@@ -234,7 +234,8 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 @media (max-width: 760px) {
   .brand { top: 54px; bottom: auto; left: -9vw; right: -9vw; height: 125vw; }
   .page.past #brand { pointer-events: none; }
-  .game:has(.shop.open) .hud { opacity: 0; visibility: hidden; }   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
+  .game:has(.shop.open) .hud { opacity: 0; visibility: hidden; }
+  body:has(.shop.open) .brand, .game:has(.shop.open) .toast { opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }   /* the upgrades sheet would sit under the title and popups */   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
   .hud { top: auto; bottom: max(64px, 11svh); right: 50%; transform: translateX(50%); text-align: center; padding: 6px 14px; }
   .hud .n { transform-origin: 50% 50%; }
   .hud .meta, .hud .row { justify-content: center; }
