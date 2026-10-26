@@ -96,6 +96,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 .shop span { color: var(--muted); }
 .shop i { font-style: normal; color: var(--gold); }
 .shop-toggle, .mbtn { display: none; }
+.pair { display: contents; }
 @media (min-width: 761px) {
   .shop { left: 16px; top: 44px; bottom: 12px; transform: none; width: 236px; flex-direction: column; justify-content: center; gap: 2px; }   /* centred in the space below the hint */
   .shop button { width: 100%; min-width: 0; padding: 2px 10px 3px; border-radius: 9px; line-height: 1.25; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; }
@@ -132,7 +133,9 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 .kaio:active:not(:disabled) { transform: translateY(1px); }
 .kaio:disabled { background: #f1b9b4; box-shadow: none; cursor: default; }
 .kaio[hidden], .game:not(.playing) .kaio, .game.wishing .kaio { display: none; }
-@media (max-width: 760px) { .kaio { right: auto; left: calc(50% + 64px); bottom: 12px; padding: 7px 12px; } .game:has(.shop.open) .kaio { display: none; } }
+@media (max-width: 760px) {
+  .kaio { position: static; height: 34px; box-sizing: border-box; padding: 0 14px; } .game:has(.shop.open) .kaio { display: none; }
+}
 /* the current training goal heads the upgrades list */
 .goal { display: flex; flex-direction: column; gap: 4px; padding: 2px 4px 6px; color: var(--muted); text-transform: lowercase; font-size: 10px; line-height: 1.3; }
 .goal i { position: relative; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
@@ -161,9 +164,13 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .hint { display: none; }
   .shop-toggle { display: flex; align-items: center; gap: 8px; position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; font: inherit; text-transform: uppercase; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; box-shadow: 0 1px 0 rgba(0,0,0,.06); cursor: pointer; }
   /* sound and share sit either side of the upgrades pill on phones, instead of in the footer */
-  .mbtn { display: flex; align-items: center; position: absolute; bottom: 12px; z-index: 3; font: inherit; text-transform: uppercase; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; box-shadow: 0 1px 0 rgba(0,0,0,.06); cursor: pointer; }
+  .mbtn { display: grid; place-items: center; position: absolute; bottom: 12px; z-index: 3; width: 34px; height: 34px; padding: 0; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 50%; box-shadow: 0 1px 0 rgba(0,0,0,.06); cursor: pointer; }
+  .mbtn svg { width: 18px; height: 18px; } .mbtn.done { color: #1a9a4a; }
+  #sndM[aria-pressed="true"] .off, #sndM[aria-pressed="false"] .on { display: none; } #sndM[aria-pressed="false"] { color: #9a9a9a; }
   #sndM { left: 16px; } #shareM { right: 16px; }
-  .mbtn.snd[aria-pressed="false"] .long { text-decoration: none; opacity: 1; }
+  .shop-toggle { position: static; transform: none; height: 34px; box-sizing: border-box; padding-block: 0; }
+  /* upgrades (and kaioken, once bought) sit as one centred row between the sound and share buttons */
+  .pair { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; display: flex; gap: 8px; }
   .foot nav .snd { display: none; }
   .shop-toggle i, .tabbar i { font-style: normal; color: #fff; background: var(--gold); border-radius: 999px; padding: 0 6px; min-width: 18px; text-align: center; }
   .shop-toggle i:empty, .tabbar i:empty { display: none; }
@@ -231,9 +238,10 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .hud { top: auto; bottom: max(64px, 11svh); right: 50%; transform: translateX(50%); text-align: center; padding: 6px 14px; }
   .hud .n { transform-origin: 50% 50%; }
   .hud .meta, .hud .row { justify-content: center; }
-  .toast { top: calc(50% - 43vw); transform: translate(-50%, calc(-100% + 6px)); max-width: 86%; }
-  .toast.on { transform: translate(-50%, -100%); }
-  .toast, .wish p { -webkit-text-stroke: 4px #fff; text-shadow: none; }
+  .wish p { -webkit-text-stroke: 4px #fff; text-shadow: none; }
+  /* popups pop out of the power level card as a white pill */
+  .toast { top: calc(var(--hud-top, 70%) - 8px); max-width: calc(100% - 32px); font-size: 16px; -webkit-text-stroke: 0; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 5px 14px 6px; box-shadow: 0 1px 0 rgba(0,0,0,.06); transform-origin: 50% 100%; transform: translate(-50%, -100%) scale(.5); transition: opacity .2s, transform .35s cubic-bezier(.3, 1.7, .5, 1); }
+  .toast.on { transform: translate(-50%, -100%) scale(1); }
   .tag { bottom: 6%; }
   .hud .label { justify-content: center; }
   .hud #extra { display: none; }
@@ -264,9 +272,11 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
     </div>
     <div class="toast" id="toast"></div>
     <div class="wish" id="wish" hidden></div>
-    <button type="button" class="kaio" id="kaio" hidden>kaioken</button>
-    <button type="button" class="shop-toggle" id="shopToggle" aria-expanded="false" aria-controls="shop">upgrades <i id="shopCount"></i></button>
-    <button type="button" class="mbtn snd" id="sndM" aria-pressed="false"><span class="long">sound off</span></button><button type="button" class="mbtn" id="shareM"><span class="long">share</span></button>
+    <div class="pair">
+      <button type="button" class="shop-toggle" id="shopToggle" aria-expanded="false" aria-controls="shop">upgrades <i id="shopCount"></i></button>
+      <button type="button" class="kaio" id="kaio" hidden>kaioken</button>
+    </div>
+    <button type="button" class="mbtn" id="sndM" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="mbtn" id="shareM" aria-label="share your power level"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11H6v9h12v-9h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="shop" id="shop"></div>
     <div class="hint">click — train · hold — charge · drag — spin</div>
     <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false">menu</button>
@@ -319,7 +329,7 @@ __PLANET__
       $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
       for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + v.level : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
     },
-    event(text, ms = 2600) { const t = $('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); },
+    event(text, ms = 2600) { const t = $('toast'), h = document.querySelector('.hud'); if (h && h.offsetParent) t.style.setProperty('--hud-top', h.offsetTop + 'px'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); },
     sfx(kind) { sfx(kind); },
     wish(options, done) {
       const box = $('wish');
@@ -378,7 +388,7 @@ __PLANET__
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
   // sound: tiny square-wave blips, off until you turn it on
   let actx = null, soundOn = false; try { soundOn = localStorage.getItem('hs-sound') === '1'; } catch (_) {}
-  const sndBtns = [$('snd'), $('sndM')], sndLabel = () => { for (const b of sndBtns) { b.setAttribute('aria-pressed', String(soundOn)); b.querySelector('.long').textContent = soundOn ? 'sound on' : 'sound off'; } };
+  const sndBtns = [$('snd'), $('sndM')], sndLabel = () => { for (const b of sndBtns) b.setAttribute('aria-pressed', String(soundOn)); $('snd').querySelector('.long').textContent = soundOn ? 'sound on' : 'sound off'; };
   for (const b of sndBtns) b.addEventListener('click', () => { soundOn = !soundOn; try { localStorage.setItem('hs-sound', soundOn ? '1' : '0'); } catch (_) {} sndLabel(); if (soundOn) sfx('coin'); });
   sndLabel();
   // share the exact power level: the native share sheet where there is one, otherwise the clipboard
@@ -386,8 +396,8 @@ __PLANET__
     const text = `i just hit a power level of ${Math.floor(lastPl).toLocaleString('en-US')} on highskore.com`, url = 'https://highskore.com';
     if (navigator.share) { try { await navigator.share({ text, url }); } catch (_) {} return; }
     try { await navigator.clipboard.writeText(text + ' ' + url); } catch (_) { return; }
-    const spans = [...btn.querySelectorAll('span')], was = spans.map(e => e.textContent); for (const e of spans) e.textContent = 'copied';
-    clearTimeout(btn._t); btn._t = setTimeout(() => spans.forEach((e, i) => { e.textContent = was[i]; }), 1600);
+    const spans = [...btn.querySelectorAll('span')]; if (!btn._was) btn._was = spans.map(e => e.textContent); for (const e of spans) e.textContent = 'copied'; btn.classList.add('done');
+    clearTimeout(btn._t); btn._t = setTimeout(() => { spans.forEach((e, i) => { e.textContent = btn._was[i]; }); btn.classList.remove('done'); }, 1600);
   };
   for (const b of [$('share'), $('shareM')]) b.addEventListener('click', () => share(b));
   let lastTapSfx = 0;
