@@ -626,7 +626,7 @@ __PLANET__
     let ripple = -9, goldUntil = 0;
     // finishes the letters ease between; a colour change sweeps across the word letter by letter
     const spec = (color, metalness, roughness, iridescence, env, sheen, glow = 0) => ({ color: new THREE.Color(color), metalness, roughness, iridescence, env, sheen, glow: new THREE.Color(glow) });
-    const SPECS = { pearl: spec(0xffffff, .1, .18, 1, 1.1, .6), gold: spec(0xffe100, .8, .2, .12, 1.4, 0, 0x7a6200), red: spec(0xff5a5a, 1, .16, .5, 1.5, 0), blue: spec(0x5ac8ff, 1, .16, .5, 1.5, 0), silver: spec(0xe8ecf4, .9, .12, .3, 1.5, 0), purple: spec(0x9a6aff, 1, .16, .6, 1.5, 0) };
+    const SPECS = { pearl: spec(0xffffff, .1, .18, 1, 1.1, .6), gold: spec(0xffe100, .8, .2, .12, 1.4, 0, 0x7a6200), red: spec(0xff5a5a, 1, .16, .5, 1.5, 0), blue: spec(0x5ac8ff, 1, .16, .5, 1.5, 0), silver: spec(0xe8ecf4, .9, .12, .3, 1.5, 0), purple: spec(0x9a6aff, 1, .16, .6, 1.5, 0), moon: spec(0xb8c8ff, .6, .14, .8, 1.3, .3, 0x101830) };   // moon: the title by night
     const FORM_MATS = ['pearl', 'gold', 'gold', 'gold', 'red', 'blue', 'purple', 'red', 'silver'];
     let formMat = 'pearl', formUntil = 0, want = 'pearl';
     titleFx = (kind, arg) => {
@@ -643,7 +643,7 @@ __PLANET__
       group.rotation.y = (P.sx * .2 + Math.sin(t * .6) * .05) * introE; group.rotation.x = (P.sy * .12 + Math.sin(t * .45) * .03 - .05) * introE;   // flat during the intro pose
       const isGold = goldUntil > t;
       const thick = 560 + Math.sin(t * .9) * 180;          // the pearly sheen slowly shifts
-      const next = isGold ? 'gold' : formUntil > t ? formMat : 'pearl';
+      const next = isGold ? 'gold' : formUntil > t ? formMat : document.body.classList.contains('night') ? 'moon' : 'pearl';
       if (next !== want) { want = next; for (const l of letters) { l.pending = next; l.at = t + l.idx * .07; } }
       const ease = 1 - Math.exp(-dt * 7);
       // the intro pose and the line are joined by springs, and the letters are solid: they shove and bounce off
