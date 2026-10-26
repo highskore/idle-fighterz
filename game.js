@@ -276,6 +276,16 @@ const GINYU = [
   { name: 'burter', spr: ginyuMember(0x4a7ad8, 0, 'burter') }, { name: 'recoome', spr: ginyuMember(0xf2c8a2, 0xe8702a, 'recoome') },
   { name: 'guldo', spr: ginyuMember(0x7acb5c, 0, 'guldo') },
 ];
+// king kai's car: a rounded red '50s sedan with a white roof, big glass, round headlights, chrome bumpers and whitewall tyres; him at the wheel
+const KAICAR = shapeSprite(34, 16, G => {
+  G.poly([[2, 8.5], [8, 7.6], [30, 7.6], [32.5, 9.4], [32.5, 12.6], [1.5, 12.6], [1.2, 10]], 'r');
+  G.poly([[8.5, 7.8], [11.5, 2.6], [23.5, 2.6], [27, 7.8]], 'w');
+  G.poly([[10.4, 7.4], [12.6, 3.6], [17.4, 3.6], [17.4, 7.4]], 'g'); G.poly([[18.4, 7.4], [18.4, 3.6], [23, 3.6], [25.4, 7.4]], 'g');
+  G.rect(1, 12, 4, 1, 'c'); G.rect(29, 12, 4, 1, 'c'); G.rect(5, 10, 24, 1, 'c');
+  G.ell(2.2, 9.6, 1.2, 1.2, 'y'); G.set(32, 10, 'h');
+  G.ell(14, 6, 2.2, 2, 'b'); G.set(15, 6, 'k'); G.set(13, 6, 'k'); G.line([[13, 4.2], [11.6, 1]], 1, 1, 'k'); G.line([[15, 4.2], [16.4, 1]], 1, 1, 'k');
+  for (const x of [7, 26]) { G.ell(x, 13.2, 2.6, 2.6, 't'); G.ell(x, 13.2, 1.5, 1.5, 'w'); G.set(x, 13, 'c'); }
+}, { o: 0x1a1010, r: 0xd8241e, R: 0x962018, h: 0xff8a7a, w: 0xf6f4ee, W: 0xc8c4b8, c: 0xdfe3ea, C: 0x8e95a4, g: 0x5ab8f2, k: 0x111111, t: 0x2a2a2a, b: 0xa2d8d2, B: 0x6aa8a4, y: 0xffe08a }, { r: 'R', w: 'W', c: 'C', b: 'B' });
 // nappa: bald, black moustache, saiyan armour with broad shoulder pads, flexing with a grin
 const NAPPA = shapeSprite(28, 34, G => {
   G.ell(14, 6.5, 4.6, 5, 's'); G.rect(11, 6, 2, 1, 'k'); G.rect(15, 6, 2, 1, 'k'); G.set(12, 6, 'w'); G.set(16, 6, 'w');   // bald head, eyes
@@ -344,6 +354,8 @@ const VEGETA = Object.assign({}, KAI, {
 const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }];
 function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
 
+// preview hooks (#raid, #snake, ...) jump straight to things for testing; on the live site they're ignored so nobody can cheat with them
+const HASH = /(^|\.)highskore\.com$/.test(location.hostname) ? '' : location.hash;
 GAMES.push({
   id: 'planet',
   mount(st, ui) {
@@ -389,13 +401,14 @@ GAMES.push({
     const cost = k => k === 'ascend' ? 1e6 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));
     // permanent: gravity ×1.15 a level, wishes ×1.25 each, ascensions +10% each; temporary boosts add up rather than multiply
     const KAIO = () => 1.25 + .25 * S.kaio;
+    const ECON = .35;   // every gain runs through mult(); at .35 a steady player reaches super saiyan god in about two hours
     const mult = () => {   // permanent boosts multiply; temporary ones add their bonuses, so a pile of buffs can't explode
-      const T = st.t, b = 1 + (boostUntil > T) * 1 + (apeUntil > T) * 2 + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (laughUntil > T) * .25 + (chamberUntil > T) * 1;
-      return Math.pow(1.15, S.gravity) * Math.pow(1.25, S.wishes) * (1 + .1 * S.ascend) * FORMS[S.form].x * b * (kaioUntil <= T && tiredUntil > T ? .5 : 1);
+      const T = st.t, b = 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * 2 + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (laughUntil > T) * .25 + (chamberUntil > T) * 1;
+      return Math.pow(1.15, S.gravity) * Math.pow(1.25, S.wishes) * (1 + .1 * S.ascend) * FORMS[S.form].x * b * (kaioUntil <= T && tiredUntil > T ? .5 : 1) * ECON;
     };
     const lapValue = () => 30 * (1 + S.boots) ;
     const passive = () => S.partner * 4 + S.house * 40 + S.piccolo * 60;
-    let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
+    let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, car = null, nextCar = 140, carUntil = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
@@ -494,6 +507,7 @@ GAMES.push({
         fuseOffer = 0; fuseUntil = st.t + 30; ach('fusion'); flashT = 1; shake = .6; ui.event('fusion ha! vegebubs — ×2 for 30s'); ui.fx && ui.fx('super');
         burst(monkeyAt.x, monkeyAt.y - 6, [0xffffff, 0xffe08a, 0xff9a3c, 0x6fb0ff], 50, 200); return;
       }
+      if (car && car.sx !== undefined && Math.hypot(px - car.sx, py - (car.sy - 6)) < 16) { carUntil = st.t + 15; ui.event("riding with king kai — ×1.5 for 15s"); ui.sfx && ui.sfx('coin'); burst(car.sx, car.sy - 6, [0xffffff, 0xd8241e, 0xdfe3ea], 16, 110); car = null; return; }
       if (yam && yam.sx !== undefined && !yam.helped && Math.hypot(px - yam.sx, py - (yam.sy - 3)) < 12) { yam.helped = true; ach('yamcha'); yam.until = st.t + 1.2; senzuUntil = Math.max(senzuUntil, st.t + 10); const g = Math.max(200, rate() * 40); gain(g, yam.sx, yam.sy - 10, true); ui.event('yamcha: "i\'m fine!" — senzu ×1.5 for 10s'); ui.sfx && ui.sfx('coin'); return; }
       if (greg && greg.sx !== undefined && Math.hypot(px - greg.sx, py - (greg.sy - 4)) < 10) { const g = Math.max(300, rate() * 120) * (1 + .5 * (S.gregWins || 0)); S.gregWins = (S.gregWins || 0) + 1; if (S.gregWins >= 5 && !S.ach.greg5) { ach('greg5'); S.spirit = 1; setTimeout(() => ui.event('king kai taught you the spirit bomb — it charges on its own, tap the ball'), 4200); } gain(g, greg.sx, greg.sy - 10, true); ui.event(`you caught gregory! +${fmtShort(Math.round(g))} — race ${S.gregWins} won`); ui.sfx && ui.sfx('coin'); burst(greg.sx, greg.sy - 4, [0xffffff, 0xd8a868, 0xa8743a], 18, 120); greg = null; return; }
       if (kai && kai.sx !== undefined && !kai.laughed && Math.hypot(px - kai.sx, py - (kai.sy - 8)) < 12) { kai.laughed = true; laughUntil = st.t + 10; ui.event('ha! ha! ha! — ×1.25 for 10s'); ui.sfx && ui.sfx('coin'); burst(kai.sx, kai.sy - 14, [0xffffff, 0xbfe9ff, 0x3a7ad8], 14, 90); return; }
@@ -867,6 +881,9 @@ GAMES.push({
       // yamcha turns up flattened in a crater now and then; help him up for a senzu
       if (!yam && session > 100 && !shen && (nextYam -= dt) < 0) { yam = { c: capPt(.3 + Math.random() * .6, Math.random() * 6.28), until: t + 14 }; ui.event('yamcha got wrecked again — tap him'); nextYam = 200 + Math.random() * 80; }
       if (yam && t > yam.until) yam = null;
+      // king kai takes his car for a spin round the road; tap it for a ride
+      if (!car && session > 70 && !shen && (nextCar -= dt) < 0) { car = { phi: phi + Math.PI, until: t + 16 }; ui.event("king kai's out for a drive — tap his car"); nextCar = 170 + Math.random() * 60; }
+      if (car) { car.phi += .85 * dt; if (t > car.until) car = null; }
       if (kai && t > kai.until) kai = null;
       // the time chamber door, once you own the key
       if (S.chamber > 0 && !door && chamberUntil < t && (nextDoor -= dt) < 0) { door = { c: capPt(.25 + Math.random() * .9, Math.random() * 6.28), t0: t, until: t + 15 }; once('door', 'the time chamber door is open — tap it'); nextDoor = 150 + Math.random() * 40; }
@@ -919,7 +936,7 @@ GAMES.push({
       if (S.spirit > 0 && !spiritShot && !spiritReady && playing) { spirit = Math.min(1, spirit + dt / Math.max(20, 60 - 8 * (S.spirit - 1))); if (spirit >= 1) { spiritReady = true; once('spirit', 'spirit bomb ready — tap the ball'); } }
       if (spiritShot && t - spiritShot.t0 > .7) { spiritBlast(spiritShot.x1, spiritShot.y1); spiritShot = null; }
       // beam struggle: a villain fires back; tap fast to push the clash into him
-      if (boss && !boss.dead && !struggle && !boss.struggled && S.galick > 0 && t - boss.t0 > 5) { boss.struggled = true; if (/struggle/.test(location.hash) || Math.random() < .6) { struggle = { t0: t, until: t + 7, p: .5 }; boss.until = Math.max(boss.until, t + 10); ui.event('beam struggle! tap fast to push it back'); ui.sfx && ui.sfx('beam'); } }
+      if (boss && !boss.dead && !struggle && !boss.struggled && S.galick > 0 && t - boss.t0 > 5) { boss.struggled = true; if (/struggle/.test(HASH) || Math.random() < .6) { struggle = { t0: t, until: t + 7, p: .5 }; boss.until = Math.max(boss.until, t + 10); ui.event('beam struggle! tap fast to push it back'); ui.sfx && ui.sfx('beam'); } }
       if (struggle) {
         struggle.p -= dt * .11;
         if (!boss || boss.dead) struggle = null;
@@ -971,6 +988,7 @@ GAMES.push({
       if (boostUntil > t) fxs.push(`boost ×2 ${Math.ceil(boostUntil - t)}s`);
       if (senzuUntil > t) fxs.push(`senzu ×1.5 ${Math.ceil(senzuUntil - t)}s`);
       if (riding > 0) fxs.push('nimbus ×1.5');
+      if (carUntil > t) fxs.push(`king kai's car ×1.5 ${Math.ceil(carUntil - t)}s`);
       if (apeUntil > t) fxs.push(`great ape ×3 ${Math.ceil(apeUntil - t)}s`);
       const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.wishes ? `dragon balls ${S.orbs7}/7` : '', S.wishes ? `wishes ${S.wishes}` : '', S.ascend ? `ascended ×${(1 + .5 * S.ascend).toFixed(1)}` : ''].filter(Boolean).join(' · ');
       const nf = FORMS[S.form + 1], cf = FORMS[S.form];
@@ -1034,6 +1052,7 @@ GAMES.push({
       } else blitZ(spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
       // piccolo meditates above the planet; king kai and gregory stand on it
       if (S.piccolo > 0) { const c = capPt(.6, .9), v = M3.ap(M, V.mul(c, 1.28)); piccoloAt = v[2] > -.2 ? { x: cx + v[0] * R, y: cy - v[1] * R + st.bob + Math.sin(t * 1.6) * 2 } : null; if (piccoloAt) blitZ(PICCOLO, piccoloAt.x, piccoloAt.y, 0, false, 0, v[2] * R + 8, .95); } else piccoloAt = null;
+      if (car) { const c = roadPt(car.phi), v = M3.ap(M, c), ahead = M3.ap(M, roadPt(car.phi + .05)), ax = cx + ahead[0] * R; if (v[2] > .05) { car.sx = cx + v[0] * R; car.sy = cy - v[1] * R + st.bob; blitZ(KAICAR, car.sx, car.sy, Math.atan2(v[0], v[1]), ax > car.sx, 0, v[2] * R + 6, .9); } else car.sx = undefined; }
       if (kai) { const v = M3.ap(M, kai.c), up = Math.min(1, (t - kai.t0) / .4) * Math.min(1, (kai.until - t) / .4); if (v[2] > .05) { kai.sx = cx + v[0] * R; kai.sy = cy - v[1] * R + st.bob; blitZ(KINGKAI, kai.sx, kai.sy, Math.atan2(v[0], v[1]), false, (up - 1) * 18, v[2] * R + 6, .85); } else kai.sx = undefined; }
       if (ship) { const v = M3.ap(M, ship.c), land = Math.min(1, (t - ship.t0) / 1.2), lift = ship.left ? Math.pow((t - ship.left) / 1.5, 2) : 0; if (v[2] > .05) { ship.sx = cx + v[0] * R; ship.sy = cy - v[1] * R + st.bob; blitZ(SHIP, ship.sx, ship.sy, Math.atan2(v[0], v[1]), false, (1 - land) * 70 + lift * 90, v[2] * R + 5, .9); } }
       if (yam) { const v = M3.ap(M, yam.c); if (v[2] > .05) { yam.sx = cx + v[0] * R; yam.sy = cy - v[1] * R + st.bob + 3; decal(YAMCHA, v, 1.1); } else yam.sx = undefined; }
@@ -1165,26 +1184,27 @@ GAMES.push({
     }
     useWorld(S.world || 0); ui.world && ui.world(S.world || 0);
     layout(); scenery(); syncShop();
-    if (/ape/.test(location.hash)) { session = 41; nextMoon = 0; }
-    if (/ginyu/.test(location.hash)) { session = 151; S.best = Math.max(S.best, 5e4); nextGinyu = 0; }   // preview hook: #ginyu
-    if (/visitors/.test(location.hash)) { session = 61; nextGreg = 0; nextKai = 0; }   // preview hook: #visitors (gregory, king kai)
-    if (/raid/.test(location.hash)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
-    if (/fusion/.test(location.hash)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
-    if (/namek|porunga/.test(location.hash)) { S.best = Math.max(S.best, 1e7); S.namekAt = 1e7; }   // preview hooks: #namek, #porunga (namek, then summon)
-    if (/chamber/.test(location.hash)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
-    if (/kaio/.test(location.hash)) S.kaio = Math.max(1, S.kaio);   // preview hook: #kaio (kaioken owned)
-    if (/vegeta/.test(location.hash)) { S.best = Math.max(S.best, 2e7); S.namekAt = 2e7; }   // preview hook: #vegeta (planet vegeta, then nappa)
-    if (/snake/.test(location.hash)) { S.best = Math.max(S.best, 3e7); S.namekAt = 3e7; }   // preview hook: #snake (snake way)
-    if (/door/.test(location.hash)) { S.chamber = Math.max(1, S.chamber); nextDoor = 0; }   // preview hook: #door (the time chamber door)
-    if (/pod/.test(location.hash)) { session = 13; nextStar = 0; }   // preview hook: #pod (a saiyan space pod)
-    if (/storm/.test(location.hash)) { session = 121; nextStorm = 0; }   // preview hook: #storm (meteor storm)
-    if (/spirit/.test(location.hash)) { S.spirit = Math.max(1, S.spirit); spirit = .97; }   // preview hook: #spirit (a nearly full spirit bomb)
-    if (/struggle/.test(location.hash)) { session = 111; nextBoss = 0; S.galick = Math.max(1, S.galick); }   // preview hook: #struggle (a villain who fires back)
-    if (/frieza/.test(location.hash)) { session = 151; nextShip = 0; }   // preview hook: #frieza (his ship lands)
-    if (/yamcha/.test(location.hash)) { session = 101; nextYam = 0; }   // preview hook: #yamcha
-    if (/gregory/.test(location.hash)) { session = 61; nextGreg = 0; }   // preview hook: #gregory (the race)
-    if (/tournament/.test(location.hash)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
-    if (/shenron/.test(location.hash)) setTimeout(() => summon(+(location.hash.match(/shenron(\d)/) || [0, 1])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
+    if (/ape/.test(HASH)) { session = 41; nextMoon = 0; }
+    if (/ginyu/.test(HASH)) { session = 151; S.best = Math.max(S.best, 5e4); nextGinyu = 0; }   // preview hook: #ginyu
+    if (/visitors/.test(HASH)) { session = 61; nextGreg = 0; nextKai = 0; }   // preview hook: #visitors (gregory, king kai)
+    if (/raid/.test(HASH)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
+    if (/fusion/.test(HASH)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
+    if (/namek|porunga/.test(HASH)) { S.best = Math.max(S.best, 1e7); S.namekAt = 1e7; }   // preview hooks: #namek, #porunga (namek, then summon)
+    if (/chamber/.test(HASH)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
+    if (/kaio/.test(HASH)) S.kaio = Math.max(1, S.kaio);   // preview hook: #kaio (kaioken owned)
+    if (/vegeta/.test(HASH)) { S.best = Math.max(S.best, 2e7); S.namekAt = 2e7; }   // preview hook: #vegeta (planet vegeta, then nappa)
+    if (/snake/.test(HASH)) { S.best = Math.max(S.best, 3e7); S.namekAt = 3e7; }   // preview hook: #snake (snake way)
+    if (/door/.test(HASH)) { S.chamber = Math.max(1, S.chamber); nextDoor = 0; }   // preview hook: #door (the time chamber door)
+    if (/car/.test(HASH)) { session = 71; nextCar = 0; }   // preview hook: #car (king kai's car)
+    if (/pod/.test(HASH)) { session = 13; nextStar = 0; }   // preview hook: #pod (a saiyan space pod)
+    if (/storm/.test(HASH)) { session = 121; nextStorm = 0; }   // preview hook: #storm (meteor storm)
+    if (/spirit/.test(HASH)) { S.spirit = Math.max(1, S.spirit); spirit = .97; }   // preview hook: #spirit (a nearly full spirit bomb)
+    if (/struggle/.test(HASH)) { session = 111; nextBoss = 0; S.galick = Math.max(1, S.galick); }   // preview hook: #struggle (a villain who fires back)
+    if (/frieza/.test(HASH)) { session = 151; nextShip = 0; }   // preview hook: #frieza (his ship lands)
+    if (/yamcha/.test(HASH)) { session = 101; nextYam = 0; }   // preview hook: #yamcha
+    if (/gregory/.test(HASH)) { session = 61; nextGreg = 0; }   // preview hook: #gregory (the race)
+    if (/tournament/.test(HASH)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
+    if (/shenron/.test(HASH)) setTimeout(() => summon(+(HASH.match(/shenron(\d)/) || [0, 1])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
     // the achievements / characters popup reads from here
     const menu = () => ({ ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
     const pick = id => { if (!heroOpen(id)) return false; S.hero = id; save(); return true; };
@@ -1196,7 +1216,7 @@ GAMES.push({
       // first visit of the day: ×1.25 for five minutes and a dragon ball
       const today = new Date().toDateString();
       if (S.daily !== today) { const first = !S.daily; S.daily = today; if (!first) { dailyUntil = st.t + 300; S.orbs7 = Math.min(6, S.orbs7 + 1); setTimeout(() => ui.event('daily bonus: ×1.25 for 5 min + a dragon ball'), 900); } }
-      if (/porunga/.test(location.hash)) setTimeout(() => summon(), 2500);
+      if (/porunga/.test(HASH)) setTimeout(() => summon(), 2500);
       save();
     }, resize: layout, train: () => { const k = kidScreen(14); onClick(k.x + 999, k.y + 999); } };
   }
