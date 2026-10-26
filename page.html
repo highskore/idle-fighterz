@@ -174,32 +174,18 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .game { flex: 1 1 auto; height: auto; min-height: 380px; max-height: 760px; }
   .foot { flex: none; }
 }
-/* scroll intro: the page is pinned for one screen of scrolling; the title starts big in the middle over the
-   hero line, then settles into place as the game card rises in (driven by --p, 0 → 1, from JS) */
+/* scroll intro: the page is pinned for one screen of scrolling; the title starts big in the middle,
+   then settles into place as the game card rises in (driven by --p, 0 → 1, from JS) */
 .scroller { height: 200svh; }
 .scroller > .page { position: sticky; top: 0; overflow: clip; }
-.hero { position: absolute; left: 0; right: 0; top: var(--hero-top, 58svh); z-index: 6; text-align: center; pointer-events: none; opacity: calc(1 - var(--p, 0) * 4); transform: translateY(calc(var(--p, 0) * -90px)); }
-.hero p { margin: 0; }
-.hero .hey { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
-.hero .gt, .hero .caret { color: var(--gold); }
-.hero .role { font-family: var(--serif); font-size: clamp(34px, 5.2vw, 72px); line-height: 1; letter-spacing: -.01em; }
-.hero .caret { font-family: var(--mono); font-size: .5em; margin-left: .08em; animation: blink 1s steps(1) infinite; }
 .cue { position: absolute; left: 50%; bottom: 22px; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translateX(-50%); color: var(--muted); text-transform: uppercase; font-size: 10px; opacity: calc(1 - var(--p, 0) * 3); }
 .cue i { width: 9px; height: 9px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); animation: cue 1.4s ease-in-out infinite; }
 @keyframes cue { 50% { transform: translateY(4px) rotate(45deg); } }
-.page.past .hero, .page.past .cue { visibility: hidden; }
+.page.past .cue { visibility: hidden; }
 #brand { transform: translateY(calc((1 - var(--e, 1)) * var(--brand-dy, 0px))) scale(calc(1 + (1 - var(--e, 1)) * (var(--brand-s, 1) - 1))); transform-origin: 50% 50%; will-change: transform; }
 #game { transform: translateY(calc((1 - var(--e, 1)) * var(--game-dy, 0px))); will-change: transform; }
-@media (max-width: 760px) { .hero .role { font-size: 30px; } .cue { bottom: 18px; } }
-/* the role changes with a twinkle: the word fades, pixel stars like the title's burst over it, the next word pops in */
-.hero .role { position: relative; display: inline-block; }
-.word { display: inline-block; transition: opacity .18s, transform .18s; }
-.word.out { opacity: 0; transform: translateY(-4px) scale(.98); }
-.word i { display: inline-block; font-style: normal; white-space: pre; opacity: 0; animation: pop .42s cubic-bezier(.2, 1.6, .4, 1) forwards; }
-@keyframes pop { from { opacity: 0; transform: translateY(.25em) scale(.7); } to { opacity: 1; transform: none; } }
-.sparks { position: absolute; left: -48px; top: -36px; width: calc(100% + 96px); height: calc(100% + 72px); image-rendering: pixelated; pointer-events: none; }
-@media (prefers-reduced-motion: reduce) { .word i { animation: none; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .hero .caret, .cue i { animation: none; } }
+@media (max-width: 760px) { .cue { bottom: 18px; } }
+@media (prefers-reduced-motion: reduce) { .cue i { animation: none; } }
 @media (min-width: 761px) { .mswitch, .tabbar, .menu-btn, .rule { display: none; } }
 
 /* phones: title at the top of the game, the power level strip on the cloud sea */
@@ -230,7 +216,6 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 
 <div class="scroller" id="scroller">
 <div class="page">
-  <div class="hero" id="hero" aria-hidden="false"><p class="hey"><span class="gt">&gt;</span> hey, i'm</p><p class="role"><span class="word" id="role">a smart contract engineer</span><span class="caret">_</span><canvas class="sparks" id="roleFx" aria-hidden="true"></canvas></p></div>
   <a class="cue" id="cue" href="#game" aria-label="scroll to the game"><span>scroll for fun</span><i aria-hidden="true"></i></a>
   <div class="brand gutter" id="brand"><canvas id="logo" aria-hidden="true"></canvas><canvas id="glint" aria-hidden="true"></canvas><h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">highskore</h1></div>
   <div class="rule r1"><span>(01) power planet</span><span>idle · click · hold · drag</span></div>
@@ -315,10 +300,9 @@ __PLANET__
   function introLayout() {
     root.style.setProperty('--e', 1);
     const vh = innerHeight, b = brandEl.getBoundingClientRect(), g = gameEl.getBoundingClientRect(), phone = innerWidth <= 760;
-    const s = phone ? 1.2 : Math.min(2.1, Math.max(1.2, innerWidth * .66 / (b.width * .46))), heroY = vh * (phone ? .4 : .38);
+    const s = phone ? 1.2 : Math.min(2.1, Math.max(1.2, innerWidth * .66 / (b.width * .46))), heroY = vh * (phone ? .44 : .45);
     root.style.setProperty('--brand-s', s.toFixed(3));
     root.style.setProperty('--brand-dy', (heroY - (b.top + b.height / 2)).toFixed(1) + 'px');
-    root.style.setProperty('--hero-top', (heroY + b.height * s * (phone ? .26 : .22)).toFixed(1) + 'px');
     root.style.setProperty('--game-dy', (vh - g.top + 24).toFixed(1) + 'px');
     introScroll();
   }
@@ -332,42 +316,6 @@ __PLANET__
   addEventListener('resize', () => requestAnimationFrame(introLayout));
   $('cue').addEventListener('click', e => { e.preventDefault(); scrollTo({ top: scroller.offsetHeight - innerHeight, behavior: 'smooth' }); });
   introLayout();
-  /* hero role: every few seconds it twinkles over to the next one, with pixel stars like the title's glints */
-  const ROLES = ['a smart contract engineer', 'a software developer', 'just a chill guy'];
-  const roleEl = $('role'), sparkCv = $('roleFx'), sctx = sparkCv.getContext('2d'), SPARK = ['#b9a7ff', '#7fc8ff', '#ff9fd2', '#9fe0c8'];
-  const reduceRole = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let roleI = 0, sparks = [], sparkRaf = 0, sparkLast = 0;
-  function sparkSize() { sparkCv.width = Math.ceil(sparkCv.clientWidth / 3); sparkCv.height = Math.ceil(sparkCv.clientHeight / 3); }
-  function twinkle(n, spread = 1) {
-    const w = roleEl.offsetWidth / 3, h = roleEl.offsetHeight / 3, ox = 16, oy = 12;
-    for (let k = 0; k < n; k++) sparks.push({ x: ox + Math.random() * w * spread + w * (1 - spread) / 2, y: oy + h * (.1 + Math.random() * .8), life: -Math.random() * .25, max: .45 + Math.random() * .6, s: 1 + (Math.random() * 3 | 0), c: SPARK[(Math.random() * SPARK.length) | 0] });
-    if (!sparkRaf) sparkRaf = requestAnimationFrame(drawSparks);
-  }
-  function drawSparks(now) {
-    const dt = Math.min(.05, (now - (sparkLast || now)) / 1000); sparkLast = now;
-    if (sparkCv.width !== Math.ceil(sparkCv.clientWidth / 3)) sparkSize();
-    sctx.clearRect(0, 0, sparkCv.width, sparkCv.height);
-    for (let i = sparks.length - 1; i >= 0; i--) {
-      const s = sparks[i]; s.life += dt; if (s.life > s.max) { sparks.splice(i, 1); continue; } if (s.life < 0) continue;
-      const k = Math.sin(s.life / s.max * Math.PI), r = Math.round(s.s * k * 2), x = Math.round(s.x), y = Math.round(s.y);
-      sctx.fillStyle = s.c; sctx.fillRect(x, y, 1, 1);
-      for (let j = 1; j <= r; j++) { sctx.globalAlpha = 1 - j / (r + 1); sctx.fillRect(x + j, y, 1, 1); sctx.fillRect(x - j, y, 1, 1); sctx.fillRect(x, y + j, 1, 1); sctx.fillRect(x, y - j, 1, 1); }
-      sctx.globalAlpha = 1;
-    }
-    sparkRaf = sparks.length ? requestAnimationFrame(drawSparks) : 0; if (!sparkRaf) sparkLast = 0;
-  }
-  function changeRole(next) {
-    if (reduceRole) { roleEl.textContent = next; return; }
-    twinkle(9);
-    roleEl.classList.add('out');
-    setTimeout(() => {
-      roleEl.innerHTML = [...next].map((ch, i) => `<i style="animation-delay:${i * 22}ms">${ch}</i>`).join('');
-      roleEl.classList.remove('out'); twinkle(6);
-    }, 190);
-  }
-  sparkSize();
-  setInterval(() => { if (pageEl.classList.contains('past') || document.hidden) return; roleI = (roleI + 1) % ROLES.length; changeRole(ROLES[roleI]); }, 2600);
-  setInterval(() => { if (!pageEl.classList.contains('past') && !document.hidden && !reduceRole) twinkle(1); }, 700);
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const st = makeStage($('game')); st.resize(); st.night = false;
   const game = GAMES.find(g => g.id === 'planet').mount(st, ui);
