@@ -232,7 +232,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 
 <div class="scroller" id="scroller">
 <div class="page">
-  <div class="hero" id="hero" aria-hidden="false"><p class="hey"><span class="gt">&gt;</span> hey, i'm</p><p class="role"><span class="glitch" id="role" data-text="a smart contract developer">a smart contract developer</span><span class="caret">_</span></p></div>
+  <div class="hero" id="hero" aria-hidden="false"><p class="hey"><span class="gt">&gt;</span> hey, i'm</p><p class="role"><span class="glitch" id="role" data-text="a smart contract engineer">a smart contract engineer</span><span class="caret">_</span></p></div>
   <a class="cue" id="cue" href="#game" aria-label="scroll to the game"><span>scroll for fun</span><i aria-hidden="true"></i></a>
   <div class="brand gutter" id="brand"><canvas id="logo" aria-hidden="true"></canvas><canvas id="glint" aria-hidden="true"></canvas><h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">highskore</h1></div>
   <div class="rule r1"><span>(01) power planet</span><span>idle · click · hold · drag</span></div>
@@ -335,7 +335,7 @@ __PLANET__
   $('cue').addEventListener('click', e => { e.preventDefault(); scrollTo({ top: scroller.offsetHeight - innerHeight, behavior: 'smooth' }); });
   introLayout();
   /* hero role: every few seconds it glitches through to the next one */
-  const ROLES = ['a smart contract developer', 'a backend engineer', 'a software engineer', 'a designer', 'an artist', 'just a chill guy'];
+  const ROLES = ['a smart contract engineer', 'a software developer', 'an artist', 'a gamer', 'a designer', 'just a chill guy'];
   const roleEl = $('role'), NOISE = '!<>-_\\/[]{}=+*^?#%01█▓▒░';
   let roleI = 0;
   const setRole = t => { roleEl.textContent = t; roleEl.dataset.text = t; };
