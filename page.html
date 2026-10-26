@@ -191,11 +191,12 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 #brand { transform: translateY(calc((1 - var(--e, 1)) * var(--brand-dy, 0px))) scale(calc(1 + (1 - var(--e, 1)) * (var(--brand-s, 1) - 1))); transform-origin: 50% 50%; will-change: transform; }
 #game { transform: translateY(calc((1 - var(--e, 1)) * var(--game-dy, 0px))); will-change: transform; }
 @media (max-width: 760px) { .hero .role { font-size: 30px; } .cue { bottom: 18px; } }
-/* the role glitches from one title to the next: scrambled letters plus a split, sliced red/cyan ghost */
+/* the role glitches from one title to the next: scrambled letters plus split, sliced ghosts in the title's glint colours */
 .glitch { position: relative; display: inline-block; }
 .glitch::before, .glitch::after { content: attr(data-text); position: absolute; inset: 0; opacity: 0; pointer-events: none; }
-.glitch.on::before { opacity: .85; color: #ff2a6d; transform: translateX(-3px); clip-path: inset(10% 0 55% 0); animation: gl1 .32s steps(2) infinite; mix-blend-mode: multiply; }
-.glitch.on::after { opacity: .85; color: #05b8e8; transform: translateX(3px); clip-path: inset(55% 0 8% 0); animation: gl2 .28s steps(2) infinite; mix-blend-mode: multiply; }
+.glitch.on::before { opacity: 1; color: #ff9fd2; transform: translateX(-3px); clip-path: inset(10% 0 55% 0); animation: gl1 .32s steps(2) infinite; }
+.glitch.on::after { opacity: 1; color: #7fc8ff; transform: translateX(3px); clip-path: inset(55% 0 8% 0); animation: gl2 .28s steps(2) infinite; }
+.glitch.on { color: #b9a7ff; text-shadow: 2px 0 #9fe0c8; }
 .glitch.on { animation: gl3 .2s steps(2) infinite; }
 @keyframes gl1 { 0% { clip-path: inset(8% 0 62% 0); transform: translateX(-4px); } 50% { clip-path: inset(48% 0 20% 0); transform: translateX(3px); } 100% { clip-path: inset(70% 0 4% 0); transform: translateX(-2px); } }
 @keyframes gl2 { 0% { clip-path: inset(60% 0 6% 0); transform: translateX(4px); } 50% { clip-path: inset(14% 0 58% 0); transform: translateX(-3px); } 100% { clip-path: inset(36% 0 40% 0); transform: translateX(2px); } }
@@ -231,7 +232,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 
 <div class="scroller" id="scroller">
 <div class="page">
-  <div class="hero" id="hero" aria-hidden="false"><p class="hey"><span class="gt">&gt;</span> hey, i'm a</p><p class="role"><span class="glitch" id="role" data-text="smart contract developer">smart contract developer</span><span class="caret">_</span></p></div>
+  <div class="hero" id="hero" aria-hidden="false"><p class="hey"><span class="gt">&gt;</span> hey, i'm</p><p class="role"><span class="glitch" id="role" data-text="a smart contract developer">a smart contract developer</span><span class="caret">_</span></p></div>
   <a class="cue" id="cue" href="#game" aria-label="scroll to the game"><span>scroll for fun</span><i aria-hidden="true"></i></a>
   <div class="brand gutter" id="brand"><canvas id="logo" aria-hidden="true"></canvas><canvas id="glint" aria-hidden="true"></canvas><h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">highskore</h1></div>
   <div class="rule r1"><span>(01) power planet</span><span>idle · click · hold · drag</span></div>
@@ -334,7 +335,7 @@ __PLANET__
   $('cue').addEventListener('click', e => { e.preventDefault(); scrollTo({ top: scroller.offsetHeight - innerHeight, behavior: 'smooth' }); });
   introLayout();
   /* hero role: every few seconds it glitches through to the next one */
-  const ROLES = ['smart contract developer', 'backend engineer', 'software engineer', 'designer', 'artist', 'gamer', 'entrepreneur', 'forward deployed engineer', 'just a chill guy'];
+  const ROLES = ['a smart contract developer', 'a backend engineer', 'a software engineer', 'a designer', 'an artist', 'just a chill guy'];
   const roleEl = $('role'), NOISE = '!<>-_\\/[]{}=+*^?#%01█▓▒░';
   let roleI = 0;
   const setRole = t => { roleEl.textContent = t; roleEl.dataset.text = t; };
