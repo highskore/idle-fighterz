@@ -201,6 +201,9 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
   /* dvh: the visible height, whichever of safari's bars are out. svh left a strip of page under the game once the bars
      collapsed, and lvh pushed the top of the page under the address bar; the game redraws at once after a resize */
   .game { height: calc(100svh - 40px); height: calc(100dvh - 40px); }
+  /* the canvas itself is drawn at the height with the bars collapsed and pinned to the bottom: a bar sliding out
+     covers some empty sky at the top instead of resizing (and re-centring) the planet mid-scroll */
+  @supports (height: 100lvh) { .stage { top: auto; height: calc(100lvh - 40px); } }
   html, body { background: var(--sea) linear-gradient(#fff 50%, var(--sea) 50%) no-repeat; }
   html { overscroll-behavior: none; touch-action: manipulation; }
   /* iOS 26 Safari tints its bottom bar from the fixed/sticky element at the edge — the near-white sticky page,
