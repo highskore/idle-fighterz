@@ -1,0 +1,451 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Fragment+Mono:ital@0;1&family=Press+Start+2P&display=swap">
+<style>
+/* Layout: the pearl logo above a framed card holding the idle planet game, links in the footer. Light only. */
+:root {
+  --bg: #ffffff;
+  --ink: #0b0b0b;
+  --muted: #8d8d8d;
+  --line: #ececec;
+  --gold: #d99a1c;
+  --serif: "Instrument Serif", "Times New Roman", serif;
+  --mono: "Fragment Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body { margin: 0; font-family: var(--mono); font-size: 12px; line-height: 1.5; letter-spacing: .01em; }
+a { color: inherit; text-decoration: none; }
+a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3px; outline: none; }
+.gutter { padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+
+.game { position: relative; overflow: hidden; }
+.stage { position: absolute; inset: 0; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+#logo { display: block; width: 100%; height: 100%; touch-action: manipulation; }
+#glint { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: none; }
+.brand { position: relative; transition: opacity .6s; }
+/* phones: while the dragon is out the title drops behind the game canvas (its sky is transparent), so he flies over it */
+@media (max-width: 760px) { body .game { background: transparent; } body .page { background: #fcfcfb; } body.shen .brand { z-index: 0; } body.shen .game { z-index: 1; } }
+.tag { position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); margin: 0; white-space: nowrap; color: var(--muted); text-transform: lowercase; letter-spacing: .02em; pointer-events: none; }
+.tag .t { display: inline-block; overflow: hidden; vertical-align: bottom; max-width: 0; animation: type 1.4s steps(26, end) .5s forwards; }
+.tag .caret { color: var(--gold); animation: blink 1s steps(1) infinite; }
+@keyframes type { to { max-width: 30ch; } }
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .tag .t { animation: none; max-width: none; } }
+.foot .short { display: none; }
+
+.hud { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); top: 18px; text-align: right; pointer-events: none; z-index: 2; }
+.hud .label { text-transform: uppercase; color: var(--muted); }
+.hud .n { font-family: var(--serif); font-size: clamp(48px, 6vw, 96px); line-height: .9; letter-spacing: -.03em; font-variant-numeric: tabular-nums lining-nums; transition: transform .12s; transform-origin: 100% 50%; }
+.hud .n.bump { transform: scale(1.04); }
+.hud .meta { color: var(--muted); text-transform: uppercase; display: flex; gap: 12px; justify-content: end; }
+.hud .meta b { color: var(--ink); font-weight: 400; font-variant-numeric: tabular-nums; }
+.hud .boost { color: var(--gold); }
+.hud .label { display: flex; justify-content: end; align-items: baseline; gap: 8px; }
+.hud .mx { font-weight: 400; color: var(--gold); font-variant-numeric: tabular-nums; display: inline-block; transition: transform .1s; }
+.hud .mx.hot { color: #e2531b; }
+.hud .mx.pop { transform: scale(1.35); }
+.hud .n { --len: 9; font-size: calc(clamp(48px, 6vw, 96px) * min(1, 10 / var(--len))); white-space: nowrap; }
+.hud .n small { font-size: .55em; letter-spacing: 0; margin-left: .06em; color: var(--gold); }
+.hud .fxs { font-weight: 400; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hud .label { min-width: 0; white-space: nowrap; }
+@media (min-width: 761px) { #extra { max-width: min(360px, 34vw); margin-left: auto; } }
+#extra { flex-wrap: wrap; row-gap: 0; }
+#extra span + span::before { content: '· '; color: var(--line); margin-left: -6px; }
+.hud .form, .hud .balls { display: none; }
+.hud .form { align-items: center; gap: 8px; text-transform: uppercase; color: var(--muted); font-size: 11px; }
+.hud .form .fn { color: var(--ink); }
+.hud .bar { position: relative; flex: 1 1 60px; min-width: 50px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.hud .bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--gold); border-radius: 4px; transition: width .4s; }
+.hud .balls { gap: 8px; align-items: center; justify-content: center; color: var(--muted); text-transform: uppercase; font-size: 11px; }
+.hud .dots { display: inline-flex; gap: 3px; }
+.hud .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.hud .dots i.on { background: radial-gradient(circle at 35% 35%, #fff2c0, #ffa63a 55%, #c4561a); }
+.toast { position: absolute; left: 50%; top: 9%; transform: translate(-50%, 6px); width: max-content; max-width: 88%; text-align: center; text-wrap: balance; font-family: var(--serif); font-style: italic; font-size: clamp(22px, 2.6vw, 34px); line-height: 1.05; color: var(--ink); -webkit-text-stroke: 6px #fff; paint-order: stroke fill; text-shadow: none; opacity: 0; transition: opacity .3s, transform .6s; pointer-events: none; z-index: 2; }
+.wish { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); z-index: 6; display: flex; flex-direction: column; gap: 8px; width: min(320px, 86%); }
+.wish[hidden] { display: none; }
+.game.wishing .hud, .game.wishing .shop-toggle, .game.wishing .shop { visibility: hidden; }
+.wish p { margin: 0 0 4px; text-align: center; font-family: var(--serif); font-style: italic; font-size: 30px; color: var(--ink); -webkit-text-stroke: 6px #fff; paint-order: stroke fill; text-shadow: none; }
+.wish button { font: inherit; display: flex; flex-direction: column; align-items: start; gap: 1px; text-align: left; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; cursor: pointer; transition: transform .12s, border-color .15s; }
+.wish button:hover, .wish button:focus-visible { border-color: var(--gold); transform: translateY(-1px); outline: none; }
+.wish b { font-weight: 400; text-transform: uppercase; }
+.wish span { color: var(--muted); }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.shop { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: min(96%, 900px); z-index: 2; }
+.shop button { font: inherit; display: flex; flex-direction: column; align-items: start; gap: 0; text-align: left; color: var(--ink); background: #ffffff; box-shadow: 0 1px 0 rgba(0,0,0,.06); border: 1px solid var(--line); border-radius: 12px; padding: 6px 12px; cursor: pointer; min-width: 128px; transition: border-color .15s, transform .12s, opacity .2s; }
+.shop button:hover:not(:disabled) { border-color: var(--ink); }
+.shop button:active:not(:disabled) { transform: translateY(1px); }
+.shop button:disabled { color: var(--muted); cursor: not-allowed; }
+.shop button:disabled i { color: var(--muted); }
+.shop button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.shop b { font-weight: 400; text-transform: uppercase; white-space: nowrap; }
+.shop em { font-style: normal; color: var(--gold); font-variant-numeric: tabular-nums; }
+.shop button:disabled em { color: var(--muted); }
+.shop button.special { border-color: var(--gold); background: #fff8e6; }
+.shop span { color: var(--muted); }
+.shop i { font-style: normal; color: var(--gold); }
+.shop-toggle { display: none; }
+@media (min-width: 761px) {
+  .shop { left: 16px; top: 50%; bottom: auto; transform: translateY(-50%); width: 236px; flex-direction: column; gap: 3px; }
+  .shop button { width: 100%; min-width: 0; padding: 3px 10px 4px; border-radius: 9px; line-height: 1.35; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .shop button { flex-wrap: wrap; row-gap: 0; }
+  .shop b { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .shop em { flex: none; }
+  .shop span { display: block; flex-basis: 100%; font-size: 9.5px; line-height: 1.2; }
+}
+/* before play: the planet idles, the game UI stays hidden */
+.game:not(.playing) .hud, .game:not(.playing) .shop, .game:not(.playing) .shop-toggle, .game:not(.playing) .hint, .game:not(.playing) .toast { opacity: 0; visibility: hidden; }
+.hud, .shop, .shop-toggle, .hint { transition: opacity .5s, visibility .5s; }
+.intro { position: absolute; inset: 0; z-index: 5; pointer-events: none; transition: opacity .45s, visibility .45s; }
+.game.playing .intro { opacity: 0; visibility: hidden; }
+@keyframes blink { 50% { opacity: 0; } }
+/* start screen: blinking press start; clicking anywhere on the game starts it */
+.intro { pointer-events: auto; cursor: pointer; }
+.start { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 8px; font: inherit; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; pointer-events: auto; text-transform: uppercase; }
+.start:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.s-arcade span { font-family: "Press Start 2P", var(--mono); font-size: 15px; letter-spacing: .04em; color: #0b0b0b; white-space: nowrap; text-shadow: 2px 0 #fff, -2px 0 #fff, 0 2px #fff, 0 -2px #fff, 2px 2px #fff, -2px -2px #fff, 2px -2px #fff, -2px 2px #fff; animation: blinkS 1.1s steps(1) infinite; }
+.s-arcade i { display: inline-block; font-style: normal; animation: nudgeL .55s steps(2) infinite alternate; }
+.s-arcade i.r { animation-name: nudgeR; }
+@keyframes nudgeL { to { transform: translateX(4px); } }
+@keyframes nudgeR { to { transform: translateX(-4px); } }
+@media (max-width: 760px) { .s-arcade span { font-size: 12px; } }
+@media (prefers-reduced-motion: reduce) { .s-arcade span, .s-arcade i { animation: none; } }
+@keyframes blinkS { 60% { opacity: 0; } }
+.hint { position: absolute; left: max(20px, env(safe-area-inset-left, 0px)); top: 18px; color: var(--muted); text-transform: uppercase; z-index: 2; pointer-events: none; }
+
+.foot { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; text-transform: uppercase; color: var(--muted); }
+.foot nav { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink); }
+
+/* card: logo above a framed game panel, links below */
+.page { display: flex; flex-direction: column; align-items: center; padding-block: 52px 28px; gap: 18px; }
+.brand { width: min(1120px, 96vw); height: clamp(150px, 23vw, 310px); margin-block: -14px calc(-1 * clamp(28px, 4.2vw, 58px)); }
+.game { width: min(1200px, calc(100vw - 40px)); height: clamp(460px, 66vh, 760px); border: 1px solid var(--line); border-radius: 28px; background: #fcfcfb; }
+.foot { width: min(1200px, calc(100vw - 40px)); padding: 6px 4px; }
+@media (max-width: 760px) {
+  .page { padding-block: 14px 22px; gap: 10px; }
+  .foot { order: 1; width: calc(100vw - 24px); justify-content: center; padding: 0; }
+  .foot nav { gap: 14px; justify-content: center; }
+  .foot .copy { display: none; }
+  .game { order: 2; width: calc(100vw - 24px); height: min(72vh, 620px); border-radius: 20px; }
+  .brand { order: 3; width: calc(100vw - 8px); height: 38vw; }
+  .hud { top: 12px; right: 14px; }
+  .hud .meta { gap: 8px; font-size: 11px; }
+  .toast { top: 26%; font-size: 22px; }
+  .hint { display: none; }
+  .shop-toggle { display: flex; align-items: center; gap: 8px; position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; font: inherit; text-transform: uppercase; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; box-shadow: 0 1px 0 rgba(0,0,0,.06); cursor: pointer; }
+  .shop-toggle i, .tabbar i { font-style: normal; color: #fff; background: var(--gold); border-radius: 999px; padding: 0 6px; min-width: 18px; text-align: center; }
+  .shop-toggle i:empty, .tabbar i:empty { display: none; }
+  .shop-toggle:focus-visible, .menu-btn:focus-visible, .tabbar button:focus-visible, .mswitch button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .shop { display: none; bottom: 54px; grid-template-columns: 1fr 1fr; gap: 5px; width: calc(100% - 20px); }
+  .shop.open { display: grid; }
+  .shop button { min-width: 0; padding: 6px 9px; border-radius: 10px; flex-direction: column; gap: 0; }
+  .shop b { font-size: 11px; white-space: normal; }
+  .shop span { display: block; font-size: 9.5px; line-height: 1.2; }
+  .menu-btn, .rule, .tabbar { display: none; }
+  /* full-bleed base for every phone variant: the game is the whole screen */
+  .page { position: relative; padding: 0; gap: 0; }
+  .game { order: 1; width: 100vw; height: 100svh; border: 0; border-radius: 0; }
+  .brand { position: absolute; z-index: 3; width: auto; }
+  .foot { position: absolute; z-index: 4; width: auto; padding: 0; }
+  .foot nav { gap: 12px; }
+  .foot nav a, .foot nav span { font-size: 11px; }
+  .hud { top: auto; bottom: 66px; right: 14px; background: rgba(255,255,255,.86); border-radius: 12px; padding: 6px 10px; }
+  .toast { top: 34%; }
+  .wish { right: auto; left: 50%; top: auto; bottom: 70px; transform: translateX(-50%); }
+  .wish p { font-size: 24px; }
+  .wish button { padding: 7px 12px; }
+  /* phones: a thin bar of links on top, the full-screen game, the title on the cloud sea */
+  .foot { position: relative; order: 0; height: 40px; width: 100vw; justify-content: center; align-items: center; border-bottom: 1px solid var(--line); background: #fff; }
+  .game { height: calc(100svh - 40px); height: calc(100dvh - 40px); }
+  html, body { background: linear-gradient(#fff 50%, #f3c55a 50%); }
+  .page { background: #fff; }
+  .foot .long { display: none; } .foot .short { display: inline; }
+  .tag { bottom: -10px; font-size: 11px; }
+  .brand { left: 0; right: 0; bottom: max(76px, 14svh); height: 30vw; }
+  .hud { top: 6px; bottom: auto; right: 10px; padding: 3px 8px; }
+  .hud .n { font-size: calc(36px * min(1, 10 / var(--len))); }
+}
+/* desktop: title, card and links always fit the window — the card takes whatever height is left */
+@media (min-width: 761px) {
+  .page { height: 100svh; min-height: 600px; padding-block: 20px 16px; gap: 14px; box-sizing: border-box; }
+  .brand { flex: none; height: clamp(130px, min(23vw, 26svh), 310px); }
+  .game { flex: 1 1 auto; height: auto; min-height: 380px; max-height: 760px; }
+  .foot { flex: none; }
+}
+/* scroll intro: the page is pinned for one screen of scrolling; the title starts big in the middle over the
+   hero line, then settles into place as the game card rises in (driven by --p, 0 → 1, from JS) */
+.scroller { height: 200svh; }
+.scroller > .page { position: sticky; top: 0; overflow: clip; }
+.hero { position: absolute; left: 0; right: 0; top: var(--hero-top, 58svh); z-index: 6; text-align: center; pointer-events: none; opacity: calc(1 - var(--p, 0) * 4); transform: translateY(calc(var(--p, 0) * -90px)); }
+.hero p { margin: 0; }
+.hero .hey { font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.hero .gt, .hero .caret { color: var(--gold); }
+.hero .role { font-family: var(--serif); font-size: clamp(34px, 5.2vw, 72px); line-height: 1; letter-spacing: -.01em; }
+.hero .caret { font-family: var(--mono); font-size: .5em; margin-left: .08em; animation: blink 1s steps(1) infinite; }
+.cue { position: absolute; left: 50%; bottom: 22px; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translateX(-50%); color: var(--muted); text-transform: uppercase; font-size: 10px; opacity: calc(1 - var(--p, 0) * 3); }
+.cue i { width: 9px; height: 9px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); animation: cue 1.4s ease-in-out infinite; }
+@keyframes cue { 50% { transform: translateY(4px) rotate(45deg); } }
+.page.past .hero, .page.past .cue { visibility: hidden; }
+#brand { transform: translateY(calc((1 - var(--e, 1)) * var(--brand-dy, 0px))) scale(calc(1 + (1 - var(--e, 1)) * (var(--brand-s, 1) - 1))); transform-origin: 50% 50%; will-change: transform; }
+#game { transform: translateY(calc((1 - var(--e, 1)) * var(--game-dy, 0px))); will-change: transform; }
+@media (max-width: 760px) { .hero .role { font-size: 30px; } .cue { bottom: 18px; } }
+@media (prefers-reduced-motion: reduce) { .hero .caret, .cue i { animation: none; } }
+@media (min-width: 761px) { .mswitch, .tabbar, .menu-btn, .rule { display: none; } }
+
+/* phones: title at the top of the game, the power level strip on the cloud sea */
+@media (max-width: 760px) {
+  .brand { top: 54px; bottom: auto; left: -9vw; right: -9vw; height: 40vw; }
+  .hud { top: auto; bottom: max(64px, 11svh); right: 50%; transform: translateX(50%); text-align: center; padding: 6px 14px; }
+  .hud .n { transform-origin: 50% 50%; }
+  .hud .meta, .hud .row { justify-content: center; }
+  .toast { top: calc(50% - 43vw); transform: translate(-50%, calc(-100% + 6px)); max-width: 86%; }
+  .toast.on { transform: translate(-50%, -100%); }
+  .toast, .wish p { -webkit-text-stroke: 4px #fff; text-shadow: none; }
+  .tag { bottom: 6%; }
+  .hud .label { justify-content: center; }
+  .hud #extra { display: none; }
+  .hud .form, .hud .balls { display: flex; }
+  .hud .form { margin-top: 4px; }
+  .hud .balls { margin-top: 3px; }
+  .hud .meta.stats { justify-content: center; }
+  /* strip: a full-width bar, number left, stats right */
+  .hud { left: 10px; right: 10px; transform: none; bottom: max(58px, 9svh); background: rgba(255,255,255,.94); border-radius: 14px; padding: 8px 12px; display: grid; grid-template-columns: 1fr auto; column-gap: 10px; text-align: left; }
+  .hud .label { justify-content: start; grid-column: 1; }
+  .hud .n { grid-column: 1; grid-row: 2 / span 2; font-size: calc(40px * min(1, 10 / var(--len))); transform-origin: 0 50%; }
+  .hud .meta.stats { grid-column: 2; grid-row: 1 / span 3; flex-direction: column; gap: 0; align-items: end; justify-content: center; }
+  .hud .form { grid-column: 1 / -1; }
+  .hud .balls { grid-column: 1 / -1; justify-content: space-between; }
+}
+</style>
+
+<div class="scroller" id="scroller">
+<div class="page">
+  <div class="hero" id="hero" aria-hidden="false"><p class="hey"><span class="gt">&gt;</span> hey, i'm a</p><p class="role">smart contract developer<span class="caret">_</span></p></div>
+  <a class="cue" id="cue" href="#game" aria-label="scroll to the game"><span>scroll</span><i aria-hidden="true"></i></a>
+  <div class="brand gutter" id="brand"><canvas id="logo" aria-hidden="true"></canvas><canvas id="glint" aria-hidden="true"></canvas><h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">highskore</h1></div>
+  <div class="rule r1"><span>(01) power planet</span><span>idle · click · hold · drag</span></div>
+  <section class="game" data-game="planet" id="game" data-cx=".5">
+    <div class="stage" role="img" aria-label="A tiny 3D pixel planet with dome huts, trees and a road, where a spiky-haired runner in blue and white armour runs laps over a sea of golden clouds"><canvas></canvas></div>
+    <div class="hud"><div class="label"><span>power level</span><b class="mx" id="mx"></b><b class="fxs" id="boost"></b></div><div class="n" id="pl">0</div><div class="meta stats"><span><b id="rate">0</b>/s</span><span>laps <b id="laps">0</b></span><span><b id="time">00:00</b></span></div><div class="meta" id="extra"></div><div class="form" id="form"><span class="fn" id="fname"></span><span class="bar"><i id="fbar"></i></span><span class="fnext" id="fnext"></span></div><div class="balls"><span class="dots" id="dots"></span><span id="bmeta"></span></div></div>
+    <div class="intro" id="intro">
+      <button type="button" class="start s-arcade" id="play" aria-label="press start to play the power level game"><span><i class="l">&lt;</i> press start <i class="r">&gt;</i></span></button>
+    </div>
+    <div class="toast" id="toast"></div>
+    <div class="wish" id="wish" hidden></div>
+    <button type="button" class="shop-toggle" id="shopToggle" aria-expanded="false" aria-controls="shop">upgrades <i id="shopCount"></i></button>
+    <div class="shop" id="shop"></div>
+    <div class="hint">click — train · hold — charge · drag — spin</div>
+    <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false">menu</button>
+  </section>
+  <div class="rule r2"><span>(02) elsewhere</span><span></span></div>
+  <footer class="foot gutter" id="foot"><span class="copy">© highskore</span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
+  <nav class="tabbar" aria-label="Game menu"><button type="button" data-tab="shop">upgrades <i id="tabCount"></i></button><button type="button" data-tab="train" class="train">train</button><button type="button" data-tab="links">links</button></nav>
+</div>
+</div>
+
+<script id="font-bagel" type="application/json">__BAGEL__</script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/FontLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/TextGeometry.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script>
+__WORLD__
+__PLANET__
+(() => {
+  const $ = id => document.getElementById(id), root = document.documentElement;
+
+  const SUF = ['', '', '', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+  // full digits up to a billion, then three significant figures and a suffix
+  const big = n => { n = Math.floor(n); if (n < 1e9) return [n.toLocaleString('en-US'), '']; const e = Math.floor(Math.log10(n) / 3); if (e >= SUF.length) { const [m, x] = n.toExponential(2).split('e+'); return [m, 'e' + x]; } const m = n / 10 ** (e * 3); return [m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0), SUF[e]]; };
+  const fmt = n => big(n).join('');
+  // shop prices stay short so a row never wraps: 950,000 then 1.2M, 21.9M …
+  const short = n => { n = Math.floor(n); if (n < 1e6) return n.toLocaleString('en-US'); const e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); return e < SUF.length ? m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0) + (['', '', 'M'][e] || SUF[e]) : n.toExponential(1).replace('+', ''); };
+  let lastCombo = 1;
+  let toastT = 0, buyFn = null, shopBuilt = false, titleFx = null;
+  const ui = {
+    onBuy(fn) { buyFn = fn; },
+    update(s) {
+      const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
+      if (pl.dataset.v !== txt) { pl.dataset.v = txt; pl.innerHTML = num + (suf ? `<small>${suf}</small>` : ''); pl.style.setProperty('--len', Math.max(9, num.length + suf.length * .6)); }
+      const mx = $('mx'); mx.textContent = s.combo > 1 ? '×' + s.combo.toFixed(2).replace(/\.?0+$/, '') : ''; mx.classList.toggle('hot', s.combo >= 3);
+      if (s.combo > lastCombo) { mx.classList.add('pop'); clearTimeout(ui._m); ui._m = setTimeout(() => mx.classList.remove('pop'), 90); } lastCombo = s.combo;
+      $('fname').textContent = s.form.name + (s.form.x > 1 ? ' ×' + s.form.x : ''); $('fbar').style.width = (s.form.p * 100).toFixed(1) + '%'; $('fnext').textContent = s.form.next ? 'next ' + s.form.next.replace('super saiyan', 'ss') : 'max';
+      const dots = $('dots'); if (dots.childElementCount !== 7) dots.innerHTML = '<i></i>'.repeat(7); [...dots.children].forEach((d, i) => d.classList.toggle('on', i < s.balls));
+      $('bmeta').textContent = [s.wishes ? 'wishes ' + s.wishes : '', s.ascend ? 'ascended ×' + s.ascend : ''].filter(Boolean).join(' · ');
+ $('rate').textContent = fmt(s.rate); $('laps').textContent = s.laps; const m = Math.floor(s.time / 60), sec = Math.floor(s.time % 60); $('time').textContent = String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'); $('boost').textContent = s.effects; if ($('extra').dataset.v !== s.extra) { $('extra').dataset.v = s.extra; $('extra').innerHTML = s.extra.split(' · ').map(x => `<span>${x}</span>`).join(''); } },
+    shop(items) {
+      const el = $('shop');
+      const keys = Object.keys(items).join();
+      if (shopBuilt !== keys) { el.innerHTML = Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyFn && buyFn(b.dataset.buy))); shopBuilt = keys; }
+      $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
+      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + v.level : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
+    },
+    event(text) { const t = $('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600); },
+    wish(options, done) {
+      const box = $('wish');
+      box.innerHTML = '<p>state your wish</p>' + options.map((o, i) => `<button type="button" data-i="${i}"><b>${o.label}</b><span>${o.what}</span></button>`).join('');
+      box.hidden = false; $('game').classList.add('wishing');
+      box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { box.hidden = true; $('game').classList.remove('wishing'); done(options[+b.dataset.i].key); }));
+      box.querySelector('button').focus({ preventScroll: true });
+    },
+    fx(kind, arg) { if (titleFx) titleFx(kind, arg); },
+    bump() { const n = $('pl'); n.classList.add('bump'); clearTimeout(ui._b); ui._b = setTimeout(() => n.classList.remove('bump'), 110); },
+  };
+  $('menuBtn').addEventListener('click', () => $('foot').classList.toggle('open'));
+  document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.tab;
+    if (k === 'shop') { $('shop').classList.toggle('open'); $('foot').classList.remove('open'); }
+    if (k === 'links') { $('foot').classList.toggle('open'); $('shop').classList.remove('open'); }
+    if (k === 'train') game.train && game.train();
+  }));
+  document.addEventListener('pointerdown', e => { const f = $('foot'); if (f.classList.contains('open') && !f.contains(e.target) && !e.target.closest('#menuBtn, [data-tab="links"]')) f.classList.remove('open'); });
+  $('shopToggle').addEventListener('click', () => { const open = $('shop').classList.toggle('open'); $('shopToggle').setAttribute('aria-expanded', String(open)); });
+  /* scroll intro: measure where the title and card sit when settled, then interpolate from the hero pose */
+  const pageEl = document.querySelector('.page'), scroller = $('scroller'), brandEl = $('brand'), gameEl = $('game');
+  function introLayout() {
+    root.style.setProperty('--e', 1);
+    const vh = innerHeight, b = brandEl.getBoundingClientRect(), g = gameEl.getBoundingClientRect(), phone = innerWidth <= 760;
+    const s = phone ? 1.2 : Math.min(2.1, Math.max(1.2, innerWidth * .66 / (b.width * .46))), heroY = vh * (phone ? .4 : .38);
+    root.style.setProperty('--brand-s', s.toFixed(3));
+    root.style.setProperty('--brand-dy', (heroY - (b.top + b.height / 2)).toFixed(1) + 'px');
+    root.style.setProperty('--hero-top', (heroY + b.height * s * (phone ? .26 : .22)).toFixed(1) + 'px');
+    root.style.setProperty('--game-dy', (vh - g.top + 24).toFixed(1) + 'px');
+    introScroll();
+  }
+  function introScroll() {
+    const span = Math.max(1, scroller.offsetHeight - innerHeight), p = Math.min(1, Math.max(0, scrollY / span)), e = 1 - Math.pow(1 - p, 3);
+    root.style.setProperty('--p', p.toFixed(4)); root.style.setProperty('--e', e.toFixed(4));
+    pageEl.classList.toggle('past', p > .6);
+  }
+  let introRaf = 0;
+  addEventListener('scroll', () => { if (!introRaf) introRaf = requestAnimationFrame(() => { introRaf = 0; introScroll(); }); }, { passive: true });
+  addEventListener('resize', () => requestAnimationFrame(introLayout));
+  $('cue').addEventListener('click', e => { e.preventDefault(); scrollTo({ top: scroller.offsetHeight - innerHeight, behavior: 'smooth' }); });
+  introLayout();
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const st = makeStage($('game')); st.resize(); st.night = false;
+  const game = GAMES.find(g => g.id === 'planet').mount(st, ui);
+  const go = () => { if ($('game').classList.contains('playing')) return; $('game').classList.add('playing'); game.start(); ui.fx('lap'); };
+  $('play').addEventListener('click', e => { e.stopPropagation(); go(); });
+  $('intro').addEventListener('click', go);
+  let timer = 0;
+  new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); game.resize(); }, 60); }).observe(st.el);
+  let visible = true; new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(st.el);
+
+  /* 3D pearl logo: one mesh per letter so each can wave, pop and bounce */
+  const logo = $('logo'), glint = $('glint'); let R3 = null;
+  try {
+    const renderer = new THREE.WebGLRenderer({ canvas: logo, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min((window.devicePixelRatio || 1) * 2, 3));   // it is drawn up to 2× larger during the intro
+    renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; renderer.setClearColor(0, 0);
+    const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(22, 1, .1, 100);
+    scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new THREE.RoomEnvironment(), .03).texture;
+    const font = new THREE.FontLoader().parse(JSON.parse($('font-bagel').textContent));
+    const pearl = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: .1, roughness: .18, clearcoat: 1, clearcoatRoughness: .06, iridescence: 1, iridescenceIOR: 1.4, iridescenceThicknessRange: [180, 620], sheen: .6, sheenColor: new THREE.Color(0xffe6f2), envMapIntensity: 1.1 });
+    const gold = new THREE.MeshPhysicalMaterial({ color: 0xffc94a, metalness: 1, roughness: .16, clearcoat: 1, clearcoatRoughness: .05, iridescence: .4, iridescenceIOR: 1.3, envMapIntensity: 1.5 });
+    const group = new THREE.Group(); scene.add(group);
+    const letters = []; let x = 0, minY = 1e9, maxY = -1e9;
+    const res = font.data.resolution;
+    for (const ch of 'highskore') {
+      const g = new THREE.TextGeometry(ch, { font, size: 1, height: .34, curveSegments: 14, bevelEnabled: true, bevelThickness: .22, bevelSize: .075, bevelSegments: 12 });
+      g.computeBoundingBox(); const b = g.boundingBox, mx = (b.min.x + b.max.x) / 2, my = (b.min.y + b.max.y) / 2;
+      g.translate(-mx, -my, -(b.min.z + b.max.z) / 2); g.computeVertexNormals();
+      const m = new THREE.Mesh(g, pearl); m.position.set(x + mx, my, 0); group.add(m);
+      m.material = pearl.clone(); m.material.iridescenceThicknessRange = [180, 620];
+      letters.push({ m, base: new THREE.Vector3(x + mx, my, 0), lift: 0, vy: 0, sq: 1, vsq: 0, spin: 0, idx: letters.length, cur: 'pearl', pending: 'pearl', at: 0 });
+      minY = Math.min(minY, b.min.y); maxY = Math.max(maxY, b.max.y);
+      x += font.data.glyphs[ch].ha / res;
+    }
+    group.position.x = -x / 2; group.position.y = -(minY + maxY) / 2;
+    const W0 = x + .3, H0 = maxY - minY;
+    const key = new THREE.DirectionalLight(0xffffff, .9); key.position.set(-3, 4, 5); scene.add(key);
+    function size() { const r = { width: logo.clientWidth, height: logo.clientHeight }; if (!r.width || !r.height) return; renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; const vt = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)); cam.position.set(0, 0, Math.max((W0 * 1.22 / 2) / (vt * cam.aspect), (H0 * 2.3 / 2) / vt) + .6); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix(); glint.width = Math.ceil(r.width / 3); glint.height = Math.ceil(r.height / 3); Object.assign(glint.style, { left: logo.offsetLeft + 'px', top: logo.offsetTop + 'px', width: r.width + 'px', height: r.height + 'px' }); }
+    size(); new ResizeObserver(size).observe(logo);
+    // pointer: tilt toward it, pop the letters near it, bounce the one clicked
+    const P = { x: 0, y: 0, sx: 0, sy: 0, lx: null }, ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+    window.addEventListener('pointermove', e => { P.x = e.clientX / innerWidth * 2 - 1; P.y = e.clientY / innerHeight * 2 - 1; });
+    const localX = e => { const r = logo.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height * 2 - 1)); ray.setFromCamera(ndc, cam); const hit = ray.intersectObjects(letters.map(l => l.m))[0]; return hit ? letters.find(l => l.m === hit.object) : null; };
+    logo.addEventListener('pointermove', e => { const l = localX(e); P.lx = l ? l.idx : null; logo.style.cursor = l ? 'pointer' : 'default'; });
+    logo.addEventListener('pointerleave', () => { P.lx = null; });
+    logo.addEventListener('pointerdown', e => { const l = localX(e); if (!l) return; l.vy += 4.2; l.vsq -= 6; l.spin += Math.PI * 2; sparkle(l.idx, 10); });
+    // pixel star glints on a low-res overlay
+    const gctx = glint.getContext('2d'), stars = [];
+    const tmp = new THREE.Vector3();
+    function sparkle(i, n = 1) {
+      const l = letters[i]; if (!l) return;
+      for (let k = 0; k < n; k++) { tmp.set(l.base.x + (Math.random() - .5) * .5, l.base.y + l.lift + .2 + Math.random() * .4, .3).applyMatrix4(group.matrixWorld).project(cam); stars.push({ x: (tmp.x + 1) / 2 * glint.width, y: (1 - tmp.y) / 2 * glint.height, life: 0, max: .5 + Math.random() * .6, s: 1 + (Math.random() * 2 | 0) }); }
+    }
+    function drawGlints(dt) {
+      gctx.clearRect(0, 0, glint.width, glint.height);
+      for (let i = stars.length - 1; i >= 0; i--) {
+        const s = stars[i]; s.life += dt; if (s.life > s.max) { stars.splice(i, 1); continue; }
+        const k = Math.sin(s.life / s.max * Math.PI), r = Math.round(s.s * k * 2), x = Math.round(s.x), y = Math.round(s.y);
+        gctx.fillStyle = goldUntil > T ? '#ffd60a' : ['#b9a7ff', '#7fc8ff', '#ff9fd2', '#9fe0c8'][s.s % 4 + (s.max > .8 ? 1 : 0)] || '#b9a7ff';
+        gctx.fillRect(x, y, 1, 1);
+        for (let j = 1; j <= r; j++) { gctx.globalAlpha = 1 - j / (r + 1); gctx.fillRect(x + j, y, 1, 1); gctx.fillRect(x - j, y, 1, 1); gctx.fillRect(x, y + j, 1, 1); gctx.fillRect(x, y - j, 1, 1); }
+        gctx.globalAlpha = 1;
+      }
+    }
+    // effects the game can trigger
+    let ripple = -9, goldUntil = 0;
+    // finishes the letters ease between; a colour change sweeps across the word letter by letter
+    const spec = (color, metalness, roughness, iridescence, env, sheen, glow = 0) => ({ color: new THREE.Color(color), metalness, roughness, iridescence, env, sheen, glow: new THREE.Color(glow) });
+    const SPECS = { pearl: spec(0xffffff, .1, .18, 1, 1.1, .6), gold: spec(0xffe100, .8, .2, .12, 1.4, 0, 0x7a6200), red: spec(0xff5a5a, 1, .16, .5, 1.5, 0), blue: spec(0x5ac8ff, 1, .16, .5, 1.5, 0), purple: spec(0x9a6aff, 1, .16, .6, 1.5, 0) };
+    const FORM_MATS = ['pearl', 'gold', 'gold', 'gold', 'red', 'blue', 'purple'];
+    let formMat = 'pearl', formUntil = 0, want = 'pearl';
+    titleFx = (kind, arg) => {
+      if (kind === 'lap') ripple = T;
+      if (kind === 'star') { ripple = T; for (let i = 0; i < letters.length; i++) sparkle(i, 2); }
+      if (kind === 'super') { goldUntil = T + 4; ripple = T; for (const l of letters) { l.vy += 3; l.spin += Math.PI * 2; } for (let i = 0; i < letters.length; i++) sparkle(i, 4); }
+      if (kind === 'buy') { const l = letters[(Math.random() * letters.length) | 0]; l.vy += 2.5; sparkle(l.idx, 3); }
+      if (kind === 'form') { formMat = FORM_MATS[arg] || 'pearl'; formUntil = T + 4; if (arg > 0) { ripple = T; for (const l of letters) { l.vy += 3; l.spin += Math.PI * 2; } for (let i = 0; i < letters.length; i++) sparkle(i, 4); } }
+    };
+    let lastT = 0;
+    R3 = t => {
+      const dt = Math.min(.05, Math.max(0, t - lastT)); lastT = t;
+      P.sx += (P.x - P.sx) * .05; P.sy += (P.y - P.sy) * .05;
+      group.rotation.y = P.sx * .2 + Math.sin(t * .6) * .05; group.rotation.x = P.sy * .12 + Math.sin(t * .45) * .03 - .05;
+      const isGold = goldUntil > t;
+      const thick = 560 + Math.sin(t * .9) * 180;          // the pearly sheen slowly shifts
+      const next = isGold ? 'gold' : formUntil > t ? formMat : 'pearl';
+      if (next !== want) { want = next; for (const l of letters) { l.pending = next; l.at = t + l.idx * .07; } }
+      const ease = 1 - Math.exp(-dt * 7);
+      for (const l of letters) {
+        // wave + ripple + hover pop, all springs
+        const wave = Math.sin(t * 1.8 - l.idx * .55) * .045;
+        const rp = t - ripple, rip = rp > 0 && rp < 1.4 ? Math.sin(rp * 9 - l.idx * .9) * Math.exp(-rp * 2.2) * .25 * (rp * 9 - l.idx * .9 > 0 ? 1 : 0) : 0;
+        const hov = P.lx === null ? 0 : Math.exp(-((l.idx - P.lx) ** 2) / 1.2) * .28;
+        const target = wave + rip + hov;
+        l.vy += ((target - l.lift) * 60 - l.vy * 9) * dt; l.lift += l.vy * dt;
+        l.vsq += ((1 - l.sq) * 120 - l.vsq * 10) * dt; l.sq += l.vsq * dt;
+        l.spin *= Math.pow(.02, dt);
+        l.m.position.set(l.base.x, l.base.y + l.lift, 0);
+        l.m.scale.set(1 / Math.sqrt(Math.max(.4, l.sq)), Math.max(.4, l.sq), 1);
+        l.m.rotation.y = l.spin;
+        // its turn in the sweep: a quick flip and a hop, then the finish melts over
+        if (l.cur !== l.pending && t >= l.at) { l.cur = l.pending; l.spin += Math.PI * 2; l.vy += 2.2; sparkle(l.idx, 2); }
+        const S = SPECS[l.cur], mt = l.m.material;
+        mt.color.lerp(S.color, ease); mt.emissive.lerp(S.glow, ease); mt.metalness += (S.metalness - mt.metalness) * ease; mt.roughness += (S.roughness - mt.roughness) * ease;
+        mt.iridescence += (S.iridescence - mt.iridescence) * ease; mt.envMapIntensity += (S.env - mt.envMapIntensity) * ease; mt.sheen += (S.sheen - mt.sheen) * ease;
+        mt.iridescenceThicknessRange[1] = thick;
+        if (Math.random() < dt * (isGold ? 3 : .45)) sparkle(l.idx);
+      }
+      renderer.render(scene, cam);
+      drawGlints(dt);
+    };
+  } catch (e) { logo.hidden = true; document.querySelector('.brand h1').removeAttribute('style'); }
+
+  let prev = performance.now(), last = 0, T = 0;
+  function tick(now) {
+    requestAnimationFrame(tick);
+    const dt = Math.max(0, Math.min(.05, (now - prev) / 1000)); prev = now;
+    if (!reduce) T += dt;
+    if (R3) R3(T);
+    if (now - last < 1000 / 30 - 2 || !visible) return; last = now;
+    st.t = T; game.frame(T, reduce ? 0 : 1 / 30);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>

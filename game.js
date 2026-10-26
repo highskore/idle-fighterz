@@ -1,0 +1,548 @@
+/* Power planet: an idle game on a tiny 3D pixel planet.
+   Everything solid (planet, dome huts, trees, bushes, orbs) is a sphere rasterised with a
+   depth buffer and shaded in dithered palette tones, so it all turns correctly when you
+   drag the planet. Characters are sprites drawn against the same depth buffer.
+   The kid runs laps on his own; clicks make him sprint; upgrades and timed events pile up. */
+function vnoise3(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), xf = x - xi, yf = y - yi, zf = z - zi;
+  const s = t => t * t * (3 - 2 * t), u = s(xf), v = s(yf), w = s(zf);
+  const H = (a, b, c) => h2(a * 73 + c * 151, b * 37 - c * 17), l = (a, b, t) => a + (b - a) * t;
+  return l(l(l(H(xi, yi, zi), H(xi + 1, yi, zi), u), l(H(xi, yi + 1, zi), H(xi + 1, yi + 1, zi), u), v), l(l(H(xi, yi, zi + 1), H(xi + 1, yi, zi + 1), u), l(H(xi, yi + 1, zi + 1), H(xi + 1, yi + 1, zi + 1), u), v), w);
+}
+const V = {
+  norm: a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  add: (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k],
+  mul: (a, k) => [a[0] * k, a[1] * k, a[2] * k],
+};
+const M3 = {
+  I: () => [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  mul: (a, b) => [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => { const r = (i / 3) | 0, c = i % 3; return a[r * 3] * b[c] + a[r * 3 + 1] * b[3 + c] + a[r * 3 + 2] * b[6 + c]; }),
+  ap: (m, v) => [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]],
+  apT: (m, v) => [m[0] * v[0] + m[3] * v[1] + m[6] * v[2], m[1] * v[0] + m[4] * v[1] + m[7] * v[2], m[2] * v[0] + m[5] * v[1] + m[8] * v[2]],
+  rx: a => { const c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, c, -s, 0, s, c]; },
+  ry: a => { const c = Math.cos(a), s = Math.sin(a); return [c, 0, s, 0, 1, 0, -s, 0, c]; },
+  ortho: m => { let a = V.norm([m[0], m[1], m[2]]); const b0 = [m[3], m[4], m[5]], d = V.dot(a, b0), b = V.norm([b0[0] - a[0] * d, b0[1] - a[1] * d, b0[2] - a[2] * d]); return [...a, ...b, ...V.cross(a, b)]; },
+};
+
+/* hero in the Vegeta style: flame hair with a widow's peak, scouter over one eye, blue bodysuit, white armour with gold shoulders, white gloves and boots */
+const KID = (() => {
+  const base = { o: 0x120c18, h: 0x1a1826, H: 0x4a5080, s: 0xf6c8a2, S: 0xd99a73, e: 0x120c18, m: 0xa8564e, b: 0x2b4fc8, B: 0x1c3584, a: 0xf4f4f6, A: 0xc2c6d2, y: 0xe8c040, Y: 0xa8841a, g: 0xffffff, G: 0xc8ccda, w: 0xffffff, W: 0xc8ccda, E: 0x120c18, L: 0x34d873, l: 0xc8ffd8, k: 0xdfe3ea, K: 0x8e95a4, M: 0x5e2824, r: 0xffffff };
+  const head = ['......o...o.....', '.....oho.oho....', '....ohHo.oHho...', '....ohHhohHhho..', '...ohhHhhhhhho..', '...ohhhhhhhhho..', '...ohhhhhhhhhho.', '....ohhhhhhhhho.', '....ohhhhhhhhKo.', '....ohhsshsshko.', '....ohEEssEEhko.', '....osrEEsLLLko.', '....osssssLlLko.', '....oSssMMsSoK..', '.....oSsssSo....', '......ooSSoo....'];
+  const idle = ['...oyyobbbbyyo..', '..oyyyoaaaaoyyo.', '..oYYoaaaaaAoYo.', '..obboaaaaaAobo.', '..obboaaaaaAobo.', '..oggoaaaaaAogo.', '..oGgoBaaaAAoGo.', '...oo.oBbbbBo.o.', '......obbbbBo...', '.....obbo.obBo..', '.....obbo.obBo..', '.....obbo.obBo..', '.....owwo.owWo..', '....owwwo.owwWo.', '....ooooo.ooooo.'];
+  const runA = ['...oyyobbbbyyo..', '..oyyyoaaaaoyyo.', '.oYYoaaaaaaAoYYo', 'oggoaaaaaaaAobbo', 'oGgoaaaaaaaAobbo', '.oo.aaaaaaaAoggo', '....oBaaaaAAoGo.', '....oBbbbbBo.oo.', '....obbbbbbBo...', '...obbbo..obBBo.', '..obbo.....obBo.', '.obbo.......obBo', 'owwo........owWo', 'owwwo.......owwo', 'ooooo........ooo'];
+  const runB = ['...oyyobbbbyyo..', '..oyyyoaaaaoyyo.', '..oYYoaaaaaAoYo.', '...ooaaaaaaAobo.', '...oaaaaaaaAobo.', '...ogoaaaaaAogo.', '...oGoBaaaAAoGo.', '....o.oBbbbBo...', '......obbbbBo...', '......obbbBo....', '......obbBo.....', '......obbBoo....', '......obbBowwo..', '.....owwwowwo...', '.....oooooooo...'];
+  const runC = ['...oyyobbbbyyo..', '..oyyyoaaaaoyyo.', '.oYYoaaaaaaAoYYo', 'oggoaaaaaaaAobbo', 'oGgoaaaaaaaAobbo', '.oo.aaaaaaaAoggo', '....oBaaaaAAoGo.', '.oo.oBbbbbBo....', '...oBbbbbbbo....', '.oBBbo..obbbo...', '.oBbo.....obbo..', 'oBbo.......obbo.', 'oWwo........owwo', 'owwo.......owwwo', 'ooo........ooooo'];
+  const set = pal => ({ idle: makeSprite(head.concat(idle), pal, { emit: 'Ll' }), run: [runA, runB, runC, runB].map(b => makeSprite(head.concat(b), pal, { emit: 'Ll' })) });
+  // long hair down the back for super saiyan 3: fill the columns behind him (he faces right)
+  // gold III: a thick spiky mane down his back (he faces right, so it flows off the left side)
+  const longHair = rows => {
+    const pad = rows.map(r => '....' + r.padEnd(16, '.'));
+    const g = pad.map(r => [...r]);
+    for (let j = 1; j < g.length - 3; j++) {
+      const first = g[j].findIndex(c => c !== '.'); if (first < 0) continue;
+      const w = j < 4 ? 2 : j < 12 ? 5 : Math.max(2, Math.round(5 - (j - 12) * .45));
+      const jag = (j % 3 === 0) ? 1 : 0;
+      for (let c = first - 1; c >= Math.max(1, first - w - jag); c--) if (g[j][c] === '.') g[j][c] = (c === first - 2 && j % 2) ? 'H' : 'h';
+      const edge = g[j].findIndex(c => c !== '.'); if (edge > 0 && j < g.length - 4) g[j][edge - 1] = 'o';
+    }
+    return g.map(r => r.join(''));
+  };
+  const setLong = pal => ({ idle: makeSprite(longHair(head.concat(idle)), pal, { emit: 'Ll', ax: 12 }), run: [runA, runB, runC, runB].map(b => makeSprite(longHair(head.concat(b)), pal, { emit: 'Ll', ax: 12 })) });
+  const hair = (h, H) => Object.assign({}, base, { h, H });
+  const forms = [set(base), set(hair(0xffe02e, 0xfffbc8)), set(hair(0xffe640, 0xfffde0)), setLong(hair(0xffe02e, 0xfffbc8)), set(hair(0xd8344a, 0xff8a8a)), set(hair(0x3fb8ff, 0xc8f2ff)), set(hair(0x6a2fc8, 0xc49cff))];
+  return { forms, black: forms[0], gold: forms[1] };
+})();
+/* great ape: the full-moon form, giant, armoured, red-eyed */
+const APE = (() => {
+  const pal = { o: 0x1a0f0a, f: 0x7a4a2a, F: 0x553018, l: 0xa0683a, s: 0xe8b48a, S: 0xc08460, r: 0xff2a2a, w: 0xffffff, a: 0xf2f2f2, A: 0xc2c6d2, y: 0xe8c040, Y: 0xa8841a, b: 0x2b4fc8, B: 0x1c3584 };
+  const top = ['.......ooooo..........', '.....oofflffoo........', '....offfllffffo.......', '...offfffffffffo......', '..offfffffsssssfo.....', '..offffFFsrssrsso.....', '..offfffssssssssso....', '..offffsswwwswwsSo....', '...offfsSSoooooSSo....', '...offffSSSSSSSo......', '.ooofffffffffffoooo...', 'offyyyfaaaaaafyyyyfo..', 'ofyyyyaaaaaaaayyyyfo..', 'offyYaaaaaaaaAAYyffo..', 'offfoaaaaaaaaAAofffo..', 'offfoaaaaaaaaAAofffo..', 'offfobbbbbbbbbbofffo..', 'osssobbbbbbbbbBossso..', '.oo.offffffffffo.ooo.o', '....offffoooffffo..ofo'];
+  return [['....offfo...offfo..ofo', '....offfo...offfo.ofo.', '...offffo...offffoo...', '...ossso.....ossso....', '...ooooo.....ooooo....'], ['.....offfo.offfo...ofo', '.....offfo.offfo..ofo.', '....offffo.offffooo...', '....ossso...ossso.....', '....ooooo...ooooo.....']].map(l => makeSprite(top.concat(l), pal, { emit: 'r' }));
+})();
+/* the eternal dragon's head and claws (side view, facing right) */
+const DRAGON = (() => {
+  const pal = { o: 0x0a2410, g: 0x2a8a36, G: 0x1a5e26, l: 0x4cb84c, L: 0x9be27a, c: 0xf2e6c0, C: 0xb8a77a, r: 0xff2a2a, R: 0xffd0d0, m: 0x5a0f12, t: 0xffffff, y: 0xf2c84a, b: 0xf2d48a };
+  return { head: makeSprite(['........cc.......cc...................', '.......cCc......cCc...................', '......cCc......cCc....................', '.....oCco.....oCco....................', '....ogggoooooogggoo...................', '...ogglllgggggglllggoo................', '..ogglLLllggggglLlgggoo...............', '.oggggllllggggglllggggggoo............', 'oGgggggggggoooggggggggggggoooo........', 'oGGggggggggoRrogggggggggggggggoo......', 'oGGGggggggggoooggggggggggggllllggo....', 'oGGGGgggggggggggggggggggggggggggggo...', '.oGGGGggggggggggmmmmmmmmmmmmmmmmmmo...', '..oGGGGgggggggmtmtmtmtmtmtmtmtmmmo....', '...oGGGGGgggggmmmmmmmmmmmmmmmmmo......', '....oGGGGGGgggmtmtmtmtmtmtmmmgggo.....', '.....oGGGGGGGgggbbbbbbbbbbbbggggo.....', '......ooGGGGGGGGbbbbbbbbbbbbGGGo......', '........oooooooooooooooooooooo........'], pal, { emit: 'rR', ax: 6, ay: 10 }), claw: makeSprite(['..oggo..', '.oggggo.', '.ogGGgo.', '..oggo..', '.ocococ.', '.c.c.c..'], pal, { ax: 4, ay: 0 }) };
+})();
+const MONKEY = [
+  makeSprite(['..oooo......', '.obbbbo.....', 'obtttbbo....', 'obtetbbo....', 'obttttbo..o.', '.oobbbbo.obo', '..obbbbboobo', '..obbbbbbbo.', '..obo..obo..', '..oo....oo..'], { o: 0x24140a, b: 0x8a5a36, t: 0xf0c9a0, e: 0x24140a }),
+  makeSprite(['..oooo......', '.obbbbo.....', 'obtttbbo....', 'obtetbbo..o.', 'obttttbo.obo', '.oobbbbo.obo', '..obbbbbbbo.', '..obbbbbbo..', '...obo.obo..', '...oo..oo...'], { o: 0x24140a, b: 0x8a5a36, t: 0xf0c9a0, e: 0x24140a }),
+];
+function makePuff(w, h) {
+  const rows = [], puffs = [[.18, .62, .3], [.4, .45, .38], [.62, .5, .34], [.82, .62, .26]];
+  for (let j = 0; j < h; j++) { let row = ''; for (let i = 0; i < w; i++) { let inside = false, l = 0; for (const [fx, fy, fr] of puffs) { const dx = (i + .5) / w - fx, dy = ((j + .5) / h - fy) * h / w, r = fr * .5; if (dx * dx + dy * dy < r * r) { inside = true; l = Math.max(l, -(dx * .6 + dy * .9) / r); } } row += !inside || (j + .5) / h > .82 ? '.' : l > .45 ? 'w' : l > .05 ? 'y' : l > -.4 ? 'Y' : 'd'; } rows.push(row); }
+  const out = rows.map((r, j) => [...r].map((c, i) => c !== '.' ? c : ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => (rows[j + b] || '')[i + a] && (rows[j + b] || '')[i + a] !== '.') ? 'o' : '.')).join(''));
+  return makeSprite(out, { o: 0xb07a1c, d: 0xe9b43c, Y: 0xf7d36b, y: 0xfbe7a3, w: 0xffffff }, { ay: h - 2, emit: 'oYydw' });
+}
+/* saibamen sprout out of the planet; villains raid it */
+const SAIBA = makeSprite(['...ooo...', '..oGgGo..', '.oGgLgGo.', '.ogrgrgo.', '.ogggggo.', '..oGgGo..', '.oogggoo.', 'og.ogo.go', '..ogggo..', '..og.go..', '..oo.oo..'], { o: 0x0d2a12, g: 0x58b848, G: 0x2f7a2a, L: 0xa6e67e, r: 0xd8241e }, { emit: 'r' });
+const VILLAINS = (() => {
+  const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
+  return [
+    { name: 'frieza', spr: body(['....oooooo....', '...oppppppo...', '..oppPPPPppo..', '..owwwwwwwwo..', '..owkrwwrkwo..', '..owwwwwwwwo..', '...owwPPwwo...', '....owwwwo....', '..oooppppooo..', '.owwppwwppwwo.', 'owwwowwwwowwwo', 'owwo.owwo.owwo', '.oo..owwo..oo.', '.....owwo.....', '....owwwwo..oo', '....owoowo.owo', '....owo.owoow.', '....oo...ooo..'], { o: 0x1d1030, w: 0xf4f2f8, p: 0x9a4ae0, P: 0x5a1f8a, k: 0x111111, r: 0xd8241e }) },
+    { name: 'cell', spr: body(['...o..oo..o...', '..oGooGGooGo..', '..oGGGGGGGGo..', '..offffffffo..', '..ofkrffrkfo..', '..offffffffo..', '...ofPPPPfo...', '....offffo....', '..ooogggggooo.', '.oggkgggkggGGo', 'oggkogggkoGGGo', 'oggo.oggo.oGGo', '.oo..okgo..oo.', '.....oggo.....', '....oggggo....', '....ogoogo....', '....ogo.ogo...', '....oo...oo...'], { o: 0x0d2210, g: 0x6cc04e, G: 0x2f6a2a, k: 0x14281a, f: 0xeee2f2, P: 0x8a4ad0, r: 0xd8241e }) },
+    { name: 'majin buu', spr: body(['......oo......', '.....oppo.....', '....oppppo....', '..oppppppppo..', '..opkrppkrpo..', '..oppppppppo..', '...oppmmppo...', '....oppppo....', '..ookkkkkkoo..', '.oppkkppkkppo.', 'opppkyyyykpppo', 'oppowwwwwwoppo', '.oo.owwwwwo.oo', '....owwwwwo...', '....owwowwo...', '....oyyoyyo...', '....okko.kko..', '....ooo...ooo.'], { o: 0x2a0f1a, p: 0xf59ac8, k: 0x1a1a1a, r: 0xd8241e, m: 0x8a1f3a, y: 0xf2c84a, w: 0xffffff }) },
+    { name: 'beerus', spr: body(['..oo......oo..', '..opo....opo..', '..oppooooppo..', '..oppppppppo..', '..opyrppyrpo..', '..oppppppppo..', '...oppkkppo...', '....oppppo....', '..ooyyyyyyoo..', '.oppkyyyykppo.', 'opppokkkkoppp o'.replace(' ', ''), 'oppo.okko.oppo', '.oo..okko..oo.', '....owwwwo....', '....owwwwo....', '....okkoko....', '....oyo.oyo...', '....oo...oo...'], { o: 0x1d1030, p: 0x9a7ad8, k: 0x1a1a1a, y: 0xf2c84a, r: 0xd8241e, w: 0xe8e0f0 }) },
+  ];
+})();
+const STAR = makeSprite(['....o....', '...oyo...', '..oyYyo..', 'ooyYWYyoo', 'oyYWWWYyo', '.oyYYYyo.', '.oyYoYyo.', 'oyyo.oyyo', 'ooo...ooo'], { o: 0x8a5a12, y: 0xf2b134, Y: 0xffd84a, W: 0xffffff }, { emit: 'oyYW' });
+
+const TONES = {
+  grass: [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e],
+  road: [0xcfc8b6, 0xe6e1d4, 0xf6f3ec, 0xffffff],
+  dome: [0x8a3418, 0xc04e26, 0xe8703a, 0xf6985a, 0xffc896],
+  band: [0x9a8a6a, 0xcbbd98, 0xe9dcb8, 0xfff6e0],
+  leaf: [0x1a4f1e, 0x2a7229, 0x429a36, 0x63bb46, 0x9edc68],
+  trunk: [0x3d2414, 0x5a3720, 0x7a4d2b, 0x9a6640],
+  stone: [0x4a4c56, 0x6c6f7c, 0x9497a4, 0xc2c5cf],
+  orb: [0xff9a2a, 0xffc04a, 0xffe08a, 0xfff6d0, 0xffffff],
+  glass: [0x2a5a8a, 0x5aa0d8, 0x9fdcff, 0xe6f6ff],
+  dragon: [0x0c3418, 0x1a5e26, 0x2a8a36, 0x4cb84c, 0x9be27a],
+  belly: [0x9a7a3a, 0xd2b060, 0xf2d48a, 0xfff0c0],
+  dorb: [0xc4561a, 0xee7a1e, 0xffa63a, 0xffd27a, 0xfff2cc],
+  bean: [0x2e6b22, 0x4a9a32, 0x76c64a, 0xb6ea7a],
+};
+
+GAMES.push({
+  id: 'planet',
+  mount(st, ui) {
+    const SAVE = 'hs-power';
+    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, orbs7: 0, wishes: 0, ascend: 0, form: 0 };
+    try { Object.assign(S, JSON.parse(localStorage.getItem(SAVE) || '{}')); } catch (_) {}
+    delete S.gold;
+    delete S.nextSuper;
+    // transformations: unlocked by power level, permanent until you ascend
+    const FORMS = [
+      { name: 'base', at: 0, x: 1, aura: [0xffffff, 0xbfe9ff, 0x6fb0ff] },
+      { name: 'super saiyan', at: 2e4, x: 2, aura: [0xffffff, 0xfff8b0, 0xffe02e] },
+      { name: 'super saiyan 2', at: 2e5, x: 3, aura: [0xffffff, 0xfff8b0, 0xffe02e], sparks: 0x9fdcff },
+      { name: 'super saiyan 3', at: 2e6, x: 4, aura: [0xffffff, 0xfff8b0, 0xffd60a], sparks: 0x9fdcff },
+      { name: 'super saiyan god', at: 2e7, x: 6, aura: [0xffd0c0, 0xff7a5a, 0xd8344a] },
+      { name: 'super saiyan blue', at: 2e8, x: 10, aura: [0xffffff, 0x9fe6ff, 0x2f9ae0] },
+      { name: 'ultra ego', at: 2e9, x: 16, aura: [0xe6d6ff, 0xa070f0, 0x4a1f9a], sparks: 0xc9a2ff },
+    ];
+    S.form = Math.min(S.form || 0, FORMS.length - 1);
+    const save = () => { S.last = Date.now(); try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (_) {} };
+    const SHOP = {
+      boots: { base: 40, k: 1.55, label: 'weighted boots', what: '+1 per step' },
+      partner: { base: 150, k: 1.5, label: 'bubbles', what: '+4/s, trains with you' },
+      gravity: { base: 900, k: 2.3, label: 'gravity chamber', what: '×1.5 everything' },
+      cloud: { base: 400, k: 1.9, label: 'flying nimbus', what: 'comes more often' },
+      scouter: { base: 300, k: 1.8, label: 'scouter', what: '+10% crits (×5)', unlock: () => S.best >= 150 },
+      galick: { base: 600, k: 2, label: 'galick charge', what: 'hold to charge a beam', unlock: () => S.best >= 400 },
+      senzu: { base: 1500, k: 1.9, label: 'senzu tree', what: 'beans: tap for ×3', unlock: () => S.best >= 1000 },
+      house: { base: 2500, k: 2.1, label: 'capsule house', what: '+40/s (a new dome up to lv 9)', unlock: () => S.best >= 2000 },
+      armor: { base: 5000, k: 2.2, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
+      ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for a permanent boost', unlock: () => S.pl >= 1e6 },
+    };
+    const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor'];
+    const cost = k => k === 'ascend' ? 1e6 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));
+    // permanent: wishes ×2 each, ascensions +50% each; temporary: star ×2, super ×2, senzu ×3, cloud ×3
+    const mult = () => Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * (boostUntil > st.t ? 2 : 1) * FORMS[S.form].x * (apeUntil > st.t ? 10 : 1) * (senzuUntil > st.t ? 3 : 1) * (riding > 0 ? 3 : 1);
+    const lapValue = () => 30 * (1 + S.boots) ;
+    const passive = () => S.partner * 4 + S.house * 40;
+    let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
+    let shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
+    ui.onBuy(k => {
+      const c = cost(k); if (S.pl < c) return;
+      if (k === 'ascend') {
+        const gainA = Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))); S.ascend += gainA; S.pl = 0; for (const r of RESETS) S[r] = 0; S.form = 0; ui.fx && ui.fx('form', 0); scenery();
+        ui.event(`ascended — now ×${(1 + .5 * S.ascend).toFixed(1)} forever`); ui.fx && ui.fx('super'); save(); syncShop(); return;
+      }
+      S.pl -= c; S[k]++; ui.fx && ui.fx('buy');
+      if (k === 'partner' && S.partner === 1) ui.event('bubbles wants to train with you');
+      if (k === 'galick' && S.galick === 1) ui.event('hold anywhere to charge a galick gun');
+      if (k === 'house') { scenery(); ui.event('a new capsule house lands'); }
+      if (k === 'armor' && S.armor === 1) ui.event('saiyan armor on — hit villains harder');
+      save(); syncShop();
+    });
+    const what = k => k === 'ascend' ? `→ ×${(1 + .5 * (S.ascend + Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))))).toFixed(1)} forever` : k === 'galick' && S.galick ? (S.galick === 4 ? 'next: final flash' : S.galick >= 5 ? 'full charge: final flash' : '+beam power') : SHOP[k].what;
+    const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0).map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k), special: k === 'ascend' }])));
+
+    // the planet: a road ring near the rim, a cap of scenery facing the viewer
+    const N = V.norm([0, .38, .92]);
+    const E1 = V.norm(V.cross([0, 1, 0], N)), E2 = V.cross(N, E1);
+    const roadPt = phi => V.norm(V.add(V.mul(E1, Math.cos(phi)), E2, Math.sin(phi)));
+    const capPt = (th, a) => V.norm(V.add(V.mul(N, Math.cos(th)), V.add(V.mul(E1, Math.cos(a)), E2, Math.sin(a)), Math.sin(th)));
+    const L = V.norm([-.55, .7, .55]);
+    const solids = [];                       // { c: body centre, r, kind, ... }
+    function scenery() {
+      solids.length = 0;
+      const dome = (th, a, r) => { const s = capPt(th, a), door = V.norm(V.cross(s, V.cross(N, s))); solids.push({ c: s, r, kind: 'dome', s, door: V.mul(door, -1) }); for (let i = 1; i <= 5; i++) solids.push({ c: V.mul(s, 1 + r + .018 * i), r: .009, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + r + .11), r: .02, kind: 'knob' }); };
+      const tree = (th, a, k = 1) => { const s = capPt(th, a), t1 = V.norm(V.cross(s, N)); for (let i = 1; i <= 4; i++) solids.push({ c: V.mul(s, 1 + .045 * i * k), r: .03 * k, kind: 'trunk' }); solids.push({ c: V.add(V.mul(s, 1 + .26 * k), t1, .05 * k), r: .13 * k, kind: 'leaf' }, { c: V.add(V.mul(s, 1 + .2 * k), t1, -.08 * k), r: .1 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .33 * k), r: .09 * k, kind: 'leaf' }); };
+      const bush = (th, a, r) => solids.push({ c: capPt(th, a), r, kind: 'leaf' });
+      const rock = (th, a, r) => solids.push({ c: V.mul(capPt(th, a), 1 - r * .3), r, kind: 'stone' });
+      dome(.3, 2.5, .25); dome(.82, 3.55, .17);
+      [[.75, 1.9, .15], [.6, 5.1, .16], [1.05, 4.0, .13], [2.0, 2.2, .16], [2.3, 4.2, .15], [1.9, .05, .14], [2.6, 5.8, .13], [3.0, 2.4, .15], [1.25, 2.65, .12]].slice(0, Math.min(9, S.house)).forEach(([a, b, r]) => dome(a, b, r));
+      tree(.95, .5, 1.05); tree(.62, 1.35, .85); tree(1.0, 5.0, .95); tree(.55, 5.8, .7); tree(2.25, 1.2, 1); tree(2.5, 3.4, 1.1); tree(2.1, 5.2, .9); tree(2.75, .2, .8);
+      bush(.7, 4.3, .07); bush(.98, 2.2, .06); bush(.4, .9, .05); bush(1.1, 3.0, .06); bush(2.3, 2.3, .08); bush(2.6, 4.5, .07);
+      rock(.62, 4.05, .05); rock(1.05, 1.7, .04); rock(2.4, .6, .05);
+    }
+
+    let R = 40, cx = 0, cy = 0, zb = null, ib = null, dm = null;
+    function layout() {
+      const wide = st.W / st.H >= 1.15, fcx = +(st.el.closest('[data-cx]')?.dataset.cx || (wide ? .56 : .5));
+      R = Math.round(st.W / st.H < .8 ? Math.min(st.W * .34, st.H * .22) : wide ? Math.min(st.W * .19, st.H * .3) : Math.min(st.W * .28, st.H * .24));
+      cx = Math.round(st.W * fcx); cy = Math.round(st.H * (wide ? .5 : st.W / st.H < .8 ? .5 : .55));
+      zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H);
+    }
+    // view rotation (drag to spin) with inertia, easing home when idle
+    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99;
+    const fx = particleSystem(), puff = makePuff(26, 11);
+
+    // ── game state
+    let phi = 0, laps = 0, lastLap = 0, sprint = 0, riding = 0, jumpH = 0, jumpV = 0, boostUntil = 0, session = 0, acc = 0, saveAcc = 0;
+    const orbs = [];            // { phi, done }
+    let star = null, nextStar = 14, meteors = [], nextShower = 55, nextCloud = 85, cloudFly = null, aura = false;
+    const seen = new Set();
+    const once = (key, text) => { if (seen.has(key)) return; seen.add(key); ui.event(text); };
+    const gain = (n, x, y, gold) => { n = Math.max(1, Math.round(n)); S.pl += n; if (S.pl > S.best) S.best = S.pl; if (x !== undefined) floats.push({ x, y, s: '+' + fmtShort(n), life: 1, gold }); };
+    const fmtShort = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'K' : String(n);
+    const floats = [];
+
+    let flipNow = false, liftNow = 0;
+    function handPos() { const kd = kidScreen(); return { x: kd.x + Math.sin(kd.ang) * (liftNow + 12) + Math.cos(kd.ang) * 6 * (flipNow ? -1 : 1), y: kd.y - Math.cos(kd.ang) * (liftNow + 12) + Math.sin(kd.ang) * 6 * (flipNow ? -1 : 1), ang: kd.ang }; }
+    function kidScreen(lift = 0) { const v = M3.ap(M, roadPt(phi)); return { v, x: cx + v[0] * (R + lift), y: cy - v[1] * (R + lift) + st.bob, ang: Math.atan2(v[0], v[1]) }; }
+    function onClick(px, py) {
+      if (!playing) return;
+      if (star && Math.hypot(px - star.x, py - star.y) < 10) {
+        boostUntil = st.t + 15; gain(Math.max(50, rate() * 20), star.x, star.y - 6, true); ui.event('shooting star — ×2 for 15s'); ui.fx && ui.fx('star');
+        for (let k = 0; k < 24; k++) fx.add({ x: star.x, y: star.y, vx: (Math.random() - .5) * 120, vy: (Math.random() - .5) * 120, drag: 2.5, life: .7, c: [0xffffff, 0xffd84a, 0xf2b134], raw: true });
+        star = null; return;
+      }
+      for (const m of meteors) if (!m.dead && Math.hypot(px - m.x, py - m.y) < 9) { m.dead = true; gain(25 * mult() * (1 + laps * .1), m.x, m.y - 6, true); for (let k = 0; k < 16; k++) fx.add({ x: m.x, y: m.y, vx: (Math.random() - .5) * 110, vy: (Math.random() - .5) * 110, drag: 2.5, life: .6, c: [0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], raw: true }); return; }
+      // anywhere else: train — a sprint burst and a few points
+      if (moon && moon.a > .3 && !moon.leaving && Math.hypot(px - moon.x, py - moon.y) < moon.r + 6) {
+        apeUntil = st.t + 20; moon.leaving = true; flashT = 1; shake = .8; ui.event('great ape mode — ×10'); ui.fx && ui.fx('super');
+        for (let k = 0; k < 80; k++) { const q = kidScreen(20); fx.add({ x: q.x, y: q.y, vx: (Math.random() - .5) * 220, vy: (Math.random() - .5) * 220, drag: 2, life: 1, c: [0xffffff, 0xffd0a0, 0x7a4a2a], raw: true }); }
+        return;
+      }
+      // senzu bean on the planet
+      for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(px - sb.sx, py - (sb.sy - 6)) < 9) { killSaiba(sb); return; }
+      if (boss && !boss.dead && Math.abs(px - boss.x) < 16 * boss.k && py > boss.y - 34 * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(5, combo + .25) : 1; lastClick = st.t; hitBoss((1 + S.boots) * mult() * combo * 6, px, py); return; }
+      if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - bean.sy) < 9) { senzuUntil = st.t + 15; ui.event('senzu bean — ×3 for 15s'); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
+      // train: rhythm builds a combo up to ×5; the scouter adds crits
+      combo = st.t - lastClick < .6 ? Math.min(5, combo + .25) : 1; lastClick = st.t;
+      sprint = Math.min(1.2, sprint + .5);
+      if (jumpH <= 0) jumpV = 120;
+      const crit = Math.random() < S.scouter * .1, k = kidScreen(14);
+      gain((1 + S.boots) * mult() * combo * (crit ? 5 : 1), k.x, k.y - 10, crit);
+      if (crit) for (let i = 0; i < 10; i++) fx.add({ x: k.x, y: k.y - 14, vx: (Math.random() - .5) * 90, vy: -20 - Math.random() * 60, drag: 2, life: .5, c: [0xffffff, 0x9cf0b8, 0x34d873], raw: true });
+      ui.bump();
+    }
+    st.cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); drag = { x: e.clientX, y: e.clientY, moved: 0, t: st.t, ax: bx, ay: by }; try { st.cv.setPointerCapture(e.pointerId); } catch (_) {} });
+    st.cv.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
+      if (charging > 0) { const [px, py] = st.toBuf(e); drag.ax = px; drag.ay = py; return; }
+      if (drag.moved > 6) { st.cv.style.cursor = 'grabbing'; const k = 1.1 / (R * st.scale); vry = dx * k * 30; vrx = dy * k * 30; M = M3.ortho(M3.mul(M3.mul(M3.rx(dy * k), M3.ry(dx * k)), M)); idleT = 0; }
+    });
+    st.cv.addEventListener('pointerup', e => { if (drag && charging > .15) fireBeam(charging, drag.ax, drag.ay); else if (drag && drag.moved <= 6) { { const [px, py] = st.toBuf(e); onClick(px, py); } } charging = 0; drag = null; st.cv.style.cursor = 'grab'; });
+    st.cv.addEventListener('pointercancel', () => { drag = null; charging = 0; });
+    function fireBeam(c, tx, ty) {
+      const k = handPos(); let dx = tx - k.x, dy = ty - k.y, dl = Math.hypot(dx, dy);
+      if (dl < 4) { dx = Math.sin(k.ang); dy = -Math.cos(k.ang); dl = 1; }
+      const dir = [dx / dl, dy / dl];
+      beam = { t0: st.t, c, x: k.x, y: k.y, dx: dir[0], dy: dir[1] }; shake = Math.max(shake, .2 + c * .15);
+      if (star) { const rx = star.x - k.x, ry = star.y - k.y; if (rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < 8 + c * 3) onClick(star.x, star.y); }
+      const ff = S.galick >= 5 && c >= 2.4; beam.ff = ff;   // galick lv 5: a full charge fires a final flash
+      const pts = (1 + S.galick) * lapValue() * 2.5 * c * mult() * (ff ? 3 : 1);
+      const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1); };
+      for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && onLine(sb.sx, sb.sy - 6, 7)) killSaiba(sb);
+      if (boss && !boss.dead && onLine(boss.x, boss.y - 16 * boss.k, 14 * boss.k)) hitBoss(pts * 4, boss.x, boss.y - 20 * boss.k);
+      gain(pts, k.x, k.y - 16, true); ui.fx && ui.fx('buy');
+      for (const m of meteors) { if (m.dead || m.delay > 0) continue; const rx = m.x - k.x, ry = m.y - k.y, along = rx * dir[0] + ry * dir[1], off = Math.abs(rx * dir[1] - ry * dir[0]); if (along > 0 && off < 6 + c * 3) { m.dead = true; gain(25 * mult() * (1 + laps * .1), m.x, m.y - 6, true); } }
+    }
+    st.cv.style.cursor = 'grab';
+
+    const rate = () => Math.round((lapValue() / 7 + passive()) * mult());
+    function burst(x, y, c, n = 16, sp = 110) { for (let k = 0; k < n; k++) fx.add({ x, y, vx: (Math.random() - .5) * sp, vy: (Math.random() - .5) * sp, drag: 2.5, life: .6, c, raw: true }); }
+    function killSaiba(sb) { sb.dead = true; gain(Math.max(40, rate() * 3) * (1 + .5 * S.armor), sb.sx, sb.sy - 12, true); burst(sb.sx, sb.sy - 5, [0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a]); }
+    function hitBoss(dmg, x, y) {
+      boss.hp -= dmg * (1 + .5 * S.armor); boss.flash = .12; burst(x, y, [0xffffff, 0xffe08a, 0xff9a3c], 6, 70);
+      if (boss.hp <= 0 && !boss.dead) {
+        boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; const prize = Math.max(boss.max * 1.5, rate() * 90);
+        gain(prize, boss.x, boss.y - 40 * boss.k, true); ui.event(`${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
+        for (let k = 0; k < 4; k++) burst(boss.x + (Math.random() - .5) * 20, boss.y - 18 * boss.k + (Math.random() - .5) * 20, [0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 20, 180);
+        save();
+      }
+    }
+    let shen = null;     // { t0, phase: 'rise' | 'wish' | 'leave', t1 }
+    let playing = false;
+    let shenLook = 1;   // 'rising'
+    function summon(look) {
+      if (shen) return;
+      if (look !== undefined) shenLook = look;
+      shen = { t0: st.t, phase: 'rise', look: shenLook }; document.body.classList.add('shen'); ui.event('the eternal dragon awakens…');
+    }
+    function openWish() {
+        shen.phase = 'wish';
+        const next = S.form < FORMS.length - 1 ? FORMS[S.form + 1] : null;
+        ui.wish([
+          { key: 'power', label: 'eternal power', what: '×2 to everything, forever' },
+          next ? { key: 'form', label: 'unlock ' + next.name, what: 'transform right now' } : { key: 'fortune', label: 'a mountain of power', what: '+20 minutes of income' },
+          { key: 'fortune', label: 'a fortune in power', what: '+10 minutes of income' },
+        ], k => {
+          if (k === 'power') { S.wishes++; ui.event('your wish is granted — ×2 forever'); }
+          if (k === 'form' && next) { S.pl = Math.max(S.pl, next.at); ui.event('your wish is granted'); }
+          if (k === 'fortune') { gain(rate() * 600); ui.event('your wish is granted — +' + fmtShort(rate() * 600)); }
+          ui.fx && ui.fx('super'); save();
+          shen.phase = 'leave'; shen.t1 = st.t;
+        });
+    }
+
+    // ── rasterise one sphere into the depth buffer
+    function sphere(o, id, shade) {
+      const v = M3.ap(M, o.c), X = cx + v[0] * R, Y = cy - v[1] * R + st.bob, Z = v[2] * R, pr = o.r * R, W = st.W, H = st.H, buf = st.buf;
+      const x0 = Math.max(0, Math.floor(X - pr)), x1 = Math.min(W - 1, Math.ceil(X + pr)), y0 = Math.max(0, Math.floor(Y - pr)), y1 = Math.min(H - 1, Math.ceil(Y + pr));
+      const r2 = pr * pr;
+      for (let y = y0; y <= y1; y++) { const dy = y + .5 - Y; for (let x = x0; x <= x1; x++) {
+        const dx = x + .5 - X, q = r2 - dx * dx - dy * dy; if (q < 0) continue;
+        const sq = Math.sqrt(q), z = Z + sq, k = y * W + x; if (z <= zb[k]) continue;
+        zb[k] = z; ib[k] = id;
+        buf[k] = PK(shade(o, [dx / pr, -dy / pr, sq / pr], x, y));
+      } }
+    }
+    const tone = (pal, lum, x, y) => pal[Math.max(0, Math.min(pal.length - 1, Math.floor((lum + (bayer(x, y) - .5) * .2) * pal.length)))];
+    const light = n => Math.max(0, V.dot(n, L)) * .78 + .22;
+    function shadePlanet(o, n, x, y) {
+      const nb = M3.apT(M, n), lum = light(n) + Math.pow(1 - n[2], 3) * .15;
+      if (Math.abs(V.dot(nb, N)) < .07) return tone(TONES.road, lum + .2, x, y);
+      const patch = vnoise3(nb[0] * 3 + 9, nb[1] * 3, nb[2] * 3), f = vnoise3(nb[0] * 24, nb[1] * 24 + 4, nb[2] * 24);
+      if (f > .9 && lum > .4) return f > .94 ? 0xffffff : 0xfff2a8;
+      return tone(TONES.grass, lum + (patch - .5) * .22, x, y);
+    }
+    function shadeDome(o, n, x, y) {
+      const u = M3.apT(M, n), up = V.dot(u, o.s), lum = light(n);
+      if (up < .36) {
+        if (V.dot(u, o.door) > .9 && up < .3) return 0x4a2a16;                                   // door
+        return tone(TONES.band, lum, x, y);
+      }
+      for (const a of [.9, -.9]) { const w = V.norm(V.add(o.door, V.cross(o.s, o.door), a)); if (up < .72 && up > .44 && V.dot(u, w) > .955) return V.dot(u, w) > .975 ? tone(TONES.glass, lum + .2, x, y) : 0x3a2214; }
+      return tone(TONES.dome, lum, x, y);
+    }
+    const shadeBy = pal => (o, n, x, y) => tone(pal, light(n) + (pal === TONES.leaf ? (h2(x * 3, y * 5) - .5) * .25 : 0), x, y);
+    const SHADE = { planet: shadePlanet, dome: shadeDome, knob: (o, n, x, y) => tone(TONES.orb, light(n) + .25, x, y), leaf: shadeBy(TONES.leaf), trunk: shadeBy(TONES.trunk), stone: shadeBy(TONES.stone), orb: (o, n, x, y) => tone(TONES.orb, light(n) * .5 + .55, x, y), dorb: (o, n, x, y) => (n[2] > .78 && Math.abs(n[0] + .1) < .14 && Math.abs(n[1] - .1) < .14) ? 0xe0302a : tone(TONES.dorb, light(n) * .55 + .5, x, y), bean: (o, n, x, y) => tone(TONES.bean, light(n), x, y), dragon: (o, n, x, y) => { const inward = -(n[0] * o.vr[0] + n[1] * o.vr[1] + n[2] * o.vr[2]); if (inward > .45) return tone(TONES.belly, light(n) + .25 - (o.seg % 4 === 0 ? .3 : 0), x, y); const scale = ((x >> 1) + (y >> 1) * 2 + o.seg) % 4 === 0 ? -.16 : 0; return tone(TONES.dragon, light(n) + scale, x, y); }, spine: (o, n, x, y) => tone(TONES.dorb, light(n) + .2, x, y) };
+
+    function outline() {
+      const W = st.W, H = st.H, buf = st.buf;
+      for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+        const k = y * W + x, id = ib[k];
+        let n = 0;
+        if (id) { for (const d of [-1, 1, -W, W]) { const j = k + d; if (ib[j] && ib[j] !== id && zb[j] > zb[k] + 1.2) { n = 1; break; } } if (n) { const [r, g, b] = UNPK(buf[k]); buf[k] = PK(((r * .4) << 16) | ((g * .4) << 8) | (b * .45)); } }
+        else { for (const d of [-1, 1, -W, W]) { const j = k + d; if (ib[j]) { const [r, g, b] = UNPK(buf[j]); buf[k] = PK(((r * .32) << 16) | ((g * .32) << 8) | (b * .36)); zb[k] = zb[j]; break; } } }
+      }
+    }
+    // sprite drawn against the depth buffer
+    function blitZ(spr, bx, by, ang, flip, lift, depth, k = 1, raw = false) {
+      const ux = Math.sin(ang), uy = -Math.cos(ang), rx = Math.cos(ang), ry = Math.sin(ang);
+      const ox = bx + ux * lift, oy = by + uy * lift, Rr = (Math.hypot(spr.w, spr.h) + 1) * k, W = st.W, H = st.H;
+      for (let y = Math.floor(oy - Rr); y <= oy + Rr; y++) { if (y < 0 || y >= H) continue; for (let x = Math.floor(ox - Rr); x <= ox + Rr; x++) {
+        if (x < 0 || x >= W) continue;
+        const dx = x + .5 - ox, dy = y + .5 - oy, lx = (dx * rx + dy * ry) / k, ly = (dx * ux + dy * uy) / k;
+        let i = Math.floor(lx + spr.ax + .5); const j = Math.floor(spr.ay + .5 - ly);
+        if (i < 0 || j < 0 || i >= spr.w || j >= spr.h) continue; if (flip) i = spr.w - 1 - i;
+        const c = spr.col[j * spr.w + i]; if (c < 0) continue;
+        const kk = y * W + x; if (zb[kk] > depth) continue;
+        st.buf[kk] = PK(c);
+      } }
+    }
+
+    function frame(t, dt) {
+      if (playing) session += dt; st.bob = Math.round(Math.sin(t * .7) * 2) + (shake > 0 ? Math.round((Math.random() - .5) * 5 * shake) : 0); shake = Math.max(0, shake - dt);
+      idleT += dt;
+      if (!drag) {
+        if (Math.abs(vrx) + Math.abs(vry) > .001) { M = M3.ortho(M3.mul(M3.mul(M3.rx(vrx * dt), M3.ry(vry * dt)), M)); vrx *= Math.pow(.06, dt); vry *= Math.pow(.06, dt); }
+        if (idleT > 3) { const I = M3.I(), k = Math.min(1, dt * .7); M = M3.ortho(M.map((v, i) => v + (I[i] - v) * k)); }
+      }
+      // running: sprint decays; riding the golden cloud triples everything
+      sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);
+      const pace = (.42 + sprint * .9) * (riding > 0 ? 1.6 : 1);
+      phi += pace * dt;
+      if (phi - lastLap > 6.283) { lastLap += 6.283; if (playing) { laps++; ui.fx && ui.fx('lap'); const k = kidScreen(20); gain(lapValue() * 4 * mult(), k.x, k.y - 14, true); } }
+      if (jumpH > 0 || jumpV > 0) { jumpV -= 520 * dt; jumpH = Math.max(0, jumpH + jumpV * dt); if (jumpH === 0) jumpV = 0; }
+      if (playing) {
+      // income: lap steps + passive, once a second
+      acc += dt; if (acc >= 1) { acc -= 1; gain((lapValue() / 7 + passive()) * mult()); }
+      if ((saveAcc += dt) > 3) { saveAcc = 0; save(); }
+
+      // ── timeline: the longer you stay, the more happens
+      if (session > 12) { once('stars', 'shooting stars — click one'); if (!star && (nextStar -= dt) < 0) { star = { x: -8, y: st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = 18 + Math.random() * 14; } }
+      if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < .2 }); }
+      if (session > 50) { if ((nextShower -= dt) < 0) { once('meteors', 'meteor shower — bust them'); for (let i = 0; i < 6; i++) meteors.push({ x: st.W * (.15 + Math.random() * .9), y: -10 - i * 18, vx: -st.W * .12, vy: st.H * .22, delay: i * .5 }); nextShower = 45 + Math.random() * 20; } }
+      if (session > 75 || S.cloud > 0) { if (!cloudFly && riding <= 0 && (nextCloud -= dt * (1 + S.cloud * .6)) < 0) { once('cloud', 'flying nimbus is here'); cloudFly = { x: -30, y: st.H * .3 }; nextCloud = 60 + Math.random() * 25; } }
+      if (session > 140 && !aura) { aura = true; ui.event('ki aura unlocked'); }
+      // the scouter can't take it
+      if (!S.o9k && S.best > 9000) { S.o9k = 1; boostUntil = Math.max(boostUntil, t + 20); shake = .6; ui.event("it's over 9000!!  ×2 for 20s"); ui.fx && ui.fx('star'); const q = handPos(); burst(q.x, q.y - 6, [0xffffff, 0x9cf0b8, 0x34d873, 0xe0473e], 30, 160); save(); }
+      // saibamen sprout from the soil in threes; tap or beam them before they burrow back
+      if (session > 80 && (nextSaiba -= dt) < 0) { once('saiba', 'saibamen! tap them'); for (let i = 0; i < 3; i++) saibas.push({ c: capPt(.25 + Math.random() * .85, Math.random() * 6.28), born: t + i * .35, life: 11 }); nextSaiba = 35 + Math.random() * 20; }
+      for (const sb of saibas) if (!sb.dead && t - sb.born > sb.life) { sb.dead = true; sb.gone = true; if (sb.sx !== undefined) burst(sb.sx, sb.sy - 4, [0xe7e2d4, 0xcfc8b6], 8, 50); }
+      saibas = saibas.filter(sb => !sb.dead);
+      // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
+      if (session > 110 && !boss && !shen && (nextBoss -= dt) < 0) {
+        const V0 = VILLAINS[(S.bosses || 0) % VILLAINS.length], hp = Math.max(600, rate() * 40);
+        boss = { name: V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 40, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 };
+        ui.event(`${V0.name} is attacking — tap him!`); nextBoss = 160 + Math.random() * 60;
+      }
+      if (boss) {
+        if (!boss.dead && t > boss.until) { boss.dead = true; boss.fled = true; boss.t1 = t; ui.event(`${boss.name} got away`); }
+        if (boss.dead && t - boss.t1 > 1.2) boss = null;
+        else if (!boss.dead && (boss.nextKi -= dt) < 0) { boss.nextKi = .7; const h = handPos(); kis.push({ x: h.x, y: h.y, t0: t }); }
+      }
+      for (const kb of kis) { if (!boss || boss.dead) { kb.done = true; continue; } const tx = boss.x, ty = boss.y - 18 * boss.k, d = Math.hypot(tx - kb.x, ty - kb.y); if (d < 6) { kb.done = true; hitBoss(Math.max(1, rate() * .5), tx, ty); continue; } const sp = 260 * dt / d; kb.x += (tx - kb.x) * Math.min(1, sp); kb.y += (ty - kb.y) * Math.min(1, sp); }
+      kis = kis.filter(kb => !kb.done);
+      // super mode: a 25s golden-hair burst (×2) each time power level passes the next milestone
+      // transform when power level reaches the next form
+      if (S.form < FORMS.length - 1 && S.pl >= FORMS[S.form + 1].at) {
+        S.form++; const F = FORMS[S.form]; ui.event(F.name + '!  ×' + F.x); ui.fx && ui.fx('form', S.form); flashT = 1;
+        for (let k = 0; k < 90; k++) { const q = kidScreen(10); fx.add({ x: q.x, y: q.y, vx: (Math.random() - .5) * 200, vy: (Math.random() - .5) * 200, drag: 2, life: 1.1, c: F.aura, raw: true }); }
+        save();
+      }
+      if (star) { star.x += star.vx * dt; star.y += Math.sin(t * 3) * .3; if (Math.random() < .8) fx.add({ x: star.x - 4, y: star.y, vx: -12, vy: 4, life: .6, s: 2, c: [0xffd84a, 0xf2b134], raw: true }); if (star.x > st.W + 12) star = null; }
+      for (const m of meteors) { if (m.delay > 0) { m.delay -= dt; continue; } m.x += m.vx * dt; m.y += m.vy * dt; if (!m.dead && Math.random() < .9) fx.add({ x: m.x + 2, y: m.y - 2, vx: -m.vx * .1, vy: -m.vy * .1, life: .5, s: 2, grow: 1, c: [0xfff1c0, 0xffb35a, 0xe0473e, 0x8a8f98], raw: true }); }
+      meteors = meteors.filter(m => !m.dead && m.y < st.H + 10);
+      if (cloudFly) { const k = kidScreen(10); cloudFly.x += (k.x - cloudFly.x) * dt * 1.8; cloudFly.y += (k.y - 10 - cloudFly.y) * dt * 1.8; if (Math.hypot(k.x - cloudFly.x, k.y - 10 - cloudFly.y) < 6) { cloudFly = null; riding = 10 + S.cloud * 2; ui.event('riding flying nimbus — ×3'); } }
+      for (const o of orbs) { let d = Math.atan2(Math.sin(o.phi - phi), Math.cos(o.phi - phi)); if (Math.abs(d) < .06 && !o.done) { o.done = true; const k = kidScreen(16); gain(lapValue() * mult() * (o.star ? 3 : 1), k.x, k.y - 12, true); if (o.star) { S.orbs7++; if (S.orbs7 >= 7) { S.orbs7 = 0; summon(); } else ui.event(`dragon ball ${S.orbs7}/7`); save(); } for (let i = 0; i < 12; i++) fx.add({ x: k.x, y: k.y - 10, vx: (Math.random() - .5) * 90, vy: (Math.random() - .5) * 90, drag: 3, life: .6, c: [0xffffff, 0xffd84a, 0xff9a3c], raw: true }); } }
+      for (let i = orbs.length - 1; i >= 0; i--) if (orbs[i].done) orbs.splice(i, 1);
+      if (t - lastClick > .9) combo = 1;
+      if (session > 40 && !moon && apeUntil < t && (nextMoon -= dt) < 0) { moon = { x: st.W * .2, y: st.H * .22, r: Math.max(9, Math.round(Math.min(st.W, st.H) * .07)), a: 0, born: t }; once('moon', 'a full moon is rising… click it to transform'); }
+      if (moon) { moon.a = moon.leaving ? moon.a - dt * 1.5 : Math.min(1, moon.a + dt * 1.2); if (!moon.leaving && t - moon.born > 25) moon.leaving = true; if (moon.a <= 0 && moon.leaving) { moon = null; nextMoon = 110 + Math.random() * 40; } }
+
+      if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
+      if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
+      const fxs = [];
+      if (boostUntil > t) fxs.push(`star ×2 ${Math.ceil(boostUntil - t)}s`);
+      if (senzuUntil > t) fxs.push(`senzu ×3 ${Math.ceil(senzuUntil - t)}s`);
+      if (riding > 0) fxs.push('nimbus ×3');
+      if (apeUntil > t) fxs.push(`great ape ×10 ${Math.ceil(apeUntil - t)}s`);
+      const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.wishes ? `dragon balls ${S.orbs7}/7` : '', S.wishes ? `wishes ${S.wishes}` : '', S.ascend ? `ascended ×${(1 + .5 * S.ascend).toFixed(1)}` : ''].filter(Boolean).join(' · ');
+      const nf = FORMS[S.form + 1], cf = FORMS[S.form];
+      ui.update({ pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, Math.max(0, (S.best - (cf.at || 0)) / (nf.at - (cf.at || 0)))) : 1 }, balls: S.orbs7, wishes: S.wishes, ascend: S.ascend ? (1 + .5 * S.ascend).toFixed(1) : '' });
+      syncShop();
+      }
+
+      // ── draw
+      st.clear(); zb.fill(-1e9); ib.fill(0);
+      drawSea(t, false);
+      if (moon) {
+        const { x, y, r } = moon, a = moon.a;
+        for (let yy = -r - 6; yy <= r + 6; yy++) for (let xx = -r - 6; xx <= r + 6; xx++) {
+          const d = Math.hypot(xx, yy);
+          if (d <= r - 1) { const n = h2(Math.round(x + xx) * 3, Math.round(y + yy) * 5), crater = Math.hypot(xx + r * .3, yy - r * .2) < r * .22 || Math.hypot(xx - r * .35, yy + r * .3) < r * .16 || Math.hypot(xx - r * .1, yy - r * .45) < r * .12; const l = -(xx * .5 + yy * .6) / r + (n - .5) * .3; st.px(x + xx, y + yy, crater ? 0xe6c878 : l > .3 ? 0xfffbe6 : l > -.3 ? 0xffeab0 : 0xf2d07e, a); }
+          else if (d <= r) st.px(x + xx, y + yy, 0xc89a3a, a);
+          else if (d <= r + 7 && bayer(Math.round(x + xx), Math.round(y + yy)) < (1 - (d - r) / 7) * .7 * a) st.px(x + xx, y + yy, 0xffd978, .8);
+        }
+      }
+      let id = 1;
+      sphere({ c: [0, 0, 0], r: 1 }, id++, shadePlanet);
+      for (const o of solids) sphere(o, id++, SHADE[o.kind]);
+      for (const o of orbs) sphere({ c: V.mul(roadPt(o.phi), 1.14 + Math.sin(t * 4 + o.phi) * .015), r: o.star ? .055 : .045 }, id++, o.star ? SHADE.dorb : SHADE.orb);
+      if (bean) { sphere({ c: bean.c, r: .04 }, id++, SHADE.bean); const v = M3.ap(M, bean.c); if (v[2] > 0) { bean.sx = cx + v[0] * R; bean.sy = cy - v[1] * R + st.bob; } else bean.sx = undefined; }
+      const shenCtx = shen && { z: 0, px(x, y, hex, dz = 0) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= st.W || y >= st.H) return; const k = y * st.W + x, z = this.z + dz; if (zb[k] > z) return; zb[k] = z; st.buf[k] = PK(hex); dm[k] = 1; }, W: st.W, H: st.H, cx, cy: cy + st.bob, R, t, rise: Math.min(1, (t - shen.t0) / 1.1), age: t - shen.t0, gone: shen.phase === 'leave' ? Math.min(1, (t - shen.t1) / 1.6) : 0, glow: shen.look === 3 };
+      outline();
+      // drawn after the planet's outline, depth-tested so the planet, trees and runner occlude him correctly
+      if (shen) { dm.fill(0); SHENRON.draw(shenCtx, shen.look); }
+      for (const sb of saibas) {
+        const v = M3.ap(M, sb.c), up = Math.min(1, Math.max(0, (t - sb.born) / .5)), down = Math.min(1, Math.max(0, (sb.born + sb.life - t) / .5));
+        if (v[2] < .05 || up <= 0) { sb.sx = undefined; continue; }
+        sb.sx = cx + v[0] * R; sb.sy = cy - v[1] * R + st.bob;
+        const hop = Math.abs(Math.sin((t - sb.born) * 7)) * 2 * up * down;
+        blitZ(SAIBA, sb.sx, sb.sy, Math.atan2(v[0], v[1]), Math.sin(t * 3 + sb.born) > 0, (up * down - 1) * 11 + hop, v[2] * R + 4, 1.1);
+      }
+      // kid (and the monkey) against the depth buffer
+      const kd = kidScreen(), set = KID.forms[S.form];
+      const ahead = M3.ap(M, roadPt(phi + .05)), ax = cx + ahead[0] * R, flip = ax < kd.x;
+      const spr = jumpH > 1 ? set.run[0] : set.run[Math.floor(t * (9 + sprint * 10)) % 4];
+      const lift = jumpH + (riding > 0 ? 9 : 0), depth = kd.v[2] * R + 6; flipNow = flip; liftNow = lift;
+      if (riding > 0) blitZ(puff, kd.x, kd.y, kd.ang, flip, lift - 9, depth + 1, 1.25, true);
+      if (aura || boostUntil > t || riding > 0 || S.form > 0) for (let i = 0; i < (S.form > 0 ? 4 : 3); i++) { const a = kd.ang + (Math.random() - .5) * .9, r = 4 + Math.random() * 8; fx.add({ x: kd.x + Math.sin(kd.ang) * (lift + 10) + Math.cos(a) * r, y: kd.y - Math.cos(kd.ang) * (lift + 10) + Math.sin(a) * r * .5, vx: Math.sin(kd.ang) * 20, vy: -Math.cos(kd.ang) * 30, life: .5, s: 1, grow: 1, c: FORMS[S.form].aura, raw: true }); }
+      // super saiyan 2+: crackling sparks around him
+      if (FORMS[S.form].sparks && Math.random() < .35) { let x = kd.x + (Math.random() - .5) * 22, y = kd.y - Math.cos(kd.ang) * (lift + 14) + (Math.random() - .5) * 26; for (let k = 0; k < 6; k++) { st.px(x, y, FORMS[S.form].sparks); x += (Math.random() - .5) * 4; y += 1 + Math.random() * 2; } }
+      if (apeUntil > t) {
+        // giant ape stomps: a little hop each step and a screen shake on landing
+        const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for (let k = 0; k < 8; k++) fx.add({ x: kd.x + (Math.random() - .5) * 30, y: kd.y, vx: (Math.random() - .5) * 60, vy: -20 - Math.random() * 30, drag: 2, life: .5, s: 2, c: [0xffffff, 0xe7e2d4], raw: true }); }
+        blitZ(APE[step % 2], kd.x, kd.y, kd.ang, flip, lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
+      } else blitZ(spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+      if (S.partner > 0) { const mv = M3.ap(M, roadPt(phi - .32)), mx = cx + mv[0] * R, my = cy - mv[1] * R + st.bob, ma = Math.atan2(mv[0], mv[1]); blitZ(MONKEY[Math.floor(t * 8) % 2], mx, my, ma, flip, 0, mv[2] * R + 5, 1.1); }
+      if (charging > 0) {
+        const hp = handPos(), hx = hp.x, hy = hp.y, r = 2 + charging * 2.2;
+        // a dotted aim line toward the pointer
+        if (drag) { let ax = drag.ax - hx, ay = drag.ay - hy; const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al; for (let d = r + 4; d < Math.min(al, 400); d += 4) if (((d / 4 | 0) + (t * 12 | 0)) % 2) st.px(hx + ax * d, hy + ay * d, 0x9a5af0); }
+        for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y) / r; if (d > 1) continue; if (d > .7 && bayer(Math.round(hx + x), Math.round(hy + y)) > .5) continue; st.px(hx + x, hy + y, d < .4 ? 0xffffff : d < .75 ? 0xd9b8ff : 0x8a4ae8); }
+        if (Math.random() < .9) { const a = Math.random() * 6.28, rr = r + 6 + Math.random() * 8; fx.add({ x: hx + Math.cos(a) * rr, y: hy + Math.sin(a) * rr, vx: -Math.cos(a) * rr * 3, vy: -Math.sin(a) * rr * 3, life: .3, c: [0xffffff, 0xc9a2ff], raw: true }); }
+      }
+      if (beam) {
+        const age = t - beam.t0, life = .7 + beam.c * .25;
+        if (age > life) beam = null;
+        else {
+          const w = (3 + beam.c * 3) * (beam.ff ? 1.8 : 1) * (1 - Math.pow(age / life, 3)), reach = Math.min(1, age / .12) * Math.max(st.W, st.H) * 1.6;
+          for (let d = 2; d < reach; d += .6) {
+            const x0 = beam.x + beam.dx * d, y0 = beam.y + beam.dy * d; if (x0 < -30 || y0 < -30 || x0 > st.W + 30 || y0 > st.H + 30) break;
+            const ww = w * Math.min(1, .35 + d / 18) * (1 + Math.sin(d * .35 - t * 40) * .12), gw = ww + 2.5;
+            for (let o = -gw; o <= gw; o += .6) { const a = Math.abs(o) / (ww || 1), X = x0 - beam.dy * o, Y = y0 + beam.dx * o; if (a > 1) { if (bayer(Math.round(X), Math.round(Y)) < .5) st.px(X, Y, beam.ff ? 0xffe066 : 0xb98af8, .6); continue; } st.px(X, Y, a < .4 ? 0xffffff : a < .75 ? (beam.ff ? 0xfff3a0 : 0xe2cbff) : (beam.ff ? 0xffc21a : 0x7a3ae0)); }
+          }
+          // the charged ball stays lit in his hands while the beam pours out
+          const bw = w * 1.4; for (let y = -bw; y <= bw; y++) for (let x = -bw; x <= bw; x++) { const q = Math.hypot(x, y) / bw; if (q <= 1) st.px(beam.x + x, beam.y + y, q < .55 ? 0xffffff : beam.ff ? 0xfff3a0 : 0xd9b8ff); }
+          if (Math.random() < .8) fx.add({ x: beam.x + beam.dx * Math.random() * 80, y: beam.y + beam.dy * Math.random() * 80, vx: (Math.random() - .5) * 60, vy: (Math.random() - .5) * 60, life: .4, c: [0xffffff, 0xc9a2ff, 0x7a3ae0], raw: true });
+        }
+      }
+      if (sprint > .3 && Math.random() < .6) fx.add({ x: kd.x, y: kd.y, vx: (Math.random() - .5) * 30, vy: -10, drag: 3, life: .4, s: 1, grow: 1.5, c: [0xffffff, 0xe7e2d4], raw: true });
+      if (cloudFly) st.blit(puff, cloudFly.x - 13, cloudFly.y - 9, false, true);
+      if (boss) {
+        const k = boss.k = Math.max(1.2, R / 42), ent = Math.min(1, (t - boss.t0) / 1.2), out = boss.dead ? Math.min(1, (t - boss.t1) / 1.2) : 0;
+        boss.x = cx + R * 1.45 + (1 - ent) * st.W * .4 + (boss.fled ? out * st.W * .5 : 0); boss.y = cy - R * .75 + Math.sin(t * 2) * 3 - (boss.fled ? out * 30 : 0);
+        boss.x = Math.min(boss.x, st.W - 11 * k - 3 + (1 - ent) * st.W * .4 + (boss.fled ? out * st.W * .5 : 0));
+        boss.flash = Math.max(0, boss.flash - dt);
+        if (!(boss.dead && !boss.fled)) {
+          const spr = boss.spr, W = st.W;
+          for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const c = spr.col[j * spr.w + (spr.w - 1 - i)]; if (c < 0) continue; for (let yy = 0; yy < k; yy++) for (let xx = 0; xx < k; xx++) st.px(boss.x + (i - spr.ax) * k + xx, boss.y + (j - spr.h) * k + yy, boss.flash > 0 ? 0xffffff : c); }
+          // health bar and name
+          const bw = Math.round(20 * k), bx = Math.round(boss.x - bw / 2), by = Math.round(boss.y - spr.h * k - 7), f = Math.max(0, boss.hp / boss.max);
+          for (let x = -1; x <= bw; x++) for (let y = -1; y <= 2; y++) st.px(bx + x, by + y, x < 0 || x === bw || y < 0 || y === 2 ? 0x1d1030 : x < bw * f ? (f > .3 ? 0x34d873 : 0xe0473e) : 0xffffff);
+          const nm = boss.name.toUpperCase(), nx = Math.round(boss.x - st.textWidth(nm) / 2);
+          for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(nm, nx + ox, by - 8 + oy, 0xffffff); st.text(nm, nx, by - 8, 0x1d1030);
+        }
+      }
+      for (const kb of kis) for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) { const d = Math.hypot(x, y); if (d <= 2.2) st.px(kb.x + x, kb.y + y, d < 1.2 ? 0xffffff : 0x8fd8ff); }
+      for (const m of meteors) if (m.delay <= 0) { st.px(m.x, m.y, 0xffffff); st.px(m.x + 1, m.y, 0xffe08a); st.px(m.x, m.y + 1, 0xffb35a); st.px(m.x + 1, m.y + 1, 0xe0473e); }
+      fx.step(st, dt);
+      if (star) st.blit(STAR, star.x - 4, star.y - 4, false, true);   // in front of the planet, like its tail
+      drawSea(t, true);
+      if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
+      if (shen) {
+        const age = t - shen.t0, dark = shen.phase === 'leave' ? Math.max(0, .62 * (1 - (t - shen.t1) / 1.6)) : Math.min(.62, age * .4);
+        if (shen.phase === 'rise' && age > 4.4) openWish();
+        if (shen.phase === 'leave' && t - shen.t1 > 1.7) { shen = null; document.body.classList.remove('shen'); }
+        // no darkening: he just appears in the daylight
+      }
+      for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y), a = Math.min(1, f.life * 2); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(f.s, x + ox, y + oy, 0xffffff, a); st.text(f.s, x, y, f.gold ? 0xd99a1c : 0x111111, a); }
+      for (let k = floats.length - 1; k >= 0; k--) if (floats[k].life <= 0) floats.splice(k, 1);
+      st.flush();
+    }
+
+    function drawSea(t, front) {
+      // cloud puffs keep the same on-screen size whatever the pixel scale (phones render at 2×, desktop at 3×)
+      const ck = 3 / st.scale, base = st.H - (st.H * (front ? .06 : .14) * (st.scale === 2 ? .7 : 1)), W = st.W, pal = [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8], sp = (front ? 6 : 3) * ck, rr = Math.round((front ? 9 : 7) * ck);
+      for (let i = -2; i < W / (rr * 1.3) + 3; i++) {
+        const px = ((i * rr * 1.3 - t * sp) % (W + rr * 4) + W + rr * 4) % (W + rr * 4) - rr * 2, py = base + Math.sin(i * 1.7) * rr * .45 + (front ? 0 : -6 * ck), r = rr * (.8 + .4 * hash(i * 3.3 + (front ? 9 : 0)));
+        for (let y = Math.floor(py - r); y < st.H; y++) for (let x = Math.floor(px - r); x <= px + r; x++) {
+          const dx = x - px, dy = y - py; if (dy < 0 && dx * dx + dy * dy > r * r) continue; if (dy >= 0 && Math.abs(dx) > r) continue;
+          const l = dy < 0 ? -(dx * .5 + dy * .9) / r : -.6 - dy / (st.H - py + 1), v = l + bayer(x, y) * .3;
+          st.px(x, y, pal[v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0]);
+        }
+      }
+    }
+    layout(); scenery(); syncShop();
+    if (/ape/.test(location.hash)) { session = 41; nextMoon = 0; }
+    if (/raid/.test(location.hash)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
+    if (/shenron/.test(location.hash)) setTimeout(() => summon(+(location.hash.match(/shenron(\d)/) || [0, 0])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
+    return { frame, start: () => {
+      playing = true; syncShop();
+      // while you were away: half of your idle rate, up to eight hours
+      const away = S.last ? Math.min(8 * 3600, (Date.now() - S.last) / 1000) : 0, idle = (lapValue() / 7 + passive()) * Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * FORMS[S.form].x;
+      if (away > 90 && idle > 0) { const got = Math.round(idle * away * .5); gain(got); setTimeout(() => ui.event(`while you were away: +${fmtShort(got)}`), 900); }
+      save();
+    }, resize: layout, train: () => { const k = kidScreen(14); onClick(k.x + 999, k.y + 999); } };
+  }
+});
