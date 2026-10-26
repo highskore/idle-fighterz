@@ -1065,7 +1065,9 @@ GAMES.push({
     const menu = () => ({ ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
     const pick = id => { if (!heroOpen(id)) return false; S.hero = id; save(); return true; };
     const thumb = (id, k = 4) => { const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); } return c; };
-    return { menu, pick, thumb, frame, kaioken, start: () => {
+    // what the share card shows: the exact power level, the form, and the hero as he looks right now
+    const card = () => ({ pl: Math.floor(S.pl), form: FORMS[S.form].name, hero: (CHARS.find(c => c.id === S.hero) || CHARS[0]).name, spr: (fuseUntil > st.t ? HERO().fused : HERO().forms[S.form]).idle, world: S.world, scene: st.cv });
+    return { menu, pick, thumb, card, frame, kaioken, start: () => {
       playing = true; syncShop();
       // first visit of the day: ×1.25 for five minutes and a dragon ball
       const today = new Date().toDateString();
