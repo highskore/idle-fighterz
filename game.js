@@ -281,7 +281,10 @@ const VILLAINS = (() => {
   ];
 })();
 // a saiyan space pod streaks across the sky now and then; tap it for a boost
-const POD = makeSprite(['....oooo....', '..oowwwwoo..', '.owwwrrrrwo.', '.owwwrRRrro.', 'owwwwrRRrrwo', 'owwwwwrrrwwo', 'owwwwwwwwwwo', 'oWwwwwwwwwWo', '.oWwwwwwwWo.', '.oWWwwwwWWo.', '..ooWWWWoo..', '....oooo....'], { o: 0x2a2a3a, w: 0xf2f2f6, W: 0xb8bcc8, r: 0xd8241e, R: 0xff8a7a });
+const POD = shapeSprite(14, 14, G => {   // white attack pod with a purple window and the door seam
+  G.ell(7, 7, 5.9, 5.9, 'w'); G.line([[4.3, 2.8], [3.9, 7], [4.7, 11.3]], 1, 1, 'W');
+  G.ell(9, 5.5, 2.8, 2.6, 'k'); G.ell(9, 5.5, 2.1, 1.9, 'm'); G.set(8, 4, 'M'); G.set(8, 5, 'M');
+}, { o: 0x22222e, w: 0xf4f4f8, W: 0xbcc0cc, k: 0x3a3a48, m: 0x6a2a8a, M: 0xc08ae0 }, { w: 'W' });
 
 const TONES = {
   grass: [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e],
@@ -1017,7 +1020,7 @@ GAMES.push({
       for (const kb of kis) for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) { const d = Math.hypot(x, y); if (d <= 2.2) st.px(kb.x + x, kb.y + y, d < 1.2 ? 0xffffff : 0x8fd8ff); }
       for (const m of meteors) if (m.delay <= 0) { st.px(m.x, m.y, 0xffffff); st.px(m.x + 1, m.y, 0xffe08a); st.px(m.x, m.y + 1, 0xffb35a); st.px(m.x + 1, m.y + 1, 0xe0473e); }
       fx.step(st, dt);
-      if (star) st.blit(POD, star.x - 6, star.y - 6, false, true);   // in front of the planet
+      if (star) st.blit(POD, star.x - 7, star.y - 7, false, true);   // in front of the planet
       drawSea(t, true);
       if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
       if (shen) {
