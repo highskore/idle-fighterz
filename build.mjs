@@ -19,7 +19,10 @@ const head = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>highskore</title>
-<meta name="description" content="highskore — train on a tiny pixel planet">
+<meta name="description" content="a smart contract developer portfolio">
+<meta property="og:description" content="a smart contract developer portfolio">
+<meta name="twitter:description" content="a smart contract developer portfolio">
+<meta name="twitter:title" content="highskore">
 <meta name="theme-color" content="#ffffff">
 <link rel="icon" href="/static/favicons/favicon-32x32.png" sizes="32x32">
 <link rel="icon" href="/static/favicons/favicon-16x16.png" sizes="16x16">
