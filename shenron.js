@@ -99,26 +99,48 @@ const SHENRON = (() => {
 
   // porunga, namek's dragon: a horned, pointy-eared, heavily muscled giant who rises up behind the planet
   const PORUNGA = (() => {
-    const G = grid(64, 58), arm = (pts, w0, w1) => { G.line(pts, w0 + 2, w1 + 2, 'o'); G.line(pts, w0, w1, 'g'); };
-    G.line([[25, 11], [19, 4], [15, -1]], 4, 1.2, 'h'); G.line([[28, 9], [25, 3], [24, -1]], 2.6, 1, 'h');          // horns
-    G.poly([[22, 14], [5, 8], [21, 19]], 'G');                                                                         // pointed ear
-    G.ell(32, 16, 10.5, 9.5, 'g'); G.ell(32, 22, 7.5, 5.5, 'g');                                                       // head, muzzle
-    G.rect(26, 23, 7, 6, 'g'); G.ell(32, 38, 23, 12, 'g'); G.ell(14, 33, 7, 6, 'g');                                   // neck, chest, shoulder
-    G.poly([[17, 44], [32, 45], [32, 58], [21, 58]], 'g');                                                             // waist into the body below
-    for (let x = 17; x <= 31; x++) { const y = Math.round(38 - Math.pow((x - 31) / 14, 2) * 5); G.set(x, y + 3, 'G'); }   // pec line
-    for (const y of [46, 50, 54]) for (let x = 27; x <= 31; x++) G.set(x, y, 'G');                                     // abs
-    G.mirror();
-    arm([[14, 33], [18, 45], [46, 41]], 8, 7); arm([[50, 33], [46, 45], [18, 41]], 8, 7);                              // arms folded across the chest
-    G.poly([[22, 11.4], [31, 15.2], [31, 16.8], [22, 13.6]], 'k'); G.poly([[42, 11.4], [33, 15.2], [33, 16.8], [42, 13.6]], 'k');   // heavy brow
-    G.ell(27.5, 16, 2.6, 1.5, 'r'); G.ell(36.5, 16, 2.6, 1.5, 'r'); G.set(26, 15, 'R'); G.set(35, 15, 'R');             // eyes
-    G.rect(29, 24, 6, 1, 'm'); G.set(29, 25, 'w'); G.set(34, 25, 'w'); G.set(31, 20, 'k'); G.set(32, 20, 'k');       // mouth, fangs, nostrils
-    return makeSprite(finish(G, { scales: false }), Object.assign({}, PAL, { g: 0x3a9a4a, G: 0x23683a, l: 0x5cbf5c, L: 0xb0ec8a }), { emit: 'rR', ax: 32, ay: 58 });
+    // arms crossed, snarling, horns, heavy traps; TOP rows of headroom keep his horns and antennae on the grid
+    const W = 66, H = 64, TOP = 6, G = grid(W, H), arm = (pts, w0, w1) => { G.line(pts, w0 + 2, w1 + 2, 'o'); G.line(pts, w0, w1, 'g'); };
+    function torso(G) {
+      const y = TOP + 22;
+      G.rect(28, y, 10, 6, 'g');                                                                                 // neck
+      G.ell(33, y + 15, 25, 12, 'g'); G.ell(12, y + 9, 7.5, 6.5, 'g'); G.ell(54, y + 9, 7.5, 6.5, 'g');         // chest, shoulders
+      for (const [x, s] of [[8, -1], [12, -1], [54, 1], [58, 1]]) G.poly([[x - 2, y + 5], [x + s * 3, y - 3], [x + 2, y + 5]], 'd');   // shoulder spikes
+      G.poly([[18, y + 22], [48, y + 22], [45, H], [21, H]], 'g');                                              // waist
+      for (let x = 18; x <= 48; x++) { const yy = Math.round(y + 17 - Math.pow((Math.abs(x - 33) - 7) / 9, 2) * 3); if (Math.abs(x - 33) > 1) G.set(x, yy, 'G'); }   // pecs
+      for (const yy of [y + 25, y + 29, y + 33]) for (let x = 28; x <= 38; x++) if (x !== 33) G.set(x, yy, 'G');   // abs
+      for (let yy = y + 23; yy < H; yy++) G.set(33, yy, 'G');
+    }
+    function traps(G) {   // sloping from under the jaw onto the shoulders, so the head sits on the body
+      const y = TOP, s = 0;
+      G.poly([[27, y + 21], [39, y + 21], [56 + s, y + 28], [58 + s, y + 33], [8 - s, y + 33], [10 - s, y + 28]], 'g');
+      G.line([[27, y + 23], [16 - s, y + 27], [9 - s, y + 30]], 1, 1, 'G'); G.line([[39, y + 23], [50 + s, y + 27], [57 + s, y + 30]], 1, 1, 'G');   // the traps' lower edge
+      G.line([[26, y + 22], [14 - s, y + 26]], 1, 1, 'l'); G.line([[40, y + 22], [52 + s, y + 26]], 1, 1, 'l');                                       // lit ridge on top
+    }
+    function horns(G) { const y = TOP; G.line([[25, y + 6], [18, y + 1], [15, y - 4]], 3, .8, 'd'); G.line([[41, y + 6], [48, y + 1], [51, y - 4]], 3, .8, 'd'); }
+    function head(G) {
+      const y = TOP;
+      G.line([[29, y + 6], [26, y - 1], [24, y - 5]], 1.6, 1, 'k'); G.line([[37, y + 6], [40, y - 1], [42, y - 5]], 1.6, 1, 'k');   // antennae
+      G.ell(24, y - 5.5, 1.4, 1.4, 'k'); G.ell(42, y - 5.5, 1.4, 1.4, 'k');
+      for (const [x0, h] of [[22, 6], [26, 8], [40, 8], [44, 6]]) G.poly([[x0 - 2, y + 6], [x0 + (x0 < 33 ? -1 : 1), y + 6 - h], [x0 + 2, y + 6]], 'd');
+      G.ell(33, y + 10, 11, 8.5, 'g');
+      G.poly([[23, y + 12], [43, y + 12], [41, y + 22], [25, y + 22]], 'g');
+      G.poly([[22, y + 14], [10, y + 10], [21, y + 18]], 'G'); G.poly([[44, y + 14], [56, y + 10], [45, y + 18]], 'G');
+      const brow = (drop, thick) => { G.poly([[22, y + 9 - drop], [32, y + 13], [32, y + 13 + thick], [22, y + 11 - drop]], 'k'); G.poly([[44, y + 9 - drop], [34, y + 13], [34, y + 13 + thick], [44, y + 11 - drop]], 'k'); };
+      // snarling: lips pulled back over a full row of teeth
+      brow(2, 2); G.ell(27.5, y + 14.5, 2.2, 1.2, 'r'); G.ell(38.5, y + 14.5, 2.2, 1.2, 'r'); G.set(28, y + 14, 'R'); G.set(38, y + 14, 'R');
+      G.set(31, y + 17, 'k'); G.set(35, y + 17, 'k'); G.set(30, y + 16, 'G'); G.set(36, y + 16, 'G');
+      G.rect(25, y + 19, 16, 4, 'm'); for (let x = 25; x <= 40; x += 2) { G.set(x, y + 19, 'w'); G.set(x + 1, y + 22, 'w'); } G.rect(25, y + 18, 16, 1, 'k'); G.rect(25, y + 23, 16, 1, 'k');
+    }
+    torso(G); horns(G); traps(G); head(G);
+    arm([[12, TOP + 33], [17, TOP + 44], [49, TOP + 41]], 9, 8); arm([[54, TOP + 33], [49, TOP + 44], [17, TOP + 41]], 9, 8);   // arms folded across the chest
+    return makeSprite(finish(G, { scales: false }), Object.assign({}, PAL, { g: 0x3a9a4a, G: 0x23683a, l: 0x5cbf5c, L: 0xb0ec8a, d: 0x1f3a24, D: 0x10200f }), { emit: 'rR', ax: 33, ay: H });
   })();
   // drawn behind the planet, so the planet hides his lower body; ctx is the same as draw()'s
   function drawPorunga(ctx) {
     // sized so his folded arms rest just above the planet's crown and his horns stay on screen
-    const spr = PORUNGA, top = ctx.cy - ctx.R * .75, k = Math.max(.8, Math.min(ctx.R * 2.6 / spr.w, (top - 4) / 46)), rise = 1 - Math.pow(1 - ctx.rise, 3), t = ctx.t;
-    const bx = ctx.cx, by = top + (spr.ay - 46) * k + (1 - rise) * ctx.H * 1.1 - ctx.gone * ctx.gone * ctx.H * 1.4 + Math.sin(t * 1.3) * 2;
+    const spr = PORUNGA, top = ctx.cy - ctx.R * .75, k = Math.max(.8, Math.min(ctx.R * 2.6 / spr.w, (top - 4) / 52)), rise = 1 - Math.pow(1 - ctx.rise, 3), t = ctx.t;
+    const bx = ctx.cx, by = top + (spr.ay - 52) * k + (1 - rise) * ctx.H * 1.1 - ctx.gone * ctx.gone * ctx.H * 1.4 + Math.sin(t * 1.3) * 2;
     // his serpent tail: from behind his waist it coils down round the planet, passing in front once
     const lift = by - (ctx.cy + ctx.R * .1), pts = [];
     for (let i = 0; i <= 900; i++) { const u = i / 900, a = -1.3 + u * 6.283 * .95, rr = 1.32 - u * .12; pts.push([ctx.cx + Math.cos(a) * rr * ctx.R + Math.sin(u * 9 + t * 1.5) * 2, ctx.cy + (-.15 + u * .95) * ctx.R + lift * (1 - u * .4), Math.sin(a) * rr * ctx.R, u]); }
@@ -130,7 +152,7 @@ const SHENRON = (() => {
     }
     ctx.z = -ctx.R * 1.6;
     blit(ctx, spr, bx, by, false, k);
-    if (rise > .9 && !ctx.gone) for (const ex of [27.5, 36.5]) { const x = bx + (ex - spr.ax) * k, y = by + (16 - spr.ay) * k; for (let a = 0; a < 6.28; a += .5) ctx.px(x + Math.cos(a) * (k + 1.5), y + Math.sin(a) * (k * .6 + 1), 0xff5a4a); }
+    if (rise > .9 && !ctx.gone) for (const ex of [27.5, 38.5]) { const x = bx + (ex - spr.ax) * k, y = by + (20.5 - spr.ay) * k; for (let a = 0; a < 6.28; a += .5) ctx.px(x + Math.cos(a) * (k + 1.5), y + Math.sin(a) * (k * .6 + 1), 0xff5a4a); }
   }
   for (const hd of HEADS) hd.spr = makeSprite(hd.rows, PAL, { emit: 'rR', ax: hd.ax, ay: hd.ay });
 
