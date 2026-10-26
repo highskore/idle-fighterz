@@ -129,13 +129,30 @@ const CELL = shapeSprite(30, 35, G => {
   G.rect(9, 32, 4, 2, 'k'); G.rect(15, 32, 4, 2, 'k');                                               // boots
   for (const [x, y] of [[10, 23], [17, 24], [13, 25], [8, 20], [20, 20], [12, 29], [16, 30], [14, 22]]) G.set(x, y, 'k');   // spots
 }, { o: 0x0d2210, g: 0x7acb5c, G: 0x3f8a3a, k: 0x1a2a1a, K: 0x24342a, f: 0xf2e8f2, F: 0xc8b8d0, P: 0x9a4ad8, r: 0xd03050 }, { g: 'G', f: 'F' });
+const KIDBUU = shapeSprite(22, 30, G => {
+  G.line([[11, 7], [13, 3], [12, 1]], 2.2, 1.2, 'p');                                               // antenna
+  G.ell(11, 10, 3.8, 3.8, 'p'); G.set(9, 10, 'r'); G.set(13, 10, 'r'); G.set(9, 9, 'k'); G.set(13, 9, 'k'); G.rect(10, 12, 3, 1, 'k');   // head, red eyes, grin
+  G.ell(11, 18, 4, 3.5, 'p'); G.rect(8, 20, 7, 2, 'y');                                             // body, gold belt
+  G.line([[7, 16], [4, 20], [3, 24]], 2.2, 1.8, 'p'); G.line([[15, 16], [18, 19], [19, 15]], 2.2, 1.8, 'p');   // arms, one fist up
+  G.poly([[7, 22], [15, 22], [16, 27], [6, 27]], 'w'); G.rect(6, 27, 4, 2, 'k'); G.rect(12, 27, 4, 2, 'k');   // baggy pants, shoes
+}, { o: 0x2a0f1a, p: 0xf59ac8, P: 0xc8669a, w: 0xffffff, W: 0xc8c8d8, k: 0x1a1a1a, y: 0xf2c84a, Y: 0xb88a1a, r: 0xd8241e }, { p: 'P', w: 'W', y: 'Y' });
+const BEERUS = shapeSprite(26, 34, G => {
+  G.poly([[8.5, 7], [7, -1], [11.5, 4]], 's'); G.poly([[17.5, 7], [19, -1], [14.5, 4]], 's');      // tall ears
+  G.ell(13, 9, 4.4, 4.6, 's'); G.set(11, 9, 'e'); G.set(15, 9, 'e'); G.set(11, 8, 'k'); G.set(15, 8, 'k'); G.rect(12, 12, 3, 1, 'S');   // head, yellow eyes
+  G.rect(9, 14, 9, 2, 'y');                                                                          // gold collar
+  G.poly([[9, 16], [17, 16], [16, 23], [10, 23]], 's');                                             // torso
+  G.rect(9, 22, 9, 2, 'w'); G.poly([[9, 24], [17, 24], [19, 31], [7, 31]], 'k');                    // white sash, black wrap trousers
+  G.rect(8, 26, 11, 1, 'y'); G.rect(7, 31, 5, 2, 'y'); G.rect(14, 31, 5, 2, 'y');                   // gold trim, shoes
+  G.line([[17, 28], [22, 30], [23, 26]], 1.6, 1.1, 's');                                            // thin tail
+  G.line([[8, 17], [9, 21], [17, 20]], 2.6, 2.2, 'S'); G.line([[18, 17], [17, 21], [9, 20]], 2.6, 2.2, 's'); G.ell(9.5, 20, 1.3, 1.1, 'y');   // arms folded, gold cuff
+}, { o: 0x1a1030, s: 0x8a6ad0, S: 0x5e44a0, y: 0xf2c84a, Y: 0xb88a1a, k: 0x1a1a1a, K: 0x34343c, w: 0xf2eee6, W: 0xc0b8a8, e: 0xd8e84a }, { s: 'S', y: 'Y', w: 'W', k: 'K' });
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
   return [
     { name: 'frieza', spr: FRIEZA },
     { name: 'cell', spr: CELL },
-    { name: 'majin buu', spr: body(['......oo......', '.....oppo.....', '....oppppo....', '..oppppppppo..', '..opkrppkrpo..', '..oppppppppo..', '...oppmmppo...', '....oppppo....', '..ookkkkkkoo..', '.oppkkppkkppo.', 'opppkyyyykpppo', 'oppowwwwwwoppo', '.oo.owwwwwo.oo', '....owwwwwo...', '....owwowwo...', '....oyyoyyo...', '....okko.kko..', '....ooo...ooo.'], { o: 0x2a0f1a, p: 0xf59ac8, k: 0x1a1a1a, r: 0xd8241e, m: 0x8a1f3a, y: 0xf2c84a, w: 0xffffff }) },
-    { name: 'beerus', spr: body(['..oo......oo..', '..opo....opo..', '..oppooooppo..', '..oppppppppo..', '..opyrppyrpo..', '..oppppppppo..', '...oppkkppo...', '....oppppo....', '..ooyyyyyyoo..', '.oppkyyyykppo.', 'opppokkkkoppp o'.replace(' ', ''), 'oppo.okko.oppo', '.oo..okko..oo.', '....owwwwo....', '....owwwwo....', '....okkoko....', '....oyo.oyo...', '....oo...oo...'], { o: 0x1d1030, p: 0x9a7ad8, k: 0x1a1a1a, y: 0xf2c84a, r: 0xd8241e, w: 0xe8e0f0 }) },
+    { name: 'kid buu', spr: KIDBUU },
+    { name: 'beerus', spr: BEERUS },
   ];
 })();
 const STAR = makeSprite(['....o....', '...oyo...', '..oyYyo..', 'ooyYWYyoo', 'oyYWWWYyo', '.oyYYYyo.', '.oyYoYyo.', 'oyyo.oyyo', 'ooo...ooo'], { o: 0x8a5a12, y: 0xf2b134, Y: 0xffd84a, W: 0xffffff }, { emit: 'oyYW' });
