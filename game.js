@@ -72,8 +72,8 @@ function makeHero(head, pal = {}, gi = false) {
   return { forms, fused, idle: forms[0].idle };
 }
 const VEGETA_HEAD = ['......o...o.....', '.....oho.oho....', '....ohHo.oHho...', '....ohHhohHhho..', '...ohhHhhhhhho..', '...ohhhhhhhhho..', '...ohhhhhhhhhho.', '....ohhhhhhhhho.', '....ohhhhhhhhKo.', '....ohhsshsshko.', '....ohEEssEEhko.', '....osrEEsLLLko.', '....osssssLlLko.', '....oSssMMsSoK..', '.....oSsssSo....', '......ooSSoo....'];
-const GOKU_HEAD = ['..o.......o.....', '.oho..o..oho....', '.ohHo.ohoohHo..o', '..ohhohHhhhHhooo', '.oohhhhhhhhhhhho', 'ohhhhHhhhhhhhho.', '.ohhhhhhhhhhhhho', '..ohhhhhhhhhhho.', '..ohhhhhshhhho..', '...ohhssshsssho.', '...ohsEEssEEso..', '...osrEEsrEEso..', '...osssssssSo...', '...oSssMMsSo....', '....oSsssSo.....', '.....ooSSoo.....'];
-const GOHAN_HEAD = ['................', '................', '.....o..o.o.....', '....ohoohohoo...', '...ohhHhhhHhho..', '..ohhhhhhhhhhho.', '..ohhhhhhhhhhho.', '...ohhhhhhhhhho.', '...ohhhhhhhhho..', '...ohhssshsssho.', '...ohsEEssEEso..', '...osrEEsrEEso..', '...osssssssSo...', '...oSssMMsSo....', '....oSsssSo.....', '.....ooSSoo.....'];
+const GOKU_HEAD = ['..o.......o.....', '.oho..o..oho....', '.ohHo.ohoohHo..o', '..ohhohHhhhHhooo', '.oohhhhhhhhhhhho', 'ohhhhHhhhhhhhho.', '.ohhhhhhhhhhhhho', '..ohhhhhhhhhhho.', '..ohhhhhshhhho..', '...ohhsshsshho..', '...ohEEssEEsho..', '...osrEEsEErso..', '...ossssssssSo..', '...oSsssMMsSo...', '....oSsssSo.....', '.....ooSSoo.....'];
+const GOHAN_HEAD = ['................', '................', '.....o..o.o.....', '....ohoohohoo...', '...ohhHhhhHhho..', '..ohhhhhhhhhhho.', '..ohhhhhhhhhhho.', '...ohhhhhhhhhho.', '...ohhhhhhhhho..', '...ohhsshsshho..', '...ohEEssEEsho..', '...osrEEsEErso..', '...ossssssssSo..', '...oSsssMMsSo...', '....oSsssSo.....', '.....ooSSoo.....'];
 const TRUNKS_HEAD = ['................', '................', '.....oooooo.....', '....ohHHhhhoo...', '...ohhhhhhhhho..', '...ohhhhhhhhhho.', '..ohhhhhohhhhho.', '..ohhhhosohhhho.', '..ohhhossssohho.', '..ohhossssssoho.', '..ohhsEEssEEsho.', '..ohhsrEEsrEsho.', '..ohhsssssssSho.', '...ohSssMMsSoho.', '...ohoSsssSo.o..', '....o.ooSSoo....'];
 // playable heroes; all but vegeta are unlocked by an achievement
 const HEROES = {
@@ -1034,13 +1034,7 @@ GAMES.push({
     const menu = () => ({ ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
     const pick = id => { if (!heroOpen(id)) return false; S.hero = id; save(); return true; };
     const thumb = (id, k = 4) => { const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); } return c; };
-    // achievement icons: a little pixel portrait of what each one is about
-    const METEOR = makeSprite(['....oo', '...oyo', '..oyYo', '.oyYro', 'oyrro.', 'ooo...'], { o: 0x2a1a10, y: 0xffe08a, Y: 0xffffff, r: 0xe0473e });
-    const BALL = makeSprite(['..oooo..', '.obbBBo.', 'obwbbbBo', 'obbbbbBo', 'obbbbbBo', 'oBbbbBBo', '.oBBBBo.', '..oooo..'], { o: 0x2f6ae0, b: 0xd8f0ff, B: 0x8fd8ff, w: 0xffffff });
-    const ICON = () => { const V = HEROES.vegeta; return { lap1: V.forms[0].run[1], laps100: KINGKAI, ss: V.forms[1].idle, ui: V.forms[8].idle, o9k: V.forms[0].idle, villains10: SOLDIER, frieza: FRIEZA, cell: CELL, beerus: BEERUS, all4: KIDBUU, ginyu: GINYU[0].spr, fleet: SHIP, greg5: GREGORY, yamcha: YAMCHA, stars25: STAR, storm20: METEOR, spirit: BALL, struggle: V.forms[0].pose, ape: APE[0], fusion: V.fused.idle, kaioken: V.forms[4].idle, shenron: DRAGON.head, porunga: SHENRON.PORUNGA, chamber: DOOR, tournament: SAIBA, ascend: V.forms[5].idle }; };
-    let icons = null;
-    const achIcon = (id, done, k = 3) => { icons = icons || ICON(); const spr = icons[id], c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = done ? '#' + v.toString(16).padStart(6, '0') : '#d9d9d6'; x.fillRect(i * k, j * k, k, k); } return c; };
-    return { menu, pick, thumb, achIcon, frame, kaioken, start: () => {
+    return { menu, pick, thumb, frame, kaioken, start: () => {
       playing = true; syncShop();
       // while you were away: half of your idle rate, up to eight hours
       const away = S.last ? Math.min(8 * 3600, (Date.now() - S.last) / 1000) : 0, idle = (lapValue() / 7 + passive()) * Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * FORMS[S.form].x;

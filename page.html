@@ -75,7 +75,8 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 .toast { position: absolute; left: 50%; top: 9%; transform: translate(-50%, 6px); width: max-content; max-width: 88%; text-align: center; text-wrap: balance; font-family: var(--serif); font-style: italic; font-size: clamp(22px, 2.6vw, 34px); line-height: 1.05; color: var(--ink); -webkit-text-stroke: 6px #fff; paint-order: stroke fill; text-shadow: none; opacity: 0; transition: opacity .3s, transform .6s; pointer-events: none; z-index: 2; }
 .wish { position: absolute; right: 24px; top: 50%; transform: translateY(-50%); z-index: 6; display: flex; flex-direction: column; gap: 8px; width: min(320px, 86%); }
 .wish[hidden] { display: none; }
-.game.wishing .hud, .game.wishing .shop-toggle, .game.wishing .mbtn, .game.wishing .shop, .game.wishing .toast { visibility: hidden; }   /* the wish menu owns the screen while it's up */
+.game.wishing .hud, .game.wishing .shop-toggle, .game.wishing .mbtn, .game.wishing .shop, .game.wishing .toast { visibility: hidden; }
+body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .brand { visibility: hidden; opacity: 0; transition: opacity .3s, visibility .3s; }   /* hidden for the whole summon, not just while each wish is open */   /* the wish menu owns the screen while it's up */
 .wish p { margin: 0 0 4px; text-align: center; font-family: var(--serif); font-style: italic; font-size: 30px; color: var(--ink); -webkit-text-stroke: 6px #fff; paint-order: stroke fill; text-shadow: none; }
 .wish button { font: inherit; display: flex; flex-direction: column; align-items: start; gap: 1px; text-align: left; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; cursor: pointer; transition: transform .12s, border-color .15s; }
 .wish button:hover, .wish button:focus-visible { border-color: var(--gold); transform: translateY(-1px); outline: none; }
@@ -271,38 +272,25 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 .menu-tabs b { font-weight: inherit; color: var(--gold); }
 .menu-x { font-size: 18px; line-height: 1; padding: 4px 10px; }
 .menu-body { overflow: auto; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.ach { display: grid; grid-template-columns: 30px 1fr; gap: 2px 10px; align-items: center; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; }
-.ach i { grid-row: span 2; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; color: #c8c8c8; background: #f4f4f3; }
-.ach i svg { width: 16px; height: 16px; }
-.ach b { font-weight: inherit; text-transform: uppercase; } .ach span { color: var(--muted); font-size: 11px; }
-.ach.done i { color: #fff; background: radial-gradient(circle at 35% 35%, #fff2c0, #ffa63a 55%, #c4561a); }
-.ach:not(.done) b { color: var(--muted); }
 .menu-body.chars { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
 .char { font: inherit; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 8px 10px; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; text-transform: uppercase; }
 .char canvas { width: 64px; height: auto; image-rendering: pixelated; }
 .char span { color: var(--muted); font-size: 10px; text-transform: lowercase; text-align: center; line-height: 1.3; }
 .char.on { border-color: var(--gold); background: #fffaf0; }
 .char.locked { cursor: default; } .char.locked canvas { filter: brightness(0) opacity(.18); }
-@media (min-width: 761px) { .menu-body:not(.chars) { grid-template-columns: repeat(3, 1fr); } }
 .achip b { font-weight: inherit; color: var(--gold); }
 .achip { display: inline-flex; align-self: center; align-items: center; gap: 3px; margin: 0; padding: 2px 0; font: inherit; line-height: 1; color: var(--muted); background: none; border: 0; cursor: pointer; pointer-events: auto; }
 .achip:hover { color: var(--ink); }
 .achip svg { width: 11px; height: 11px; }
 
-.ach i canvas { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
 
 /* ozaru night: the full moon turns the sky black and starry */
 .game, .page { transition: background-color .8s; }
 body.night .game { background-color: #07070d !important; background-image: radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 32% 8%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 58% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 76% 12%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 88% 34%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 8% 46%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 46% 40%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 94% 6%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 22% 60%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 68% 52%, #fff 50%, transparent 51%); }
 @media (min-width: 761px) { body.night .hud, body.night .hint, body.night .hud b { color: #f2f2f2; } body.night .hud .label, body.night .hud .meta { color: #9a9aa6; } }
 @media (max-width: 760px) { body.night .page, body.night { background-color: #07070d; } body.night .foot { background: #07070d; border-color: #1c1c26; } body.night .foot a, body.night .foot nav { color: #e8e8ec; } }
-[data-icons] .ach { border: 0; border-radius: 0; padding: 8px 2px; grid-template-columns: 22px 1fr; border-bottom: 1px solid var(--line); }
-[data-icons] .ach i { width: auto; height: auto; background: none !important; border-radius: 0; font-style: normal; color: #c8c8c4; }
-[data-icons] .ach.done i { color: var(--gold); }
-[data-icons="2"] .ach { grid-template-columns: 1fr auto; } [data-icons="2"] .ach b, [data-icons="2"] .ach span { grid-column: 1; } [data-icons="2"] .ach i { grid-column: 2; grid-row: 1 / span 2; text-transform: uppercase; font-size: 10px; }
-[data-icons="3"] .ach { display: inline-flex; flex-direction: column; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; } [data-icons="3"] .ach i { display: none; } [data-icons="3"] .ach span { display: none; }
-[data-icons="3"] .ach.done { background: #fff7e6; border-color: #f2d9a8; } [data-icons="3"].menu-body { display: flex; flex-wrap: wrap; gap: 6px; align-content: start; }
-[data-icons="4"] .ach { grid-template-columns: 30px 1fr; } [data-icons="4"] .ach i { font-family: var(--mono); white-space: nowrap; }
+[data-icons="pills"] .ach { display: inline-flex; align-items: baseline; gap: 8px; font: inherit; text-transform: uppercase; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; } [data-icons="pills"] .ach span { display: none; font-size: 11px; text-transform: none; } [data-icons="pills"] .ach.open span { display: inline; } [data-icons="pills"] .ach.done b { color: var(--ink); }
+[data-icons="pills"] .ach.done { background: #fff7e6; border-color: #f2d9a8; } [data-icons="pills"].menu-body { display: flex; flex-wrap: wrap; gap: 6px; align-content: start; }
 </style>
 
 <div class="scroller" id="scroller">
@@ -483,29 +471,14 @@ __PLANET__
   // achievements and characters popup
   let menuTab = 'ach';
   const achCount = () => { const m = game.menu(), n = m.ach.filter(a => a.done).length; document.querySelectorAll('[data-achn]').forEach(e => { e.textContent = `${n}/${m.ach.length}`; }); };
-  const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5L2.5 9.3l6.6-.8z" fill="currentColor"/></svg>';
-  // a pixel dragon ball with n stars
-  const dball = (n, on) => { const k = 3, N = 14, c = document.createElement('canvas'); c.width = c.height = N * k; const x = c.getContext('2d'), P = (i, j, col) => { x.fillStyle = col; x.fillRect(i * k, j * k, k, k); };
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const d = Math.hypot(i + .5 - N / 2, j + .5 - N / 2); if (d > 6.6) continue; P(i, j, !on ? (d > 5.8 ? '#c8c8c4' : '#e6e6e2') : d > 5.8 ? '#a8481a' : (i + j) < 9 ? '#ffc04a' : (i + j) < 15 ? '#f59a22' : '#e07a1a'); }
-    if (on) { P(4, 3, '#fff6d0'); P(5, 3, '#fff6d0'); P(4, 4, '#fff6d0'); }
-    const spots = [[7, 7], [5, 6, 9, 8], [5, 5, 9, 5, 7, 9], [5, 5, 9, 5, 5, 9, 9, 9], [4, 5, 10, 5, 7, 7, 4, 9, 10, 9], [4, 4, 10, 4, 4, 7, 10, 7, 4, 10, 10, 10], [7, 3, 4, 5, 10, 5, 7, 7, 4, 9, 10, 9, 7, 11]][n - 1];
-    for (let s2 = 0; s2 < spots.length; s2 += 2) { const sx = spots[s2], sy = spots[s2 + 1], col = on ? '#d8241e' : '#b8b8b4'; P(sx, sy, col); P(sx - 1, sy, col); P(sx + 1, sy, col); P(sx, sy - 1, col); P(sx, sy + 1, col); }
-    return c; };
   const renderMenu = () => {
     const m = game.menu(), body = $('menuBody'); achCount();
     document.querySelectorAll('[data-mt]').forEach(b => b.classList.toggle('on', b.dataset.mt === menuTab));
     body.classList.toggle('chars', menuTab === 'chars'); body.innerHTML = '';
     delete body.dataset.icons;
     if (menuTab === 'ach') {
-      const v = +((location.hash.match(/icon(\d)/) || [0, 1])[1]); body.dataset.icons = v;   // preview: #icon1..4
-      m.ach.forEach((a, n) => {
-        const d = document.createElement('div'); d.className = 'ach' + (a.done ? ' done' : ''); const i = document.createElement('i');
-        if (v === 1) i.textContent = a.done ? '●' : '○';
-        else if (v === 2) i.textContent = a.done ? 'done' : '—';
-        else if (v === 3) i.textContent = '';
-        else i.textContent = a.done ? '[x]' : '[ ]';
-        d.append(i); d.insertAdjacentHTML('beforeend', `<b>${a.name}</b><span>${a.text}</span>`); body.append(d);
-      });
+      body.dataset.icons = 'pills';   // compact pills, gold once earned
+      m.ach.forEach(a => { const d = document.createElement('button'); d.type = 'button'; d.className = 'ach' + (a.done ? ' done' : ''); d.title = a.text; d.innerHTML = `<b>${a.name}</b><span>${a.text}</span>`; d.addEventListener('click', () => d.classList.toggle('open')); body.append(d); });   // tap a pill for how to earn it
       return;
     }
     for (const c of m.chars) {
