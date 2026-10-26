@@ -175,7 +175,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .wish button { padding: 7px 12px; }
   /* phones: a thin bar of links on top, the full-screen game, the title on the cloud sea */
   .foot { position: relative; order: 0; height: 40px; width: 100vw; justify-content: center; align-items: center; border-bottom: 1px solid var(--line); background: #fff; }
-  .game { height: calc(100svh - 40px); height: calc(100dvh - 40px); }
+  .game { height: calc(100svh - 40px); }   /* svh, not dvh: safari's toolbar sliding in and out mustn't resize (and rebuild) the game mid-scroll */
   html, body { background: var(--sea) linear-gradient(#fff 50%, var(--sea) 50%) no-repeat; }
   html { overscroll-behavior: none; touch-action: manipulation; }
   /* iOS 26 Safari tints its bottom bar from the fixed/sticky element at the edge — the near-white sticky page,
@@ -200,14 +200,14 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
    then settles into place as the game card rises in (driven by --p, 0 → 1, from JS) */
 .scroller { height: 200svh; }
 .scroller > .page { position: sticky; top: 0; overflow: clip; }
-.cue { position: absolute; left: 50%; bottom: 22px; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translateX(-50%); color: var(--muted); text-transform: uppercase; font-size: 10px; opacity: calc(1 - var(--p, 0) * 3); }
+.cue { position: absolute; left: 50%; bottom: 22px; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translateX(-50%); color: var(--muted); text-transform: uppercase; font-size: 10px; padding: 12px 28px; opacity: calc(1 - var(--p, 0) * 3); }
 .cue i { width: 9px; height: 9px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); animation: cue 1.4s ease-in-out infinite; }
 @keyframes cue { 50% { transform: translateY(4px) rotate(45deg); } }
 .page.past .cue { visibility: hidden; }
 .edge { display: none; }
 #brand { transform: translateY(calc((1 - var(--e, 1)) * var(--brand-dy, 0px))) scale(calc(1 + (1 - var(--e, 1)) * (var(--brand-s, 1) - 1))); transform-origin: 50% 50%; will-change: transform; }
 #game { transform: translateY(calc((1 - var(--e, 1)) * var(--game-dy, 0px))); will-change: transform; }
-@media (max-width: 760px) { .cue { bottom: 18px; } }
+@media (max-width: 760px) { .cue { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px); } }   /* clear of safari's bottom toolbar */
 @media (prefers-reduced-motion: reduce) { .cue i { animation: none; } }
 @media (min-width: 761px) { .mswitch, .tabbar, .menu-btn, .rule { display: none; } }
 
@@ -345,8 +345,15 @@ __PLANET__
   }
   let introRaf = 0;
   addEventListener('scroll', () => { if (!introRaf) introRaf = requestAnimationFrame(() => { introRaf = 0; introScroll(); }); }, { passive: true });
-  addEventListener('resize', () => requestAnimationFrame(introLayout));
-  $('cue').addEventListener('click', e => { e.preventDefault(); scrollTo({ top: scroller.offsetHeight - innerHeight, behavior: 'smooth' }); });
+  // phones fire resize whenever the toolbar slides; only a real width change re-lays out the intro
+  let introW = innerWidth;
+  addEventListener('resize', () => { if (innerWidth === introW && innerWidth <= 760) return; introW = innerWidth; requestAnimationFrame(introLayout); });
+  // the cue glides you through the intro: our own eased scroll, so it's the same in every browser
+  $('cue').addEventListener('click', e => {
+    e.preventDefault();
+    const from = scrollY, to = scroller.offsetHeight - innerHeight, t0 = performance.now(), dur = 1300;
+    (function step(now) { const k = Math.min(1, (now - t0) / dur), ease = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; scrollTo(0, from + (to - from) * ease); if (k < 1) requestAnimationFrame(step); })(t0);
+  });
   introLayout();
   // older iOS ignores touch-action for double taps on some elements: swallow a second tap that lands within
   // 300ms outside the game canvas (the canvas handles its own double tap for the big bang attack)
@@ -398,9 +405,9 @@ __PLANET__
       group.position.y = baseGY + (phone ? (r.height / 2 - innerWidth * .2) / r.height * VH : 0);
       if (!phone) { for (const l of letters) { l.hero.copy(l.base); l.hk = 1; l.hr = 0; } return; }
       const lines = [letters.slice(0, 4), letters.slice(4)], adv = l => (letters[l.idx + 1] ? letters[l.idx + 1].pen : W0 - .3) - l.pen;
-      const wide = Math.max(...lines.map(ln => ln.reduce((a, l) => a + adv(l), 0))), k = Math.min(VW * (innerWidth / r.width) * .86 / (wide * 1.08), VH * .32 / H0), lh = H0 * k * 1.04;   // a full word-height apart, so ascenders and descenders never meet
+      const wide = Math.max(...lines.map(ln => ln.reduce((a, l) => a + adv(l), 0))), k = Math.min(VW * (innerWidth / r.width) * .8 / (wide * 1.08), VH * .32 / H0), lh = H0 * k * 1.04;   // a full word-height apart, so ascenders and descenders never meet
       lines.forEach((ln, row) => {
-        const w = ln.reduce((a, l) => a + adv(l), 0) * k; let pen = -w / 2 + (row ? .04 : -.04) * w;
+        const w = ln.reduce((a, l) => a + adv(l), 0) * k; let pen = -w / 2 + (row ? .01 : -.05) * w;
         for (const l of ln) { l.hero.set(pen + l.cx * k - group.position.x, (row ? -.5 : .5) * lh + (l.base.y - midY) * k - group.position.y, 0); l.hk = k; l.hr = (l.idx % 2 ? 1 : -1) * (.05 + (l.idx * 37 % 5) * .02); pen += adv(l) * k; }
       });
     }
