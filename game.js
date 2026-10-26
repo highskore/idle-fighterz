@@ -174,6 +174,31 @@ const GREGORY = shapeSprite(11, 8, G => {
   G.line([[3, 6], [1, 8]], 1, 1, 'G'); G.line([[6, 6], [7, 8]], 1, 1, 'G'); G.line([[8.5, 2], [10, 0]], 1, 1, 'k');
 }, { o: 0x0d2a12, g: 0x7ad85a, G: 0x3f8a3a, k: 0x111111 }, { g: 'G' });
 const DOOR = shapeSprite(12, 16, G => { G.rect(1, 1, 10, 15, 'w'); G.rect(3, 3, 6, 13, 'k'); G.set(8, 9, 'y'); }, { o: 0x1a1a24, w: 0xf6f4ee, W: 0xc8c4b8, k: 0x2a2a3a, y: 0xf2c84a }, { w: 'W' });
+// frieza's ship and his soldiers, yamcha in his crater
+const SHIP = shapeSprite(30, 18, G => {
+  G.line([[7, 12], [4, 17]], 1.4, 1.2, 'k'); G.line([[23, 12], [26, 17]], 1.4, 1.2, 'k'); G.line([[15, 13], [15, 17]], 1.4, 1.2, 'k');   // landing legs
+  G.rect(3, 17, 3, 1, 'k'); G.rect(25, 17, 3, 1, 'k'); G.rect(14, 17, 3, 1, 'k');
+  G.ell(15, 10, 14, 4.2, 'w');                                                                        // saucer body
+  G.ell(15, 6.5, 8, 5.5, 'w');                                                                        // dome
+  for (const x of [5, 9, 13, 17, 21, 25]) G.ell(x, 10.4, 1.3, 1, 'r');                              // ring of red-orange portholes
+  G.rect(4, 13, 23, 1, 'p');                                                                        // purple keel band
+  G.set(12, 3, 'l'); G.set(13, 2, 'l'); G.set(11, 4, 'l');                                            // glint on the dome
+}, { o: 0x1a1a24, w: 0xe8e8ee, W: 0xa8a8b8, r: 0xf06a2a, p: 0x6a3aa8, P: 0x45227a, k: 0x3a3a48, l: 0xffffff }, { w: 'W', p: 'P' });
+const SOLDIER = shapeSprite(13, 18, G => {
+  G.ell(6.5, 4, 2.8, 3, 's'); G.set(5, 4, 'k'); G.set(8, 4, 'k'); G.rect(3, 1, 7, 2, 'h');        // head, eyes, helmet hair
+  G.rect(9, 3, 2, 1, 'g');                                                                        // green scouter lens
+  G.ell(2.5, 8, 2.2, 1.6, 'y'); G.ell(10.5, 8, 2.2, 1.6, 'y');                                       // armour shoulder pads
+  G.poly([[3, 7], [10, 7], [10, 12], [3, 12]], 'w'); G.rect(3, 12, 7, 1, 'k');                        // chest plate
+  G.rect(1, 9, 2, 4, 's'); G.rect(10, 9, 2, 4, 's');                                            // arms
+  G.rect(4, 13, 2, 4, 'b'); G.rect(7, 13, 2, 4, 'b'); G.rect(3, 17, 3, 1, 'w'); G.rect(7, 17, 3, 1, 'w');   // legs, boots
+}, { o: 0x14141c, s: 0xb8a0e0, S: 0x8a72b4, h: 0x3a2a5a, k: 0x111111, g: 0x5ae07a, y: 0xd8c070, Y: 0xa89040, w: 0xf2f0e8, W: 0xc8c4b8, b: 0x2a2a3a }, { s: 'S', y: 'Y', w: 'W' });
+const YAMCHA = shapeSprite(26, 12, G => {
+  G.ell(13, 8, 12.5, 3.6, 'c'); G.ell(13, 7.6, 10, 2.6, 'C');                                         // the crater
+  G.ell(9, 5.5, 4.2, 2.6, 'g'); G.rect(12, 4, 6, 3, 'g');                                             // curled up in his orange gi
+  G.ell(18.5, 5, 2.4, 2.2, 's'); G.rect(17, 3, 4, 1, 'h'); G.set(16, 4, 'h'); G.set(19, 5, 'k');  // head, hair, closed eye
+  G.rect(6, 7, 3, 1, 'b'); G.rect(13, 7, 2, 1, 'b');                                                // blue wristbands
+  G.ell(5, 7.6, 1.4, 1, 's');                                                                         // a limp hand
+}, { o: 0x2a1a10, c: 0x8a6a48, C: 0x5a4430, g: 0xf08a24, G: 0xc0641a, s: 0xf2c8a0, S: 0xc89a76, h: 0x1a1a1a, k: 0x111111, b: 0x2a5ad8 }, { g: 'G', s: 'S' });
 // the ginyu force: one armoured build, five heads
 function ginyuMember(skin, hair, style) {
   return shapeSprite(16, 22, G => {
@@ -282,7 +307,7 @@ GAMES.push({
     };
     const lapValue = () => 30 * (1 + S.boots) ;
     const passive = () => S.partner * 4 + S.house * 40 + S.piccolo * 60;
-    let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
+    let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
@@ -368,7 +393,8 @@ GAMES.push({
         fuseOffer = 0; fuseUntil = st.t + 30; flashT = 1; shake = .6; ui.event('fusion ha! vegebubs — ×2 for 30s'); ui.fx && ui.fx('super');
         burst(monkeyAt.x, monkeyAt.y - 6, [0xffffff, 0xffe08a, 0xff9a3c, 0x6fb0ff], 50, 200); return;
       }
-      if (greg && greg.sx !== undefined && Math.hypot(px - greg.sx, py - (greg.sy - 4)) < 10) { const g = Math.max(300, rate() * 120); gain(g, greg.sx, greg.sy - 10, true); ui.event(`you caught gregory! +${fmtShort(Math.round(g))}`); ui.sfx && ui.sfx('coin'); burst(greg.sx, greg.sy - 4, [0xffffff, 0x9cf07a, 0x3f8a3a], 18, 120); greg = null; return; }
+      if (yam && yam.sx !== undefined && !yam.helped && Math.hypot(px - yam.sx, py - (yam.sy - 3)) < 12) { yam.helped = true; yam.until = st.t + 1.2; senzuUntil = Math.max(senzuUntil, st.t + 10); const g = Math.max(200, rate() * 40); gain(g, yam.sx, yam.sy - 10, true); ui.event('yamcha: "i\'m fine!" — senzu ×1.5 for 10s'); ui.sfx && ui.sfx('coin'); return; }
+      if (greg && greg.sx !== undefined && Math.hypot(px - greg.sx, py - (greg.sy - 4)) < 10) { const g = Math.max(300, rate() * 120) * (1 + .5 * (S.gregWins || 0)); S.gregWins = (S.gregWins || 0) + 1; gain(g, greg.sx, greg.sy - 10, true); ui.event(`you caught gregory! +${fmtShort(Math.round(g))} — race ${S.gregWins} won`); ui.sfx && ui.sfx('coin'); burst(greg.sx, greg.sy - 4, [0xffffff, 0x9cf07a, 0x3f8a3a], 18, 120); greg = null; return; }
       if (kai && kai.sx !== undefined && !kai.laughed && Math.hypot(px - kai.sx, py - (kai.sy - 8)) < 12) { kai.laughed = true; laughUntil = st.t + 10; ui.event('ha! ha! ha! — ×1.25 for 10s'); ui.sfx && ui.sfx('coin'); burst(kai.sx, kai.sy - 14, [0xffffff, 0xbfe9ff, 0x3a7ad8], 14, 90); return; }
       if (door && Math.hypot(px - door.x, py - (door.y - 8)) < 12) { chamberT0 = st.t; chamberUntil = st.t + 10 + 5 * S.chamber; ui.event(`hyperbolic time chamber — time slows, training ×2 for ${10 + 5 * S.chamber}s`); flashT = 1; ui.sfx && ui.sfx('form'); door = null; return; }
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.abs(px - m.x) < (m.spr.w / 2 + 2) * m.k && py > m.y - (m.spr.h + 2) * m.k && py < m.y + 3) { combo = st.t - lastClick < .6 ? Math.min(2, combo + .1) : 1; lastClick = st.t; ginyuHit(m, (1 + S.boots) * mult() * combo * 6); ui.sfx && ui.sfx('hit'); return; }
@@ -483,7 +509,7 @@ GAMES.push({
       kaioUntil = st.t + 15; tiredUntil = st.t + 25; kaioReady = st.t + 45; shake = .5; flashT = .4;
       ui.event(`kaioken! ×${KAIO()}`); const q = handPos(); burst(q.x, q.y, [0xffffff, 0xff9a8a, 0xe0332b], 40, 200);
     }
-    function killSaiba(sb) { goal('saiba'); if (tour) tour.ko++; sb.dead = true; gain(Math.max(40, rate() * 3) * (1 + .5 * S.armor), sb.sx, sb.sy - 12, true); burst(sb.sx, sb.sy - 5, [0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a]); }
+    function killSaiba(sb) { if (sb.soldier && ship) ship.ko++; goal('saiba'); if (tour) tour.ko++; sb.dead = true; gain(Math.max(40, rate() * 3) * (1 + .5 * S.armor), sb.sx, sb.sy - 12, true); burst(sb.sx, sb.sy - 5, [0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a]); }
     const PUNS = [
       'why did the saiyan bring a ladder? to reach the next level!',
       "what's a namekian's favourite drink? green tea!",
@@ -616,10 +642,21 @@ GAMES.push({
       if (session > 75 || S.cloud > 0) { if (!cloudFly && riding <= 0 && (nextCloud -= dt * (1 + S.cloud * .6)) < 0) { once('cloud', 'flying nimbus is here'); cloudFly = { x: -30, y: st.H * .3 }; nextCloud = 60 + Math.random() * 25; } }
       if (session > 140 && !aura) { aura = true; ui.event('ki aura unlocked'); }
       // gregory hops about the planet now and then — catch him
-      if (!greg && session > 60 && (nextGreg -= dt) < 0) { greg = { c: capPt(.2 + Math.random() * .9, Math.random() * 6.28), from: null, hopT: t, until: t + 15 }; once('greg', 'gregory is hopping around — catch him!'); nextGreg = 80 + Math.random() * 40; }
-      if (greg) { if (t > greg.until) { if (greg.sx !== undefined) burst(greg.sx, greg.sy, [0xffffff, 0x9cf07a], 8, 60); greg = null; } else if (t - greg.hopT > .75) { greg.from = greg.c; greg.c = V.norm(V.add(greg.c, [Math.random() - .5, Math.random() - .5, Math.random() - .5], .45)); if (V.dot(greg.c, N) < .1) greg.c = capPt(.3 + Math.random() * .6, Math.random() * 6.28); greg.hopT = t; } }
+      if (!greg && session > 60 && (nextGreg -= dt) < 0) { greg = { c: capPt(.2 + Math.random() * .9, Math.random() * 6.28), from: null, hopT: t, until: t + 10, hop: Math.max(.3, .75 - .08 * (S.gregWins || 0)) }; ui.event(S.gregWins ? `race gregory again — he's faster now. 10s` : 'race gregory! catch him in 10s'); nextGreg = 80 + Math.random() * 40; }
+      if (greg) { if (t > greg.until) { if (greg.sx !== undefined) burst(greg.sx, greg.sy, [0xffffff, 0x9cf07a], 8, 60); greg = null; ui.event('gregory got away'); } else if (t - greg.hopT > greg.hop) { greg.from = greg.c; greg.c = V.norm(V.add(greg.c, [Math.random() - .5, Math.random() - .5, Math.random() - .5], .45)); if (V.dot(greg.c, N) < .1) greg.c = capPt(.3 + Math.random() * .6, Math.random() * 6.28); greg.hopT = t; } }
       // king kai pops out to tell a terrible joke — laugh (tap him) for ×1.25
       if (!kai && session > 45 && !shen && (nextKai -= dt) < 0) { kai = { c: capPt(.35, 3.6), t0: t, until: t + 9 }; ui.event('king kai: ' + PUNS[Math.floor(Math.random() * PUNS.length)], 6000); nextKai = 140 + Math.random() * 40; }
+      // frieza's ship lands and four soldiers hop out; drop them all before it lifts off
+      if (!ship && session > 150 && !tour && !shen && !boss && !(ginyu && !ginyu.done) && (nextShip -= dt) < 0) { ship = { c: capPt(.35 + Math.random() * .5, Math.random() * 6.28), t0: t, until: t + 28, out: 0, ko: 0, next: t + 1.6 }; ui.event("frieza's ship has landed — take out his soldiers!"); ui.sfx && ui.sfx('boss'); nextShip = 220 + Math.random() * 60; }
+      if (ship) {
+        if (!ship.left && ship.out < 4 && t > ship.next) { saibas.push({ c: V.norm(V.add(ship.c, [Math.random() - .5, Math.random() - .5, Math.random() - .5], .3)), born: t, life: 16, soldier: true }); ship.out++; ship.next = t + 1.1; }
+        if (!ship.left && ship.ko >= 4) { ship.left = t; const g = Math.max(500, rate() * 60) * (1 + .5 * S.armor); const q = handPos(); gain(g, q.x, q.y - 16, true); ui.event(`frieza's soldiers are down — the ship flees! +${fmtShort(Math.round(g))}`); }
+        else if (!ship.left && t > ship.until) { ship.left = t; ui.event("frieza's ship took off"); }
+        if (ship.left && t - ship.left > 1.5) ship = null;
+      }
+      // yamcha turns up flattened in a crater now and then; help him up for a senzu
+      if (!yam && session > 100 && !shen && (nextYam -= dt) < 0) { yam = { c: capPt(.3 + Math.random() * .6, Math.random() * 6.28), until: t + 14 }; ui.event('yamcha got wrecked again — tap him'); nextYam = 200 + Math.random() * 80; }
+      if (yam && t > yam.until) yam = null;
       if (kai && t > kai.until) kai = null;
       // the time chamber door, once you own the key
       if (S.chamber > 0 && !door && chamberUntil < t && (nextDoor -= dt) < 0) { door = { x: cx - R * 1.45, y: cy - R * .45, t0: t, until: t + 15 }; once('door', 'the time chamber door is open — tap it'); nextDoor = 150 + Math.random() * 40; }
@@ -688,6 +725,7 @@ GAMES.push({
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
       if (S.world) { const left = Math.max(0, namekUntil - t); fxs.push(left > 60 ? `namek ${Math.ceil(left / 60)}m` : `namek ${Math.ceil(left)}s`); }
+      if (greg) fxs.push(`gregory ${Math.ceil(greg.until - t)}s`);
       if (chamberUntil > t) fxs.push(`time chamber ×2 ${Math.ceil(chamberUntil - t)}s`);
       if (laughUntil > t) fxs.push(`laughing ×1.25 ${Math.ceil(laughUntil - t)}s`);
       if (ginyu && !ginyu.done) fxs.push(`ginyu force ${Math.ceil(ginyu.until - t)}s`);
@@ -740,7 +778,7 @@ GAMES.push({
         if (v[2] < .05 || up <= 0) { sb.sx = undefined; continue; }
         sb.sx = cx + v[0] * R; sb.sy = cy - v[1] * R + st.bob;
         const hop = Math.abs(Math.sin((t - sb.born) * 7)) * 2 * up * down;
-        blitZ(SAIBA, sb.sx, sb.sy, Math.atan2(v[0], v[1]), Math.sin(t * 3 + sb.born) > 0, (up * down - 1) * 11 + hop, v[2] * R + 4, 1.1);
+        blitZ(sb.soldier ? SOLDIER : SAIBA, sb.sx, sb.sy, Math.atan2(v[0], v[1]), Math.sin(t * 3 + sb.born) > 0, (up * down - 1) * 11 + hop, v[2] * R + 4, 1.1);
       }
       // kid (and the monkey) against the depth buffer
       const kd = kidScreen(), set = fuseUntil > t ? KID.fused : KID.forms[S.form];
@@ -761,6 +799,8 @@ GAMES.push({
       // piccolo meditates above the planet; king kai and gregory stand on it
       if (S.piccolo > 0) { const c = capPt(.6, .9), v = M3.ap(M, V.mul(c, 1.28)); piccoloAt = v[2] > -.2 ? { x: cx + v[0] * R, y: cy - v[1] * R + st.bob + Math.sin(t * 1.6) * 2 } : null; if (piccoloAt) blitZ(PICCOLO, piccoloAt.x, piccoloAt.y, 0, false, 0, v[2] * R + 8, .95); } else piccoloAt = null;
       if (kai) { const v = M3.ap(M, kai.c), up = Math.min(1, (t - kai.t0) / .4) * Math.min(1, (kai.until - t) / .4); if (v[2] > .05) { kai.sx = cx + v[0] * R; kai.sy = cy - v[1] * R + st.bob; blitZ(KINGKAI, kai.sx, kai.sy, Math.atan2(v[0], v[1]), false, (up - 1) * 18, v[2] * R + 6, .85); } else kai.sx = undefined; }
+      if (ship) { const v = M3.ap(M, ship.c), land = Math.min(1, (t - ship.t0) / 1.2), lift = ship.left ? Math.pow((t - ship.left) / 1.5, 2) : 0; if (v[2] > .05) { ship.sx = cx + v[0] * R; ship.sy = cy - v[1] * R + st.bob; blitZ(SHIP, ship.sx, ship.sy, Math.atan2(v[0], v[1]), false, (1 - land) * 70 + lift * 90, v[2] * R + 5, .9); } }
+      if (yam) { const v = M3.ap(M, yam.c); if (v[2] > .05) { yam.sx = cx + v[0] * R; yam.sy = cy - v[1] * R + st.bob; blitZ(YAMCHA, yam.sx, yam.sy, Math.atan2(v[0], v[1]), false, -2, v[2] * R + 3, .9); } else yam.sx = undefined; }
       if (greg) { const k = Math.min(1, (t - greg.hopT) / .35), from = greg.from || greg.c, c = V.norm(V.add(V.mul(from, 1 - k), greg.c, k)), v = M3.ap(M, c); if (v[2] > .05) { greg.sx = cx + v[0] * R; greg.sy = cy - v[1] * R + st.bob; blitZ(GREGORY, greg.sx, greg.sy, Math.atan2(v[0], v[1]), k < 1 && from[0] > greg.c[0], Math.sin(k * Math.PI) * 9, v[2] * R + 4, 1.1); } else greg.sx = undefined; }
       if (S.partner > 0 && fuseUntil <= t) {
         const mv = M3.ap(M, roadPt(phi - .32)), mx = cx + mv[0] * R, my = cy - mv[1] * R + st.bob, ma = Math.atan2(mv[0], mv[1]);
@@ -879,6 +919,9 @@ GAMES.push({
     if (/fusion/.test(location.hash)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
     if (/namek|porunga/.test(location.hash)) { S.best = Math.max(S.best, 1e7); S.namekAt = 1e7; }   // preview hooks: #namek, #porunga (namek, then summon)
     if (/chamber/.test(location.hash)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
+    if (/frieza/.test(location.hash)) { session = 151; nextShip = 0; }   // preview hook: #frieza (his ship lands)
+    if (/yamcha/.test(location.hash)) { session = 101; nextYam = 0; }   // preview hook: #yamcha
+    if (/gregory/.test(location.hash)) { session = 61; nextGreg = 0; }   // preview hook: #gregory (the race)
     if (/tournament/.test(location.hash)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
     if (/shenron/.test(location.hash)) setTimeout(() => summon(+(location.hash.match(/shenron(\d)/) || [0, 1])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
     return { frame, kaioken, start: () => {
