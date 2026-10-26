@@ -163,7 +163,7 @@ GAMES.push({
       armor: { base: 5000, k: 2.2, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
       kaio: { base: 8000, k: 2.4, label: 'kaioken', what: 'red button: big boost, then tired', unlock: () => S.best >= 8000 },
       bigbang: { base: 25000, k: 2.2, label: 'big bang attack', what: 'double-tap: an exploding ki ball', unlock: () => S.best >= 20000 },
-      pod: { base: 0, k: 1, label: 'space pod', what: '', unlock: () => S.best >= 1e5 },
+      pod: { base: 0, k: 1, label: 'space pod', what: '', unlock: () => S.best >= 1e7 },
       ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for a permanent boost', unlock: () => S.pl >= 1e6 },
     };
     const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang'];
@@ -683,7 +683,7 @@ GAMES.push({
     if (/ape/.test(location.hash)) { session = 41; nextMoon = 0; }
     if (/raid/.test(location.hash)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
     if (/fusion/.test(location.hash)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
-    if (/namek/.test(location.hash)) { S.best = Math.max(S.best, 1e5); S.world = 1; }   // preview hook: #namek
+    if (/namek/.test(location.hash)) { S.best = Math.max(S.best, 1e7); S.world = 1; }   // preview hook: #namek
     if (/tournament/.test(location.hash)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
     if (/shenron/.test(location.hash)) setTimeout(() => summon(+(location.hash.match(/shenron(\d)/) || [0, 0])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
     return { frame, kaioken, start: () => {
