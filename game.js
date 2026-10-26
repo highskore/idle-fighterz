@@ -69,7 +69,10 @@ function makeHero(head, pal = {}, gi = false) {
   });
   const fusedPal = Object.assign({}, base, { a: 0xf28a1c, A: 0xc0601a, H: 0x8a5a36, q: 0xf0c9a0, T: 0x8a5a36 });
   const fused = { pose: makeSprite(fuse(head.concat(pose)), fusedPal, { emit: 'Ll' }), idle: makeSprite(fuse(head.concat(idle)), fusedPal, { emit: 'Ll' }), run: [runA, runB, runC, runB].map(b => makeSprite(fuse(head.concat(b)), fusedPal, { emit: 'Ll' })) };
-  return { forms, fused, idle: forms[0].idle };
+  // from behind (snake way): spiky hair over the back of the head, the same body
+  const backHead = ['......o...o.....', '.....oho.oho....', '....ohHo.oHho...', '...ohhHhohHhho..', '...ohhhhhhhhho..', '..ohhhhhhhhhhho.', '..ohhHhhhhHhhho.', '...ohhhhhhhhho..', '...ohhhhhhhhho..', '....ohhhhhhho...', '....oShhhhhSo...', '.....oSSSSSo....'];
+  const backs = [base, hair(0xffe02e, 0xfffbc8), hair(0xffe640, 0xfffde0), hair(0xffe02e, 0xfffbc8), hair(0xd8344a, 0xff8a8a), hair(0x3fb8ff, 0xc8f2ff), hair(0x6a2fc8, 0xc49cff), base, hair(0xd8dde8, 0xffffff)].map(pal => [runA, runC].map(b => makeSprite(backHead.concat(b), pal, {})));
+  return { forms, fused, idle: forms[0].idle, backs };
 }
 const VEGETA_HEAD = ['......o...o.....', '.....oho.oho....', '....ohHo.oHho...', '....ohHhohHhho..', '...ohhHhhhhhho..', '...ohhhhhhhhho..', '...ohhhhhhhhhho.', '....ohhhhhhhhho.', '....ohhhhhhhhKo.', '....ohhsshsshko.', '....ohEEssEEhko.', '....osrEEsLLLko.', '....osssssLlLko.', '....oSssMMsSoK..', '.....oSsssSo....', '......ooSSoo....'];
 const GOKU_HEAD = ['..o.......o.....', '.oho..o..oho....', '.ohHo.ohoohHo..o', '..ohhohHhhhHhooo', '.oohhhhhhhhhhhho', 'ohhhhHhhhhhhhho.', '.ohhhhhhhhhhhhho', '..ohhhhhhhhhhho.', '..ohhhhhshhhho..', '...ohhsshsshho..', '...ohEEssEEsho..', '...osrEEsEErso..', '...ossssssssSo..', '...oSsssMMsSo...', '....oSsssSo.....', '.....ooSSoo.....'];
@@ -83,7 +86,7 @@ const HEROES = {
   trunks: makeHero(TRUNKS_HEAD, { h: 0xb8a0e8, H: 0xe2d4ff, y: 0x26346e, Y: 0x16204a, a: 0x26346e, A: 0x16204a, b: 0x1a1a22, B: 0x0c0c12, g: 0xf6c8a2, G: 0xd99a73, u: 0x8a5a2a, p: 0x6a6e7a, P: 0x4a4e58, w: 0xf2c84a, W: 0xc49a24 }, true),
 };
 const CHARS = [{ id: 'vegeta', name: 'vegeta' }, { id: 'goku', name: 'goku', need: 'ss' }, { id: 'gohan', name: 'gohan', need: 'cell' }, { id: 'trunks', name: 'future trunks', need: 'frieza' }];
-// achievements: an even 28, each recorded once with the time it was earned
+// achievements: an even 30, each recorded once with the time it was earned
 const ACH = [
   ['lap1', 'first steps', 'run a lap of the planet'], ['laps100', 'marathon', 'run 100 laps'], ['ss', 'super saiyan', 'reach super saiyan'], ['ui', 'ultra instinct', 'reach ultra instinct'],
   ['o9k', "it's over 9000", 'pass 9,000 power'], ['villains10', 'villain slayer', 'beat 10 villains'], ['frieza', 'emperor down', 'beat frieza'], ['cell', 'perfect no more', 'beat cell'],
@@ -93,6 +96,7 @@ const ACH = [
   ['kaioken', 'kaioken', 'use the kaioken'], ['shenron', 'eternal dragon', 'summon shenron'], ['porunga', 'namekian dragon', 'summon porunga'], ['chamber', 'a year in a day', 'enter the time chamber'],
   ['tournament', 'tournament of power', 'finish a tournament'], ['ascend', 'ascended', 'ascend for the first time'],
   ['vegeta', 'homeworld', 'visit planet vegeta'], ['nappa', 'bald and beaten', 'beat nappa on planet vegeta'],
+  ['snakeway', 'one million kilometres', 'run all of snake way'], ['hfil', 'home for infinite losers', 'fall off snake way'],
 ].map(([id, name, text]) => ({ id, name, text }));
 /* great ape: the full-moon form, giant, armoured, red-eyed */
 const APE = (() => {
@@ -337,7 +341,7 @@ const VEGETA = Object.assign({}, KAI, {
   leaf: [0x3a1612, 0x5a2218, 0x7a3220, 0x9a4a2c, 0xc06a40],                  // red boulders where bushes grow
   stone: [0x3a1a16, 0x5a2a20, 0x7a3e2c, 0x9a5a40],
 });
-const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }];
+const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }];
 function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
 
 GAMES.push({
@@ -395,7 +399,7 @@ GAMES.push({
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
-    let night = false, nightK = 0, shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
+    let night = false, nightK = 0, shake = 0, moon = null, nextMoon = 150, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
     ui.onBuy(k => {
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') {
@@ -483,6 +487,7 @@ GAMES.push({
     }
     function onClick(px, py) {
       if (!playing) return;
+      if (S.world === 3 && snk) { snakeTap(px); return; }
       if (struggle) { struggle.p += .055; ui.sfx && ui.sfx('tap'); shake = Math.max(shake, .08); return; }   // a beam struggle takes every tap
       if (spiritReady && !spiritShot) { const b = spiritPos(); if (Math.hypot(px - b.x, py - b.y) < b.r + 8) { throwSpirit(); return; } }
       if (fuseOffer > st.t && monkeyAt && Math.hypot(px - monkeyAt.x, py - (monkeyAt.y - 5)) < 12) {
@@ -503,7 +508,7 @@ GAMES.push({
       for (const m of meteors) if (!m.dead && Math.hypot(px - m.x, py - m.y) < 9) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + laps * .1), m.x, m.y - 6, true); for (let k = 0; k < 16; k++) fx.add({ x: m.x, y: m.y, vx: (Math.random() - .5) * 110, vy: (Math.random() - .5) * 110, drag: 2.5, life: .6, c: [0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], raw: true }); return; }
       // anywhere else: train — a sprint burst and a few points
       if (moon && moon.a > .3 && !moon.leaving && Math.hypot(px - moon.x, py - moon.y) < moon.r + 6) {
-        apeUntil = st.t + 20; moon.leaving = true; ach('ape'); flashT = 1; shake = .8; ui.event('great ape mode — ×3'); ui.fx && ui.fx('super');
+        apeUntil = st.t + 15; moon.leaving = true; ach('ape'); flashT = 1; shake = .8; ui.event('great ape mode — ×3'); ui.fx && ui.fx('super');
         for (let k = 0; k < 80; k++) { const q = kidScreen(20); fx.add({ x: q.x, y: q.y, vx: (Math.random() - .5) * 220, vy: (Math.random() - .5) * 220, drag: 2, life: 1, c: [0xffffff, 0xffd0a0, 0x7a4a2a], raw: true }); }
         return;
       }
@@ -530,6 +535,7 @@ GAMES.push({
     st.cv.addEventListener('pointerup', e => { if (drag && charging > .15) fireBeam(charging, drag.ax, drag.ay); else if (drag && drag.moved <= 6) { const [px, py] = st.toBuf(e); tap(px, py); } charging = 0; drag = null; st.cv.style.cursor = 'grab'; });
     st.cv.addEventListener('pointercancel', () => { drag = null; charging = 0; });
     function fireBeam(c, tx, ty) {
+      if (S.world === 3) return;
       if (struggle) { struggle.p += .12 * c; return; }   // a charged beam shoves the struggle
       const k = handPos(); let dx = tx - k.x, dy = ty - k.y, dl = Math.hypot(dx, dy);
       if (dl < 4) { dx = Math.sin(k.ang); dy = -Math.cos(k.ang); dl = 1; }
@@ -617,8 +623,9 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full'][w]); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right to switch lanes, middle to jump'][w], w === 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
+      if (w === 3) startSnake(); else snk = null;
     }
     function kaioken() {
       if (!playing || S.kaio <= 0 || st.t < kaioReady) return;
@@ -744,6 +751,78 @@ GAMES.push({
       } }
     }
 
+    // ── snake way: a pseudo-3D run along the snake's back to king kai's planet
+    let snk = null;
+    const SNAKE_LEN = 420, SNAKE_SPEED = 7.5, LANE = .52;
+    const SN = { edge: 0x3a1e0c, rim: 0x8a4a18, ridge: 0xf2c060, ridgeHi: 0xfff0b0, road: 0xf2c84a, scale: 0xc87a28, scaleHi: 0xffe28a, spine: 0xd89a34 };
+    const bendAt = s => 1.25 * Math.sin(s * .045) + .6 * Math.sin(s * .017 + 1);   // the road winds left and right
+    function startSnake() {
+      const gaps = [], orbsS = [];
+      for (let s = 30; s < SNAKE_LEN - 20; s += 26 + Math.random() * 18) { gaps.push([s, s + 2.2]); const lane = [-1, 0, 1][(Math.random() * 3) | 0]; for (let k = 0; k < 4; k++) orbsS.push({ s: s + 6 + k * 2.4, u: lane * LANE }); }
+      snk = { dist: 0, len: SNAKE_LEN, lane: 0, x: 0, jumpT: -9, fall: 0, gaps, orbs: orbsS, done: 0, got: 0 };
+    }
+    function snakeTap(px) {
+      const third = px / st.W;
+      if (third < .33) snk.lane = Math.max(-1, snk.lane - 1); else if (third > .67) snk.lane = Math.min(1, snk.lane + 1); else if (st.t - snk.jumpT > .6) { snk.jumpT = st.t; ui.sfx && ui.sfx('tap'); }
+    }
+    const airborne = t => t - snk.jumpT < .6;
+    function updateSnake(t, dt) {
+      if (!snk) startSnake();
+      if (snk.done) { if (t - snk.done > 2.5) namekUntil = t; return; }
+      if (snk.fall) { if (t - snk.fall > 2.4) { snk.fall = 0; const g = snk.gaps.find(g => snk.dist + 1.6 >= g[0] - .5 && snk.dist + 1.6 <= g[1] + .5); if (g) snk.dist = g[1] + .2; } return; }
+      snk.dist += SNAKE_SPEED * dt * (1 + sprint * .4); snk.x += (snk.lane * LANE - snk.x) * Math.min(1, dt * 10);
+      const here = snk.dist + 1.6;
+      if (!airborne(t) && snk.gaps.some(g => here > g[0] && here < g[1])) { snk.fall = t; shake = .6; ach('hfil'); ui.event('you fell into hell! (HFIL) — climbing back up…'); ui.sfx && ui.sfx('boom'); }
+      for (const o of snk.orbs) if (!o.got && Math.abs(o.s - here) < .7 && Math.abs(o.u - snk.x) < .3) { o.got = true; snk.got++; gain(lapValue() * mult() * 2, st.W / 2, st.H * .7, true); ui.sfx && ui.sfx('coin'); }
+      if (snk.dist >= snk.len) { snk.done = t; ach('snakeway'); const g = Math.max(rate() * 120, lapValue() * mult() * 80); gain(g, st.W / 2, st.H * .4, true); ui.event(`made it to king kai's planet! +${fmtShort(Math.round(g))}`); victory(); }
+    }
+    function drawSnake(t, dt) {
+      const W = st.W, H = st.H, hz = Math.round(H * (W / H < .8 ? .4 : .36)), RW = W * (W / H < .8 ? .6 : .42), mix = (a, b, k) => { k = Math.max(0, Math.min(1, k)); const c = sh => Math.round(((a >> sh) & 255) + (((b >> sh) & 255) - ((a >> sh) & 255)) * k); return (c(16) << 16) | (c(8) << 8) | c(0); };
+      const dist = snk.dist, prog = Math.min(1, dist / snk.len), px = (x, y, c) => st.px(x, y, c);
+      // other world's sky
+      for (let y = 0; y < hz + 4; y++) for (let x = 0; x < W; x++) px(x, y, mix(0xffe9c8, 0xf6b86a, y / hz + (bayer(x, y) - .5) * .1));
+      // king kai's planet at the end of the road, growing as you close in
+      const kr = Math.round(5 + prog * Math.min(W, H) * .16), kx = Math.round(W / 2 + (bendAt(dist + 60) - bendAt(dist) - snk.x) * RW * .08), ky = Math.round(hz - kr * .7 - 4);
+      for (let y = -kr - 8; y <= kr + 8; y++) for (let x = -kr - 8; x <= kr + 8; x++) { const d = Math.hypot(x, y); if (d > kr && d < kr + 8 && bayer(kx + x, ky + y) < (1 - (d - kr) / 8) * .55) px(kx + x, ky + y, 0xfff6d8); }
+      const G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e];
+      for (let y = -kr; y <= kr; y++) for (let x = -kr; x <= kr; x++) { const d = Math.hypot(x, y); if (d > kr + .3) continue; if (d > kr - .7) { px(kx + x, ky + y, 0x1f3a1a); continue; }
+        const nz = Math.sqrt(Math.max(0, 1 - (d / kr) ** 2)), l = (-x * .55 - y * .7) / kr * .8 + nz * .5 + (bayer(kx + x, ky + y) - .5) * .35, band = Math.abs((y + x * .35) - kr * .25) < Math.max(1, kr * .09);
+        px(kx + x, ky + y, band ? (l > .3 ? 0xfdfaf2 : 0xd8d2c4) : G5[Math.max(0, Math.min(5, Math.round(1 + l * 3.4)))]); }
+      if (kr > 9) { const hr = Math.max(2, kr * .28); for (let y = -hr; y <= 0; y++) for (let x = -hr; x <= hr; x++) if (x * x + y * y <= hr * hr) px(kx - kr * .35 + x, ky - kr * .4 + y, x + y < 0 ? 0xf6985a : 0xc04e26); }
+      // the clouds of other world, below and beyond the road
+      for (let y = hz + 3; y < H; y++) for (let x = 0; x < W; x++) px(x, y, mix(0xe8923a, 0xb0521e, (y - hz) / (H - hz) + (bayer(x, y) - .5) * .12));
+      drawSea(t, false);
+      // the road: the snake's yellow back in perspective, crescent scales and a raised border down both sides
+      const rows = [];
+      for (let y = H - 1; y > hz + 1; y--) {
+        const p = (y - hz) / (H - hz), z = 1.6 / p, sAt = dist + z, w = RW * p, cxr = W / 2 + (bendAt(sAt) - bendAt(dist) - snk.x) * w;
+        rows.push({ y, z, s: sAt, w, cx: cxr });
+        if (snk.gaps.some(g => sAt > g[0] && sAt < g[1])) { for (let o = -w; o <= w; o++) if ((Math.round(o) + y) % 3 === 0) px(cxr + o, y, 0x7a1a10); continue; }   // a gap: hell glows below
+        const v = sAt * 3.2;
+        for (let o = -w - 2; o <= w + 2; o++) { const u = o / w, au = Math.abs(u); let col;
+          if (au > 1) col = au < 1 + 2.5 / w ? SN.edge : null;
+          else if (au > .93) col = SN.rim;
+          else if (au > .82) col = Math.floor(v * 2) % 2 ? SN.ridge : SN.ridgeHi;
+          else if (au > .79) col = SN.rim;
+          else { const row = Math.floor(v), fv = v - row, su = u * 4.2 + (row % 2) * .5, fu = su - Math.floor(su), arc = Math.pow((fu - .5) * 2, 2) * .55; col = fv < arc + .12 && fv > arc ? SN.scale : fv < arc + .2 && fv > arc + .12 ? SN.scaleHi : au < .03 ? SN.spine : SN.road; }
+          if (col) px(cxr + o, y, mix(col, 0xf6b86a, Math.max(0, .55 - p) * .9)); } }
+      // ki orbs over the road
+      for (const o of snk.orbs) { if (o.got) continue; const z = o.s - dist; if (z < 1.2 || z > 40) continue; const p = 1.6 / z, y = hz + p * (H - hz), w = RW * p, cxr = W / 2 + (bendAt(o.s) - bendAt(dist) - snk.x) * w, r = Math.max(1.5, 7 * p * (RW / 130)), ox = cxr + o.u * w, oy = y - r * 2.2;
+        for (let yy = -r; yy <= r; yy++) for (let xx = -r; xx <= r; xx++) { const q = Math.hypot(xx, yy) / r; if (q <= 1) px(ox + xx, oy + yy, q < .45 ? 0xffffff : q < .8 ? 0xffe08a : 0xff9a2a); } }
+      // speed streaks
+      for (let i = 0; i < 10; i++) { const k = (t * 1.8 + i * .37) % 1, side = i % 2 ? -1 : 1, x0 = W / 2 + side * W * (.38 + k * .2), y0 = hz + (H - hz) * (.2 + ((i * .29) % .7)); for (let j = 0; j < 6 + k * 8; j++) px(x0 + side * j * .5, y0 + j, 0xfff3d0); }
+      // him, from behind
+      const k = Math.max(1, Math.round(Math.min(W, H) / 110)), set = HERO().backs[S.form] || HERO().backs[0], spr = set[Math.floor(t * 8) % 2], jump = airborne(t) ? Math.sin((t - snk.jumpT) / .6 * Math.PI) * 18 * k : 0;
+      if (snk.fall) { const f = (t - snk.fall) / 2.4; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (bayer(x, y) < Math.min(.85, f * 2)) px(x, y, y > H * .6 && (x + y + Math.floor(t * 20)) % 7 < 2 ? 0xffa12a : 0x5a0a0a); }
+      else { const ox = Math.round(W / 2 - spr.w * k / 2), oy = Math.round(H - spr.h * k - 4 - jump); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const c = spr.col[j * spr.w + i]; if (c < 0) continue; for (let a = 0; a < k; a++) for (let b = 0; b < k; b++) px(ox + i * k + a, oy + j * k + b, c); } }
+      // distance to king kai
+      const bw = W - 40; for (let x = 0; x < bw; x++) for (let y = 0; y < 2; y++) px(20 + x, H - 3 + y, x < bw * prog ? 0xd4a017 : 0xf2e2c0);
+      fx.step(st, dt);
+      if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); }
+      for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y); st.text(f.s, x, y, 0x1d1030); }
+      for (let i = floats.length - 1; i >= 0; i--) if (floats[i].life <= 0) floats.splice(i, 1);
+      st.flush();
+    }
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
       const rdt = dt; if (chamberUntil > t) dt *= .3;
@@ -764,7 +843,8 @@ GAMES.push({
       acc += rdt; if (acc >= 1) { acc -= 1; gain((lapValue() / 7 + passive()) * mult()); }
       if ((saveAcc += dt) > 3) { saveAcc = 0; save(); }
 
-      // ── timeline: the longer you stay, the more happens
+      // ── timeline: the longer you stay, the more happens (all of it waits while you're on snake way)
+      if (S.world === 3) updateSnake(t, dt); else {
       // the space pod: on phones the title covers the top of the sky, so there it flies just above the planet
       if (session > 12) { once('stars', 'a saiyan space pod — tap it'); if (!star && (nextStar -= dt) < 0) { star = { x: -8, y: st.W / st.H < .8 ? cy - R * (1.12 + Math.random() * .16) : st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = 18 + Math.random() * 14; } }
       if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < (S.world === 1 ? .4 : .2) }); }
@@ -805,10 +885,12 @@ GAMES.push({
       saibas = saibas.filter(sb => !sb.dead);
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
-      // every 10 million power a space pod takes you away for 45 seconds: namek and planet vegeta take turns
-      if (!S.world && S.best >= (S.namekAt || 1e7) && !tour && !shen && !boss) { const n = Math.floor(S.best / 1e7); S.namekAt = (n + 1) * 1e7; travel(n % 2 ? 1 : 2); namekUntil = t + 45; }
+      }
+      // every 10 million power you're off for a visit: namek, planet vegeta and snake way take turns
+      if (!S.world && S.best >= (S.namekAt || 1e7) && !tour && !shen && !boss) { const n = Math.floor(S.best / 1e7); S.namekAt = (n + 1) * 1e7; travel([3, 1, 2][n % 3]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
       if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen) { travel(0); namekUntil = 0; } }   // home after any wishes
+      if (S.world !== 3) {
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
       if (tour) {
@@ -853,6 +935,7 @@ GAMES.push({
       }
       for (const kb of kis) { if (kb.m) { if (kb.m.dead || !ginyu) { kb.done = true; continue; } const tx = kb.m.x, ty = kb.m.y - kb.m.spr.h / 2 * kb.m.k, d = Math.hypot(tx - kb.x, ty - kb.y); if (d < 6) { kb.done = true; ginyuHit(kb.m, Math.max(1, rate() * .5)); continue; } const sp = 260 * dt / d; kb.x += (tx - kb.x) * Math.min(1, sp); kb.y += (ty - kb.y) * Math.min(1, sp); continue; } if (!boss || boss.dead) { kb.done = true; continue; } const tx = boss.x, ty = boss.y - boss.spr.h / 2 * boss.k, d = Math.hypot(tx - kb.x, ty - kb.y); if (d < 6) { kb.done = true; hitBoss(Math.max(1, rate() * .5), tx, ty); continue; } const sp = 260 * dt / d; kb.x += (tx - kb.x) * Math.min(1, sp); kb.y += (ty - kb.y) * Math.min(1, sp); }
       kis = kis.filter(kb => !kb.done);
+      }
       // super mode: a 25s golden-hair burst (×2) each time power level passes the next milestone
       // transform when power level reaches the next form
       if (S.form < FORMS.length - 1 && S.pl >= FORMS[S.form + 1].at) {
@@ -869,12 +952,12 @@ GAMES.push({
       if (t - lastClick > .9) combo = 1;
       if ((session > 40 || S.world === 2) && !moon && apeUntil < t && (nextMoon -= dt) < 0) { moon = { x: st.W * .2, y: st.H * .22, r: Math.max(9, Math.round(Math.min(st.W, st.H) * .07)), a: 0, born: t }; once('moon', 'a full moon is rising… click it to transform'); }
       { const n = !!moon && !moon.leaving || apeUntil > t; if (n !== night) { night = n; ui.night && ui.night(n); } nightK = Math.max(0, Math.min(1, nightK + (night ? dt : -dt) / .8)); }   // the full moon brings the night
-      if (moon) { moon.a = moon.leaving ? moon.a - dt * 1.5 : Math.min(1, moon.a + dt * 1.2); if (!moon.leaving && t - moon.born > 25) moon.leaving = true; if (moon.a <= 0 && moon.leaving) { moon = null; nextMoon = S.world === 2 ? 10 : 110 + Math.random() * 40; } }
+      if (moon) { moon.a = moon.leaving ? moon.a - dt * 1.5 : Math.min(1, moon.a + dt * 1.2); if (!moon.leaving && t - moon.born > 12) moon.leaving = true; if (moon.a <= 0 && moon.leaving) { moon = null; nextMoon = S.world === 2 ? 40 : 180 + Math.random() * 60; } }
 
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
-      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = S.world === 2 ? 'vegeta' : 'namek'; fxs.push(left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
+      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way'][S.world]; fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
       if (storm && t < storm.until) fxs.push(`meteor storm ${Math.ceil(storm.until - t)}s`);
       if (struggle) fxs.push(`struggle ${Math.ceil(struggle.until - t)}s`);
       if (greg) fxs.push(`gregory ${Math.ceil(greg.until - t)}s`);
@@ -898,6 +981,7 @@ GAMES.push({
 
       // ── draw
       st.clear(); zb.fill(-1e9); ib.fill(0);
+      if (S.world === 3 && snk) { drawSnake(t, dt); return; }
       drawSea(t, false);
       if (moon) {
         const { x, y, r } = moon, a = moon.a;
@@ -1090,6 +1174,7 @@ GAMES.push({
     if (/chamber/.test(location.hash)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
     if (/kaio/.test(location.hash)) S.kaio = Math.max(1, S.kaio);   // preview hook: #kaio (kaioken owned)
     if (/vegeta/.test(location.hash)) { S.best = Math.max(S.best, 2e7); S.namekAt = 2e7; }   // preview hook: #vegeta (planet vegeta, then nappa)
+    if (/snake/.test(location.hash)) { S.best = Math.max(S.best, 3e7); S.namekAt = 3e7; }   // preview hook: #snake (snake way)
     if (/door/.test(location.hash)) { S.chamber = Math.max(1, S.chamber); nextDoor = 0; }   // preview hook: #door (the time chamber door)
     if (/pod/.test(location.hash)) { session = 13; nextStar = 0; }   // preview hook: #pod (a saiyan space pod)
     if (/storm/.test(location.hash)) { session = 121; nextStorm = 0; }   // preview hook: #storm (meteor storm)
