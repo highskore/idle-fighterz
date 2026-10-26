@@ -135,7 +135,7 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .kaio:disabled { background: #f1b9b4; box-shadow: none; cursor: default; }
 .kaio[hidden], .game:not(.playing) .kaio, .game.wishing .kaio { display: none; }
 @media (max-width: 760px) {
-  .kaio { position: static; height: 34px; box-sizing: border-box; padding: 0 14px; } .game:has(.shop.open) .kaio { display: none; }
+  .kaio { position: static; height: 34px; box-sizing: border-box; padding: 0 14px; white-space: nowrap; flex: none; }   /* the cooldown text stays on one line, to the right of upgrades */ .game:has(.shop.open) .kaio { display: none; }
 }
 /* the current training goal heads the upgrades list */
 .goal { display: flex; flex-direction: column; gap: 4px; padding: 2px 4px 6px; color: var(--muted); text-transform: lowercase; font-size: 10px; line-height: 1.3; }
@@ -170,9 +170,9 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
   .mbtn svg { width: 18px; height: 18px; } .mbtn.done { color: #1a9a4a; }
   #sndM[aria-pressed="true"] .off, #sndM[aria-pressed="false"] .on { display: none; } #sndM[aria-pressed="false"] { color: #9a9a9a; }
   #sndM { left: 16px; } #shareM { right: 16px; }
-  .shop-toggle { position: static; transform: none; height: 34px; box-sizing: border-box; padding-block: 0; }
+  .shop-toggle { position: static; transform: none; height: 34px; box-sizing: border-box; padding-block: 0; white-space: nowrap; flex: none; }
   /* upgrades (and kaioken, once bought) sit as one centred row between the sound and share buttons */
-  .pair { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; display: flex; gap: 8px; }
+  .pair { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; display: flex; flex-wrap: nowrap; gap: 8px; width: max-content; }
   .foot .snd { display: none; }
   .shop-toggle i, .tabbar i { font-style: normal; color: #fff; background: var(--gold); border-radius: 999px; padding: 0 6px; min-width: 18px; text-align: center; }
   .shop-toggle i:empty, .tabbar i:empty { display: none; }
@@ -289,7 +289,7 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .game, .page { transition: background-color .8s; }
 body.night .game { background-color: #07070d !important; background-image: radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 32% 8%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 58% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 76% 12%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 88% 34%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 8% 46%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 46% 40%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 94% 6%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 22% 60%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 68% 52%, #fff 50%, transparent 51%); }
 @media (min-width: 761px) { body.night .hud, body.night .hint, body.night .hud b { color: #f2f2f2; } body.night .hud .label, body.night .hud .meta { color: #9a9aa6; } }
-@media (max-width: 760px) { body.night .page, body.night { background-color: #07070d; } body.night .foot { background: #07070d; border-color: #1c1c26; } body.night .foot a, body.night .foot nav { color: #e8e8ec; } }
+@media (max-width: 760px) { body.night .page, body.night { background-color: #07070d; } body.night { --sea: #141a3a; } body.night .foot { background: #07070d; border-color: #1c1c26; } body.night .foot a, body.night .foot nav { color: #e8e8ec; } }
 [data-icons="pills"] .ach { display: inline-flex; align-items: baseline; gap: 8px; font: inherit; text-transform: uppercase; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; } [data-icons="pills"] .ach span { display: none; font-size: 11px; text-transform: none; } [data-icons="pills"] .ach.open span { display: inline; } [data-icons="pills"] .ach.done b { color: var(--ink); }
 [data-icons="pills"] .ach.done { background: #fff7e6; border-color: #f2d9a8; } [data-icons="pills"].menu-body { display: flex; flex-wrap: wrap; gap: 6px; align-content: start; }
 
@@ -301,6 +301,9 @@ body.night .game { background-color: #07070d !important; background-image: radia
 .share-actions { display: flex; gap: 8px; justify-content: center; }
 .share-actions button { font: inherit; text-transform: uppercase; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; cursor: pointer; }
 .share-actions .share-go { color: #fff; background: #0b0b0b; border-color: #0b0b0b; }
+
+/* planet vegeta: a dusky red sky */
+body.vegeta:not(.night) .game { background: linear-gradient(#f6d2b0, #e89a72 75%) !important; }
 </style>
 
 <div class="scroller" id="scroller">
@@ -391,7 +394,7 @@ __PLANET__
       box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { box.hidden = true; $('game').classList.remove('wishing'); done(options[+b.dataset.i].key); }));
       box.querySelector('button').focus({ preventScroll: true });
     },
-    world(w) { root.style.setProperty('--sea', w ? '#1e7a7a' : '#e2a93a'); document.body.classList.toggle('namek', !!w); },
+    world(w) { root.style.setProperty('--sea', ['#e2a93a', '#1e7a7a', '#a83a24'][w] || '#e2a93a'); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); },
     fx(kind, arg) { if (titleFx) titleFx(kind, arg); },
     bump() { const n = $('pl'); n.classList.add('bump'); clearTimeout(ui._b); ui._b = setTimeout(() => n.classList.remove('bump'), 110); },
   };

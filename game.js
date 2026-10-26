@@ -83,7 +83,7 @@ const HEROES = {
   trunks: makeHero(TRUNKS_HEAD, { h: 0xb8a0e8, H: 0xe2d4ff, y: 0x26346e, Y: 0x16204a, a: 0x26346e, A: 0x16204a, b: 0x1a1a22, B: 0x0c0c12, g: 0xf6c8a2, G: 0xd99a73, u: 0x8a5a2a, p: 0x6a6e7a, P: 0x4a4e58, w: 0xf2c84a, W: 0xc49a24 }, true),
 };
 const CHARS = [{ id: 'vegeta', name: 'vegeta' }, { id: 'goku', name: 'goku', need: 'ss' }, { id: 'gohan', name: 'gohan', need: 'cell' }, { id: 'trunks', name: 'future trunks', need: 'frieza' }];
-// achievements: an even 26, each recorded once with the time it was earned
+// achievements: an even 28, each recorded once with the time it was earned
 const ACH = [
   ['lap1', 'first steps', 'run a lap of the planet'], ['laps100', 'marathon', 'run 100 laps'], ['ss', 'super saiyan', 'reach super saiyan'], ['ui', 'ultra instinct', 'reach ultra instinct'],
   ['o9k', "it's over 9000", 'pass 9,000 power'], ['villains10', 'villain slayer', 'beat 10 villains'], ['frieza', 'emperor down', 'beat frieza'], ['cell', 'perfect no more', 'beat cell'],
@@ -92,6 +92,7 @@ const ACH = [
   ['spirit', 'spirit bomb', 'throw a spirit bomb'], ['struggle', 'beam struggle', 'win a beam struggle'], ['ape', 'great ape', 'look at the full moon'], ['fusion', 'fusion ha!', 'fuse with bubbles'],
   ['kaioken', 'kaioken', 'use the kaioken'], ['shenron', 'eternal dragon', 'summon shenron'], ['porunga', 'namekian dragon', 'summon porunga'], ['chamber', 'a year in a day', 'enter the time chamber'],
   ['tournament', 'tournament of power', 'finish a tournament'], ['ascend', 'ascended', 'ascend for the first time'],
+  ['vegeta', 'homeworld', 'visit planet vegeta'], ['nappa', 'bald and beaten', 'beat nappa on planet vegeta'],
 ].map(([id, name, text]) => ({ id, name, text }));
 /* great ape: the full-moon form, giant, armoured, red-eyed */
 const APE = (() => {
@@ -271,6 +272,20 @@ const GINYU = [
   { name: 'burter', spr: ginyuMember(0x4a7ad8, 0, 'burter') }, { name: 'recoome', spr: ginyuMember(0xf2c8a2, 0xe8702a, 'recoome') },
   { name: 'guldo', spr: ginyuMember(0x7acb5c, 0, 'guldo') },
 ];
+// nappa: bald, black moustache, saiyan armour with broad shoulder pads, arms folded
+const NAPPA = shapeSprite(28, 34, G => {
+  G.ell(14, 6.5, 4.6, 5, 's'); G.rect(11, 6, 2, 1, 'k'); G.rect(15, 6, 2, 1, 'k'); G.set(12, 6, 'w'); G.set(16, 6, 'w');   // bald head, eyes
+  G.poly([[10.5, 4.6], [13.4, 5.4], [13.4, 6], [10.5, 5.4]], 'k'); G.poly([[17.5, 4.6], [14.6, 5.4], [14.6, 6], [17.5, 5.4]], 'k');   // brows
+  G.poly([[11, 8.6], [17, 8.6], [17.5, 10.4], [15, 9.6], [13, 9.6], [10.5, 10.4]], 'k'); G.rect(13, 10, 2, 1, 'm');         // moustache, mouth
+  G.rect(12, 11, 4, 2, 's');                                                                                                 // thick neck
+  G.ell(6, 15, 4.6, 3.2, 'y'); G.ell(22, 15, 4.6, 3.2, 'y');                                                                 // shoulder pads
+  G.poly([[9, 13], [19, 13], [20, 22], [8, 22]], 'a'); G.rect(9, 16, 10, 1, 'A');                                           // chest armour
+  G.poly([[8, 22], [20, 22], [19, 26], [9, 26]], 'y'); G.rect(9, 26, 10, 2, 'b');                                           // armour skirt, bodysuit
+  G.line([[11, 27], [10, 33]], 3.6, 3.2, 'b'); G.line([[17, 27], [18, 33]], 3.6, 3.2, 'b');                                 // legs
+  G.rect(7, 31, 5, 3, 'w'); G.rect(16, 31, 5, 3, 'w');                                                                       // boots
+  G.line([[5, 17], [8, 21], [20, 20]], 5.4, 5, 'o'); G.line([[5, 17], [8, 21], [20, 20]], 3.6, 3.2, 's');                    // arms folded across the chest
+  G.line([[23, 17], [20, 21], [8, 20]], 5.4, 5, 'o'); G.line([[23, 17], [20, 21], [8, 20]], 3.6, 3.2, 's'); G.ell(8.5, 20, 1.8, 1.8, 'w'); G.ell(19.5, 20, 1.8, 1.8, 'w');   // and white gloves
+}, { o: 0x1a1210, s: 0xe8b48a, S: 0xc08460, k: 0x15110f, w: 0xf6f4ee, W: 0xc8c4b8, m: 0x7a3a2a, y: 0xd8b05a, Y: 0x9a7a3a, a: 0x3a2e2a, A: 0x2a201c, b: 0x2a2a46 }, { s: 'S', y: 'Y', w: 'W' });
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
   return [
@@ -312,7 +327,17 @@ const NAMEK = Object.assign({}, KAI, {
   leaf: [0x1c4a5e, 0x245f78, 0x2f7f98, 0x4aa2b8, 0x86cfe0],      // ajissa trees: blue-green puffs on tall stems
   trunk: [0x5a5a40, 0x7a7a58, 0x9a9a74, 0xbebe96],
 });
-const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }];
+const VEGETA = Object.assign({}, KAI, {
+  grass: [0x5a1a14, 0x7a2a1c, 0x9a3e24, 0xb85a30, 0xd27a44, 0xeaa06a],     // red rock
+  road: [0x3a2620, 0x52362c, 0x6a4a3a, 0x86624e],
+  dome: [0x8a8a92, 0xaeaeb6, 0xcfcfd6, 0xe8e8ee, 0xffffff],                  // saiyan domes
+  band: [0x6a6a72, 0x8a8a92, 0xaeaeb6, 0xd0d0d6],
+  glass: [0x3a1418, 0x6a2028, 0xa83a3a, 0xe86a5a],
+  trunk: [0x2a1410, 0x3a1c14, 0x4a2618, 0x5a3020],
+  leaf: [0x3a1612, 0x5a2218, 0x7a3220, 0x9a4a2c, 0xc06a40],                  // red boulders where bushes grow
+  stone: [0x3a1a16, 0x5a2a20, 0x7a3e2c, 0x9a5a40],
+});
+const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }];
 function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
 
 GAMES.push({
@@ -366,11 +391,11 @@ GAMES.push({
     };
     const lapValue = () => 30 * (1 + S.boots) ;
     const passive = () => S.partner * 4 + S.house * 40 + S.piccolo * 60;
-    let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
+    let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
-    let night = false, shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
+    let night = false, nightK = 0, shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
     ui.onBuy(k => {
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') {
@@ -401,7 +426,8 @@ GAMES.push({
     function scenery() {
       solids.length = 0;
       const dome = (th, a, r) => { const s = capPt(th, a), door = V.norm(V.cross(s, V.cross(N, s))); solids.push({ c: s, r, kind: 'dome', s, door: V.mul(door, -1) }); for (let i = 1; i <= 5; i++) solids.push({ c: V.mul(s, 1 + r + .018 * i), r: .009, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + r + .11), r: .02, kind: 'knob' }); };
-      const tree = (th, a, k = 1) => S.world ? ajissa(th, a, k) : kaiTree(th, a, k);
+      const tree = (th, a, k = 1) => S.world === 2 ? spire(th, a, k) : S.world ? ajissa(th, a, k) : kaiTree(th, a, k);
+      const spire = (th, a, k) => { const s = capPt(th, a); for (let i = 0; i <= 8; i++) solids.push({ c: V.mul(s, 1 + .05 * i * k), r: (.1 - .011 * i) * k, kind: 'stone' }); };   // planet vegeta: jagged rock spires
       const ajissa = (th, a, k) => { const s = capPt(th, a); for (let i = 1; i <= 7; i++) solids.push({ c: V.mul(s, 1 + .05 * i * k), r: .022 * k, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + .42 * k), r: .12 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .52 * k), r: .08 * k, kind: 'leaf' }); };
       const kaiTree = (th, a, k = 1) => { const s = capPt(th, a), t1 = V.norm(V.cross(s, N)); for (let i = 1; i <= 4; i++) solids.push({ c: V.mul(s, 1 + .045 * i * k), r: .03 * k, kind: 'trunk' }); solids.push({ c: V.add(V.mul(s, 1 + .26 * k), t1, .05 * k), r: .13 * k, kind: 'leaf' }, { c: V.add(V.mul(s, 1 + .2 * k), t1, -.08 * k), r: .1 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .33 * k), r: .09 * k, kind: 'leaf' }); };
       const bush = (th, a, r) => solids.push({ c: capPt(th, a), r, kind: 'leaf' });
@@ -591,7 +617,8 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(w ? 'a space pod takes you to namek for 45 seconds — dragon balls ×2' : "back on king kai's planet"); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full'][w]); save(); syncShop();
+      if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
     }
     function kaioken() {
       if (!playing || S.kaio <= 0 || st.t < kaioReady) return;
@@ -617,7 +644,7 @@ GAMES.push({
       boss.hp -= dmg * (1 + .5 * S.armor); boss.flash = .12; ui.sfx && ui.sfx('hit'); burst(x, y, [0xffffff, 0xffe08a, 0xff9a3c], 6, 70);
       if (boss.hp <= 0 && !boss.dead) {
         boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; const prize = Math.max(boss.max * 1.5, rate() * 90);
-        victory(); S.beaten = S.beaten || {}; S.beaten[boss.name] = 1; if (S.bosses >= 10) ach('villains10'); if (boss.name === 'frieza') ach('frieza'); if (boss.name === 'cell') ach('cell'); if (boss.name === 'beerus') ach('beerus'); if (['frieza', 'cell', 'kid buu', 'beerus'].every(n => S.beaten[n])) ach('all4'); gain(prize, boss.x, boss.y - (boss.spr.h + 10) * boss.k, true); ui.event(`${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
+        victory(); S.beaten = S.beaten || {}; S.beaten[boss.name] = 1; if (S.bosses >= 10) ach('villains10'); if (boss.name === 'frieza') ach('frieza'); if (boss.name === 'nappa') ach('nappa'); if (boss.name === 'cell') ach('cell'); if (boss.name === 'beerus') ach('beerus'); if (['frieza', 'cell', 'kid buu', 'beerus'].every(n => S.beaten[n])) ach('all4'); gain(prize, boss.x, boss.y - (boss.spr.h + 10) * boss.k, true); ui.event(`${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
         for (let k = 0; k < 4; k++) burst(boss.x + (Math.random() - .5) * 20, boss.y - boss.spr.h / 2 * boss.k + (Math.random() - .5) * 20, [0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 20, 180);
         save();
       }
@@ -628,7 +655,7 @@ GAMES.push({
     function summon(look) {
       if (shen) return;
       if (look !== undefined) shenLook = look;
-      shen = { t0: st.t, phase: 'rise', look: shenLook, wishes: S.world ? 3 : 1, porunga: !!S.world }; ach(S.world ? 'porunga' : 'shenron'); document.body.classList.add('shen'); ui.sfx && ui.sfx('dragon'); ui.event(S.world ? 'porunga awakens — three wishes…' : 'the eternal dragon awakens…');
+      shen = { t0: st.t, phase: 'rise', look: shenLook, wishes: S.world === 1 ? 3 : 1, porunga: S.world === 1 }; ach(S.world === 1 ? 'porunga' : 'shenron'); document.body.classList.add('shen'); ui.sfx && ui.sfx('dragon'); ui.event(S.world ? 'porunga awakens — three wishes…' : 'the eternal dragon awakens…');
     }
     function openWish() {
         shen.phase = 'wish';
@@ -740,7 +767,7 @@ GAMES.push({
       // ── timeline: the longer you stay, the more happens
       // the space pod: on phones the title covers the top of the sky, so there it flies just above the planet
       if (session > 12) { once('stars', 'a saiyan space pod — tap it'); if (!star && (nextStar -= dt) < 0) { star = { x: -8, y: st.W / st.H < .8 ? cy - R * (1.12 + Math.random() * .16) : st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = 18 + Math.random() * 14; } }
-      if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < (S.world ? .4 : .2) }); }
+      if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < (S.world === 1 ? .4 : .2) }); }
       if (session > 50) { if ((nextShower -= dt) < 0) { once('meteors', 'meteor shower — bust them'); for (let i = 0; i < 6; i++) meteors.push({ x: st.W * (.15 + Math.random() * .9), y: -10 - i * 18, vx: -st.W * .12, vy: st.H * .22, delay: i * .5 }); nextShower = 45 + Math.random() * 20; } }
       if (session > 75 || S.cloud > 0) { if (!cloudFly && riding <= 0 && (nextCloud -= dt * (1 + S.cloud * .6)) < 0) { once('cloud', 'flying nimbus is here'); cloudFly = { x: -30, y: st.H * .3 }; nextCloud = 60 + Math.random() * 25; } }
       if (session > 140 && !aura) { aura = true; ui.event('ki aura unlocked'); }
@@ -778,8 +805,8 @@ GAMES.push({
       saibas = saibas.filter(sb => !sb.dead);
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
-      // every 10 million power a space pod takes you to namek for 45 seconds
-      if (!S.world && S.best >= (S.namekAt || 1e7) && !tour && !shen && !boss) { S.namekAt = (Math.floor(S.best / 1e7) + 1) * 1e7; travel(1); namekUntil = t + 45; }
+      // every 10 million power a space pod takes you away for 45 seconds: namek and planet vegeta take turns
+      if (!S.world && S.best >= (S.namekAt || 1e7) && !tour && !shen && !boss) { const n = Math.floor(S.best / 1e7); S.namekAt = (n + 1) * 1e7; travel(n % 2 ? 1 : 2); namekUntil = t + 45; }
       if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
       if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen) { travel(0); namekUntil = 0; } }   // home after any wishes
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
@@ -793,6 +820,8 @@ GAMES.push({
           ach('tournament'); tour = null; nextTour = 240 + Math.random() * 60; nextSaiba = 30; save();
         }
       }
+      // nappa defends planet vegeta
+      if (S.world === 2 && nextNappa > 0 && !boss && !shen && (nextNappa -= dt) <= 0) { nextNappa = 0; const hp = Math.max(800, rate() * 50); boss = { name: 'nappa', spr: NAPPA, hp, max: hp, t0: t, until: t + 35, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event('nappa: "vegeta, let me handle this!" — tap him'); }
       if (!tour && session > 110 && !boss && !shen && (nextBoss -= dt) < 0) {
         const V0 = VILLAINS[(S.bosses || 0) % VILLAINS.length], hp = Math.max(600, rate() * 40);
         boss = { name: V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 40, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 };
@@ -838,14 +867,14 @@ GAMES.push({
       for (const o of orbs) { let d = Math.atan2(Math.sin(o.phi - phi), Math.cos(o.phi - phi)); if (Math.abs(d) < .06 && !o.done) { o.done = true; const k = kidScreen(16); gain(lapValue() * mult() * (o.star ? 3 : 1), k.x, k.y - 12, true); if (o.star) { goal('ball'); S.orbs7++; if (S.orbs7 >= 7) { S.orbs7 = 0; summon(); } else ui.event(`dragon ball ${S.orbs7}/7`); save(); } for (let i = 0; i < 12; i++) fx.add({ x: k.x, y: k.y - 10, vx: (Math.random() - .5) * 90, vy: (Math.random() - .5) * 90, drag: 3, life: .6, c: [0xffffff, 0xffd84a, 0xff9a3c], raw: true }); } }
       for (let i = orbs.length - 1; i >= 0; i--) if (orbs[i].done) orbs.splice(i, 1);
       if (t - lastClick > .9) combo = 1;
-      if (session > 40 && !moon && apeUntil < t && (nextMoon -= dt) < 0) { moon = { x: st.W * .2, y: st.H * .22, r: Math.max(9, Math.round(Math.min(st.W, st.H) * .07)), a: 0, born: t }; once('moon', 'a full moon is rising… click it to transform'); }
-      { const n = !!moon && !moon.leaving || apeUntil > t; if (n !== night) { night = n; ui.night && ui.night(n); } }   // the full moon brings the night
-      if (moon) { moon.a = moon.leaving ? moon.a - dt * 1.5 : Math.min(1, moon.a + dt * 1.2); if (!moon.leaving && t - moon.born > 25) moon.leaving = true; if (moon.a <= 0 && moon.leaving) { moon = null; nextMoon = 110 + Math.random() * 40; } }
+      if ((session > 40 || S.world === 2) && !moon && apeUntil < t && (nextMoon -= dt) < 0) { moon = { x: st.W * .2, y: st.H * .22, r: Math.max(9, Math.round(Math.min(st.W, st.H) * .07)), a: 0, born: t }; once('moon', 'a full moon is rising… click it to transform'); }
+      { const n = !!moon && !moon.leaving || apeUntil > t; if (n !== night) { night = n; ui.night && ui.night(n); } nightK = Math.max(0, Math.min(1, nightK + (night ? dt : -dt) / .8)); }   // the full moon brings the night
+      if (moon) { moon.a = moon.leaving ? moon.a - dt * 1.5 : Math.min(1, moon.a + dt * 1.2); if (!moon.leaving && t - moon.born > 25) moon.leaving = true; if (moon.a <= 0 && moon.leaving) { moon = null; nextMoon = S.world === 2 ? 10 : 110 + Math.random() * 40; } }
 
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
-      if (S.world) { const left = Math.max(0, namekUntil - t); fxs.push(left > 60 ? `namek ${Math.ceil(left / 60)}m` : `namek ${Math.ceil(left)}s`); }
+      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = S.world === 2 ? 'vegeta' : 'namek'; fxs.push(left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
       if (storm && t < storm.until) fxs.push(`meteor storm ${Math.ceil(storm.until - t)}s`);
       if (struggle) fxs.push(`struggle ${Math.ceil(struggle.until - t)}s`);
       if (greg) fxs.push(`gregory ${Math.ceil(greg.until - t)}s`);
@@ -1035,9 +1064,12 @@ GAMES.push({
       st.flush();
     }
 
+    // by night the cloud sea turns moonlit blue, fading in step with the sky
+    const NIGHT_SEA = [0x141a3a, 0x232c5a, 0x3a4a82, 0x6a7ab8];
+    const seaPal = () => { const day = WORLDS[S.world].sea; if (nightK <= 0) return day; return day.map((c, i) => { const n = NIGHT_SEA[i], k = nightK, ch = sh => Math.round(((c >> sh) & 255) + (((n >> sh) & 255) - ((c >> sh) & 255)) * k); return (ch(16) << 16) | (ch(8) << 8) | ch(0); }); };
     function drawSea(t, front) {
       // cloud puffs keep the same on-screen size whatever the pixel scale (phones render at 2×, desktop at 3×)
-      const ck = 3 / st.scale, base = st.H - (st.H * (front ? .06 : .14) * (st.scale === 2 ? .7 : 1)), W = st.W, pal = WORLDS[S.world].sea, sp = (front ? 6 : 3) * ck, rr = Math.round((front ? 9 : 7) * ck);
+      const ck = 3 / st.scale, base = st.H - (st.H * (front ? .06 : .14) * (st.scale === 2 ? .7 : 1)), W = st.W, pal = seaPal(), sp = (front ? 6 : 3) * ck, rr = Math.round((front ? 9 : 7) * ck);
       for (let i = -2; i < W / (rr * 1.3) + 3; i++) {
         const px = ((i * rr * 1.3 - t * sp) % (W + rr * 4) + W + rr * 4) % (W + rr * 4) - rr * 2, py = base + Math.sin(i * 1.7) * rr * .45 + (front ? 0 : -6 * ck), r = rr * (.8 + .4 * hash(i * 3.3 + (front ? 9 : 0)));
         for (let y = Math.floor(py - r); y < st.H; y++) for (let x = Math.floor(px - r); x <= px + r; x++) {
@@ -1056,6 +1088,8 @@ GAMES.push({
     if (/fusion/.test(location.hash)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
     if (/namek|porunga/.test(location.hash)) { S.best = Math.max(S.best, 1e7); S.namekAt = 1e7; }   // preview hooks: #namek, #porunga (namek, then summon)
     if (/chamber/.test(location.hash)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
+    if (/kaio/.test(location.hash)) S.kaio = Math.max(1, S.kaio);   // preview hook: #kaio (kaioken owned)
+    if (/vegeta/.test(location.hash)) { S.best = Math.max(S.best, 2e7); S.namekAt = 2e7; }   // preview hook: #vegeta (planet vegeta, then nappa)
     if (/door/.test(location.hash)) { S.chamber = Math.max(1, S.chamber); nextDoor = 0; }   // preview hook: #door (the time chamber door)
     if (/pod/.test(location.hash)) { session = 13; nextStar = 0; }   // preview hook: #pod (a saiyan space pod)
     if (/storm/.test(location.hash)) { session = 121; nextStorm = 0; }   // preview hook: #storm (meteor storm)
