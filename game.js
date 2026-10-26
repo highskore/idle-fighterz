@@ -134,7 +134,7 @@ GAMES.push({
   id: 'planet',
   mount(st, ui) {
     const SAVE = 'hs-power';
-    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, pod: 0, world: 0, orbs7: 0, wishes: 0, ascend: 0, form: 0 };
+    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, world: 0, orbs7: 0, wishes: 0, ascend: 0, form: 0 };
     try { Object.assign(S, JSON.parse(localStorage.getItem(SAVE) || '{}')); } catch (_) {}
     delete S.gold;
     delete S.nextSuper;
@@ -163,20 +163,19 @@ GAMES.push({
       armor: { base: 5000, k: 2.2, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
       kaio: { base: 8000, k: 2.4, label: 'kaioken', what: 'red button: big boost, then tired', unlock: () => S.best >= 8000 },
       bigbang: { base: 25000, k: 2.2, label: 'big bang attack', what: 'double-tap: an exploding ki ball', unlock: () => S.best >= 20000 },
-      pod: { base: 0, k: 1, label: 'space pod', what: '', unlock: () => S.best >= 1e7 },
       ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for a permanent boost', unlock: () => S.pl >= 1e6 },
     };
     const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang'];
-    const cost = k => k === 'pod' ? 0 : k === 'ascend' ? 1e6 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));
+    const cost = k => k === 'ascend' ? 1e6 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));
     // permanent: wishes ×2 each, ascensions +50% each; temporary: star ×2, super ×2, senzu ×3, cloud ×3
     const mult = () => Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * (boostUntil > st.t ? 2 : 1) * FORMS[S.form].x * (apeUntil > st.t ? 10 : 1) * (senzuUntil > st.t ? 3 : 1) * (riding > 0 ? 3 : 1) * (kaioUntil > st.t ? 2 + S.kaio : tiredUntil > st.t ? .5 : 1) * (dailyUntil > st.t ? 2 : 1) * (fuseUntil > st.t ? 8 : 1);
     const lapValue = () => 30 * (1 + S.boots) ;
     const passive = () => S.partner * 4 + S.house * 40;
-    let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45;
+    let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0, nextNamek = 600;
+    S.world = 0;   // namek is only ever a visit
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
     let shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
     ui.onBuy(k => {
-      if (k === 'pod') { travel(S.world ? 0 : 1); return; }
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') {
         const gainA = Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))); S.ascend += gainA; S.pl = 0; for (const r of RESETS) S[r] = 0; S.form = 0; ui.fx && ui.fx('form', 0); scenery();
@@ -191,8 +190,8 @@ GAMES.push({
       if (k === 'armor' && S.armor === 1) ui.event('saiyan armor on — hit villains harder');
       save(); syncShop();
     });
-    const what = k => k === 'pod' ? (S.world ? "fly back to king kai's planet" : 'fly to namek — dragon balls ×2, three wishes') : k === 'ascend' ? `→ ×${(1 + .5 * (S.ascend + Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))))).toFixed(1)} forever` : k === 'kaio' && S.kaio ? `×${2 + S.kaio} for 15s, then ×0.5` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? 'next: final flash' : S.galick >= 5 ? 'full charge: final flash' : '+beam power') : SHOP[k].what;
-    const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0).map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : k === 'pod' ? 0 : S[k], label: k === 'pod' ? (S.world ? 'space pod → king kai' : 'space pod → namek') : SHOP[k].label, what: what(k), can: S.pl >= cost(k), special: k === 'ascend', wide: k === 'pod' }])));
+    const what = k => k === 'ascend' ? `→ ×${(1 + .5 * (S.ascend + Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))))).toFixed(1)} forever` : k === 'kaio' && S.kaio ? `×${2 + S.kaio} for 15s, then ×0.5` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? 'next: final flash' : S.galick >= 5 ? 'full charge: final flash' : '+beam power') : SHOP[k].what;
+    const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0).map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k), special: k === 'ascend' }])));
 
     // the planet: a road ring near the rim, a cap of scenery facing the viewer
     const N = V.norm([0, .38, .92]);
@@ -353,10 +352,10 @@ GAMES.push({
       burst(x, y, [0xffffff, 0xbfe9ff, 0x6fb0ff, 0x2f6ae0], 36, 220);
     }
     function travel(w) {
-      if (!playing || shen || tour) return;
-      S.world = w; S.pod = 1; useWorld(w); scenery(); ui.world && ui.world(w);
+      if (!playing) return;
+      S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(w ? 'landed on namek — dragon balls are everywhere' : "back on king kai's planet"); save(); syncShop();
+      ui.event(w ? 'a space pod lands on namek — 30s to grab dragon balls' : "back on king kai's planet"); save(); syncShop();
     }
     function kaioken() {
       if (!playing || S.kaio <= 0 || st.t < kaioReady) return;
@@ -379,7 +378,7 @@ GAMES.push({
     function summon(look) {
       if (shen) return;
       if (look !== undefined) shenLook = look;
-      shen = { t0: st.t, phase: 'rise', look: shenLook, wishes: S.world ? 3 : 1 }; document.body.classList.add('shen'); ui.event('the eternal dragon awakens…');
+      shen = { t0: st.t, phase: 'rise', look: shenLook, wishes: S.world ? 3 : 1, porunga: !!S.world }; document.body.classList.add('shen'); ui.event(S.world ? 'porunga awakens — three wishes…' : 'the eternal dragon awakens…');
     }
     function openWish() {
         shen.phase = 'wish';
@@ -487,6 +486,9 @@ GAMES.push({
       saibas = saibas.filter(sb => !sb.dead);
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
+      if (!S.world && S.best >= 1e7 && !tour && !shen && !boss && (nextNamek -= dt) < 0) { travel(1); namekUntil = t + 30; nextNamek = 600; }
+      if (S.world && t > namekUntil && !shen) travel(0);   // home once the visit's over (after any wishes)
+      if (S.world && orbs.length < 4 && Math.random() < dt * .6) orbs.push({ phi: phi + 1 + Math.random() * 2, star: Math.random() < .5 });   // namek: dragon balls on the road
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
       if (tour) {
@@ -530,6 +532,7 @@ GAMES.push({
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
+      if (S.world) fxs.push(`namek ${Math.max(0, Math.ceil(namekUntil - t))}s`);
       if (fuseUntil > t) fxs.push(`fusion ×8 ${Math.ceil(fuseUntil - t)}s`);
       if (dailyUntil > t) fxs.push(`daily ×2 ${Math.ceil((dailyUntil - t) / 60)}m`);
       if (tour) fxs.push(`tournament ${Math.ceil(tour.until - t)}s · ${tour.ko} KO`);
@@ -565,7 +568,7 @@ GAMES.push({
       const shenCtx = shen && { z: 0, px(x, y, hex, dz = 0) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= st.W || y >= st.H) return; const k = y * st.W + x, z = this.z + dz; if (zb[k] > z) return; zb[k] = z; st.buf[k] = PK(hex); dm[k] = 1; }, W: st.W, H: st.H, cx, cy: cy + st.bob, R, t, rise: Math.min(1, (t - shen.t0) / 1.1), age: t - shen.t0, gone: shen.phase === 'leave' ? Math.min(1, (t - shen.t1) / 1.6) : 0, glow: shen.look === 3 };
       outline();
       // drawn after the planet's outline, depth-tested so the planet, trees and runner occlude him correctly
-      if (shen) { dm.fill(0); SHENRON.draw(shenCtx, shen.look); }
+      if (shen) { dm.fill(0); if (shen.porunga) SHENRON.drawPorunga(shenCtx); else SHENRON.draw(shenCtx, shen.look); }
       for (const sb of saibas) {
         const v = M3.ap(M, sb.c), up = Math.min(1, Math.max(0, (t - sb.born) / .5)), down = Math.min(1, Math.max(0, (sb.born + sb.life - t) / .5));
         if (v[2] < .05 || up <= 0) { sb.sx = undefined; continue; }
@@ -685,7 +688,7 @@ GAMES.push({
     if (/ape/.test(location.hash)) { session = 41; nextMoon = 0; }
     if (/raid/.test(location.hash)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
     if (/fusion/.test(location.hash)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
-    if (/namek/.test(location.hash)) { S.best = Math.max(S.best, 1e7); S.world = 1; }   // preview hook: #namek
+    if (/namek/.test(location.hash)) { S.best = Math.max(S.best, 1e7); nextNamek = 1; }   // preview hook: #namek
     if (/tournament/.test(location.hash)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
     if (/shenron/.test(location.hash)) setTimeout(() => summon(+(location.hash.match(/shenron(\d)/) || [0, 0])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
     return { frame, kaioken, start: () => {

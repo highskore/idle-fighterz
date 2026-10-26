@@ -96,6 +96,38 @@ const SHENRON = (() => {
     return { rows: finish(G, { flat: true }), ax: 29, ay: 12, whiskers: [[1, 8, -1]], flat: true };
   }
   const HEADS = [profile(), front(), chunky()];
+
+  // porunga, namek's dragon: a horned, pointy-eared, heavily muscled giant who rises up behind the planet
+  const PORUNGA = (() => {
+    const G = grid(64, 58);
+    G.line([[25, 11], [19, 4], [15, -1]], 4, 1.2, 'h'); G.line([[28, 9], [25, 3], [24, -1]], 2.6, 1, 'h');          // horns
+    G.poly([[22, 14], [6, 8], [21, 19]], 'G');                                                                         // pointed ear
+    G.ell(32, 16, 10.5, 9.5, 'g'); G.ell(32, 22, 7.5, 5.5, 'g');                                                       // head, muzzle
+    G.rect(26, 23, 7, 6, 'g');                                                                                         // neck
+    G.ell(32, 38, 23, 12, 'g'); G.ell(14, 33, 7, 6, 'g');                                                              // chest, shoulder
+    G.line([[12, 34], [7, 43], [6, 50]], 9, 7, 'g'); G.line([[6, 50], [8, 55]], 7, 6, 'g');                            // arm, fist
+    G.poly([[17, 44], [32, 45], [32, 58], [21, 58]], 'g');                                                             // waist into the body below
+    for (const x of [3, 6, 9]) G.line([[x + 1, 55], [x, 58]], 1.6, 1, 'c');                                            // claws
+    G.poly([[22, 11.4], [31, 15.2], [31, 16.8], [22, 13.6]], 'k');                                                     // heavy brow
+    G.ell(27.5, 16, 2.6, 1.5, 'r'); G.set(26, 15, 'R');                                                                // eye
+    G.rect(28, 24, 5, 1, 'm'); G.set(28, 25, 'w'); G.set(31, 25, 'w');                                                 // mouth, fangs
+    G.set(30, 20, 'k'); G.set(30, 21, 'k');                                                                            // nostril
+    for (let x = 17; x <= 31; x++) { const y = Math.round(38 + Math.pow((x - 31) / 14, 2) * -5); G.set(x, y + 3, 'G'); }   // pec line
+    for (const y of [46, 50, 54]) for (let x = 27; x <= 31; x++) G.set(x, y, 'G');                                     // abs
+    G.line([[12, 38], [10, 44]], 1.4, 1, 'G');                                                                         // bicep crease
+    G.mirror();
+    for (let y = 44; y <= 57; y++) G.set(31, y, 'G'), G.set(32, y, 'G');                                               // centre line
+    const rows = finish(G, { scales: false });
+    return makeSprite(rows, Object.assign({}, PAL, { g: 0x3a9a4a, G: 0x23683a, l: 0x5cbf5c, L: 0xb0ec8a }), { emit: 'rR', ax: 32, ay: 58 });
+  })();
+  // drawn behind the planet, so the planet hides his lower body; ctx is the same as draw()'s
+  function drawPorunga(ctx) {
+    const spr = PORUNGA, k = ctx.R * 2.7 / spr.w, rise = 1 - Math.pow(1 - ctx.rise, 3), t = ctx.t;
+    const bx = ctx.cx, by = ctx.cy + ctx.R * .35 + (1 - rise) * ctx.H * 1.1 - ctx.gone * ctx.gone * ctx.H * 1.4 + Math.sin(t * 1.3) * 2;
+    ctx.z = -ctx.R * 1.6;
+    blit(ctx, spr, bx, by, false, k);
+    if (rise > .9 && !ctx.gone) for (const ex of [27.5, 36.5]) { const x = bx + (ex - spr.ax) * k, y = by + (16 - spr.ay) * k; for (let a = 0; a < 6.28; a += .5) ctx.px(x + Math.cos(a) * (k + 1.5), y + Math.sin(a) * (k * .6 + 1), 0xff5a4a); }
+  }
   for (const hd of HEADS) hd.spr = makeSprite(hd.rows, PAL, { emit: 'rR', ax: hd.ax, ay: hd.ay });
 
   /* body paths in planet units (x right, y down, z toward you), tail → head */
@@ -152,7 +184,7 @@ const SHENRON = (() => {
       tube(ctx, p.x, p.y, nx, ny, r, p.s, L.flat);
       // back spines every few pixels
       if (!L.flat && Math.floor(p.s / 9) !== Math.floor(pts[i - 1].s / 9) && p.u > .08 && p.u < .97) for (let j = 1; j < r * .9; j++) { const w = (1 - j / (r * .9)) * 2.4; for (let o = -w; o <= w; o += .5) ctx.px(p.x - nx * (r + j - .5) + (tx / tl) * o, p.y - ny * (r + j - .5) + (ty / tl) * o, j > r * .55 ? BODY.spineHi : BODY.spine); }
-      for (const f of legsAt) if (pts[i - 1].u < f && p.u >= f) leg(ctx, p.x, p.y, nx, ny, r, t + f * 7, L.flat);
+      for (const f of legsAt) if (pts[i - 1].u < f && p.u >= f) leg(ctx, p.x, p.y, nx, ny, r, t + f * 7, L.flat, tx / tl, ty / tl);
     }
     // the head rides the end of the path
     const e = pts[n - 1], e0 = pts[Math.max(0, n - 8)];
@@ -184,13 +216,36 @@ const SHENRON = (() => {
       ctx.px(px, py, c, Math.sqrt(Math.max(0, 1 - q * q)) * r);
     }
   }
-  function leg(ctx, x, y, nx, ny, r, ph, flat) {
-    const sw = Math.sin(ph * 2) * .4, dx = nx * Math.cos(sw) - ny * Math.sin(sw), dy = nx * Math.sin(sw) + ny * Math.cos(sw);
-    const len = r * 1.05, w = Math.max(2, r * .62);
-    for (let j = r * .5; j < r + len; j += .5) { const lx = x + dx * j, ly = y + dy * j; for (let o = -w; o <= w; o += .5) ctx.px(lx - dy * o, ly + dx * o, Math.abs(o) > w - 1 ? BODY.o : flat ? PAL.g : o < 0 ? BODY.t[2] : BODY.t[1]); }
-    const fx = x + dx * (r + len), fy = y + dy * (r + len);
-    for (const a of [-.7, 0, .7]) { const cx = dx * Math.cos(a) - dy * Math.sin(a), cy = dx * Math.sin(a) + dy * Math.cos(a); for (let j = 0; j < w * 1.6; j += .5) ctx.px(fx + cx * j, fy + cy * j, j > w ? BODY.b[1] : BODY.o); }
+  // four leg styles (ctx.legs): 0 none, 1 tucked claws, 2 jointed dragon legs, 3 belly fins
+  function limb(ctx, x0, y0, x1, y1, w0, w1, flat) {
+    const L = Math.hypot(x1 - x0, y1 - y0) || 1, ux = (x1 - x0) / L, uy = (y1 - y0) / L;
+    for (let j = 0; j <= L; j += .5) { const w = w0 + (w1 - w0) * j / L, x = x0 + ux * j, y = y0 + uy * j; for (let o = -w; o <= w; o += .5) ctx.px(x - uy * o, y + ux * o, Math.abs(o) > w - 1 ? BODY.o : flat ? PAL.g : o < -w * .2 ? BODY.t[2] : BODY.t[1]); }
   }
+  function talons(ctx, x, y, dx, dy, n, len, spread) {
+    for (let i = 0; i < n; i++) { const a = (i - (n - 1) / 2) * spread, cx = dx * Math.cos(a) - dy * Math.sin(a), cy = dx * Math.sin(a) + dy * Math.cos(a); for (let j = 0; j < len; j += .5) { const curl = j / len; ctx.px(x + cx * j - cy * curl * 1.5, y + cy * j + cx * curl * 1.5, j > len * .55 ? BODY.b[2] : BODY.b[0]); } }
+  }
+  function leg(ctx, x, y, nx, ny, r, ph, flat, tx, ty) {
+    const style = ctx.legs ?? 2, sw = Math.sin(ph * 2) * .25;
+    if (style === 0) return;
+    if (style === 3) {   // fins: a spray of pale spikes off the belly
+      for (let i = -2; i <= 2; i++) { const bx = x + tx * i * 2.2 + nx * r * .7, by = y + ty * i * 2.2 + ny * r * .7, len = r * (1 - Math.abs(i) * .22) * (1.9 + sw); for (let j = 0; j < len; j += .5) { const f = 1 - j / len; for (let o = -f * 2; o <= f * 2; o += .5) ctx.px(bx + nx * j - tx * j * .5 + tx * o, by + ny * j - ty * j * .5 + ty * o, j > len * .6 ? BODY.b[2] : BODY.b[1]); } }
+      return;
+    }
+    const w = Math.max(2.5, r * .7);
+    if (style === 1) {   // tucked: a short thigh swept back, talons folded under
+      const kx = x + (nx * .75 - tx * .66) * r * 2, ky = y + (ny * .75 - ty * .66) * r * 2;
+      limb(ctx, x + nx * r * .4, y + ny * r * .4, kx, ky, w, w * .8, flat);
+      talons(ctx, kx, ky, nx * .6 + tx * .8, ny * .6 + ty * .8, 3, w * 2.2, .55);
+      return;
+    }
+    // jointed: thigh out and back, shin forward, three talons gripping the air
+    const kx = x + (nx * .85 - tx * .5) * r * 2.3 + tx * sw * r, ky = y + (ny * .85 - ty * .5) * r * 2.3 + ty * sw * r;
+    const fx = kx + (nx * .55 + tx * .85) * r * 1.9, fy = ky + (ny * .55 + ty * .85) * r * 1.9;
+    limb(ctx, x + nx * r * .3, y + ny * r * .3, kx, ky, w * 1.15, w * .85, flat);
+    limb(ctx, kx, ky, fx, fy, w * .85, w * .6, flat);
+    talons(ctx, fx, fy, tx * .8 + nx * .6, ty * .8 + ny * .6, 3, w * 2.4, .6);
+  }
+
   function blit(ctx, spr, bx, by, flip, k) {
     for (let y = Math.floor(by - spr.ay * k); y < by + (spr.h - spr.ay) * k; y++) for (let x = Math.floor(bx - spr.ax * k); x < bx + (spr.w - spr.ax) * k; x++) {
       let i = Math.floor((x + .5 - bx) / k + spr.ax); const j = Math.floor((y + .5 - by) / k + spr.ay);
@@ -198,5 +253,5 @@ const SHENRON = (() => {
       const c = spr.col[j * spr.w + i]; if (c >= 0) ctx.px(x, y, c);
     }
   }
-  return { draw, LOOKS, HEADS };
+  return { draw, drawPorunga, LOOKS, HEADS, kit: { grid, finish, PAL, blit } };
 })();
