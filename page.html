@@ -173,8 +173,9 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .game { height: calc(100svh - 40px); height: calc(100dvh - 40px); }
   html, body { background: #e2a93a linear-gradient(#fff 50%, #e2a93a 50%) no-repeat; }
   html { overscroll-behavior: none; touch-action: manipulation; }
-  /* gold below the game when the iOS toolbar reveals what's under it */
-  body .page { box-shadow: 0 50vh 0 #e2a93a; }
+  /* iOS 26 Safari tints its bottom bar from the fixed/sticky element at the edge — the near-white sticky page,
+     unless this gold strip (hidden under the clouds) sits on top */
+  .page.past .edge { display: block; position: fixed; left: 0; right: 0; bottom: 0; height: 3px; background: #e2a93a; z-index: 50; pointer-events: none; }
   .page { background: #fff; }
   .foot .long { display: none; } .foot .short { display: inline; }
   .tag { bottom: -10px; font-size: 11px; }
@@ -198,6 +199,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 .cue i { width: 9px; height: 9px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); animation: cue 1.4s ease-in-out infinite; }
 @keyframes cue { 50% { transform: translateY(4px) rotate(45deg); } }
 .page.past .cue { visibility: hidden; }
+.edge { display: none; }
 #brand { transform: translateY(calc((1 - var(--e, 1)) * var(--brand-dy, 0px))) scale(calc(1 + (1 - var(--e, 1)) * (var(--brand-s, 1) - 1))); transform-origin: 50% 50%; will-change: transform; }
 #game { transform: translateY(calc((1 - var(--e, 1)) * var(--game-dy, 0px))); will-change: transform; }
 @media (max-width: 760px) { .cue { bottom: 18px; } }
@@ -254,6 +256,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   <div class="rule r2"><span>(02) elsewhere</span><span></span></div>
   <footer class="foot gutter" id="foot"><span class="copy">© highskore</span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
   <nav class="tabbar" aria-label="Game menu"><button type="button" data-tab="shop">upgrades <i id="tabCount"></i></button><button type="button" data-tab="train" class="train">train</button><button type="button" data-tab="links">links</button></nav>
+  <div class="edge" aria-hidden="true"></div>
 </div>
 </div>
 
