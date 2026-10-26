@@ -198,7 +198,9 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
   .wish button { padding: 7px 12px; }
   /* phones: a thin bar of links on top, the full-screen game, the title on the cloud sea */
   .foot { position: relative; order: 0; height: 40px; width: 100vw; justify-content: center; align-items: center; border-bottom: 1px solid var(--line); background: #fff; }
-  .game { height: calc(100svh - 40px); }   /* svh, not dvh: safari's toolbar sliding in and out mustn't resize (and rebuild) the game mid-scroll */
+  /* dvh: the visible height, whichever of safari's bars are out. svh left a strip of page under the game once the bars
+     collapsed, and lvh pushed the top of the page under the address bar; the game redraws at once after a resize */
+  .game { height: calc(100svh - 40px); height: calc(100dvh - 40px); }
   html, body { background: var(--sea) linear-gradient(#fff 50%, var(--sea) 50%) no-repeat; }
   html { overscroll-behavior: none; touch-action: manipulation; }
   /* iOS 26 Safari tints its bottom bar from the fixed/sticky element at the edge — the near-white sticky page,
@@ -272,20 +274,6 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 /* achievements and characters popup */
 .menu { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(250,250,249,.72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .menu[hidden] { display: none; }
-/* phones: the game is as tall as the screen with safari's bars collapsed (lvh), so it never stops short of the
-   bottom edge; while a bar is out, everything pinned to the bottom lifts by its height (lvh - dvh) instead, which
-   moves a few buttons and never resizes (and rebuilds) the game */
-@supports (height: 100lvh) {
-  @media (max-width: 760px) {
-    :root { --lift: max(0px, calc(100lvh - 100dvh)); }
-    .game { height: calc(100lvh - 40px); }
-    .pair, .mbtn { bottom: calc(12px + var(--lift)); }
-    .shop { bottom: calc(54px + var(--lift)); }
-    .hud { bottom: calc(max(58px, 9svh) + var(--lift)); }
-    .wish { bottom: calc(70px + var(--lift)); }
-    .cue { bottom: calc(env(safe-area-inset-bottom, 0px) + 64px + var(--lift)); }
-  }
-}
 .menu-card { width: min(720px, 100%); max-height: min(640px, 86svh); display: flex; flex-direction: column; background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.08); overflow: hidden; }
 .menu-card header { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 16px; border-bottom: 1px solid var(--line); }
 .menu-tabs { display: flex; gap: 6px; }
@@ -575,7 +563,7 @@ __PLANET__
     return c;
   }
   let timer = 0;
-  new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); game.resize(); }, 60); }).observe(st.el);
+  new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); game.resize(); game.frame(st.t, 0); }, 60); }).observe(st.el);   // redraw now: resizing clears the canvas
   let visible = true; new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(st.el);
 
   /* 3D pearl logo: one mesh per letter so each can wave, pop and bounce */
