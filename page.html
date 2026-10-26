@@ -42,6 +42,8 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 @keyframes blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .tag .t { animation: none; max-width: none; } }
 .foot .short { display: none; }
+.snd { font: inherit; color: inherit; text-transform: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.snd[aria-pressed="false"] .short { text-decoration: line-through; opacity: .5; }
 
 .hud { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); top: 18px; text-align: right; pointer-events: none; z-index: 2; }
 .hud .label { text-transform: uppercase; color: var(--muted); }
@@ -100,7 +102,11 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .shop button { flex-wrap: wrap; row-gap: 0; }
   .shop b { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .shop em { flex: none; }
-  .shop span { display: block; flex-basis: 100%; font-size: 9px; line-height: 1.15; }
+  /* 14 rows: descriptions show on hover, beside the row, instead of taking a line each */
+  .shop { flex-wrap: nowrap; }
+  .shop button { position: relative; }
+  .shop button span { display: none; }
+  .shop button:hover span, .shop button:focus-visible span { display: block; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); width: max-content; max-width: 220px; padding: 4px 9px; font-size: 10px; line-height: 1.3; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); z-index: 6; text-transform: none; }
 }
 /* before play: the planet idles, the game UI stays hidden */
 .game:not(.playing) .hud, .game:not(.playing) .shop, .game:not(.playing) .shop-toggle, .game:not(.playing) .hint, .game:not(.playing) .toast { opacity: 0; visibility: hidden; }
@@ -128,6 +134,9 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 .kaio[hidden], .game:not(.playing) .kaio, .game.wishing .kaio { display: none; }
 @media (max-width: 760px) { .kaio { right: auto; left: calc(50% + 64px); bottom: 12px; padding: 7px 12px; } .game:has(.shop.open) .kaio { display: none; } }
 /* the current training goal heads the upgrades list */
+.goal .log { margin-top: 2px; }
+.goal .log em { font-style: normal; opacity: .45; }
+.goal .log em.on { opacity: 1; color: var(--ink); }
 .goal { display: flex; flex-direction: column; gap: 4px; padding: 2px 4px 6px; color: var(--muted); text-transform: lowercase; font-size: 10px; line-height: 1.3; }
 .goal i { position: relative; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .goal b { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--gold); border-radius: 3px; transition: width .4s; }
@@ -191,7 +200,6 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .hud .n { font-size: calc(36px * min(1, 10 / var(--len))); }
 }
 /* desktop: title, card and links always fit the window — the card takes whatever height is left */
-@media (min-width: 761px) and (max-height: 760px) { .shop button span { display: none; } }   /* short windows: 12 rows fit without their descriptions */
 @media (min-width: 761px) {
   .page { height: 100svh; min-height: 600px; padding-block: 20px 16px; gap: 14px; box-sizing: border-box; }
   .brand { flex: none; height: clamp(130px, min(23vw, 26svh), 310px); }
@@ -261,7 +269,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
     <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false">menu</button>
   </section>
   <div class="rule r2"><span>(02) elsewhere</span><span></span></div>
-  <footer class="foot gutter" id="foot"><span class="copy">© highskore</span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
+  <footer class="foot gutter" id="foot"><span class="copy">© highskore</span><nav><button type="button" class="snd" id="snd" aria-pressed="false"><span class="long">sound off</span><span class="short">♪</span></button><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
   <nav class="tabbar" aria-label="Game menu"><button type="button" data-tab="shop">upgrades <i id="tabCount"></i></button><button type="button" data-tab="train" class="train">train</button><button type="button" data-tab="links">links</button></nav>
   <div class="edge" aria-hidden="true"></div>
 </div>
@@ -284,11 +292,12 @@ __PLANET__
   const fmt = n => big(n).join('');
   // shop prices stay short so a row never wraps: 950,000 then 1.2M, 21.9M …
   const short = n => { n = Math.floor(n); if (n < 1e6) return n.toLocaleString('en-US'); const e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); return e < SUF.length ? m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0) + (['', '', 'M'][e] || SUF[e]) : n.toExponential(1).replace('+', ''); };
-  let lastCombo = 1, goalKey = '';
+  let lastCombo = 1, goalKey = '', logKey = '';
   let toastT = 0, buyFn = null, shopBuilt = false, titleFx = null;
   const ui = {
     onBuy(fn) { buyFn = fn; },
     update(s) {
+      const lk = JSON.stringify(s.log); if (lk !== logKey && $('logText')) { logKey = lk; $('logText').innerHTML = 'scouter log · ' + s.log.list.map(([n, on]) => `<em class="${on ? 'on' : ''}">${n}</em>`).join(' ') + (s.log.bonus ? ` · +${s.log.bonus}%` : ''); }
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
       const kb = $('kaio'); kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kb.textContent = s.kaio.ready ? 'kaioken' : 'kaioken ' + s.kaio.left + 's';
       const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
@@ -302,11 +311,12 @@ __PLANET__
     shop(items) {
       const el = $('shop');
       const keys = Object.keys(items).join();
-      if (shopBuilt !== keys) { goalKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyFn && buyFn(b.dataset.buy))); shopBuilt = keys; }
+      if (shopBuilt !== keys) { goalKey = ''; logKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i><span class="log" id="logText"></span></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyFn && buyFn(b.dataset.buy))); shopBuilt = keys; }
       $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
       for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + v.level : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
     },
-    event(text) { const t = $('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600); },
+    event(text, ms = 2600) { const t = $('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); },
+    sfx(kind) { sfx(kind); },
     wish(options, done) {
       const box = $('wish');
       box.innerHTML = '<p>state your wish</p>' + options.map((o, i) => `<button type="button" data-i="${i}"><b>${o.label}</b><span>${o.what}</span></button>`).join('');
@@ -362,6 +372,29 @@ __PLANET__
   let lastTouchEnd = 0;
   document.addEventListener('touchend', e => { const now = Date.now(); if (now - lastTouchEnd < 300 && !e.target.closest('.stage canvas, a, button')) e.preventDefault(); lastTouchEnd = now; }, { passive: false });
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+  // sound: tiny square-wave blips, off until you turn it on
+  let actx = null, soundOn = false; try { soundOn = localStorage.getItem('hs-sound') === '1'; } catch (_) {}
+  const sndBtn = $('snd'), sndLabel = () => { sndBtn.setAttribute('aria-pressed', String(soundOn)); sndBtn.querySelector('.long').textContent = soundOn ? 'sound on' : 'sound off'; };
+  sndBtn.addEventListener('click', () => { soundOn = !soundOn; try { localStorage.setItem('hs-sound', soundOn ? '1' : '0'); } catch (_) {} sndLabel(); if (soundOn) sfx('coin'); });
+  sndLabel();
+  let lastTapSfx = 0;
+  function tone(f0, f1, dur, type = 'square', vol = .06, delay = 0) {
+    const t = actx.currentTime + delay, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur); o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  function sfx(kind) {
+    if (!soundOn) return;
+    try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (_) { return; }
+    if (kind === 'tap') { const n = performance.now(); if (n - lastTapSfx < 60) return; lastTapSfx = n; tone(880, 660, .05, 'square', .03); }
+    else if (kind === 'coin') { tone(988, 988, .06, 'square', .05); tone(1319, 1319, .14, 'square', .05, .06); }
+    else if (kind === 'hit') tone(220, 90, .09, 'square', .06);
+    else if (kind === 'beam') tone(1200, 140, .45, 'sawtooth', .05);
+    else if (kind === 'boom') { tone(160, 40, .4, 'sawtooth', .08); tone(90, 30, .5, 'square', .06, .03); }
+    else if (kind === 'form') [523, 659, 784, 1047].forEach((f, i) => tone(f, f, .12, 'square', .05, i * .08));
+    else if (kind === 'dragon') [130, 164, 196].forEach((f, i) => tone(f, f * .98, 1.6, 'triangle', .07, i * .15));
+    else if (kind === 'boss') [196, 185, 175].forEach((f, i) => tone(f, f, .18, 'square', .06, i * .18));
+  }
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const st = makeStage($('game')); st.resize(); st.night = false;
   const game = GAMES.find(g => g.id === 'planet').mount(st, ui);
@@ -444,8 +477,8 @@ __PLANET__
     let ripple = -9, goldUntil = 0;
     // finishes the letters ease between; a colour change sweeps across the word letter by letter
     const spec = (color, metalness, roughness, iridescence, env, sheen, glow = 0) => ({ color: new THREE.Color(color), metalness, roughness, iridescence, env, sheen, glow: new THREE.Color(glow) });
-    const SPECS = { pearl: spec(0xffffff, .1, .18, 1, 1.1, .6), gold: spec(0xffe100, .8, .2, .12, 1.4, 0, 0x7a6200), red: spec(0xff5a5a, 1, .16, .5, 1.5, 0), blue: spec(0x5ac8ff, 1, .16, .5, 1.5, 0), purple: spec(0x9a6aff, 1, .16, .6, 1.5, 0) };
-    const FORM_MATS = ['pearl', 'gold', 'gold', 'gold', 'red', 'blue', 'purple'];
+    const SPECS = { pearl: spec(0xffffff, .1, .18, 1, 1.1, .6), gold: spec(0xffe100, .8, .2, .12, 1.4, 0, 0x7a6200), red: spec(0xff5a5a, 1, .16, .5, 1.5, 0), blue: spec(0x5ac8ff, 1, .16, .5, 1.5, 0), silver: spec(0xe8ecf4, .9, .12, .3, 1.5, 0), purple: spec(0x9a6aff, 1, .16, .6, 1.5, 0) };
+    const FORM_MATS = ['pearl', 'gold', 'gold', 'gold', 'red', 'blue', 'purple', 'red', 'silver'];
     let formMat = 'pearl', formUntil = 0, want = 'pearl';
     titleFx = (kind, arg) => {
       if (kind === 'lap') ripple = T;
