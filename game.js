@@ -994,10 +994,11 @@ GAMES.push({
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
       }
-      // every 10 million power you're off for a visit: namek, planet vegeta and snake way take turns
-      if (!S.world && S.best >= (S.namekAt || PLANET_EVERY) && !tour && !shen && !boss) { const n = Math.floor(S.best / PLANET_EVERY); S.namekAt = (n + 1) * PLANET_EVERY; travel([3, 1, 2][n % 3]); namekUntil = t + (S.world === 3 ? 75 : 45); }
+      // every 1M best power you're off for a visit: namek, planet vegeta and snake way strictly in turn. (picking the
+      // world from best / 1M % 3 sent every form-up at 2M, 20M, 200M… to planet vegeta, since 2·10^k % 3 is always 2)
+      if (!S.world && S.best >= (S.namekAt || PLANET_EVERY) && !tour && !shen && !boss) { S.namekAt = (Math.floor(S.best / PLANET_EVERY) + 1) * PLANET_EVERY; S.trips = (S.trips || 0) + 1; travel([1, 2, 3][(S.trips - 1) % 3]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
-      if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen) { travel(0); namekUntil = 0; } }   // home after any wishes
+      if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen) { travel(0); namekUntil = 0; S.namekAt = Math.max(S.namekAt || 0, (Math.floor(S.best / PLANET_EVERY) + 1) * PLANET_EVERY); } }   // home after any wishes, and the next trip is a full 1M away
       if (S.world !== 3) {
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
@@ -1281,12 +1282,12 @@ GAMES.push({
     if (/visitors/.test(HASH)) { session = 61; nextGreg = 0; nextKai = 0; }   // preview hook: #visitors (gregory, king kai)
     if (/raid/.test(HASH)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
     if (/fusion/.test(HASH)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
-    if (/namek|porunga/.test(HASH)) { S.best = Math.max(S.best, 1e6); S.namekAt = 1e6; }   // preview hooks: #namek, #porunga (namek, then summon)
+    if (/namek|porunga/.test(HASH)) { S.best = Math.max(S.best, 1e6); S.namekAt = 1e6; S.trips = 0; }   // preview hooks: #namek, #porunga (namek, then summon)
     if (/chamber/.test(HASH)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
     if (/kaio/.test(HASH)) S.kaio = Math.max(1, S.kaio);   // preview hook: #kaio (kaioken owned)
-    if (/vegeta/.test(HASH)) { S.best = Math.max(S.best, 2e6); S.namekAt = 2e6; }   // preview hook: #vegeta (planet vegeta, then nappa)
+    if (/vegeta/.test(HASH)) { S.best = Math.max(S.best, 2e6); S.namekAt = 2e6; S.trips = 1; }   // preview hook: #vegeta (planet vegeta, then nappa)
     { const hh = HASH.match(/hero-(\w+)/); if (hh && HEROES[hh[1]]) S.hero = hh[1]; }   // preview hook: #hero-goku (play as any character)
-    if (/snake/.test(HASH)) { S.best = Math.max(S.best, 3e6); S.namekAt = 3e6; }   // preview hooks: #snake (snake way), #snake-nimbus (riding the nimbus)
+    if (/snake/.test(HASH)) { S.best = Math.max(S.best, 3e6); S.namekAt = 3e6; S.trips = 2; }   // preview hooks: #snake (snake way), #snake-nimbus (riding the nimbus)
     if (/door/.test(HASH)) { S.chamber = Math.max(1, S.chamber); nextDoor = 0; }   // preview hook: #door (the time chamber door)
     if (/car/.test(HASH)) { session = 71; nextCar = 0; }   // preview hook: #car (king kai's car)
     if (/pod/.test(HASH)) { session = 13; nextStar = 0; }   // preview hook: #pod (a saiyan space pod)
