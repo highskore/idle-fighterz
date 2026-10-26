@@ -29,6 +29,8 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 .stage { position: absolute; inset: 0; }
 .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
 #logo { display: block; width: 100%; height: 100%; touch-action: manipulation; }
+/* desktop: the title canvas overhangs its box top and bottom, so letters shoved up or down while they jostle aren't cut off */
+@media (min-width: 761px) { #logo { position: absolute; left: 0; top: -45%; height: 190%; pointer-events: auto; } }
 #glint { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: none; }
 .brand { position: relative; transition: opacity .6s; }
 /* phones: while the dragon is out the title drops behind the game canvas (its sky is transparent), so he flies over it */
@@ -400,11 +402,9 @@ __PLANET__
     const key = new THREE.DirectionalLight(0xffffff, .9); key.position.set(-3, 4, 5); scene.add(key);
     // phones: the canvas is tall; settled, the word sits near its top, and in the intro the letters
     // stack big as "high / skore" with a little tilt, sliding into one line as you scroll
-    let stacked = false;   // only the phone intro stacks the word, and only then do letters need to collide
     function introPose(r) {
       const phone = innerWidth <= 760, VH = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * cam.position.z, VW = VH * cam.aspect;
       group.position.y = baseGY + (phone ? (r.height / 2 - innerWidth * .2) / r.height * VH : 0);
-      stacked = phone;
       if (!phone) { for (const l of letters) { l.hero.copy(l.base); l.hk = 1; l.hr = 0; } return; }
       const lines = [letters.slice(0, 4), letters.slice(4)], adv = l => (letters[l.idx + 1] ? letters[l.idx + 1].pen : W0 - .3) - l.pen;
       const wide = Math.max(...lines.map(ln => ln.reduce((a, l) => a + adv(l), 0))), k = Math.min(VW * (innerWidth / r.width) * .8 / (wide * 1.08), VH * .32 / H0), lh = H0 * k * 1.04;   // a full word-height apart, so ascenders and descenders never meet
@@ -413,7 +413,7 @@ __PLANET__
         for (const l of ln) { l.hero.set(pen + l.cx * k - group.position.x, (row ? -.5 : .5) * lh + (l.base.y - midY) * k - group.position.y, 0); l.hk = k; l.hr = (l.idx % 2 ? 1 : -1) * (.05 + (l.idx * 37 % 5) * .02); pen += adv(l) * k; }
       });
     }
-    function size() { const r = { width: logo.clientWidth, height: logo.clientHeight }; if (!r.width || !r.height) return; renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; const vt = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)); cam.position.set(0, 0, Math.max((W0 * 1.22 / 2) / (vt * cam.aspect), (H0 * 2.3 / 2) / vt) + .6); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix(); introPose(r); glint.width = Math.ceil(r.width / 3); glint.height = Math.ceil(r.height / 3); Object.assign(glint.style, { left: logo.offsetLeft + 'px', top: logo.offsetTop + 'px', width: r.width + 'px', height: r.height + 'px' }); }
+    function size() { const r = { width: logo.clientWidth, height: logo.clientHeight }; if (!r.width || !r.height) return; renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; const vt = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)); cam.position.set(0, 0, Math.max((W0 * 1.22 / 2) / (vt * cam.aspect), (H0 * 2.3 * (r.height / (logo.parentElement.clientHeight || r.height)) / 2) / vt) + .6); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix(); introPose(r); glint.width = Math.ceil(r.width / 3); glint.height = Math.ceil(r.height / 3); Object.assign(glint.style, { left: logo.offsetLeft + 'px', top: logo.offsetTop + 'px', width: r.width + 'px', height: r.height + 'px' }); }
     size(); new ResizeObserver(size).observe(logo);
     // pointer: tilt toward it, pop the letters near it, bounce the one clicked
     const P = { x: 0, y: 0, sx: 0, sy: 0, lx: null }, ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -474,7 +474,7 @@ __PLANET__
         l.px += l.pvx * dt; l.py += l.pvy * dt; l.bx = l.hw * .94 * hk; l.by = l.hh * .96 * hk; l.curk = hk;
       }
       // collisions fade out over the last stretch (the finished line's glyph boxes touch), so nothing snaps
-      const cw = stacked ? Math.min(1, Math.max(0, (.96 - ie) / .26)) : 0;
+      const cw = Math.min(1, Math.max(0, (.96 - ie) / .26));
       if (cw > 0) for (let it = 0; it < 4; it++) for (let i = 0; i < letters.length; i++) for (let j = i + 1; j < letters.length; j++) {
         const a = letters[i], b = letters[j], dx = b.px - a.px, dy = b.py - a.py, ox = a.bx + b.bx - Math.abs(dx), oy = a.by + b.by - Math.abs(dy);
         if (ox <= 0 || oy <= 0) continue;
