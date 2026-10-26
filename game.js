@@ -52,7 +52,20 @@ const KID = (() => {
   const setLong = pal => ({ idle: makeSprite(longHair(head.concat(idle)), pal, { emit: 'Ll', ax: 12 }), run: [runA, runB, runC, runB].map(b => makeSprite(longHair(head.concat(b)), pal, { emit: 'Ll', ax: 12 })) });
   const hair = (h, H) => Object.assign({}, base, { h, H });
   const forms = [set(base), set(hair(0xffe02e, 0xfffbc8)), set(hair(0xffe640, 0xfffde0)), setLong(hair(0xffe02e, 0xfffbc8)), set(hair(0xd8344a, 0xff8a8a)), set(hair(0x3fb8ff, 0xc8f2ff)), set(hair(0x6a2fc8, 0xc49cff))];
-  return { forms, black: forms[0], gold: forms[1] };
+  // fused with Bubbles: monkey ears and tail, Potara earrings, an orange fusion vest, fur-brown streaks in the hair
+  const fuse = rows => rows.map((r, j) => {
+    const g = [...r];
+    const put = (i, c) => { if (g[i] === '.') g[i] = c; };
+    if (j >= 8 && j <= 11) { put(3, j === 8 || j === 11 ? 'o' : 'q'); put(2, j === 9 || j === 10 ? 'o' : '.'); }   // ear
+    if (j === 12) { put(3, 'y'); put(2, 'o'); } if (j === 13) put(3, 'Y');                                                // earring
+    const b = j - head.length;                                                                                           // tail, curling off his back
+    if (b === 6) { put(2, 'o'); put(1, 'o'); } if (b === 7) { put(2, 'T'); put(1, 'T'); put(0, 'o'); } if (b === 8) { put(1, 'T'); put(0, 'o'); put(2, 'o'); }
+    if (b === 9) { put(1, 'T'); put(0, 'o'); put(2, 'T'); put(3, 'o'); } if (b === 10) { put(2, 'o'); put(1, 'o'); }
+    return g.join('');
+  });
+  const fusedPal = Object.assign({}, base, { a: 0xf28a1c, A: 0xc0601a, H: 0x8a5a36, q: 0xf0c9a0, T: 0x8a5a36 });
+  const fused = { idle: makeSprite(fuse(head.concat(idle)), fusedPal, { emit: 'Ll' }), run: [runA, runB, runC, runB].map(b => makeSprite(fuse(head.concat(b)), fusedPal, { emit: 'Ll' })) };
+  return { forms, fused, black: forms[0], gold: forms[1] };
 })();
 /* great ape: the full-moon form, giant, armoured, red-eyed */
 const APE = (() => {
@@ -222,7 +235,7 @@ GAMES.push({
     function onClick(px, py) {
       if (!playing) return;
       if (fuseOffer > st.t && monkeyAt && Math.hypot(px - monkeyAt.x, py - (monkeyAt.y - 5)) < 12) {
-        fuseOffer = 0; fuseUntil = st.t + 30; flashT = 1; shake = .6; ui.event('fusion ha! ×8 for 30s'); ui.fx && ui.fx('super');
+        fuseOffer = 0; fuseUntil = st.t + 30; flashT = 1; shake = .6; ui.event('fusion ha! vegebubs — ×8 for 30s'); ui.fx && ui.fx('super');
         burst(monkeyAt.x, monkeyAt.y - 6, [0xffffff, 0xffe08a, 0xff9a3c, 0x6fb0ff], 50, 200); return;
       }
       if (capsule && Math.hypot(px - capsule.x, py - capsule.y) < 11) { openCapsule(); return; }
@@ -537,7 +550,7 @@ GAMES.push({
         blitZ(SAIBA, sb.sx, sb.sy, Math.atan2(v[0], v[1]), Math.sin(t * 3 + sb.born) > 0, (up * down - 1) * 11 + hop, v[2] * R + 4, 1.1);
       }
       // kid (and the monkey) against the depth buffer
-      const kd = kidScreen(), set = KID.forms[S.form];
+      const kd = kidScreen(), set = fuseUntil > t ? KID.fused : KID.forms[S.form];
       const ahead = M3.ap(M, roadPt(phi + .05)), ax = cx + ahead[0] * R, flip = ax < kd.x;
       const spr = jumpH > 1 ? set.run[0] : set.run[Math.floor(t * (9 + sprint * 10)) % 4];
       const lift = jumpH + (riding > 0 ? 9 : 0), depth = kd.v[2] * R + 6; flipNow = flip; liftNow = lift;
