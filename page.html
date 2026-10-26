@@ -215,9 +215,8 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .hud { top: auto; bottom: max(64px, 11svh); right: 50%; transform: translateX(50%); text-align: center; padding: 6px 14px; }
   .hud .n { transform-origin: 50% 50%; }
   .hud .meta, .hud .row { justify-content: center; }
-  /* popups sit just above the power level strip, clear of the title */
-  .toast { top: auto; bottom: calc(max(58px, 9svh) + 112px); transform: translate(-50%, 6px); max-width: 86%; }
-  .toast.on { transform: translate(-50%, 0); }
+  .toast { top: calc(50% - 43vw); transform: translate(-50%, calc(-100% + 6px)); max-width: 86%; }
+  .toast.on { transform: translate(-50%, -100%); }
   .toast, .wish p { -webkit-text-stroke: 4px #fff; text-shadow: none; }
   .tag { bottom: 6%; }
   .hud .label { justify-content: center; }

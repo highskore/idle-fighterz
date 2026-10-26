@@ -90,11 +90,53 @@ function makePuff(w, h) {
 }
 /* saibamen sprout out of the planet; villains raid it */
 const SAIBA = makeSprite(['...ooo...', '..oGgGo..', '.oGgLgGo.', '.ogrgrgo.', '.ogggggo.', '..oGgGo..', '.oogggoo.', 'og.ogo.go', '..ogggo..', '..og.go..', '..oo.oo..'], { o: 0x0d2a12, g: 0x58b848, G: 0x2f7a2a, L: 0xa6e67e, r: 0xd8241e }, { emit: 'r' });
+/* frieza (final form) and cell (perfect form), shaped on a grid: light from the top left,
+   a darker tone on the right and lower edges, then a dark outline */
+function shapeSprite(w, h, paint, pal, shadeOf) {
+  const G = SHENRON.kit.grid(w, h); paint(G);
+  const g = G.g, at = (x, y) => (g[y] || [])[x] || '.';
+  const out = g.map(r => r.slice());
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const c = g[y][x]; if (shadeOf[c] && (at(x + 1, y) === '.' || at(x, y + 1) === '.' || at(x + 1, y + 1) === '.')) out[y][x] = shadeOf[c]; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (g[y][x] === '.' && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => at(x + a, y + b) !== '.')) out[y][x] = 'o';
+  return makeSprite(out.map(r => r.join('')), pal, { emit: 'r' });
+}
+const FRIEZA = shapeSprite(26, 34, G => {
+  G.line([[16, 25], [21, 27], [24, 23], [23, 18]], 2.8, 1.6, 'w'); G.ell(23, 17.5, 1.6, 1.6, 'p');      // tail with its purple tip
+  G.ell(13, 9.5, 4.6, 4.6, 'w');                                                                       // face
+  G.poly([[8, 9], [8.6, 5], [11, 2.4], [15, 2.4], [17.4, 5], [18, 9], [16, 7.4], [10, 7.4]], 'p');      // the shiny dome
+  G.set(11, 3, 'q'); G.set(10, 4, 'q'); G.set(12, 3, 'q');                                             // its highlight
+  G.set(10, 10, 'r'); G.set(11, 10, 'k'); G.set(15, 10, 'r'); G.set(14, 10, 'k');                      // eyes
+  G.set(9, 9, 'P'); G.set(17, 9, 'P');                                                                 // purple cheek marks
+  G.rect(12, 12, 3, 1, 'P');                                                                           // lips
+  G.rect(11, 14, 5, 2, 'w');                                                                           // neck
+  G.ell(8, 17, 3.2, 2.4, 'p'); G.ell(18, 17, 3.2, 2.4, 'p');                                           // shoulder plates
+  G.poly([[9, 16], [17, 16], [16, 25], [10, 25]], 'w'); G.ell(13, 19, 2.6, 1.8, 'p');                  // torso, chest gem
+  G.line([[7, 18], [5, 23], [7, 27]], 2.6, 2.2, 'w'); G.ell(5.4, 23, 1.4, 1.4, 'p');                   // left arm, forearm gem
+  G.line([[19, 18], [21, 22], [17, 22]], 2.6, 2.2, 'w'); G.set(16, 21, 'w');                           // right arm, a finger raised
+  G.line([[16, 22], [16, 19]], 1.2, 1, 'w');
+  G.line([[11, 25], [10, 32]], 3, 2.6, 'w'); G.line([[15, 25], [16, 32]], 3, 2.6, 'w');                // legs
+  G.ell(10, 29, 1.4, 1.2, 'p'); G.ell(16, 29, 1.4, 1.2, 'p');                                          // shin gems
+}, { o: 0x1d1030, w: 0xf6f4fa, W: 0xb8b0cc, p: 0xa25ae8, P: 0x5a1f8a, q: 0xe6d0ff, r: 0xe0302a, k: 0x2a1840 }, { w: 'W', p: 'P' });
+const CELL = shapeSprite(28, 34, G => {
+  G.poly([[10, 15], [1, 27], [4, 28], [10, 22]], 'K'); G.poly([[18, 15], [27, 27], [24, 28], [18, 22]], 'K');   // wings
+  G.poly([[8, 8], [8.5, 1], [11, 5], [14, 0], [17, 5], [19.5, 1], [20, 8]], 'k');                     // the black crown
+  G.ell(14, 8.5, 5, 5.2, 'g'); G.ell(14, 10.5, 3.6, 3.2, 'f');                                        // head, pale face
+  G.set(12, 10, 'P'); G.set(16, 10, 'P'); G.set(12, 11, 'k'); G.set(16, 11, 'k');                     // eyes
+  G.line([[11, 12], [12, 13.5]], 1, 1, 'P'); G.line([[17, 12], [16, 13.5]], 1, 1, 'P');               // cheek stripes
+  G.rect(13, 13, 3, 1, 'k');                                                                           // mouth
+  G.rect(12, 14, 5, 2, 'g');                                                                           // neck
+  G.ell(14, 19, 6.5, 4.5, 'g'); G.poly([[10, 21], [18, 21], [17, 26], [11, 26]], 'g');                 // chest, waist
+  G.ell(11.5, 18, 2.2, 1.4, 'k'); G.ell(16.5, 18, 2.2, 1.4, 'k');                                      // black chest plates
+  G.line([[8, 17], [6, 22], [7, 27]], 2.6, 2.2, 'g'); G.line([[20, 17], [22, 22], [21, 27]], 2.6, 2.2, 'g');   // arms
+  G.line([[12, 26], [11, 33]], 3, 2.6, 'g'); G.line([[16, 26], [17, 33]], 3, 2.6, 'g');                // legs
+  G.rect(9, 31, 4, 2, 'k'); G.rect(15, 31, 4, 2, 'k');                                                 // boots
+  for (const [x, y] of [[10, 6], [17, 6], [13, 20], [15, 23], [9, 19], [19, 19], [6, 20], [22, 21], [12, 28], [17, 29], [7, 25], [21, 25], [14, 16]]) G.set(x, y, 'k');   // spots
+}, { o: 0x0d2210, g: 0x7acb5c, G: 0x3f8a3a, k: 0x1a2a1a, K: 0x24342a, f: 0xf2e8f2, P: 0x9a4ad8, r: 0xd03050 }, { g: 'G' });
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
   return [
-    { name: 'frieza', spr: body(['....oooooo....', '...oppppppo...', '..oppPPPPppo..', '..owwwwwwwwo..', '..owkrwwrkwo..', '..owwwwwwwwo..', '...owwPPwwo...', '....owwwwo....', '..oooppppooo..', '.owwppwwppwwo.', 'owwwowwwwowwwo', 'owwo.owwo.owwo', '.oo..owwo..oo.', '.....owwo.....', '....owwwwo..oo', '....owoowo.owo', '....owo.owoow.', '....oo...ooo..'], { o: 0x1d1030, w: 0xf4f2f8, p: 0x9a4ae0, P: 0x5a1f8a, k: 0x111111, r: 0xd8241e }) },
-    { name: 'cell', spr: body(['...o..oo..o...', '..oGooGGooGo..', '..oGGGGGGGGo..', '..offffffffo..', '..ofkrffrkfo..', '..offffffffo..', '...ofPPPPfo...', '....offffo....', '..ooogggggooo.', '.oggkgggkggGGo', 'oggkogggkoGGGo', 'oggo.oggo.oGGo', '.oo..okgo..oo.', '.....oggo.....', '....oggggo....', '....ogoogo....', '....ogo.ogo...', '....oo...oo...'], { o: 0x0d2210, g: 0x6cc04e, G: 0x2f6a2a, k: 0x14281a, f: 0xeee2f2, P: 0x8a4ad0, r: 0xd8241e }) },
+    { name: 'frieza', spr: FRIEZA },
+    { name: 'cell', spr: CELL },
     { name: 'majin buu', spr: body(['......oo......', '.....oppo.....', '....oppppo....', '..oppppppppo..', '..opkrppkrpo..', '..oppppppppo..', '...oppmmppo...', '....oppppo....', '..ookkkkkkoo..', '.oppkkppkkppo.', 'opppkyyyykpppo', 'oppowwwwwwoppo', '.oo.owwwwwo.oo', '....owwwwwo...', '....owwowwo...', '....oyyoyyo...', '....okko.kko..', '....ooo...ooo.'], { o: 0x2a0f1a, p: 0xf59ac8, k: 0x1a1a1a, r: 0xd8241e, m: 0x8a1f3a, y: 0xf2c84a, w: 0xffffff }) },
     { name: 'beerus', spr: body(['..oo......oo..', '..opo....opo..', '..oppooooppo..', '..oppppppppo..', '..opyrppyrpo..', '..oppppppppo..', '...oppkkppo...', '....oppppo....', '..ooyyyyyyoo..', '.oppkyyyykppo.', 'opppokkkkoppp o'.replace(' ', ''), 'oppo.okko.oppo', '.oo..okko..oo.', '....owwwwo....', '....owwwwo....', '....okkoko....', '....oyo.oyo...', '....oo...oo...'], { o: 0x1d1030, p: 0x9a7ad8, k: 0x1a1a1a, y: 0xf2c84a, r: 0xd8241e, w: 0xe8e0f0 }) },
   ];
@@ -269,7 +311,7 @@ GAMES.push({
       }
       // senzu bean on the planet
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(px - sb.sx, py - (sb.sy - 6)) < 9) { killSaiba(sb); return; }
-      if (boss && !boss.dead && Math.abs(px - boss.x) < 16 * boss.k && py > boss.y - 34 * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(5, combo + .25) : 1; lastClick = st.t; hitBoss((1 + S.boots) * mult() * combo * 6, px, py); return; }
+      if (boss && !boss.dead && Math.abs(px - boss.x) < (boss.spr.w / 2 + 3) * boss.k && py > boss.y - (boss.spr.h + 2) * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(5, combo + .25) : 1; lastClick = st.t; hitBoss((1 + S.boots) * mult() * combo * 6, px, py); return; }
       if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - bean.sy) < 9) { senzuUntil = st.t + 15; ui.event('senzu bean — ×3 for 15s'); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
       // train: rhythm builds a combo up to ×5; the scouter adds crits
       combo = st.t - lastClick < .6 ? Math.min(5, combo + .25) : 1; lastClick = st.t; if (combo >= 5) goal('combo');
@@ -300,7 +342,7 @@ GAMES.push({
       const pts = (1 + S.galick) * lapValue() * 2.5 * c * mult() * (ff ? 3 : 1);
       const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1); };
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && onLine(sb.sx, sb.sy - 6, 7)) killSaiba(sb);
-      if (boss && !boss.dead && onLine(boss.x, boss.y - 16 * boss.k, 14 * boss.k)) hitBoss(pts * 4, boss.x, boss.y - 20 * boss.k);
+      if (boss && !boss.dead && onLine(boss.x, boss.y - boss.spr.h / 2 * boss.k, boss.spr.w / 2 * boss.k)) hitBoss(pts * 4, boss.x, boss.y - boss.spr.h / 2 * boss.k);
       gain(pts, k.x, k.y - 16, true); ui.fx && ui.fx('buy');
       for (const m of meteors) { if (m.dead || m.delay > 0) continue; const rx = m.x - k.x, ry = m.y - k.y, along = rx * dir[0] + ry * dir[1], off = Math.abs(rx * dir[1] - ry * dir[0]); if (along > 0 && off < 6 + c * 3) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + laps * .1), m.x, m.y - 6, true); } }
     }
@@ -347,7 +389,7 @@ GAMES.push({
       gain(lapValue() * mult() * 3 * S.bigbang, x, y - 10, true);
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(sb.sx - x, sb.sy - 6 - y) < r + 6) killSaiba(sb);
       for (const m of meteors) if (!m.dead && m.delay <= 0 && Math.hypot(m.x - x, m.y - y) < r + 4) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + laps * .1), m.x, m.y - 6, true); }
-      if (boss && !boss.dead && Math.hypot(boss.x - x, boss.y - 18 * boss.k - y) < r + 16 * boss.k) hitBoss(Math.max(rate(), lapValue() * mult()) * 12 * S.bigbang, x, y);
+      if (boss && !boss.dead && Math.hypot(boss.x - x, boss.y - boss.spr.h / 2 * boss.k - y) < r + boss.spr.w / 2 * boss.k) hitBoss(Math.max(rate(), lapValue() * mult()) * 12 * S.bigbang, x, y);
       if (star && Math.hypot(star.x - x, star.y - y) < r) onClick(star.x, star.y);
       burst(x, y, [0xffffff, 0xbfe9ff, 0x6fb0ff, 0x2f6ae0], 36, 220);
     }
@@ -366,9 +408,9 @@ GAMES.push({
     function hitBoss(dmg, x, y) {
       boss.hp -= dmg * (1 + .5 * S.armor); boss.flash = .12; burst(x, y, [0xffffff, 0xffe08a, 0xff9a3c], 6, 70);
       if (boss.hp <= 0 && !boss.dead) {
-        boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - 20 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; const prize = Math.max(boss.max * 1.5, rate() * 90);
-        gain(prize, boss.x, boss.y - 40 * boss.k, true); ui.event(`${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
-        for (let k = 0; k < 4; k++) burst(boss.x + (Math.random() - .5) * 20, boss.y - 18 * boss.k + (Math.random() - .5) * 20, [0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 20, 180);
+        boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; const prize = Math.max(boss.max * 1.5, rate() * 90);
+        gain(prize, boss.x, boss.y - (boss.spr.h + 10) * boss.k, true); ui.event(`${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
+        for (let k = 0; k < 4; k++) burst(boss.x + (Math.random() - .5) * 20, boss.y - boss.spr.h / 2 * boss.k + (Math.random() - .5) * 20, [0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 20, 180);
         save();
       }
     }
@@ -511,7 +553,7 @@ GAMES.push({
         if (boss.dead && t - boss.t1 > 1.2) boss = null;
         else if (!boss.dead && (boss.nextKi -= dt) < 0) { boss.nextKi = .7; const h = handPos(); kis.push({ x: h.x, y: h.y, t0: t }); }
       }
-      for (const kb of kis) { if (!boss || boss.dead) { kb.done = true; continue; } const tx = boss.x, ty = boss.y - 18 * boss.k, d = Math.hypot(tx - kb.x, ty - kb.y); if (d < 6) { kb.done = true; hitBoss(Math.max(1, rate() * .5), tx, ty); continue; } const sp = 260 * dt / d; kb.x += (tx - kb.x) * Math.min(1, sp); kb.y += (ty - kb.y) * Math.min(1, sp); }
+      for (const kb of kis) { if (!boss || boss.dead) { kb.done = true; continue; } const tx = boss.x, ty = boss.y - boss.spr.h / 2 * boss.k, d = Math.hypot(tx - kb.x, ty - kb.y); if (d < 6) { kb.done = true; hitBoss(Math.max(1, rate() * .5), tx, ty); continue; } const sp = 260 * dt / d; kb.x += (tx - kb.x) * Math.min(1, sp); kb.y += (ty - kb.y) * Math.min(1, sp); }
       kis = kis.filter(kb => !kb.done);
       // super mode: a 25s golden-hair burst (×2) each time power level passes the next milestone
       // transform when power level reaches the next form
@@ -641,9 +683,9 @@ GAMES.push({
       if (sprint > .3 && Math.random() < .6) fx.add({ x: kd.x, y: kd.y, vx: (Math.random() - .5) * 30, vy: -10, drag: 3, life: .4, s: 1, grow: 1.5, c: [0xffffff, 0xe7e2d4], raw: true });
       if (cloudFly) st.blit(puff, cloudFly.x - 13, cloudFly.y - 9, false, true);
       if (boss) {
-        const k = boss.k = Math.max(1.2, R / 42), ent = Math.min(1, (t - boss.t0) / 1.2), out = boss.dead ? Math.min(1, (t - boss.t1) / 1.2) : 0;
+        const k = boss.k = Math.max(.9, R / 62), ent = Math.min(1, (t - boss.t0) / 1.2), out = boss.dead ? Math.min(1, (t - boss.t1) / 1.2) : 0;
         boss.x = cx + R * 1.45 + (1 - ent) * st.W * .4 + (boss.fled ? out * st.W * .5 : 0); boss.y = cy - R * .75 + Math.sin(t * 2) * 3 - (boss.fled ? out * 30 : 0);
-        boss.x = Math.min(boss.x, st.W - 11 * k - 3 + (1 - ent) * st.W * .4 + (boss.fled ? out * st.W * .5 : 0));
+        boss.x = Math.min(boss.x, st.W - (boss.spr.w / 2 + 2) * k - 3 + (1 - ent) * st.W * .4 + (boss.fled ? out * st.W * .5 : 0));
         boss.flash = Math.max(0, boss.flash - dt);
         if (!(boss.dead && !boss.fled)) {
           const spr = boss.spr, W = st.W;
