@@ -231,6 +231,7 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
    then settles into place as the game card rises in (driven by --p, 0 → 1, from JS) */
 .scroller { height: 200svh; }
 .scroller > .page { position: sticky; top: 0; overflow: clip; }
+@media (max-width: 760px) { .scroller { height: auto; } html, body { overflow: hidden; } }   /* no scroll on phones: the cue plays the intro */
 .cue { position: absolute; left: 50%; bottom: 22px; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 6px; transform: translateX(-50%); color: var(--muted); text-transform: uppercase; font-size: 10px; padding: 12px 28px; opacity: calc(1 - var(--p, 0) * 3); }
 .cue i { width: 9px; height: 9px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); animation: cue 1.4s ease-in-out infinite; }
 @keyframes cue { 50% { transform: translateY(4px) rotate(45deg); } }
@@ -433,8 +434,12 @@ __PLANET__
     introScroll();
   }
   let introE = 1;   // read by the title: 0 = intro pose, 1 = settled
+  // phones don't scroll at all (scrolling made safari's bars slide and the page jump): the cue becomes a button
+  // that plays the same intro, so introP stands in for the scroll position there
+  const noScroll = () => innerWidth <= 760;
+  let introP = 0;
   function introScroll() {
-    const span = Math.max(1, scroller.offsetHeight - innerHeight), p = Math.min(1, Math.max(0, scrollY / span)), e = 1 - Math.pow(1 - p, 3);
+    const span = Math.max(1, scroller.offsetHeight - innerHeight), p = noScroll() ? introP : Math.min(1, Math.max(0, scrollY / span)), e = 1 - Math.pow(1 - p, 3);
     // set on the moving elements only, so a scroll frame restyles them and not the whole page
     cueEl.style.setProperty('--p', p.toFixed(4)); for (const el of [brandEl, gameEl]) el.style.setProperty('--e', e.toFixed(4)); introE = e;
     pageEl.classList.toggle('past', p > .6);
@@ -445,10 +450,25 @@ __PLANET__
   let introW = innerWidth;
   addEventListener('resize', () => { if (innerWidth === introW && innerWidth <= 760) return; introW = innerWidth; requestAnimationFrame(introLayout); });
   // the cue glides you through the intro: our own eased scroll, so it's the same in every browser
+  const ease = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  let introPlaying = false;
+  function playIntro() {
+    if (introPlaying || introP >= 1) return; introPlaying = true;
+    const from = introP, t0 = performance.now(), dur = 1300;
+    (function step(now) { const k = Math.min(1, (now - t0) / dur); introP = from + (1 - from) * ease(k); lastScroll = now; introScroll(); if (k < 1) requestAnimationFrame(step); else introPlaying = false; })(t0);
+  }
+  // a swipe or a wheel turn starts it too, since that's what people try first
+  let swipeY = null;
+  addEventListener('touchstart', e => { swipeY = e.touches[0].clientY; }, { passive: true });
+  addEventListener('touchmove', e => { if (noScroll() && swipeY !== null && swipeY - e.touches[0].clientY > 30) { swipeY = null; playIntro(); } }, { passive: true });
+  addEventListener('wheel', e => { if (noScroll() && e.deltaY > 0) playIntro(); }, { passive: true });
+  const cueText = () => { const sp = cueEl.querySelector('span'); sp.textContent = noScroll() ? 'press for fun' : 'scroll for fun'; cueEl.setAttribute('aria-label', noScroll() ? 'start the game' : 'scroll to the game'); };
+  cueText(); addEventListener('resize', cueText);
   $('cue').addEventListener('click', e => {
     e.preventDefault();
+    if (noScroll()) { playIntro(); return; }
     const from = scrollY, to = scroller.offsetHeight - innerHeight, t0 = performance.now(), dur = 1300;
-    (function step(now) { const k = Math.min(1, (now - t0) / dur), ease = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; scrollTo(0, from + (to - from) * ease); if (k < 1) requestAnimationFrame(step); })(t0);
+    (function step(now) { const k = Math.min(1, (now - t0) / dur); scrollTo(0, from + (to - from) * ease(k)); if (k < 1) requestAnimationFrame(step); })(t0);
   });
   introLayout();
   // older iOS ignores touch-action for double taps on some elements: swallow a second tap that lands within
