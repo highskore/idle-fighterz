@@ -173,6 +173,8 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .game { height: calc(100svh - 40px); height: calc(100dvh - 40px); }
   html, body { background: #e2a93a linear-gradient(#fff 50%, #e2a93a 50%) no-repeat; }
   html { overscroll-behavior: none; touch-action: manipulation; }
+  /* gold below the game when the iOS toolbar reveals what's under it */
+  body .page { box-shadow: 0 50vh 0 #e2a93a; }
   .page { background: #fff; }
   .foot .long { display: none; } .foot .short { display: inline; }
   .tag { bottom: -10px; font-size: 11px; }
