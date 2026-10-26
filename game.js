@@ -282,19 +282,19 @@ GAMES.push({
     S.form = Math.min(S.form || 0, FORMS.length - 1);
     const save = () => { S.last = Date.now(); try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (_) {} };
     const SHOP = {
-      boots: { base: 40, k: 1.55, label: 'weighted boots', what: '+1 per step' },
-      partner: { base: 150, k: 1.5, label: 'bubbles', what: '+4/s, trains with you' },
-      gravity: { base: 900, k: 2.3, label: 'gravity chamber', what: '×1.15 everything' },
-      cloud: { base: 400, k: 1.9, label: 'flying nimbus', what: 'comes more often' },
-      scouter: { base: 300, k: 1.8, label: 'scouter', what: '+10% crits (×2)', unlock: () => S.best >= 150 },
-      galick: { base: 600, k: 2, label: 'galick charge', what: 'hold to charge a beam', unlock: () => S.best >= 400 },
-      senzu: { base: 1500, k: 1.9, label: 'senzu tree', what: 'beans: tap for ×1.5', unlock: () => S.best >= 1000 },
-      house: { base: 2500, k: 2.1, label: 'capsule house', what: '+40/s (a new dome up to lv 9)', unlock: () => S.best >= 2000 },
-      armor: { base: 5000, k: 2.2, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
-      kaio: { base: 8000, k: 2.4, label: 'kaioken', what: 'red button: big boost, then tired', unlock: () => S.best >= 8000 },
-      bigbang: { base: 25000, k: 2.2, label: 'big bang attack', what: 'double-tap: an exploding ki ball', unlock: () => S.best >= 20000 },
-      piccolo: { base: 12000, k: 2.1, label: 'piccolo', what: '+60/s, zaps meteors', unlock: () => S.best >= 10000 },
-      chamber: { base: 50000, k: 2.5, label: 'time chamber', what: 'a door appears: train ×2 inside', unlock: () => S.best >= 40000 },
+      boots: { base: 50, k: 1.7, label: 'weighted boots', what: '+1 per step' },
+      partner: { base: 250, k: 1.7, label: 'bubbles', what: '+4/s, trains with you' },
+      gravity: { base: 2500, k: 2.6, label: 'gravity chamber', what: '×1.15 everything' },
+      cloud: { base: 1000, k: 2.2, label: 'flying nimbus', what: 'comes more often' },
+      scouter: { base: 800, k: 2.1, label: 'scouter', what: '+10% crits (×2)', unlock: () => S.best >= 150 },
+      galick: { base: 1500, k: 2.3, label: 'galick charge', what: 'hold to charge a beam', unlock: () => S.best >= 400 },
+      senzu: { base: 4000, k: 2.2, label: 'senzu tree', what: 'beans: tap for ×1.5', unlock: () => S.best >= 1000 },
+      house: { base: 6000, k: 2.3, label: 'capsule house', what: '+40/s (a new dome up to lv 9)', unlock: () => S.best >= 2000 },
+      armor: { base: 12000, k: 2.4, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
+      kaio: { base: 20000, k: 2.6, label: 'kaioken', what: 'red button: big boost, then tired', unlock: () => S.best >= 8000 },
+      bigbang: { base: 60000, k: 2.5, label: 'big bang attack', what: 'double-tap: an exploding ki ball', unlock: () => S.best >= 20000 },
+      piccolo: { base: 30000, k: 2.4, label: 'piccolo', what: '+60/s, zaps meteors', unlock: () => S.best >= 10000 },
+      chamber: { base: 150000, k: 2.8, label: 'time chamber', what: 'a door appears: train ×2 inside', unlock: () => S.best >= 40000 },
       ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for a permanent boost', unlock: () => S.pl >= 1e6 },
     };
     const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber'];
