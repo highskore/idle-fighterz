@@ -421,7 +421,8 @@ GAMES.push({
     ui.onBuy(k => {
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') {
-        const gainA = Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))); S.ascend += gainA; ach('ascend'); S.pl = 0; for (const r of RESETS) S[r] = 0; S.form = 0; ui.fx && ui.fx('form', 0); scenery();
+        // one ascension per 1M power you give up
+        const gainA = Math.max(1, Math.floor(S.pl / 1e6)); S.ascend += gainA; ach('ascend'); S.pl = 0; for (const r of RESETS) S[r] = 0; S.form = 0; ui.fx && ui.fx('form', 0); scenery();
         ui.event(`ascended — now ×${(1 + .1 * S.ascend).toFixed(2)} forever`); ui.fx && ui.fx('super'); save(); syncShop(); return;
       }
       S.pl -= c; S[k]++; ui.fx && ui.fx('buy');
@@ -435,7 +436,7 @@ GAMES.push({
       if (k === 'armor' && S.armor === 1) ui.event('saiyan armor on — hit villains harder');
       save(); syncShop();
     });
-    const what = k => k === 'ascend' ? `→ ×${(1 + .1 * (S.ascend + Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))))).toFixed(2)} forever` : k === 'chamber' && S.chamber ? `train ×2 for ${10 + 5 * S.chamber}s` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.5` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? 'next: final flash' : S.galick >= 5 ? 'full charge: final flash' : '+beam power') : SHOP[k].what;
+    const what = k => k === 'ascend' ? `→ ×${(1 + .1 * (S.ascend + Math.max(1, Math.floor(S.pl / 1e6)))).toFixed(2)} forever` : k === 'chamber' && S.chamber ? `train ×2 for ${10 + 5 * S.chamber}s` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.5` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? 'next: final flash' : S.galick >= 5 ? 'full charge: final flash' : '+beam power') : SHOP[k].what;
     const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0).map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k), special: k === 'ascend' }])));
 
     // the planet: a road ring near the rim, a cap of scenery facing the viewer
