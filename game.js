@@ -101,37 +101,34 @@ function shapeSprite(w, h, paint, pal, shadeOf) {
   return makeSprite(out.map(r => r.join('')), pal, { emit: 'r' });
 }
 const FRIEZA = shapeSprite(26, 34, G => {
-  G.line([[16, 25], [21, 27], [24, 23], [23, 18]], 2.8, 1.6, 'w'); G.ell(23, 17.5, 1.6, 1.6, 'p');      // tail with its purple tip
-  G.ell(13, 9.5, 4.6, 4.6, 'w');                                                                       // face
-  G.poly([[8, 9], [8.6, 5], [11, 2.4], [15, 2.4], [17.4, 5], [18, 9], [16, 7.4], [10, 7.4]], 'p');      // the shiny dome
-  G.set(11, 3, 'q'); G.set(10, 4, 'q'); G.set(12, 3, 'q');                                             // its highlight
-  G.set(10, 10, 'r'); G.set(11, 10, 'k'); G.set(15, 10, 'r'); G.set(14, 10, 'k');                      // eyes
-  G.set(9, 9, 'P'); G.set(17, 9, 'P');                                                                 // purple cheek marks
-  G.rect(12, 12, 3, 1, 'P');                                                                           // lips
-  G.rect(11, 14, 5, 2, 'w');                                                                           // neck
-  G.ell(8, 17, 3.2, 2.4, 'p'); G.ell(18, 17, 3.2, 2.4, 'p');                                           // shoulder plates
-  G.poly([[9, 16], [17, 16], [16, 25], [10, 25]], 'w'); G.ell(13, 19, 2.6, 1.8, 'p');                  // torso, chest gem
-  G.line([[7, 18], [5, 23], [7, 27]], 2.6, 2.2, 'w'); G.ell(5.4, 23, 1.4, 1.4, 'p');                   // left arm, forearm gem
-  G.line([[19, 18], [21, 22], [17, 22]], 2.6, 2.2, 'w'); G.set(16, 21, 'w');                           // right arm, a finger raised
-  G.line([[16, 22], [16, 19]], 1.2, 1, 'w');
-  G.line([[11, 25], [10, 32]], 3, 2.6, 'w'); G.line([[15, 25], [16, 32]], 3, 2.6, 'w');                // legs
-  G.ell(10, 29, 1.4, 1.2, 'p'); G.ell(16, 29, 1.4, 1.2, 'p');                                          // shin gems
+  G.line([[15, 25], [20, 28], [23, 24], [22, 19]], 2.8, 1.5, 'w'); G.ell(22, 19, 1.6, 1.6, 'p');     // tail, curled behind, purple tip
+  G.ell(13, 10, 4.4, 4.4, 'w');                                                                      // face
+  G.poly([[8, 9.5], [8.4, 5], [10.8, 2.2], [15.2, 2.2], [17.6, 5], [18, 9.5], [16.4, 7.6], [9.6, 7.6]], 'p');   // the shiny dome
+  G.set(11, 3, 'q'); G.set(10, 4, 'q'); G.set(12, 3, 'q');                                           // its highlight
+  G.set(10, 10, 'r'); G.set(11, 10, 'k'); G.set(15, 10, 'r'); G.set(14, 10, 'k');                    // eyes
+  G.rect(12, 12, 3, 1, 'P'); G.rect(11, 14, 5, 2, 'w');                                              // lips, neck
+  G.ell(8, 17, 3, 2.3, 'p'); G.ell(18, 17, 3, 2.3, 'p');                                             // shoulder plates
+  G.poly([[9, 16], [17, 16], [16, 25], [10, 25]], 'w'); G.ell(13, 19.5, 2.4, 1.8, 'p');              // torso, chest gem
+  G.line([[8, 18], [6, 23], [7, 27]], 2.6, 2.2, 'w'); G.line([[18, 18], [20, 23], [19, 27]], 2.6, 2.2, 'w');   // arms
+  G.ell(6.4, 23, 1.3, 1.3, 'p'); G.ell(19.6, 23, 1.3, 1.3, 'p');                                     // forearm gems
+  G.line([[11, 25], [10, 32]], 3, 2.6, 'w'); G.line([[15, 25], [16, 32]], 3, 2.6, 'w');              // legs
+  G.ell(10, 29, 1.3, 1.2, 'p'); G.ell(16, 29, 1.3, 1.2, 'p');                                        // shin gems
 }, { o: 0x1d1030, w: 0xf6f4fa, W: 0xb8b0cc, p: 0xa25ae8, P: 0x5a1f8a, q: 0xe6d0ff, r: 0xe0302a, k: 0x2a1840 }, { w: 'W', p: 'P' });
-const CELL = shapeSprite(28, 34, G => {
-  G.poly([[10, 15], [1, 27], [4, 28], [10, 22]], 'K'); G.poly([[18, 15], [27, 27], [24, 28], [18, 22]], 'K');   // wings
-  G.poly([[8, 8], [8.5, 1], [11, 5], [14, 0], [17, 5], [19.5, 1], [20, 8]], 'k');                     // the black crown
-  G.ell(14, 8.5, 5, 5.2, 'g'); G.ell(14, 10.5, 3.6, 3.2, 'f');                                        // head, pale face
-  G.set(12, 10, 'P'); G.set(16, 10, 'P'); G.set(12, 11, 'k'); G.set(16, 11, 'k');                     // eyes
-  G.line([[11, 12], [12, 13.5]], 1, 1, 'P'); G.line([[17, 12], [16, 13.5]], 1, 1, 'P');               // cheek stripes
-  G.rect(13, 13, 3, 1, 'k');                                                                           // mouth
-  G.rect(12, 14, 5, 2, 'g');                                                                           // neck
-  G.ell(14, 19, 6.5, 4.5, 'g'); G.poly([[10, 21], [18, 21], [17, 26], [11, 26]], 'g');                 // chest, waist
-  G.ell(11.5, 18, 2.2, 1.4, 'k'); G.ell(16.5, 18, 2.2, 1.4, 'k');                                      // black chest plates
-  G.line([[8, 17], [6, 22], [7, 27]], 2.6, 2.2, 'g'); G.line([[20, 17], [22, 22], [21, 27]], 2.6, 2.2, 'g');   // arms
-  G.line([[12, 26], [11, 33]], 3, 2.6, 'g'); G.line([[16, 26], [17, 33]], 3, 2.6, 'g');                // legs
-  G.rect(9, 31, 4, 2, 'k'); G.rect(15, 31, 4, 2, 'k');                                                 // boots
-  for (const [x, y] of [[10, 6], [17, 6], [13, 20], [15, 23], [9, 19], [19, 19], [6, 20], [22, 21], [12, 28], [17, 29], [7, 25], [21, 25], [14, 16]]) G.set(x, y, 'k');   // spots
-}, { o: 0x0d2210, g: 0x7acb5c, G: 0x3f8a3a, k: 0x1a2a1a, K: 0x24342a, f: 0xf2e8f2, P: 0x9a4ad8, r: 0xd03050 }, { g: 'G' });
+const CELL = shapeSprite(30, 35, G => {
+  G.poly([[11, 17], [2, 29], [5, 30], [11, 24]], 'K'); G.poly([[17, 17], [26, 29], [23, 30], [17, 24]], 'K');   // folded wings
+  G.poly([[8, 9], [7.5, 3], [9.5, 0], [11, 4], [14, 2.5], [17, 4], [18.5, 0], [20.5, 3], [20, 9]], 'g');          // crest
+  G.line([[9.5, .5], [10.8, 5]], 1, 1, 'k'); G.line([[18.5, .5], [17.2, 5]], 1, 1, 'k');
+  G.ell(14, 10.5, 3.8, 4.4, 'f');                                                                    // pale face
+  G.set(12, 10, 'P'); G.set(16, 10, 'P'); G.set(12, 9, 'k'); G.set(16, 9, 'k');                     // eyes
+  G.line([[11, 11], [12, 13]], 1, 1, 'P'); G.line([[17, 11], [16, 13]], 1, 1, 'P');                 // cheek stripes
+  G.rect(13, 13, 3, 1, 'k'); G.rect(12, 15, 5, 2, 'g');                                              // mouth, neck
+  G.ell(14, 20, 6.5, 4.5, 'g'); G.poly([[10, 22], [18, 22], [17, 27], [11, 27]], 'g');               // chest, waist
+  G.poly([[9, 18], [13, 18], [13, 21], [9, 21]], 'k'); G.poly([[15, 18], [19, 18], [19, 21], [15, 21]], 'k');   // black chest plates
+  G.line([[8, 19], [6, 24], [7, 28]], 2.6, 2.2, 'g'); G.line([[20, 19], [22, 24], [21, 28]], 2.6, 2.2, 'g');   // arms
+  G.line([[12, 27], [11, 33]], 3, 2.6, 'g'); G.line([[16, 27], [17, 33]], 3, 2.6, 'g');              // legs
+  G.rect(9, 32, 4, 2, 'k'); G.rect(15, 32, 4, 2, 'k');                                               // boots
+  for (const [x, y] of [[10, 23], [17, 24], [13, 25], [8, 20], [20, 20], [12, 29], [16, 30], [14, 22]]) G.set(x, y, 'k');   // spots
+}, { o: 0x0d2210, g: 0x7acb5c, G: 0x3f8a3a, k: 0x1a2a1a, K: 0x24342a, f: 0xf2e8f2, F: 0xc8b8d0, P: 0x9a4ad8, r: 0xd03050 }, { g: 'G', f: 'F' });
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
   return [
