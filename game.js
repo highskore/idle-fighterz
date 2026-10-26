@@ -272,19 +272,19 @@ const GINYU = [
   { name: 'burter', spr: ginyuMember(0x4a7ad8, 0, 'burter') }, { name: 'recoome', spr: ginyuMember(0xf2c8a2, 0xe8702a, 'recoome') },
   { name: 'guldo', spr: ginyuMember(0x7acb5c, 0, 'guldo') },
 ];
-// nappa: bald, black moustache, saiyan armour with broad shoulder pads, arms folded
+// nappa: bald, black moustache, saiyan armour with broad shoulder pads, flexing with a grin
 const NAPPA = shapeSprite(28, 34, G => {
   G.ell(14, 6.5, 4.6, 5, 's'); G.rect(11, 6, 2, 1, 'k'); G.rect(15, 6, 2, 1, 'k'); G.set(12, 6, 'w'); G.set(16, 6, 'w');   // bald head, eyes
   G.poly([[10.5, 4.6], [13.4, 5.4], [13.4, 6], [10.5, 5.4]], 'k'); G.poly([[17.5, 4.6], [14.6, 5.4], [14.6, 6], [17.5, 5.4]], 'k');   // brows
-  G.poly([[11, 8.6], [17, 8.6], [17.5, 10.4], [15, 9.6], [13, 9.6], [10.5, 10.4]], 'k'); G.rect(13, 10, 2, 1, 'm');         // moustache, mouth
+  G.poly([[11, 8.6], [17, 8.6], [17.5, 10.4], [15, 9.6], [13, 9.6], [10.5, 10.4]], 'k'); G.rect(12, 10, 4, 1, 'w');         // moustache, grin
   G.rect(12, 11, 4, 2, 's');                                                                                                 // thick neck
   G.ell(6, 15, 4.6, 3.2, 'y'); G.ell(22, 15, 4.6, 3.2, 'y');                                                                 // shoulder pads
   G.poly([[9, 13], [19, 13], [20, 22], [8, 22]], 'a'); G.rect(9, 16, 10, 1, 'A');                                           // chest armour
   G.poly([[8, 22], [20, 22], [19, 26], [9, 26]], 'y'); G.rect(9, 26, 10, 2, 'b');                                           // armour skirt, bodysuit
   G.line([[11, 27], [10, 33]], 3.6, 3.2, 'b'); G.line([[17, 27], [18, 33]], 3.6, 3.2, 'b');                                 // legs
   G.rect(7, 31, 5, 3, 'w'); G.rect(16, 31, 5, 3, 'w');                                                                       // boots
-  G.line([[5, 17], [8, 21], [20, 20]], 5.4, 5, 'o'); G.line([[5, 17], [8, 21], [20, 20]], 3.6, 3.2, 's');                    // arms folded across the chest
-  G.line([[23, 17], [20, 21], [8, 20]], 5.4, 5, 'o'); G.line([[23, 17], [20, 21], [8, 20]], 3.6, 3.2, 's'); G.ell(8.5, 20, 1.8, 1.8, 'w'); G.ell(19.5, 20, 1.8, 1.8, 'w');   // and white gloves
+  for (const pts of [[[5, 16], [1.5, 13], [4, 8]], [[23, 16], [26.5, 13], [24, 8]]]) { G.line(pts, 5.4, 5, 'o'); G.line(pts, 3.6, 3.2, 's'); }   // both arms up, flexing
+  G.ell(4, 7, 1.9, 1.9, 'w'); G.ell(24, 7, 1.9, 1.9, 'w');                                                                   // white gloves
 }, { o: 0x1a1210, s: 0xe8b48a, S: 0xc08460, k: 0x15110f, w: 0xf6f4ee, W: 0xc8c4b8, m: 0x7a3a2a, y: 0xd8b05a, Y: 0x9a7a3a, a: 0x3a2e2a, A: 0x2a201c, b: 0x2a2a46 }, { s: 'S', y: 'Y', w: 'W' });
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
