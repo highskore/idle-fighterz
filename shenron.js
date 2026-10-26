@@ -119,6 +119,15 @@ const SHENRON = (() => {
     // sized so his folded arms rest just above the planet's crown and his horns stay on screen
     const spr = PORUNGA, top = ctx.cy - ctx.R * .75, k = Math.max(.8, Math.min(ctx.R * 2.6 / spr.w, (top - 4) / 46)), rise = 1 - Math.pow(1 - ctx.rise, 3), t = ctx.t;
     const bx = ctx.cx, by = top + (spr.ay - 46) * k + (1 - rise) * ctx.H * 1.1 - ctx.gone * ctx.gone * ctx.H * 1.4 + Math.sin(t * 1.3) * 2;
+    // his serpent tail: from behind his waist it coils down round the planet, passing in front once
+    const lift = by - (ctx.cy + ctx.R * .1), pts = [];
+    for (let i = 0; i <= 900; i++) { const u = i / 900, a = -1.3 + u * 6.283 * .95, rr = 1.32 - u * .12; pts.push([ctx.cx + Math.cos(a) * rr * ctx.R + Math.sin(u * 9 + t * 1.5) * 2, ctx.cy + (-.15 + u * .95) * ctx.R + lift * (1 - u * .4), Math.sin(a) * rr * ctx.R, u]); }
+    let sAcc = 0;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [x, y, z, u] = pts[i], tx = pts[i + 1][0] - pts[i - 1][0], ty = pts[i + 1][1] - pts[i - 1][1], tl = Math.hypot(tx, ty) || 1;
+      sAcc += Math.hypot(x - pts[i - 1][0], y - pts[i - 1][1]); if (y > ctx.H + 20 || y < -20) continue;
+      ctx.z = z; tube(ctx, x, y, ty / tl, -tx / tl, Math.max(1.5, ctx.R * .16 * (1 - u * .8)), sAcc, false);
+    }
     ctx.z = -ctx.R * 1.6;
     blit(ctx, spr, bx, by, false, k);
     if (rise > .9 && !ctx.gone) for (const ex of [27.5, 36.5]) { const x = bx + (ex - spr.ax) * k, y = by + (16 - spr.ay) * k; for (let a = 0; a < 6.28; a += .5) ctx.px(x + Math.cos(a) * (k + 1.5), y + Math.sin(a) * (k * .6 + 1), 0xff5a4a); }
