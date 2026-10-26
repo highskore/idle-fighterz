@@ -269,7 +269,7 @@ GAMES.push({
     const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber'];
     const cost = k => k === 'ascend' ? 1e6 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));
     // permanent: wishes ×2 each, ascensions +50% each; temporary: star ×2, super ×2, senzu ×3, cloud ×3
-    const mult = () => Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * (boostUntil > st.t ? 2 : 1) * FORMS[S.form].x * (apeUntil > st.t ? 10 : 1) * (senzuUntil > st.t ? 3 : 1) * (riding > 0 ? 3 : 1) * (kaioUntil > st.t ? 2 + S.kaio : tiredUntil > st.t ? .5 : 1) * (dailyUntil > st.t ? 2 : 1) * (fuseUntil > st.t ? 8 : 1) * (laughUntil > st.t ? 2 : 1) * (chamberUntil > st.t ? 10 : 1) * (1 + .1 * Object.keys(S.defeated || {}).length);
+    const mult = () => Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * (boostUntil > st.t ? 2 : 1) * FORMS[S.form].x * (apeUntil > st.t ? 10 : 1) * (senzuUntil > st.t ? 3 : 1) * (riding > 0 ? 3 : 1) * (kaioUntil > st.t ? 2 + S.kaio : tiredUntil > st.t ? .5 : 1) * (dailyUntil > st.t ? 2 : 1) * (fuseUntil > st.t ? 8 : 1) * (laughUntil > st.t ? 2 : 1) * (chamberUntil > st.t ? 10 : 1);
     const lapValue = () => 30 * (1 + S.boots) ;
     const passive = () => S.partner * 4 + S.house * 40 + S.piccolo * 60;
     let laughUntil = 0, chamberUntil = 0, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
@@ -474,7 +474,6 @@ GAMES.push({
       ui.event(`kaioken! ×${2 + S.kaio}`); const q = handPos(); burst(q.x, q.y, [0xffffff, 0xff9a8a, 0xe0332b], 40, 200);
     }
     function killSaiba(sb) { goal('saiba'); if (tour) tour.ko++; sb.dead = true; gain(Math.max(40, rate() * 3) * (1 + .5 * S.armor), sb.sx, sb.sy - 12, true); burst(sb.sx, sb.sy - 5, [0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a]); }
-    function logDefeat(name) { S.defeated = S.defeated || {}; const first = !S.defeated[name]; S.defeated[name] = (S.defeated[name] || 0) + 1; if (first) setTimeout(() => ui.event(`scouter log: ${name} — +10% forever`), 2800); }
     const PUNS = [
       'why did the saiyan bring a ladder? to reach the next level!',
       "what's a namekian's favourite drink? green tea!",
@@ -487,12 +486,12 @@ GAMES.push({
     function ginyuHit(m, dmg) {
       if (m.dead) return; m.hp -= dmg * (1 + .5 * S.armor); m.flash = .12; burst(m.x, m.y - 12, [0xffffff, 0xffe08a, 0xff9a3c], 5, 60);
       if (m.hp <= 0) { m.dead = true; burst(m.x, m.y - 10, [0xffffff, 0xffe08a, 0xe0473e], 16, 140); if (tour) tour.ko += 2;
-        if (ginyu.members.every(x => x.dead)) { const prize = Math.max(ginyu.max * 2, rate() * 200); gain(prize, cx, cy - R * 1.3, true); ui.event(`the ginyu force is defeated! +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); ui.sfx && ui.sfx('boom'); logDefeat('ginyu force'); goal('boss'); ginyu.done = st.t; save(); } }
+        if (ginyu.members.every(x => x.dead)) { const prize = Math.max(ginyu.max * 2, rate() * 200); gain(prize, cx, cy - R * 1.3, true); ui.event(`the ginyu force is defeated! +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); ui.sfx && ui.sfx('boom'); goal('boss'); ginyu.done = st.t; save(); } }
     }
     function hitBoss(dmg, x, y) {
       boss.hp -= dmg * (1 + .5 * S.armor); boss.flash = .12; ui.sfx && ui.sfx('hit'); burst(x, y, [0xffffff, 0xffe08a, 0xff9a3c], 6, 70);
       if (boss.hp <= 0 && !boss.dead) {
-        boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; logDefeat(boss.name); goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; const prize = Math.max(boss.max * 1.5, rate() * 90);
+        boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; const prize = Math.max(boss.max * 1.5, rate() * 90);
         gain(prize, boss.x, boss.y - (boss.spr.h + 10) * boss.k, true); ui.event(`${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
         for (let k = 0; k < 4; k++) burst(boss.x + (Math.random() - .5) * 20, boss.y - boss.spr.h / 2 * boss.k + (Math.random() - .5) * 20, [0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 20, 180);
         save();
@@ -691,7 +690,7 @@ GAMES.push({
       const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.wishes ? `dragon balls ${S.orbs7}/7` : '', S.wishes ? `wishes ${S.wishes}` : '', S.ascend ? `ascended ×${(1 + .5 * S.ascend).toFixed(1)}` : ''].filter(Boolean).join(' · ');
       const nf = FORMS[S.form + 1], cf = FORMS[S.form];
       const G = GOALS.find(g => g.id === S.goal.id);
-      ui.update({ log: { list: ['frieza', 'cell', 'kid buu', 'beerus', 'ginyu force'].map(n => [n, !!(S.defeated || {})[n]]), bonus: Object.keys(S.defeated || {}).length * 10 }, goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, Math.max(0, (S.best - (cf.at || 0)) / (nf.at - (cf.at || 0)))) : 1 }, balls: S.orbs7, wishes: S.wishes, ascend: S.ascend ? (1 + .5 * S.ascend).toFixed(1) : '' });
+      ui.update({ goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, Math.max(0, (S.best - (cf.at || 0)) / (nf.at - (cf.at || 0)))) : 1 }, balls: S.orbs7, wishes: S.wishes, ascend: S.ascend ? (1 + .5 * S.ascend).toFixed(1) : '' });
       syncShop();
       }
 
