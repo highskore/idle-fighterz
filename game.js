@@ -366,6 +366,10 @@ GAMES.push({
     const KEEP = ['daily'];
     try { const saved = JSON.parse(localStorage.getItem(SAVE) || '{}'); for (const k of KEEP) if (k in saved) S[k] = saved[k]; } catch (_) {}
     delete S.gold;
+    // goku and gohan fire a blue kamehameha; vegeta and trunks a purple galick gun
+    const kame = () => S.hero === 'goku' || S.hero === 'gohan';
+    const BEAMS = { galick: { aim: 0x9a5af0, ball: 0xd9b8ff, ballEdge: 0x8a4ae8, spark: 0xc9a2ff, glow: 0xb98af8, mid: 0xe2cbff, edge: 0x7a3ae0 }, kame: { aim: 0x4aa8f0, ball: 0xb8e4ff, ballEdge: 0x2a8ae8, spark: 0xa2d8ff, glow: 0x7ac8ff, mid: 0xcdeeff, edge: 0x1f6ad8 } };
+    const BEAM = () => kame() ? BEAMS.kame : BEAMS.galick;
     delete S.nextSuper;
     // transformations: unlocked by power level, permanent until you ascend
     const AURAS = [[0xffffff, 0xffc2e2, 0xf05aa8], [0xffffff, 0xb8f5dc, 0x2fbf8a], [0xffffff, 0xffd8a0, 0xf28a1c], [0xffffff, 0xd9c8ff, 0x7a4ae0]];   // capsule cosmetics for the base form
@@ -388,7 +392,7 @@ GAMES.push({
       gravity: { base: 2500, k: 2.6, label: 'gravity chamber', what: '×1.15 everything' },
       cloud: { base: 1000, k: 2.2, label: 'flying nimbus', what: 'comes more often' },
       scouter: { base: 800, k: 2.1, label: 'scouter', what: '+10% crits (×2)', unlock: () => S.best >= 150 },
-      galick: { base: 1500, k: 2.3, label: 'galick charge', what: 'hold to charge a beam', unlock: () => S.best >= 400 },
+      galick: { base: 1500, k: 2.3, get label() { return kame() ? 'kamehameha' : 'galick charge'; }, what: 'hold to charge a beam', unlock: () => S.best >= 400 },
       senzu: { base: 4000, k: 2.2, label: 'senzu tree', what: 'beans: tap for ×1.5', unlock: () => S.best >= 1000 },
       house: { base: 6000, k: 2.3, label: 'capsule house', what: '+40/s (a new dome up to lv 9)', unlock: () => S.best >= 2000 },
       armor: { base: 12000, k: 2.4, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
@@ -422,7 +426,7 @@ GAMES.push({
       }
       S.pl -= c; S[k]++; ui.fx && ui.fx('buy');
       if (k === 'partner' && S.partner === 1) ui.event('bubbles wants to train with you');
-      if (k === 'galick' && S.galick === 1) ui.event('hold anywhere to charge a galick gun');
+      if (k === 'galick' && S.galick === 1) ui.event(`hold anywhere to charge a ${kame() ? 'kamehameha' : 'galick gun'}`);
       if (k === 'house') { scenery(); ui.event('a new capsule house lands'); }
       if (k === 'piccolo' && S.piccolo === 1) ui.event('piccolo lands to meditate');
       if (k === 'chamber' && S.chamber === 1) ui.event('the time chamber door will appear — tap it');
@@ -1153,9 +1157,9 @@ GAMES.push({
       if (charging > 0 && seen) {
         const hp = handPos(), hx = hp.x, hy = hp.y, r = 2 + charging * 2.2;
         // a dotted aim line toward the pointer
-        if (drag) { let ax = drag.ax - hx, ay = drag.ay - hy; const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al; for (let d = r + 4; d < Math.min(al, 400); d += 4) if (((d / 4 | 0) + (t * 12 | 0)) % 2) st.px(hx + ax * d, hy + ay * d, 0x9a5af0); }
-        for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y) / r; if (d > 1) continue; if (d > .7 && bayer(Math.round(hx + x), Math.round(hy + y)) > .5) continue; st.px(hx + x, hy + y, d < .4 ? 0xffffff : d < .75 ? 0xd9b8ff : 0x8a4ae8); }
-        if (Math.random() < .9) { const a = Math.random() * 6.28, rr = r + 6 + Math.random() * 8; fx.add({ x: hx + Math.cos(a) * rr, y: hy + Math.sin(a) * rr, vx: -Math.cos(a) * rr * 3, vy: -Math.sin(a) * rr * 3, life: .3, c: [0xffffff, 0xc9a2ff], raw: true }); }
+        if (drag) { let ax = drag.ax - hx, ay = drag.ay - hy; const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al; for (let d = r + 4; d < Math.min(al, 400); d += 4) if (((d / 4 | 0) + (t * 12 | 0)) % 2) st.px(hx + ax * d, hy + ay * d, BEAM().aim); }
+        for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y) / r; if (d > 1) continue; if (d > .7 && bayer(Math.round(hx + x), Math.round(hy + y)) > .5) continue; st.px(hx + x, hy + y, d < .4 ? 0xffffff : d < .75 ? BEAM().ball : BEAM().ballEdge); }
+        if (Math.random() < .9) { const a = Math.random() * 6.28, rr = r + 6 + Math.random() * 8; fx.add({ x: hx + Math.cos(a) * rr, y: hy + Math.sin(a) * rr, vx: -Math.cos(a) * rr * 3, vy: -Math.sin(a) * rr * 3, life: .3, c: [0xffffff, BEAM().spark], raw: true }); }
       }
       if (bang) {
         const k = Math.min(1, (t - bang.t0) / bang.dur), x = bang.x0 + (bang.x1 - bang.x0) * k, y = bang.y0 + (bang.y1 - bang.y0) * k - Math.sin(k * Math.PI) * 14, r = 3 + k * 2;
@@ -1174,7 +1178,7 @@ GAMES.push({
       if (struggle && boss) {
         const h = handPos(), bx = boss.x, by = boss.y - boss.spr.h / 2 * boss.k, p = Math.max(.04, Math.min(.96, struggle.p)), qx = h.x + (bx - h.x) * p, qy = h.y + (by - h.y) * p;
         const ray = (x0, y0, x1, y1, w, core, edge) => { const L = Math.hypot(x1 - x0, y1 - y0) || 1, dx = (x1 - x0) / L, dy = (y1 - y0) / L; for (let d = 0; d < L; d += .6) { const ww = w * (1 + Math.sin(d * .4 - t * 40) * .12); for (let o = -ww; o <= ww; o += .6) st.px(x0 + dx * d - dy * o, y0 + dy * d + dx * o, Math.abs(o) < ww * .45 ? 0xffffff : Math.abs(o) < ww * .8 ? core : edge); } };
-        const w = 3 + R / 40; ray(h.x, h.y, qx, qy, w, 0xe2cbff, 0x7a3ae0); ray(bx, by, qx, qy, w, 0xffd8a0, 0xe0603a);
+        const w = 3 + R / 40; ray(h.x, h.y, qx, qy, w, BEAM().mid, BEAM().edge); ray(bx, by, qx, qy, w, 0xffd8a0, 0xe0603a);
         ball(qx, qy, w * 2.2 + Math.sin(t * 30) * 1.2); if (Math.random() < .9) fx.add({ x: qx, y: qy, vx: (Math.random() - .5) * 160, vy: (Math.random() - .5) * 160, life: .3, c: [0xffffff, 0xfff3a0, 0xffb35a], raw: true });
       }
       for (let i = blasts.length - 1; i >= 0; i--) {
@@ -1191,17 +1195,18 @@ GAMES.push({
         const age = t - beam.t0, life = .7 + beam.c * .25;
         if (age > life) beam = null;
         else {
+          const bp = BEAM(), ff = beam.ff && !kame();   // vegeta's level-5 shot is a golden final flash; a kamehameha stays blue
           const w = (3 + beam.c * 3) * (beam.ff ? 1.8 : 1) * (1 + .15 * (S.galick - 1)) * (1 - Math.pow(age / life, 3)), reach = Math.min(1, age / .12) * Math.max(st.W, st.H) * 1.6;
           // the beam sits at vegeta's depth: from the far side only the part clearing the planet shows
           const px = (X, Y, c, a) => { const xi = Math.round(X), yi = Math.round(Y), k = yi * st.W + xi; if (xi >= 0 && yi >= 0 && xi < st.W && k < zb.length && zb[k] > beam.z + 6) return; st.px(X, Y, c, a); };
           for (let d = 2; d < reach; d += .6) {
             const x0 = beam.x + beam.dx * d, y0 = beam.y + beam.dy * d; if (x0 < -30 || y0 < -30 || x0 > st.W + 30 || y0 > st.H + 30) break;
             const ww = w * Math.min(1, .35 + d / 18) * (1 + Math.sin(d * .35 - t * 40) * .12), gw = ww + 2.5;
-            for (let o = -gw; o <= gw; o += .6) { const a = Math.abs(o) / (ww || 1), X = x0 - beam.dy * o, Y = y0 + beam.dx * o; if (a > 1) { if (bayer(Math.round(X), Math.round(Y)) < .5) px(X, Y, beam.ff ? 0xffe066 : 0xb98af8, .6); continue; } px(X, Y, a < .4 ? 0xffffff : a < .75 ? (beam.ff ? 0xfff3a0 : 0xe2cbff) : (beam.ff ? 0xffc21a : 0x7a3ae0)); }
+            for (let o = -gw; o <= gw; o += .6) { const a = Math.abs(o) / (ww || 1), X = x0 - beam.dy * o, Y = y0 + beam.dx * o; if (a > 1) { if (bayer(Math.round(X), Math.round(Y)) < .5) px(X, Y, ff ? 0xffe066 : bp.glow, .6); continue; } px(X, Y, a < .4 ? 0xffffff : a < .75 ? (ff ? 0xfff3a0 : bp.mid) : (ff ? 0xffc21a : bp.edge)); }
           }
           // the charged ball stays lit in his hands while the beam pours out
-          const bw = w * 1.4; for (let y = -bw; y <= bw; y++) for (let x = -bw; x <= bw; x++) { const q = Math.hypot(x, y) / bw; if (q <= 1) px(beam.x + x, beam.y + y, q < .55 ? 0xffffff : beam.ff ? 0xfff3a0 : 0xd9b8ff); }
-          if (beam.z > 0 && Math.random() < .8) fx.add({ x: beam.x + beam.dx * Math.random() * 80, y: beam.y + beam.dy * Math.random() * 80, vx: (Math.random() - .5) * 60, vy: (Math.random() - .5) * 60, life: .4, c: [0xffffff, 0xc9a2ff, 0x7a3ae0], raw: true });
+          const bw = w * 1.4; for (let y = -bw; y <= bw; y++) for (let x = -bw; x <= bw; x++) { const q = Math.hypot(x, y) / bw; if (q <= 1) px(beam.x + x, beam.y + y, q < .55 ? 0xffffff : ff ? 0xfff3a0 : bp.ball); }
+          if (beam.z > 0 && Math.random() < .8) fx.add({ x: beam.x + beam.dx * Math.random() * 80, y: beam.y + beam.dy * Math.random() * 80, vx: (Math.random() - .5) * 60, vy: (Math.random() - .5) * 60, life: .4, c: [0xffffff, bp.spark, bp.edge], raw: true });
         }
       }
       if (sprint > .3 && Math.random() < .6) fx.add({ x: kd.x, y: kd.y, vx: (Math.random() - .5) * 30, vy: -10, drag: 3, life: .4, s: 1, grow: 1.5, c: [0xffffff, 0xe7e2d4], raw: true });
@@ -1279,6 +1284,7 @@ GAMES.push({
     if (/chamber/.test(HASH)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
     if (/kaio/.test(HASH)) S.kaio = Math.max(1, S.kaio);   // preview hook: #kaio (kaioken owned)
     if (/vegeta/.test(HASH)) { S.best = Math.max(S.best, 1e7); S.namekAt = 1e7; }   // preview hook: #vegeta (planet vegeta, then nappa)
+    { const hh = HASH.match(/hero-(\w+)/); if (hh && HEROES[hh[1]]) S.hero = hh[1]; }   // preview hook: #hero-goku (play as any character)
     if (/snake/.test(HASH)) { S.best = Math.max(S.best, 1.5e7); S.namekAt = 1.5e7; }   // preview hooks: #snake (snake way), #snake-nimbus (riding the nimbus)
     if (/door/.test(HASH)) { S.chamber = Math.max(1, S.chamber); nextDoor = 0; }   // preview hook: #door (the time chamber door)
     if (/car/.test(HASH)) { session = 71; nextCar = 0; }   // preview hook: #car (king kai's car)

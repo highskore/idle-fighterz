@@ -702,13 +702,17 @@ __PLANET__
     };
   } catch (e) { logo.hidden = true; document.querySelector('.brand h1').removeAttribute('style'); }
 
-  let prev = performance.now(), last = 0, T = 0;
+  // the pearl title is the heaviest thing on the page: at most 60fps (not 120 on promotion screens), and while
+  // the page scrolls it drops to 30fps on the frames between the game's, so the two never share a frame
+  let prev = performance.now(), last = 0, lastTitle = 0, lastScroll = -1e9, T = 0;
+  addEventListener('scroll', () => { lastScroll = performance.now(); }, { passive: true });
   function tick(now) {
     requestAnimationFrame(tick);
     const dt = Math.max(0, Math.min(.05, (now - prev) / 1000)); prev = now;
     if (!reduce) T += dt;
-    if (R3) R3(T);
-    if (now - last < 1000 / 30 - 2 || !visible) return; last = now;
+    const scrolling = now - lastScroll < 250, gameDue = visible && now - last >= 1000 / 30 - 2;
+    if (R3 && !(scrolling && gameDue) && now - lastTitle >= (scrolling ? 1000 / 30 : 1000 / 60) - 2) { lastTitle = now; R3(T); }
+    if (!gameDue) return; last = now;
     st.t = T; game.frame(T, reduce ? 0 : 1 / 30);
   }
   requestAnimationFrame(tick);
