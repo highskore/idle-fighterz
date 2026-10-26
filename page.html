@@ -100,6 +100,7 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .pair { display: contents; }
 @media (min-width: 761px) {
   .shop { left: 16px; top: 44px; bottom: 12px; transform: none; width: 236px; flex-direction: column; justify-content: center; gap: 2px; }   /* centred in the space below the hint */
+  .shop { pointer-events: none; } .shop button { pointer-events: auto; }   /* the column spans the card's height: only the buttons take taps, so the moon or a pod behind it stays clickable */
   .shop button { width: 100%; min-width: 0; padding: 2px 10px 3px; border-radius: 9px; line-height: 1.25; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; }
   .shop button { flex-wrap: wrap; row-gap: 0; }
   .shop b { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
