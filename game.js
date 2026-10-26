@@ -117,11 +117,24 @@ const TONES = {
   bean: [0x2e6b22, 0x4a9a32, 0x76c64a, 0xb6ea7a],
 };
 
+const KAI = Object.fromEntries(Object.entries(TONES).map(([k, v]) => [k, v.slice()]));
+const NAMEK = Object.assign({}, KAI, {
+  grass: [0x1f6a5a, 0x2a8a72, 0x3fa88a, 0x62c4a0, 0x96deb8, 0xc8f2d8],
+  road: [0xc9cdb8, 0xdfe2d0, 0xf0f2e6, 0xffffff],
+  dome: [0x8f9aa0, 0xbcc6ca, 0xdfe6e8, 0xf4f8f8, 0xffffff],      // namekian houses: white domes with round windows
+  band: [0x8a9aa0, 0xb4c2c6, 0xd6e0e2, 0xf0f6f6],
+  glass: [0x1c3a4a, 0x2a5a6a, 0x4a8a9a, 0x9adada],
+  leaf: [0x1c4a5e, 0x245f78, 0x2f7f98, 0x4aa2b8, 0x86cfe0],      // ajissa trees: blue-green puffs on tall stems
+  trunk: [0x5a5a40, 0x7a7a58, 0x9a9a74, 0xbebe96],
+});
+const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }];
+function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
+
 GAMES.push({
   id: 'planet',
   mount(st, ui) {
     const SAVE = 'hs-power';
-    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, orbs7: 0, wishes: 0, ascend: 0, form: 0 };
+    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, pod: 0, world: 0, orbs7: 0, wishes: 0, ascend: 0, form: 0 };
     try { Object.assign(S, JSON.parse(localStorage.getItem(SAVE) || '{}')); } catch (_) {}
     delete S.gold;
     delete S.nextSuper;
@@ -150,18 +163,20 @@ GAMES.push({
       armor: { base: 5000, k: 2.2, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
       kaio: { base: 8000, k: 2.4, label: 'kaioken', what: 'red button: big boost, then tired', unlock: () => S.best >= 8000 },
       bigbang: { base: 25000, k: 2.2, label: 'big bang attack', what: 'double-tap: an exploding ki ball', unlock: () => S.best >= 20000 },
+      pod: { base: 0, k: 1, label: 'space pod', what: '', unlock: () => S.best >= 1e5 },
       ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for a permanent boost', unlock: () => S.pl >= 1e6 },
     };
     const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang'];
-    const cost = k => k === 'ascend' ? 1e6 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));
+    const cost = k => k === 'pod' ? 0 : k === 'ascend' ? 1e6 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));
     // permanent: wishes ×2 each, ascensions +50% each; temporary: star ×2, super ×2, senzu ×3, cloud ×3
     const mult = () => Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * (boostUntil > st.t ? 2 : 1) * FORMS[S.form].x * (apeUntil > st.t ? 10 : 1) * (senzuUntil > st.t ? 3 : 1) * (riding > 0 ? 3 : 1) * (kaioUntil > st.t ? 2 + S.kaio : tiredUntil > st.t ? .5 : 1) * (dailyUntil > st.t ? 2 : 1) * (fuseUntil > st.t ? 8 : 1);
     const lapValue = () => 30 * (1 + S.boots) ;
     const passive = () => S.partner * 4 + S.house * 40;
-    let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 200;
+    let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45;
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
     let shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
     ui.onBuy(k => {
+      if (k === 'pod') { travel(S.world ? 0 : 1); return; }
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') {
         const gainA = Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))); S.ascend += gainA; S.pl = 0; for (const r of RESETS) S[r] = 0; S.form = 0; ui.fx && ui.fx('form', 0); scenery();
@@ -176,8 +191,8 @@ GAMES.push({
       if (k === 'armor' && S.armor === 1) ui.event('saiyan armor on — hit villains harder');
       save(); syncShop();
     });
-    const what = k => k === 'ascend' ? `→ ×${(1 + .5 * (S.ascend + Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))))).toFixed(1)} forever` : k === 'kaio' && S.kaio ? `×${2 + S.kaio} for 15s, then ×0.5` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? 'next: final flash' : S.galick >= 5 ? 'full charge: final flash' : '+beam power') : SHOP[k].what;
-    const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0).map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k), special: k === 'ascend' }])));
+    const what = k => k === 'pod' ? (S.world ? "fly back to king kai's planet" : 'fly to namek — dragon balls ×2, three wishes') : k === 'ascend' ? `→ ×${(1 + .5 * (S.ascend + Math.max(1, Math.floor(Math.sqrt(S.pl / 1e6))))).toFixed(1)} forever` : k === 'kaio' && S.kaio ? `×${2 + S.kaio} for 15s, then ×0.5` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? 'next: final flash' : S.galick >= 5 ? 'full charge: final flash' : '+beam power') : SHOP[k].what;
+    const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0).map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : k === 'pod' ? 0 : S[k], label: k === 'pod' ? (S.world ? 'space pod → king kai' : 'space pod → namek') : SHOP[k].label, what: what(k), can: S.pl >= cost(k), special: k === 'ascend', wide: k === 'pod' }])));
 
     // the planet: a road ring near the rim, a cap of scenery facing the viewer
     const N = V.norm([0, .38, .92]);
@@ -189,7 +204,9 @@ GAMES.push({
     function scenery() {
       solids.length = 0;
       const dome = (th, a, r) => { const s = capPt(th, a), door = V.norm(V.cross(s, V.cross(N, s))); solids.push({ c: s, r, kind: 'dome', s, door: V.mul(door, -1) }); for (let i = 1; i <= 5; i++) solids.push({ c: V.mul(s, 1 + r + .018 * i), r: .009, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + r + .11), r: .02, kind: 'knob' }); };
-      const tree = (th, a, k = 1) => { const s = capPt(th, a), t1 = V.norm(V.cross(s, N)); for (let i = 1; i <= 4; i++) solids.push({ c: V.mul(s, 1 + .045 * i * k), r: .03 * k, kind: 'trunk' }); solids.push({ c: V.add(V.mul(s, 1 + .26 * k), t1, .05 * k), r: .13 * k, kind: 'leaf' }, { c: V.add(V.mul(s, 1 + .2 * k), t1, -.08 * k), r: .1 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .33 * k), r: .09 * k, kind: 'leaf' }); };
+      const tree = (th, a, k = 1) => S.world ? ajissa(th, a, k) : kaiTree(th, a, k);
+      const ajissa = (th, a, k) => { const s = capPt(th, a); for (let i = 1; i <= 7; i++) solids.push({ c: V.mul(s, 1 + .05 * i * k), r: .022 * k, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + .42 * k), r: .12 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .52 * k), r: .08 * k, kind: 'leaf' }); };
+      const kaiTree = (th, a, k = 1) => { const s = capPt(th, a), t1 = V.norm(V.cross(s, N)); for (let i = 1; i <= 4; i++) solids.push({ c: V.mul(s, 1 + .045 * i * k), r: .03 * k, kind: 'trunk' }); solids.push({ c: V.add(V.mul(s, 1 + .26 * k), t1, .05 * k), r: .13 * k, kind: 'leaf' }, { c: V.add(V.mul(s, 1 + .2 * k), t1, -.08 * k), r: .1 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .33 * k), r: .09 * k, kind: 'leaf' }); };
       const bush = (th, a, r) => solids.push({ c: capPt(th, a), r, kind: 'leaf' });
       const rock = (th, a, r) => solids.push({ c: V.mul(capPt(th, a), 1 - r * .3), r, kind: 'stone' });
       dome(.3, 2.5, .25); dome(.82, 3.55, .17);
@@ -301,7 +318,7 @@ GAMES.push({
       { id: 'boss', n: 1, text: 'defeat a villain' },
       { id: 'ball', n: 2, text: 'find 2 dragon balls' },
       { id: 'beam', n: 5, text: 'fire 5 full-power beams', need: () => S.galick > 0 },
-      { id: 'tour', n: 20, text: 'score 20 KO in a tournament', need: () => S.best >= 10000 },
+      { id: 'tour', n: 20, text: 'score 20 KO in a tournament', need: () => S.best >= 3000 },
     ];
     if (!S.goal || !GOALS.find(g => g.id === S.goal.id)) S.goal = { id: 'combo', p: 0 };
     function nextGoal() {
@@ -335,6 +352,12 @@ GAMES.push({
       if (star && Math.hypot(star.x - x, star.y - y) < r) onClick(star.x, star.y);
       burst(x, y, [0xffffff, 0xbfe9ff, 0x6fb0ff, 0x2f6ae0], 36, 220);
     }
+    function travel(w) {
+      if (!playing || shen || tour) return;
+      S.world = w; S.pod = 1; useWorld(w); scenery(); ui.world && ui.world(w);
+      flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
+      ui.event(w ? 'landed on namek — dragon balls are everywhere' : "back on king kai's planet"); save(); syncShop();
+    }
     function kaioken() {
       if (!playing || S.kaio <= 0 || st.t < kaioReady) return;
       kaioUntil = st.t + 15; tiredUntil = st.t + 25; kaioReady = st.t + 45; shake = .5; flashT = .4;
@@ -356,7 +379,7 @@ GAMES.push({
     function summon(look) {
       if (shen) return;
       if (look !== undefined) shenLook = look;
-      shen = { t0: st.t, phase: 'rise', look: shenLook }; document.body.classList.add('shen'); ui.event('the eternal dragon awakens…');
+      shen = { t0: st.t, phase: 'rise', look: shenLook, wishes: S.world ? 3 : 1 }; document.body.classList.add('shen'); ui.event('the eternal dragon awakens…');
     }
     function openWish() {
         shen.phase = 'wish';
@@ -370,6 +393,7 @@ GAMES.push({
           if (k === 'form' && next) { S.pl = Math.max(S.pl, next.at); ui.event('your wish is granted'); }
           if (k === 'fortune') { gain(rate() * 600); ui.event('your wish is granted — +' + fmtShort(rate() * 600)); }
           ui.fx && ui.fx('super'); save();
+          if (--shen.wishes > 0) { setTimeout(() => { if (shen) { ui.event(`${shen.wishes} wish${shen.wishes > 1 ? 'es' : ''} left`); openWish(); } }, 1400); return; }
           shen.phase = 'leave'; shen.t1 = st.t;
         });
     }
@@ -451,7 +475,7 @@ GAMES.push({
 
       // ── timeline: the longer you stay, the more happens
       if (session > 12) { once('stars', 'shooting stars — click one'); if (!star && (nextStar -= dt) < 0) { star = { x: -8, y: st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = 18 + Math.random() * 14; } }
-      if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < .2 }); }
+      if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < (S.world ? .4 : .2) }); }
       if (session > 50) { if ((nextShower -= dt) < 0) { once('meteors', 'meteor shower — bust them'); for (let i = 0; i < 6; i++) meteors.push({ x: st.W * (.15 + Math.random() * .9), y: -10 - i * 18, vx: -st.W * .12, vy: st.H * .22, delay: i * .5 }); nextShower = 45 + Math.random() * 20; } }
       if (session > 75 || S.cloud > 0) { if (!cloudFly && riding <= 0 && (nextCloud -= dt * (1 + S.cloud * .6)) < 0) { once('cloud', 'flying nimbus is here'); cloudFly = { x: -30, y: st.H * .3 }; nextCloud = 60 + Math.random() * 25; } }
       if (session > 140 && !aura) { aura = true; ui.event('ki aura unlocked'); }
@@ -464,14 +488,14 @@ GAMES.push({
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
-      if (!tour && !shen && !boss && session > 180 && S.best >= 10000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
+      if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
       if (tour) {
         if ((tour.next -= dt) < 0 && saibas.length < 8) { saibas.push({ c: capPt(.2 + Math.random() * .9, Math.random() * 6.28), born: t, life: 6 }); tour.next = Math.max(.45, 1.2 - (t - tour.t0) / 80); }
         if (!tour.villain && t - tour.t0 > 28 && !boss) { tour.villain = true; const V0 = VILLAINS[(S.bosses || 0) % VILLAINS.length], hp = Math.max(400, rate() * 18); boss = { name: V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 25, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event(`${V0.name} joins the tournament!`); }
         if (t > tour.until) {
           const ko = tour.ko, best = S.tourBest || 0, prize = Math.max(500, rate() * ko * 8); S.tourBest = Math.max(best, ko); gain(prize); goal('tour', ko, true);
           ui.event(ko > best ? `tournament over — ${ko} KO, new best! +${fmtShort(Math.round(prize))}` : `tournament over — ${ko} KO (best ${best}) +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star');
-          tour = null; nextTour = 360 + Math.random() * 60; nextSaiba = 30; save();
+          tour = null; nextTour = 240 + Math.random() * 60; nextSaiba = 30; save();
         }
       }
       if (!tour && session > 110 && !boss && !shen && (nextBoss -= dt) < 0) {
@@ -644,7 +668,7 @@ GAMES.push({
 
     function drawSea(t, front) {
       // cloud puffs keep the same on-screen size whatever the pixel scale (phones render at 2×, desktop at 3×)
-      const ck = 3 / st.scale, base = st.H - (st.H * (front ? .06 : .14) * (st.scale === 2 ? .7 : 1)), W = st.W, pal = [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8], sp = (front ? 6 : 3) * ck, rr = Math.round((front ? 9 : 7) * ck);
+      const ck = 3 / st.scale, base = st.H - (st.H * (front ? .06 : .14) * (st.scale === 2 ? .7 : 1)), W = st.W, pal = WORLDS[S.world].sea, sp = (front ? 6 : 3) * ck, rr = Math.round((front ? 9 : 7) * ck);
       for (let i = -2; i < W / (rr * 1.3) + 3; i++) {
         const px = ((i * rr * 1.3 - t * sp) % (W + rr * 4) + W + rr * 4) % (W + rr * 4) - rr * 2, py = base + Math.sin(i * 1.7) * rr * .45 + (front ? 0 : -6 * ck), r = rr * (.8 + .4 * hash(i * 3.3 + (front ? 9 : 0)));
         for (let y = Math.floor(py - r); y < st.H; y++) for (let x = Math.floor(px - r); x <= px + r; x++) {
@@ -654,11 +678,13 @@ GAMES.push({
         }
       }
     }
+    useWorld(S.world || 0); ui.world && ui.world(S.world || 0);
     layout(); scenery(); syncShop();
     if (/ape/.test(location.hash)) { session = 41; nextMoon = 0; }
     if (/raid/.test(location.hash)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
     if (/fusion/.test(location.hash)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
-    if (/tournament/.test(location.hash)) { session = 181; S.best = Math.max(S.best, 10000); nextTour = 0; }   // preview hook: #tournament
+    if (/namek/.test(location.hash)) { S.best = Math.max(S.best, 1e5); S.world = 1; }   // preview hook: #namek
+    if (/tournament/.test(location.hash)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
     if (/shenron/.test(location.hash)) setTimeout(() => summon(+(location.hash.match(/shenron(\d)/) || [0, 0])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
     return { frame, kaioken, start: () => {
       playing = true; syncShop();
