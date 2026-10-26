@@ -113,6 +113,13 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 @media (max-width: 760px) { .s-arcade span { font-size: 12px; } }
 @media (prefers-reduced-motion: reduce) { .s-arcade span, .s-arcade i { animation: none; } }
 @keyframes blinkS { 60% { opacity: 0; } }
+/* kaioken: a red button once it's bought; it counts down while recharging */
+.kaio { position: absolute; right: 18px; bottom: 18px; z-index: 3; font: inherit; text-transform: uppercase; letter-spacing: .06em; color: #fff; background: #e0332b; border: 0; border-radius: 999px; padding: 7px 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(224, 51, 43, .35), inset 0 1px 0 rgba(255,255,255,.3); transition: transform .12s, background .2s; }
+.kaio:hover:not(:disabled) { transform: translateY(-1px); }
+.kaio:active:not(:disabled) { transform: translateY(1px); }
+.kaio:disabled { background: #f1b9b4; box-shadow: none; cursor: default; }
+.kaio[hidden], .game:not(.playing) .kaio, .game.wishing .kaio { display: none; }
+@media (max-width: 760px) { .kaio { right: auto; left: calc(50% + 64px); bottom: 12px; padding: 7px 12px; } .game:has(.shop.open) .kaio { display: none; } }
 .hint { position: absolute; left: max(20px, env(safe-area-inset-left, 0px)); top: 18px; color: var(--muted); text-transform: uppercase; z-index: 2; pointer-events: none; }
 
 .foot { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; text-transform: uppercase; color: var(--muted); }
@@ -169,6 +176,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .hud .n { font-size: calc(36px * min(1, 10 / var(--len))); }
 }
 /* desktop: title, card and links always fit the window — the card takes whatever height is left */
+@media (min-width: 761px) and (max-height: 700px) { .shop span { display: none; } }   /* short windows: 12 rows fit without their descriptions */
 @media (min-width: 761px) {
   .page { height: 100svh; min-height: 600px; padding-block: 20px 16px; gap: 14px; box-sizing: border-box; }
   .brand { flex: none; height: clamp(130px, min(23vw, 26svh), 310px); }
@@ -191,7 +199,9 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 
 /* phones: title at the top of the game, the power level strip on the cloud sea */
 @media (max-width: 760px) {
-  .brand { top: 54px; bottom: auto; left: -9vw; right: -9vw; height: 40vw; }
+  .brand { top: 54px; bottom: auto; left: -9vw; right: -9vw; height: 125vw; }
+  .page.past #brand { pointer-events: none; }
+  .game:has(.shop.open) .hud { opacity: 0; visibility: hidden; }   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
   .hud { top: auto; bottom: max(64px, 11svh); right: 50%; transform: translateX(50%); text-align: center; padding: 6px 14px; }
   .hud .n { transform-origin: 50% 50%; }
   .hud .meta, .hud .row { justify-content: center; }
@@ -228,6 +238,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
     </div>
     <div class="toast" id="toast"></div>
     <div class="wish" id="wish" hidden></div>
+    <button type="button" class="kaio" id="kaio" hidden>kaioken</button>
     <button type="button" class="shop-toggle" id="shopToggle" aria-expanded="false" aria-controls="shop">upgrades <i id="shopCount"></i></button>
     <div class="shop" id="shop"></div>
     <div class="hint">click — train · hold — charge · drag — spin</div>
@@ -261,6 +272,7 @@ __PLANET__
   const ui = {
     onBuy(fn) { buyFn = fn; },
     update(s) {
+      const kb = $('kaio'); kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kb.textContent = s.kaio.ready ? 'kaioken' : 'kaioken ' + s.kaio.left + 's';
       const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
       if (pl.dataset.v !== txt) { pl.dataset.v = txt; pl.innerHTML = num + (suf ? `<small>${suf}</small>` : ''); pl.style.setProperty('--len', Math.max(9, num.length + suf.length * .6)); }
       const mx = $('mx'); mx.textContent = s.combo > 1 ? '×' + s.combo.toFixed(2).replace(/\.?0+$/, '') : ''; mx.classList.toggle('hot', s.combo >= 3);
@@ -301,16 +313,17 @@ __PLANET__
   function introLayout() {
     for (const el of [brandEl, gameEl]) el.style.setProperty('--e', 1);
     const vh = innerHeight, b = brandEl.getBoundingClientRect(), g = gameEl.getBoundingClientRect(), phone = innerWidth <= 760;
-    const s = phone ? 1.2 : Math.min(2.1, Math.max(1.2, innerWidth * .66 / (b.width * .46))), heroY = vh * (phone ? .44 : .45);
+    const s = phone ? 1 : Math.min(2.1, Math.max(1.2, innerWidth * .66 / (b.width * .46))), heroY = vh * (phone ? .44 : .45);
     root.style.setProperty('--brand-s', s.toFixed(3));
     root.style.setProperty('--brand-dy', (heroY - (b.top + b.height / 2)).toFixed(1) + 'px');
     root.style.setProperty('--game-dy', (vh - g.top + 24).toFixed(1) + 'px');
     introScroll();
   }
+  let introE = 1;   // read by the title: 0 = intro pose, 1 = settled
   function introScroll() {
     const span = Math.max(1, scroller.offsetHeight - innerHeight), p = Math.min(1, Math.max(0, scrollY / span)), e = 1 - Math.pow(1 - p, 3);
     // set on the moving elements only, so a scroll frame restyles them and not the whole page
-    cueEl.style.setProperty('--p', p.toFixed(4)); for (const el of [brandEl, gameEl]) el.style.setProperty('--e', e.toFixed(4));
+    cueEl.style.setProperty('--p', p.toFixed(4)); for (const el of [brandEl, gameEl]) el.style.setProperty('--e', e.toFixed(4)); introE = e;
     pageEl.classList.toggle('past', p > .6);
   }
   let introRaf = 0;
@@ -324,6 +337,7 @@ __PLANET__
   const go = () => { if ($('game').classList.contains('playing')) return; $('game').classList.add('playing'); game.start(); ui.fx('lap'); };
   $('play').addEventListener('click', e => { e.stopPropagation(); go(); });
   $('intro').addEventListener('click', go);
+  $('kaio').addEventListener('click', () => game.kaioken());
   let timer = 0;
   new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); game.resize(); }, 60); }).observe(st.el);
   let visible = true; new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(st.el);
@@ -332,7 +346,7 @@ __PLANET__
   const logo = $('logo'), glint = $('glint'); let R3 = null;
   try {
     const renderer = new THREE.WebGLRenderer({ canvas: logo, antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min((window.devicePixelRatio || 1) * 2, 3));   // it is drawn up to 2× larger during the intro
+    renderer.setPixelRatio(innerWidth <= 760 ? Math.min(window.devicePixelRatio || 1, 2) : Math.min((window.devicePixelRatio || 1) * 2, 3));   // desktop scales it up to 2× in the intro; phones lay it out at full size instead
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; renderer.setClearColor(0, 0);
     const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(22, 1, .1, 100);
     scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new THREE.RoomEnvironment(), .03).texture;
@@ -348,14 +362,27 @@ __PLANET__
       g.translate(-mx, -my, -(b.min.z + b.max.z) / 2); g.computeVertexNormals();
       const m = new THREE.Mesh(g, pearl); m.position.set(x + mx, my, 0); group.add(m);
       m.material = pearl.clone(); m.material.iridescenceThicknessRange = [180, 620];
-      letters.push({ m, base: new THREE.Vector3(x + mx, my, 0), lift: 0, vy: 0, sq: 1, vsq: 0, spin: 0, idx: letters.length, cur: 'pearl', pending: 'pearl', at: 0 });
+      letters.push({ m, base: new THREE.Vector3(x + mx, my, 0), pen: x, cx: mx, hw: (b.max.x - b.min.x) / 2, hh: (b.max.y - b.min.y) / 2, hero: new THREE.Vector3(x + mx, my, 0), hk: 1, hr: 0, lift: 0, vy: 0, sq: 1, vsq: 0, spin: 0, idx: letters.length, cur: 'pearl', pending: 'pearl', at: 0 });
       minY = Math.min(minY, b.min.y); maxY = Math.max(maxY, b.max.y);
       x += font.data.glyphs[ch].ha / res;
     }
     group.position.x = -x / 2; group.position.y = -(minY + maxY) / 2;
-    const W0 = x + .3, H0 = maxY - minY;
+    const W0 = x + .3, H0 = maxY - minY, baseGY = group.position.y, midY = (minY + maxY) / 2;
     const key = new THREE.DirectionalLight(0xffffff, .9); key.position.set(-3, 4, 5); scene.add(key);
-    function size() { const r = { width: logo.clientWidth, height: logo.clientHeight }; if (!r.width || !r.height) return; renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; const vt = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)); cam.position.set(0, 0, Math.max((W0 * 1.22 / 2) / (vt * cam.aspect), (H0 * 2.3 / 2) / vt) + .6); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix(); glint.width = Math.ceil(r.width / 3); glint.height = Math.ceil(r.height / 3); Object.assign(glint.style, { left: logo.offsetLeft + 'px', top: logo.offsetTop + 'px', width: r.width + 'px', height: r.height + 'px' }); }
+    // phones: the canvas is tall; settled, the word sits near its top, and in the intro the letters
+    // stack big as "high / skore" with a little tilt, sliding into one line as you scroll
+    function introPose(r) {
+      const phone = innerWidth <= 760, VH = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * cam.position.z, VW = VH * cam.aspect;
+      group.position.y = baseGY + (phone ? (r.height / 2 - innerWidth * .2) / r.height * VH : 0);
+      if (!phone) { for (const l of letters) { l.hero.copy(l.base); l.hk = 1; l.hr = 0; } return; }
+      const lines = [letters.slice(0, 4), letters.slice(4)], adv = l => (letters[l.idx + 1] ? letters[l.idx + 1].pen : W0 - .3) - l.pen;
+      const wide = Math.max(...lines.map(ln => ln.reduce((a, l) => a + adv(l), 0))), k = Math.min(VW * (innerWidth / r.width) * .86 / (wide * 1.08), VH * .32 / H0), lh = H0 * k * 1.04;   // a full word-height apart, so ascenders and descenders never meet
+      lines.forEach((ln, row) => {
+        const w = ln.reduce((a, l) => a + adv(l), 0) * k; let pen = -w / 2 + (row ? .04 : -.04) * w;
+        for (const l of ln) { l.hero.set(pen + l.cx * k - group.position.x, (row ? -.5 : .5) * lh + (l.base.y - midY) * k - group.position.y, 0); l.hk = k; l.hr = (l.idx % 2 ? 1 : -1) * (.05 + (l.idx * 37 % 5) * .02); pen += adv(l) * k; }
+      });
+    }
+    function size() { const r = { width: logo.clientWidth, height: logo.clientHeight }; if (!r.width || !r.height) return; renderer.setSize(r.width, r.height, false); cam.aspect = r.width / r.height; const vt = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)); cam.position.set(0, 0, Math.max((W0 * 1.22 / 2) / (vt * cam.aspect), (H0 * 2.3 / 2) / vt) + .6); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix(); introPose(r); glint.width = Math.ceil(r.width / 3); glint.height = Math.ceil(r.height / 3); Object.assign(glint.style, { left: logo.offsetLeft + 'px', top: logo.offsetTop + 'px', width: r.width + 'px', height: r.height + 'px' }); }
     size(); new ResizeObserver(size).observe(logo);
     // pointer: tilt toward it, pop the letters near it, bounce the one clicked
     const P = { x: 0, y: 0, sx: 0, sy: 0, lx: null }, ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -369,7 +396,7 @@ __PLANET__
     const tmp = new THREE.Vector3();
     function sparkle(i, n = 1) {
       const l = letters[i]; if (!l) return;
-      for (let k = 0; k < n; k++) { tmp.set(l.base.x + (Math.random() - .5) * .5, l.base.y + l.lift + .2 + Math.random() * .4, .3).applyMatrix4(group.matrixWorld).project(cam); stars.push({ x: (tmp.x + 1) / 2 * glint.width, y: (1 - tmp.y) / 2 * glint.height, life: 0, max: .5 + Math.random() * .6, s: 1 + (Math.random() * 2 | 0) }); }
+      for (let k = 0; k < n; k++) { const sk = l.m.scale.y || 1; tmp.set(l.m.position.x + (Math.random() - .5) * .5 * sk, l.m.position.y + (.2 + Math.random() * .4) * sk, .3 * sk).applyMatrix4(group.matrixWorld).project(cam); stars.push({ x: (tmp.x + 1) / 2 * glint.width, y: (1 - tmp.y) / 2 * glint.height, life: 0, max: .5 + Math.random() * .6, s: 1 + (Math.random() * 2 | 0) }); }
     }
     function drawGlints(dt) {
       gctx.clearRect(0, 0, glint.width, glint.height);
@@ -400,12 +427,32 @@ __PLANET__
     R3 = t => {
       const dt = Math.min(.05, Math.max(0, t - lastT)); lastT = t;
       P.sx += (P.x - P.sx) * .05; P.sy += (P.y - P.sy) * .05;
-      group.rotation.y = P.sx * .2 + Math.sin(t * .6) * .05; group.rotation.x = P.sy * .12 + Math.sin(t * .45) * .03 - .05;
+      group.rotation.y = (P.sx * .2 + Math.sin(t * .6) * .05) * introE; group.rotation.x = (P.sy * .12 + Math.sin(t * .45) * .03 - .05) * introE;   // flat during the intro pose
       const isGold = goldUntil > t;
       const thick = 560 + Math.sin(t * .9) * 180;          // the pearly sheen slowly shifts
       const next = isGold ? 'gold' : formUntil > t ? formMat : 'pearl';
       if (next !== want) { want = next; for (const l of letters) { l.pending = next; l.at = t + l.idx * .07; } }
       const ease = 1 - Math.exp(-dt * 7);
+      // the intro pose and the line are joined by springs, and the letters are solid: they shove and bounce off
+      // each other on the way instead of passing through
+      const ie = introE;
+      for (const l of letters) {
+        const hk = l.hk + (1 - l.hk) * ie, tx = l.hero.x + (l.base.x - l.hero.x) * ie, ty = l.hero.y + (l.base.y - l.hero.y) * ie + l.lift * hk;
+        if (l.px === undefined) { l.px = tx; l.py = ty; l.pvx = 0; l.pvy = 0; }
+        l.pvx += ((tx - l.px) * 70 - l.pvx * 11) * dt; l.pvy += ((ty - l.py) * 70 - l.pvy * 11) * dt;
+        l.px += l.pvx * dt; l.py += l.pvy * dt; l.bx = l.hw * .94 * hk; l.by = l.hh * .96 * hk; l.curk = hk;
+      }
+      // collisions fade out over the last stretch (the finished line's glyph boxes touch), so nothing snaps
+      const cw = Math.min(1, Math.max(0, (.96 - ie) / .26));
+      if (cw > 0) for (let it = 0; it < 4; it++) for (let i = 0; i < letters.length; i++) for (let j = i + 1; j < letters.length; j++) {
+        const a = letters[i], b = letters[j], dx = b.px - a.px, dy = b.py - a.py, ox = a.bx + b.bx - Math.abs(dx), oy = a.by + b.by - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        // separate along the shallower overlap, like two boxes
+        const nx = ox < oy ? Math.sign(dx) || 1 : 0, ny = ox < oy ? 0 : Math.sign(dy) || 1, push = Math.min(ox, oy) / 2 * cw;
+        a.px -= nx * push; a.py -= ny * push; b.px += nx * push; b.py += ny * push;
+        const rel = (b.pvx - a.pvx) * nx + (b.pvy - a.pvy) * ny;
+        if (rel < 0) { const imp = -rel * .8 * cw; a.pvx -= nx * imp; a.pvy -= ny * imp; b.pvx += nx * imp; b.pvy += ny * imp; if (Math.abs(rel) > 1.5 && Math.random() < .3) sparkle(i); }
+      }
       for (const l of letters) {
         // wave + ripple + hover pop, all springs
         const wave = Math.sin(t * 1.8 - l.idx * .55) * .045;
@@ -415,8 +462,10 @@ __PLANET__
         l.vy += ((target - l.lift) * 60 - l.vy * 9) * dt; l.lift += l.vy * dt;
         l.vsq += ((1 - l.sq) * 120 - l.vsq * 10) * dt; l.sq += l.vsq * dt;
         l.spin *= Math.pow(.02, dt);
-        l.m.position.set(l.base.x, l.base.y + l.lift, 0);
-        l.m.scale.set(1 / Math.sqrt(Math.max(.4, l.sq)), Math.max(.4, l.sq), 1);
+        const hk = l.curk;
+        l.m.position.set(l.px, l.py, (l.idx >= 4 ? -.4 : 0) * (hk - 1) / Math.max(1, l.hk - 1));   // the second row sits a touch further back, so a near miss layers instead of clipping
+        l.m.scale.set(hk / Math.sqrt(Math.max(.4, l.sq)), hk * Math.max(.4, l.sq), hk);
+        l.m.rotation.z = l.hr * (1 - ie);
         l.m.rotation.y = l.spin;
         // its turn in the sweep: a quick flip and a hop, then the finish melts over
         if (l.cur !== l.pending && t >= l.at) { l.cur = l.pending; l.spin += Math.PI * 2; l.vy += 2.2; sparkle(l.idx, 2); }
