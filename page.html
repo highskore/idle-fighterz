@@ -217,6 +217,13 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
   .game { flex: 1 1 auto; height: auto; min-height: 380px; max-height: 760px; }
   .foot { flex: none; }
 }
+/* portrait tablets: the links become a bar on top (as on phones), so the scroll cue sits alone at the bottom
+   and the card grows into the height a wide screen doesn't have */
+@media (min-width: 761px) and (orientation: portrait) {
+  .page { padding-top: 0; }
+  .foot { order: -1; width: 100vw; height: 44px; box-sizing: border-box; padding: 0 20px; align-items: center; border-bottom: 1px solid var(--line); }
+  .game { max-height: none; }
+}
 /* scroll intro: the page is pinned for one screen of scrolling; the title starts big in the middle,
    then settles into place as the game card rises in (driven by --p, 0 → 1, from JS) */
 .scroller { height: 200svh; }
