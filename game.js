@@ -351,7 +351,7 @@ const VEGETA = Object.assign({}, KAI, {
   leaf: [0x3a1612, 0x5a2218, 0x7a3220, 0x9a4a2c, 0xc06a40],                  // red boulders where bushes grow
   stone: [0x3a1a16, 0x5a2a20, 0x7a3e2c, 0x9a5a40],
 });
-const PLANET_EVERY = 5e6;   // a trip to another world at every 5M best power: namek, planet vegeta, snake way, in turn
+const PLANET_EVERY = 1e6;   // a trip to another world at every 1M best power: namek, planet vegeta, snake way, in turn
 const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }];
 function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
 
@@ -1281,12 +1281,12 @@ GAMES.push({
     if (/visitors/.test(HASH)) { session = 61; nextGreg = 0; nextKai = 0; }   // preview hook: #visitors (gregory, king kai)
     if (/raid/.test(HASH)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
     if (/fusion/.test(HASH)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
-    if (/namek|porunga/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; }   // preview hooks: #namek, #porunga (namek, then summon)
+    if (/namek|porunga/.test(HASH)) { S.best = Math.max(S.best, 1e6); S.namekAt = 1e6; }   // preview hooks: #namek, #porunga (namek, then summon)
     if (/chamber/.test(HASH)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
     if (/kaio/.test(HASH)) S.kaio = Math.max(1, S.kaio);   // preview hook: #kaio (kaioken owned)
-    if (/vegeta/.test(HASH)) { S.best = Math.max(S.best, 1e7); S.namekAt = 1e7; }   // preview hook: #vegeta (planet vegeta, then nappa)
+    if (/vegeta/.test(HASH)) { S.best = Math.max(S.best, 2e6); S.namekAt = 2e6; }   // preview hook: #vegeta (planet vegeta, then nappa)
     { const hh = HASH.match(/hero-(\w+)/); if (hh && HEROES[hh[1]]) S.hero = hh[1]; }   // preview hook: #hero-goku (play as any character)
-    if (/snake/.test(HASH)) { S.best = Math.max(S.best, 1.5e7); S.namekAt = 1.5e7; }   // preview hooks: #snake (snake way), #snake-nimbus (riding the nimbus)
+    if (/snake/.test(HASH)) { S.best = Math.max(S.best, 3e6); S.namekAt = 3e6; }   // preview hooks: #snake (snake way), #snake-nimbus (riding the nimbus)
     if (/door/.test(HASH)) { S.chamber = Math.max(1, S.chamber); nextDoor = 0; }   // preview hook: #door (the time chamber door)
     if (/car/.test(HASH)) { session = 71; nextCar = 0; }   // preview hook: #car (king kai's car)
     if (/pod/.test(HASH)) { session = 13; nextStar = 0; }   // preview hook: #pod (a saiyan space pod)
