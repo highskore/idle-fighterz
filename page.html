@@ -43,7 +43,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 @media (prefers-reduced-motion: reduce) { .tag .t { animation: none; max-width: none; } }
 .foot .short { display: none; }
 .snd { font: inherit; color: inherit; text-transform: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-.snd[aria-pressed="false"] .short { text-decoration: line-through; opacity: .5; }
+#snd svg { width: 16px; height: 16px; display: block; } #snd[aria-pressed="true"] .off, #snd[aria-pressed="false"] .on { display: none; } #snd[aria-pressed="false"] { color: #9a9a9a; }
 
 .hud { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); top: 18px; text-align: right; pointer-events: none; z-index: 2; }
 .hud .label { text-transform: uppercase; color: var(--muted); }
@@ -144,6 +144,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 .hint { position: absolute; left: max(20px, env(safe-area-inset-left, 0px)); top: 18px; color: var(--muted); text-transform: uppercase; z-index: 2; pointer-events: none; }
 
 .foot { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; text-transform: uppercase; color: var(--muted); }
+.foot .copy { display: flex; align-items: center; gap: 14px; color: var(--ink); }
 .foot nav { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink); }
 
 /* card: logo above a framed game panel, links below */
@@ -171,7 +172,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .shop-toggle { position: static; transform: none; height: 34px; box-sizing: border-box; padding-block: 0; }
   /* upgrades (and kaioken, once bought) sit as one centred row between the sound and share buttons */
   .pair { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; display: flex; gap: 8px; }
-  .foot nav .snd { display: none; }
+  .foot .snd { display: none; }
   .shop-toggle i, .tabbar i { font-style: normal; color: #fff; background: var(--gold); border-radius: 999px; padding: 0 6px; min-width: 18px; text-align: center; }
   .shop-toggle i:empty, .tabbar i:empty { display: none; }
   .shop-toggle:focus-visible, .menu-btn:focus-visible, .tabbar button:focus-visible, .mswitch button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -283,7 +284,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
     <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false">menu</button>
   </section>
   <div class="rule r2"><span>(02) elsewhere</span><span></span></div>
-  <footer class="foot gutter" id="foot"><span class="copy">© highskore</span><nav><button type="button" class="snd" id="snd" aria-pressed="false"><span class="long">sound off</span><span class="short">♪</span></button><button type="button" class="snd" id="share"><span class="long">share score</span><span class="short">share</span></button><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
+  <footer class="foot gutter" id="foot"><span class="copy"><button type="button" class="snd" id="snd" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="snd" id="share"><span class="long">share score</span><span class="short">share</span></button></span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
   <nav class="tabbar" aria-label="Game menu"><button type="button" data-tab="shop">upgrades <i id="tabCount"></i></button><button type="button" data-tab="train" class="train">train</button><button type="button" data-tab="links">links</button></nav>
   <div class="edge" aria-hidden="true"></div>
 </div>
@@ -392,7 +393,7 @@ __PLANET__
   document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
   // sound: tiny square-wave blips, off until you turn it on
   let actx = null, soundOn = false; try { soundOn = localStorage.getItem('hs-sound') === '1'; } catch (_) {}
-  const sndBtns = [$('snd'), $('sndM')], sndLabel = () => { for (const b of sndBtns) b.setAttribute('aria-pressed', String(soundOn)); $('snd').querySelector('.long').textContent = soundOn ? 'sound on' : 'sound off'; };
+  const sndBtns = [$('snd'), $('sndM')], sndLabel = () => { for (const b of sndBtns) b.setAttribute('aria-pressed', String(soundOn)); };
   for (const b of sndBtns) b.addEventListener('click', () => { soundOn = !soundOn; try { localStorage.setItem('hs-sound', soundOn ? '1' : '0'); } catch (_) {} sndLabel(); if (soundOn) sfx('coin'); });
   sndLabel();
   // share the exact power level: the native share sheet where there is one, otherwise the clipboard

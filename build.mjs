@@ -24,6 +24,7 @@ const head = `<!doctype html>
 <meta name="twitter:description" content="a smart contract developer portfolio">
 <meta name="twitter:title" content="highskore">
 <meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/static/favicons/favicon-32x32.png" sizes="32x32">
 <link rel="icon" href="/static/favicons/favicon-16x16.png" sizes="16x16">
 <link rel="apple-touch-icon" href="/static/favicons/apple-touch-icon.png">
