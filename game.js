@@ -81,9 +81,8 @@ const HEROES = {
   goku: makeHero(GOKU_HEAD, { y: 0xf08a24, Y: 0xc0641a, a: 0xf08a24, A: 0xc0641a, g: 0x2b4fc8, G: 0x1c3584, u: 0x2b4fc8, p: 0xf08a24, P: 0xc0641a, w: 0x2b4fc8, W: 0x1c3584 }, true),
   gohan: makeHero(GOHAN_HEAD, { y: 0x6a3aa8, Y: 0x45227a, a: 0x6a3aa8, A: 0x45227a, b: 0x6a3aa8, B: 0x45227a, g: 0xd8323a, G: 0x962028, u: 0xd8323a, p: 0x6a3aa8, P: 0x45227a, w: 0x7a4a2a, W: 0x553018 }, true),
   trunks: makeHero(TRUNKS_HEAD, { h: 0xb8a0e8, H: 0xe2d4ff, y: 0x26346e, Y: 0x16204a, a: 0x26346e, A: 0x16204a, b: 0x1a1a22, B: 0x0c0c12, g: 0xf6c8a2, G: 0xd99a73, u: 0x8a5a2a, p: 0x6a6e7a, P: 0x4a4e58, w: 0xf2c84a, W: 0xc49a24 }, true),
-  black: makeHero(GOKU_HEAD, { y: 0x3a3a44, Y: 0x24242c, a: 0x3a3a44, A: 0x24242c, b: 0x8a8e9a, B: 0x5e6270, g: 0x3a3a44, G: 0x24242c, u: 0xd8323a, p: 0x3a3a44, P: 0x24242c, w: 0xf2f2f2, W: 0xc0c0c8 }, true),
 };
-const CHARS = [{ id: 'vegeta', name: 'vegeta' }, { id: 'goku', name: 'goku', need: 'ss' }, { id: 'gohan', name: 'gohan', need: 'cell' }, { id: 'trunks', name: 'future trunks', need: 'frieza' }, { id: 'black', name: 'goku black', need: 'beerus' }];
+const CHARS = [{ id: 'vegeta', name: 'vegeta' }, { id: 'goku', name: 'goku', need: 'ss' }, { id: 'gohan', name: 'gohan', need: 'cell' }, { id: 'trunks', name: 'future trunks', need: 'frieza' }];
 // achievements: an even 26, each recorded once with the time it was earned
 const ACH = [
   ['lap1', 'first steps', 'run a lap of the planet'], ['laps100', 'marathon', 'run 100 laps'], ['ss', 'super saiyan', 'reach super saiyan'], ['ui', 'ultra instinct', 'reach ultra instinct'],
@@ -339,7 +338,7 @@ GAMES.push({
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
-    let shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
+    let night = false, shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
     ui.onBuy(k => {
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') {
@@ -480,8 +479,8 @@ GAMES.push({
       if (star) { const rx = star.x - k.x, ry = star.y - k.y; if (rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < 8 + c * 3) onClick(star.x, star.y); }
       if (c >= 2.4) goal('beam');
       const ff = S.galick >= 5 && c >= 2.4; beam.ff = ff;   // galick lv 5: a full charge fires a final flash
-      const pts = (1 + S.galick) * lapValue() * 2.5 * c * mult() * (ff ? 3 : 1);
-      const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1); };
+      const pts = Math.pow(1.6, S.galick) * lapValue() * 2.5 * c * mult() * (ff ? 3 : 1);   // each level hits ×1.6 harder
+      const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1) * (1 + .15 * (S.galick - 1)); };
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && onLine(sb.sx, sb.sy - 6, 7)) killSaiba(sb);
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && onLine(m.x, m.y - m.spr.h / 2 * m.k, m.spr.w / 2 * m.k)) ginyuHit(m, pts * 2);
       if (boss && !boss.dead && onLine(boss.x, boss.y - boss.spr.h / 2 * boss.k, boss.spr.w / 2 * boss.k)) hitBoss(pts * 4, boss.x, boss.y - boss.spr.h / 2 * boss.k);
@@ -559,7 +558,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(w ? 'a space pod takes you to namek for 30 minutes — dragon balls ×2' : "back on king kai's planet"); save(); syncShop();
+      ui.event(w ? 'a space pod takes you to namek for 45 seconds — dragon balls ×2' : "back on king kai's planet"); save(); syncShop();
     }
     function kaioken() {
       if (!playing || S.kaio <= 0 || st.t < kaioReady) return;
@@ -745,9 +744,9 @@ GAMES.push({
       saibas = saibas.filter(sb => !sb.dead);
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
-      // every 10 million power a space pod takes you to namek for half an hour
-      if (!S.world && S.best >= (S.namekAt || 1e7) && !tour && !shen && !boss) { S.namekAt = (Math.floor(S.best / 1e7) + 1) * 1e7; travel(1); namekUntil = t + 1800; }
-      if (S.world && !namekUntil) namekUntil = t + (S.namekLeft || 1800);   // resumed after a reload
+      // every 10 million power a space pod takes you to namek for 45 seconds
+      if (!S.world && S.best >= (S.namekAt || 1e7) && !tour && !shen && !boss) { S.namekAt = (Math.floor(S.best / 1e7) + 1) * 1e7; travel(1); namekUntil = t + 45; }
+      if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
       if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen) { travel(0); namekUntil = 0; } }   // home after any wishes
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
@@ -806,6 +805,7 @@ GAMES.push({
       for (let i = orbs.length - 1; i >= 0; i--) if (orbs[i].done) orbs.splice(i, 1);
       if (t - lastClick > .9) combo = 1;
       if (session > 40 && !moon && apeUntil < t && (nextMoon -= dt) < 0) { moon = { x: st.W * .2, y: st.H * .22, r: Math.max(9, Math.round(Math.min(st.W, st.H) * .07)), a: 0, born: t }; once('moon', 'a full moon is rising… click it to transform'); }
+      { const n = !!moon && !moon.leaving || apeUntil > t; if (n !== night) { night = n; ui.night && ui.night(n); } }   // the full moon brings the night
       if (moon) { moon.a = moon.leaving ? moon.a - dt * 1.5 : Math.min(1, moon.a + dt * 1.2); if (!moon.leaving && t - moon.born > 25) moon.leaving = true; if (moon.a <= 0 && moon.leaving) { moon = null; nextMoon = 110 + Math.random() * 40; } }
 
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
@@ -939,7 +939,7 @@ GAMES.push({
         const age = t - beam.t0, life = .7 + beam.c * .25;
         if (age > life) beam = null;
         else {
-          const w = (3 + beam.c * 3) * (beam.ff ? 1.8 : 1) * (1 - Math.pow(age / life, 3)), reach = Math.min(1, age / .12) * Math.max(st.W, st.H) * 1.6;
+          const w = (3 + beam.c * 3) * (beam.ff ? 1.8 : 1) * (1 + .15 * (S.galick - 1)) * (1 - Math.pow(age / life, 3)), reach = Math.min(1, age / .12) * Math.max(st.W, st.H) * 1.6;
           // the beam sits at vegeta's depth: from the far side only the part clearing the planet shows
           const px = (X, Y, c, a) => { const xi = Math.round(X), yi = Math.round(Y), k = yi * st.W + xi; if (xi >= 0 && yi >= 0 && xi < st.W && k < zb.length && zb[k] > beam.z + 6) return; st.px(X, Y, c, a); };
           for (let d = 2; d < reach; d += .6) {
@@ -1034,7 +1034,13 @@ GAMES.push({
     const menu = () => ({ ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
     const pick = id => { if (!heroOpen(id)) return false; S.hero = id; save(); return true; };
     const thumb = (id, k = 4) => { const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); } return c; };
-    return { menu, pick, thumb, frame, kaioken, start: () => {
+    // achievement icons: a little pixel portrait of what each one is about
+    const METEOR = makeSprite(['....oo', '...oyo', '..oyYo', '.oyYro', 'oyrro.', 'ooo...'], { o: 0x2a1a10, y: 0xffe08a, Y: 0xffffff, r: 0xe0473e });
+    const BALL = makeSprite(['..oooo..', '.obbBBo.', 'obwbbbBo', 'obbbbbBo', 'obbbbbBo', 'oBbbbBBo', '.oBBBBo.', '..oooo..'], { o: 0x2f6ae0, b: 0xd8f0ff, B: 0x8fd8ff, w: 0xffffff });
+    const ICON = () => { const V = HEROES.vegeta; return { lap1: V.forms[0].run[1], laps100: KINGKAI, ss: V.forms[1].idle, ui: V.forms[8].idle, o9k: V.forms[0].idle, villains10: SOLDIER, frieza: FRIEZA, cell: CELL, beerus: BEERUS, all4: KIDBUU, ginyu: GINYU[0].spr, fleet: SHIP, greg5: GREGORY, yamcha: YAMCHA, stars25: STAR, storm20: METEOR, spirit: BALL, struggle: V.forms[0].pose, ape: APE[0], fusion: V.fused.idle, kaioken: V.forms[4].idle, shenron: DRAGON.head, porunga: SHENRON.PORUNGA, chamber: DOOR, tournament: SAIBA, ascend: V.forms[5].idle }; };
+    let icons = null;
+    const achIcon = (id, done, k = 3) => { icons = icons || ICON(); const spr = icons[id], c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = done ? '#' + v.toString(16).padStart(6, '0') : '#d9d9d6'; x.fillRect(i * k, j * k, k, k); } return c; };
+    return { menu, pick, thumb, achIcon, frame, kaioken, start: () => {
       playing = true; syncShop();
       // while you were away: half of your idle rate, up to eight hours
       const away = S.last ? Math.min(8 * 3600, (Date.now() - S.last) / 1000) : 0, idle = (lapValue() / 7 + passive()) * Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * FORMS[S.form].x;

@@ -279,5 +279,5 @@ const SHENRON = (() => {
       const c = spr.col[j * spr.w + i]; if (c >= 0) ctx.px(x, y, c);
     }
   }
-  return { draw, drawPorunga, LOOKS, HEADS, kit: { grid, finish, PAL, blit } };
+  return { draw, drawPorunga, PORUNGA, LOOKS, HEADS, kit: { grid, finish, PAL, blit } };
 })();
