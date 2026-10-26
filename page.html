@@ -345,8 +345,8 @@ __PLANET__
   /* 3D pearl logo: one mesh per letter so each can wave, pop and bounce */
   const logo = $('logo'), glint = $('glint'); let R3 = null;
   try {
-    const renderer = new THREE.WebGLRenderer({ canvas: logo, antialias: true, alpha: true });
-    renderer.setPixelRatio(innerWidth <= 760 ? Math.min(window.devicePixelRatio || 1, 2) : Math.min((window.devicePixelRatio || 1) * 2, 3));   // desktop scales it up to 2× in the intro; phones lay it out at full size instead
+    const renderer = new THREE.WebGLRenderer({ canvas: logo, antialias: (window.devicePixelRatio || 1) < 2, alpha: true, powerPreference: 'high-performance' });   // retina screens don't need MSAA
+    renderer.setPixelRatio(innerWidth <= 760 ? Math.min(window.devicePixelRatio || 1, 1.75) : Math.min((window.devicePixelRatio || 1) * 1.4, 2.5));   // kept modest: this canvas redraws every frame of the scroll
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; renderer.setClearColor(0, 0);
     const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(22, 1, .1, 100);
     scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new THREE.RoomEnvironment(), .03).texture;
@@ -357,7 +357,7 @@ __PLANET__
     const letters = []; let x = 0, minY = 1e9, maxY = -1e9;
     const res = font.data.resolution;
     for (const ch of 'highskore') {
-      const g = new THREE.TextGeometry(ch, { font, size: 1, height: .34, curveSegments: 14, bevelEnabled: true, bevelThickness: .22, bevelSize: .075, bevelSegments: 12 });
+      const g = new THREE.TextGeometry(ch, { font, size: 1, height: .34, curveSegments: 9, bevelEnabled: true, bevelThickness: .22, bevelSize: .075, bevelSegments: 7 });
       g.computeBoundingBox(); const b = g.boundingBox, mx = (b.min.x + b.max.x) / 2, my = (b.min.y + b.max.y) / 2;
       g.translate(-mx, -my, -(b.min.z + b.max.z) / 2); g.computeVertexNormals();
       const m = new THREE.Mesh(g, pearl); m.position.set(x + mx, my, 0); group.add(m);
