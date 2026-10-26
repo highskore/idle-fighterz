@@ -515,7 +515,7 @@ __PLANET__
     else if (kind === 'boss') [196, 185, 175].forEach((f, i) => tone(f, f, .18, 'square', .06, i * .18));
   }
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const st = makeStage($('game')); st.resize(); st.night = false;
+  const st = makeStage($('game')); st.resize(); st.night = false; st.calm = reduce;
   const game = GAMES.find(g => g.id === 'planet').mount(st, ui);
   const go = () => { if ($('game').classList.contains('playing')) return; $('game').classList.add('playing'); game.start(); ui.fx('lap'); };
   $('play').addEventListener('click', e => { e.stopPropagation(); go(); });
@@ -723,11 +723,11 @@ __PLANET__
   function tick(now) {
     requestAnimationFrame(tick);
     const dt = Math.max(0, Math.min(.05, (now - prev) / 1000)); prev = now;
-    if (!reduce) T += dt;
+    T += dt;   // reduced motion still plays the game (it's the content); it only drops the screen shake
     const scrolling = now - lastScroll < 250, gameDue = visible && now - last >= 1000 / 30 - 2;
     if (R3 && !(scrolling && gameDue) && now - lastTitle >= (scrolling ? 1000 / 30 : 1000 / 60) - 2) { lastTitle = now; R3(T); }
     if (!gameDue) return; last = now;
-    st.t = T; game.frame(T, reduce ? 0 : 1 / 30);
+    st.t = T; game.frame(T, 1 / 30);
   }
   requestAnimationFrame(tick);
 })();

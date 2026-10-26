@@ -931,7 +931,7 @@ GAMES.push({
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
       const rdt = dt; if (chamberUntil > t) dt *= .3;
-      if (playing) session += dt; st.bob = Math.round(Math.sin(t * .7) * 2) + (shake > 0 ? Math.round((Math.random() - .5) * 5 * shake) : 0); shake = Math.max(0, shake - dt);
+      if (playing) session += dt; st.bob = Math.round(Math.sin(t * .7) * 2) + (shake > 0 && !st.calm ? Math.round((Math.random() - .5) * 5 * shake) : 0); shake = Math.max(0, shake - dt);
       idleT += dt;
       if (!drag) {
         if (Math.abs(vrx) + Math.abs(vry) > .001) { M = M3.ortho(M3.mul(M3.mul(M3.rx(vrx * dt), M3.ry(vry * dt)), M)); vrx *= Math.pow(.06, dt); vry *= Math.pow(.06, dt); }
