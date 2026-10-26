@@ -394,7 +394,7 @@ __PLANET__
   sndLabel();
   // share the exact power level: the native share sheet where there is one, otherwise the clipboard
   const share = async btn => {
-    const text = `i just hit a power level of ${Math.floor(lastPl).toLocaleString('en-US')} on highskore.com`, url = 'https://highskore.com';
+    const text = `i just hit a power level of ${Math.floor(lastPl).toLocaleString('en-US')} on`, url = 'https://highskore.com';   // the link finishes the sentence
     if (navigator.share) { try { await navigator.share({ text, url }); } catch (_) {} return; }
     try { await navigator.clipboard.writeText(text + ' ' + url); } catch (_) { return; }
     const spans = [...btn.querySelectorAll('span')]; if (!btn._was) btn._was = spans.map(e => e.textContent); for (const e of spans) e.textContent = 'copied'; btn.classList.add('done');
