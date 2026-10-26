@@ -171,8 +171,8 @@ GAMES.push({
     const mult = () => Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * (boostUntil > st.t ? 2 : 1) * FORMS[S.form].x * (apeUntil > st.t ? 10 : 1) * (senzuUntil > st.t ? 3 : 1) * (riding > 0 ? 3 : 1) * (kaioUntil > st.t ? 2 + S.kaio : tiredUntil > st.t ? .5 : 1) * (dailyUntil > st.t ? 2 : 1) * (fuseUntil > st.t ? 8 : 1);
     const lapValue = () => 30 * (1 + S.boots) ;
     const passive = () => S.partner * 4 + S.house * 40;
-    let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0, nextNamek = 600;
-    S.world = 0;   // namek is only ever a visit
+    let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
+    if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
     let shake = 0, moon = null, nextMoon = 95, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
     ui.onBuy(k => {
@@ -355,7 +355,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(w ? 'a space pod lands on namek — 30s to grab dragon balls' : "back on king kai's planet"); save(); syncShop();
+      ui.event(w ? 'a space pod takes you to namek for 30 minutes — dragon balls ×2' : "back on king kai's planet"); save(); syncShop();
     }
     function kaioken() {
       if (!playing || S.kaio <= 0 || st.t < kaioReady) return;
@@ -486,9 +486,10 @@ GAMES.push({
       saibas = saibas.filter(sb => !sb.dead);
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
-      if (!S.world && S.best >= 1e7 && !tour && !shen && !boss && (nextNamek -= dt) < 0) { travel(1); namekUntil = t + 30; nextNamek = 600; }
-      if (S.world && t > namekUntil && !shen) travel(0);   // home once the visit's over (after any wishes)
-      if (S.world && orbs.length < 4 && Math.random() < dt * .6) orbs.push({ phi: phi + 1 + Math.random() * 2, star: Math.random() < .5 });   // namek: dragon balls on the road
+      // every 10 million power a space pod takes you to namek for half an hour
+      if (!S.world && S.best >= (S.namekAt || 1e7) && !tour && !shen && !boss) { S.namekAt = (Math.floor(S.best / 1e7) + 1) * 1e7; travel(1); namekUntil = t + 1800; }
+      if (S.world && !namekUntil) namekUntil = t + (S.namekLeft || 1800);   // resumed after a reload
+      if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen) { travel(0); namekUntil = 0; } }   // home after any wishes
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
       if (tour) {
@@ -532,7 +533,7 @@ GAMES.push({
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
-      if (S.world) fxs.push(`namek ${Math.max(0, Math.ceil(namekUntil - t))}s`);
+      if (S.world) { const left = Math.max(0, namekUntil - t); fxs.push(left > 60 ? `namek ${Math.ceil(left / 60)}m` : `namek ${Math.ceil(left)}s`); }
       if (fuseUntil > t) fxs.push(`fusion ×8 ${Math.ceil(fuseUntil - t)}s`);
       if (dailyUntil > t) fxs.push(`daily ×2 ${Math.ceil((dailyUntil - t) / 60)}m`);
       if (tour) fxs.push(`tournament ${Math.ceil(tour.until - t)}s · ${tour.ko} KO`);
@@ -688,9 +689,9 @@ GAMES.push({
     if (/ape/.test(location.hash)) { session = 41; nextMoon = 0; }
     if (/raid/.test(location.hash)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
     if (/fusion/.test(location.hash)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
-    if (/namek/.test(location.hash)) { S.best = Math.max(S.best, 1e7); nextNamek = 1; }   // preview hook: #namek
+    if (/namek|porunga/.test(location.hash)) { S.best = Math.max(S.best, 1e7); S.namekAt = 1e7; }   // preview hooks: #namek, #porunga (namek, then summon)
     if (/tournament/.test(location.hash)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
-    if (/shenron/.test(location.hash)) setTimeout(() => summon(+(location.hash.match(/shenron(\d)/) || [0, 0])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
+    if (/shenron/.test(location.hash)) setTimeout(() => summon(+(location.hash.match(/shenron(\d)/) || [0, 1])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
     return { frame, kaioken, start: () => {
       playing = true; syncShop();
       // while you were away: half of your idle rate, up to eight hours
@@ -699,6 +700,7 @@ GAMES.push({
       // first visit of the day: ×2 for five minutes and a dragon ball
       const today = new Date().toDateString();
       if (S.daily !== today) { const first = !S.daily; S.daily = today; if (!first) { dailyUntil = st.t + 300; S.orbs7 = Math.min(6, S.orbs7 + 1); setTimeout(() => ui.event('daily bonus: ×2 for 5 min + a dragon ball'), away > 90 ? 3600 : 900); } }
+      if (/porunga/.test(location.hash)) setTimeout(() => summon(), 2500);
       save();
     }, resize: layout, train: () => { const k = kidScreen(14); onClick(k.x + 999, k.y + 999); } };
   }

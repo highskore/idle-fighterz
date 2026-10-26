@@ -185,6 +185,11 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .hud .n { font-size: calc(36px * min(1, 10 / var(--len))); }
 }
 /* desktop: title, card and links always fit the window — the card takes whatever height is left */
+/* desktop: popups sit in the open space on the right, under the power level, clear of the title above the card */
+@media (min-width: 761px) {
+  .toast { left: auto; right: 28px; top: 46%; width: auto; max-width: 30%; text-align: right; transform: translateY(6px); }
+  .toast.on { transform: none; }
+}
 @media (min-width: 761px) and (max-height: 760px) { .shop button span { display: none; } }   /* short windows: 12 rows fit without their descriptions */
 @media (min-width: 761px) {
   .page { height: 100svh; min-height: 600px; padding-block: 20px 16px; gap: 14px; box-sizing: border-box; }

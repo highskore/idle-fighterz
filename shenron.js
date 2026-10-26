@@ -99,31 +99,26 @@ const SHENRON = (() => {
 
   // porunga, namek's dragon: a horned, pointy-eared, heavily muscled giant who rises up behind the planet
   const PORUNGA = (() => {
-    const G = grid(64, 58);
+    const G = grid(64, 58), arm = (pts, w0, w1) => { G.line(pts, w0 + 2, w1 + 2, 'o'); G.line(pts, w0, w1, 'g'); };
     G.line([[25, 11], [19, 4], [15, -1]], 4, 1.2, 'h'); G.line([[28, 9], [25, 3], [24, -1]], 2.6, 1, 'h');          // horns
-    G.poly([[22, 14], [6, 8], [21, 19]], 'G');                                                                         // pointed ear
+    G.poly([[22, 14], [5, 8], [21, 19]], 'G');                                                                         // pointed ear
     G.ell(32, 16, 10.5, 9.5, 'g'); G.ell(32, 22, 7.5, 5.5, 'g');                                                       // head, muzzle
-    G.rect(26, 23, 7, 6, 'g');                                                                                         // neck
-    G.ell(32, 38, 23, 12, 'g'); G.ell(14, 33, 7, 6, 'g');                                                              // chest, shoulder
-    G.line([[12, 34], [7, 43], [6, 50]], 9, 7, 'g'); G.line([[6, 50], [8, 55]], 7, 6, 'g');                            // arm, fist
+    G.rect(26, 23, 7, 6, 'g'); G.ell(32, 38, 23, 12, 'g'); G.ell(14, 33, 7, 6, 'g');                                   // neck, chest, shoulder
     G.poly([[17, 44], [32, 45], [32, 58], [21, 58]], 'g');                                                             // waist into the body below
-    for (const x of [3, 6, 9]) G.line([[x + 1, 55], [x, 58]], 1.6, 1, 'c');                                            // claws
-    G.poly([[22, 11.4], [31, 15.2], [31, 16.8], [22, 13.6]], 'k');                                                     // heavy brow
-    G.ell(27.5, 16, 2.6, 1.5, 'r'); G.set(26, 15, 'R');                                                                // eye
-    G.rect(28, 24, 5, 1, 'm'); G.set(28, 25, 'w'); G.set(31, 25, 'w');                                                 // mouth, fangs
-    G.set(30, 20, 'k'); G.set(30, 21, 'k');                                                                            // nostril
-    for (let x = 17; x <= 31; x++) { const y = Math.round(38 + Math.pow((x - 31) / 14, 2) * -5); G.set(x, y + 3, 'G'); }   // pec line
+    for (let x = 17; x <= 31; x++) { const y = Math.round(38 - Math.pow((x - 31) / 14, 2) * 5); G.set(x, y + 3, 'G'); }   // pec line
     for (const y of [46, 50, 54]) for (let x = 27; x <= 31; x++) G.set(x, y, 'G');                                     // abs
-    G.line([[12, 38], [10, 44]], 1.4, 1, 'G');                                                                         // bicep crease
     G.mirror();
-    for (let y = 44; y <= 57; y++) G.set(31, y, 'G'), G.set(32, y, 'G');                                               // centre line
-    const rows = finish(G, { scales: false });
-    return makeSprite(rows, Object.assign({}, PAL, { g: 0x3a9a4a, G: 0x23683a, l: 0x5cbf5c, L: 0xb0ec8a }), { emit: 'rR', ax: 32, ay: 58 });
+    arm([[14, 33], [18, 45], [46, 41]], 8, 7); arm([[50, 33], [46, 45], [18, 41]], 8, 7);                              // arms folded across the chest
+    G.poly([[22, 11.4], [31, 15.2], [31, 16.8], [22, 13.6]], 'k'); G.poly([[42, 11.4], [33, 15.2], [33, 16.8], [42, 13.6]], 'k');   // heavy brow
+    G.ell(27.5, 16, 2.6, 1.5, 'r'); G.ell(36.5, 16, 2.6, 1.5, 'r'); G.set(26, 15, 'R'); G.set(35, 15, 'R');             // eyes
+    G.rect(29, 24, 6, 1, 'm'); G.set(29, 25, 'w'); G.set(34, 25, 'w'); G.set(31, 20, 'k'); G.set(32, 20, 'k');       // mouth, fangs, nostrils
+    return makeSprite(finish(G, { scales: false }), Object.assign({}, PAL, { g: 0x3a9a4a, G: 0x23683a, l: 0x5cbf5c, L: 0xb0ec8a }), { emit: 'rR', ax: 32, ay: 58 });
   })();
   // drawn behind the planet, so the planet hides his lower body; ctx is the same as draw()'s
   function drawPorunga(ctx) {
-    const spr = PORUNGA, k = ctx.R * 2.7 / spr.w, rise = 1 - Math.pow(1 - ctx.rise, 3), t = ctx.t;
-    const bx = ctx.cx, by = ctx.cy + ctx.R * .35 + (1 - rise) * ctx.H * 1.1 - ctx.gone * ctx.gone * ctx.H * 1.4 + Math.sin(t * 1.3) * 2;
+    // sized so his folded arms rest just above the planet's crown and his horns stay on screen
+    const spr = PORUNGA, top = ctx.cy - ctx.R * .75, k = Math.max(.8, Math.min(ctx.R * 2.6 / spr.w, (top - 4) / 46)), rise = 1 - Math.pow(1 - ctx.rise, 3), t = ctx.t;
+    const bx = ctx.cx, by = top + (spr.ay - 46) * k + (1 - rise) * ctx.H * 1.1 - ctx.gone * ctx.gone * ctx.H * 1.4 + Math.sin(t * 1.3) * 2;
     ctx.z = -ctx.R * 1.6;
     blit(ctx, spr, bx, by, false, k);
     if (rise > .9 && !ctx.gone) for (const ex of [27.5, 36.5]) { const x = bx + (ex - spr.ax) * k, y = by + (16 - spr.ay) * k; for (let a = 0; a < 6.28; a += .5) ctx.px(x + Math.cos(a) * (k + 1.5), y + Math.sin(a) * (k * .6 + 1), 0xff5a4a); }
