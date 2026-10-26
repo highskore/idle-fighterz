@@ -333,7 +333,7 @@ __PLANET__
   $('cue').addEventListener('click', e => { e.preventDefault(); scrollTo({ top: scroller.offsetHeight - innerHeight, behavior: 'smooth' }); });
   introLayout();
   /* hero role: every few seconds it twinkles over to the next one, with pixel stars like the title's glints */
-  const ROLES = ['a smart contract engineer', 'a software developer', 'an artist', 'a gamer', 'a designer', 'just a chill guy'];
+  const ROLES = ['a smart contract engineer', 'a software developer', 'just a chill guy'];
   const roleEl = $('role'), sparkCv = $('roleFx'), sctx = sparkCv.getContext('2d'), SPARK = ['#b9a7ff', '#7fc8ff', '#ff9fd2', '#9fe0c8'];
   const reduceRole = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let roleI = 0, sparks = [], sparkRaf = 0, sparkLast = 0;
