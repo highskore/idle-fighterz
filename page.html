@@ -292,6 +292,15 @@ body.night .game { background-color: #07070d !important; background-image: radia
 @media (max-width: 760px) { body.night .page, body.night { background-color: #07070d; } body.night .foot { background: #07070d; border-color: #1c1c26; } body.night .foot a, body.night .foot nav { color: #e8e8ec; } }
 [data-icons="pills"] .ach { display: inline-flex; align-items: baseline; gap: 8px; font: inherit; text-transform: uppercase; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; } [data-icons="pills"] .ach span { display: none; font-size: 11px; text-transform: none; } [data-icons="pills"] .ach.open span { display: inline; } [data-icons="pills"] .ach.done b { color: var(--ink); }
 [data-icons="pills"] .ach.done { background: #fff7e6; border-color: #f2d9a8; } [data-icons="pills"].menu-body { display: flex; flex-wrap: wrap; gap: 6px; align-content: start; }
+
+/* the share popup: a preview of the card, then share or download it */
+.share-card { width: min(640px, 100%); }
+.share-title { text-transform: uppercase; color: var(--muted); }
+.share-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.share-body img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; image-rendering: pixelated; background: #fcfcfb; }
+.share-actions { display: flex; gap: 8px; justify-content: center; }
+.share-actions button { font: inherit; text-transform: uppercase; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; cursor: pointer; }
+.share-actions .share-go { color: #fff; background: #0b0b0b; border-color: #0b0b0b; }
 </style>
 
 <div class="scroller" id="scroller">
@@ -320,6 +329,10 @@ body.night .game { background-color: #07070d !important; background-image: radia
   <div class="menu" id="menu" hidden><div class="menu-card" role="dialog" aria-modal="true" aria-label="achievements and characters">
     <header><nav class="menu-tabs"><button type="button" data-mt="ach" class="on">achievements <b data-achn></b></button><button type="button" data-mt="chars">characters</button></nav><button type="button" class="menu-x" id="menuX" aria-label="close">×</button></header>
     <div class="menu-body" id="menuBody"></div>
+  </div></div>
+  <div class="menu" id="shareBox" hidden><div class="menu-card share-card" role="dialog" aria-modal="true" aria-label="share your power level">
+    <header><span class="share-title">share your power level</span><button type="button" class="menu-x" id="shareX" aria-label="close">×</button></header>
+    <div class="share-body"><img id="shareImg" alt="your power level card"><div class="share-actions"><button type="button" class="share-go" id="shareGo">share</button><button type="button" id="shareDl">download</button></div></div>
   </div></div>
   <footer class="foot gutter" id="foot"><span class="copy"><button type="button" class="snd" id="snd" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="snd" id="share"><span class="long">share score</span><span class="short">share</span></button></span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
   <nav class="tabbar" aria-label="Game menu"><button type="button" data-tab="shop">upgrades <i id="tabCount"></i></button><button type="button" data-tab="train" class="train">train</button><button type="button" data-tab="links">links</button></nav>
@@ -435,21 +448,28 @@ __PLANET__
   for (const b of sndBtns) b.addEventListener('click', () => { soundOn = !soundOn; try { localStorage.setItem('hs-sound', soundOn ? '1' : '0'); } catch (_) {} sndLabel(); if (soundOn) sfx('coin'); });
   sndLabel();
   // share the exact power level: the native share sheet where there is one, otherwise the clipboard
-  const share = async btn => {
-    const text = `i just hit a power level of ${Math.floor(lastPl).toLocaleString('en-US')} on`, url = 'https://highskore.com';
-    let blob = null; try { await document.fonts.ready; blob = await new Promise(r => drawCard().toBlob(r, 'image/png')); } catch (_) {}
-    const file = blob && new File([blob], 'highskore.png', { type: 'image/png' });
+  // share: the card opens in a popup first; share (or copy) and download from there
+  let cardBlob = null, cardUrl = '';
+  const shareText = () => `i just hit a power level of ${Math.floor(lastPl).toLocaleString('en-US')} on`;
+  const openShare = async () => {
+    try { await document.fonts.ready; cardBlob = await new Promise(r => drawCard().toBlob(r, 'image/png')); } catch (_) { cardBlob = null; }
+    if (cardUrl) URL.revokeObjectURL(cardUrl); cardUrl = cardBlob ? URL.createObjectURL(cardBlob) : ''; $('shareImg').src = cardUrl; $('shareDl').hidden = !cardBlob;
+    $('shareBox').hidden = false;
+  };
+  const flash = (btn, text) => { const was = btn._was || (btn._was = btn.textContent); btn.textContent = text; clearTimeout(btn._t); btn._t = setTimeout(() => { btn.textContent = was; }, 1600); };
+  $('shareGo').addEventListener('click', async () => {
+    const text = shareText(), url = 'https://highskore.com', file = cardBlob && new File([cardBlob], 'highskore.png', { type: 'image/png' });
     if (navigator.share) {   // the share sheet (phones, macOS), with the card when it can carry files
       try { await navigator.share(file && navigator.canShare && navigator.canShare({ files: [file] }) ? { files: [file], text: `${text} ${url}` } : { text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }   // anything but a cancel falls through to the clipboard
     }
-    let ok = false;   // desktop: the card and the text on the clipboard
-    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob, 'text/plain': new Blob([`${text} ${url}`], { type: 'text/plain' }) })]); ok = true; } catch (_) {}
-    if (!ok) try { await navigator.clipboard.writeText(`${text} ${url}`); ok = true; } catch (_) {}
-    if (!ok) return;
-    const spans = [...btn.querySelectorAll('span')]; if (!btn._was) btn._was = spans.map(e => e.textContent); for (const e of spans) e.textContent = 'copied'; btn.classList.add('done');
-    clearTimeout(btn._t); btn._t = setTimeout(() => { spans.forEach((e, i) => { e.textContent = btn._was[i]; }); btn.classList.remove('done'); }, 1600);
-  };
-  for (const b of [$('share'), $('shareM')]) b.addEventListener('click', () => share(b));
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': cardBlob, 'text/plain': new Blob([`${text} ${url}`], { type: 'text/plain' }) })]); flash($('shareGo'), 'copied'); return; } catch (_) {}
+    try { await navigator.clipboard.writeText(`${text} ${url}`); flash($('shareGo'), 'copied text'); } catch (_) {}
+  });
+  $('shareDl').addEventListener('click', () => { if (!cardUrl) return; const a = document.createElement('a'); a.href = cardUrl; a.download = 'highskore.png'; a.click(); });
+  $('shareX').addEventListener('click', () => { $('shareBox').hidden = true; });
+  $('shareBox').addEventListener('click', e => { if (e.target === $('shareBox')) $('shareBox').hidden = true; });
+  addEventListener('keydown', e => { if (e.key === 'Escape') $('shareBox').hidden = true; });
+  for (const b of [$('share'), $('shareM')]) b.addEventListener('click', openShare);
   let lastTapSfx = 0;
   function tone(f0, f1, dur, type = 'square', vol = .06, delay = 0) {
     const t = actx.currentTime + delay, o = actx.createOscillator(), g = actx.createGain();
@@ -505,15 +525,50 @@ __PLANET__
   ui.achieved = achCount; achCount();
 
   // the share card: a 1200×630 frame of the game, with your exact power level on a pill
-  function drawCard() {
-    const d = game.card(), W = 1200, H = 630, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  // the share card: a frame of the game, your power level, achievements and run stats (#card1..4 previews the layouts)
+  let CARD_STYLE = +((location.hash.match(/card(\d)/) || [0, 1])[1]);
+  function drawCard(style = CARD_STYLE, demo) {
+    const d = Object.assign(game.card(), demo || {}), W = 1200, H = 630, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+    const MONO = s => `${s}px "Fragment Mono"`, num = n => n.toLocaleString('en-US'), clock = t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+    const frame = (fx, fy, fw, fh) => { const sc = d.scene, k = Math.max(fw / sc.width, fh / sc.height); x.save(); x.beginPath(); x.rect(fx, fy, fw, fh); x.clip(); x.fillStyle = '#fcfcfb'; x.fillRect(fx, fy, fw, fh); x.drawImage(sc, fx + (fw - sc.width * k) / 2, fy + (fh - sc.height * k) / 2, sc.width * k, sc.height * k); x.restore(); };
+    const pillAt = (text, px, py, size, h, dark, gold) => { x.font = MONO(size); const tw = x.measureText(text).width, w = tw + h; x.fillStyle = gold ? '#fff7e6' : dark ? '#0b0b0b' : '#fff'; x.strokeStyle = gold ? '#f2d9a8' : '#e4e4e4'; x.lineWidth = 2; x.beginPath(); x.roundRect(px, py, w, h, h / 2); x.fill(); x.stroke(); x.fillStyle = dark ? '#fff' : '#0b0b0b'; x.fillText(text, px + h / 2, py + h / 2 + size * .36); return w; };
+    const pills = (list, px, py, maxW, size, h, gap, rows) => { let cx = px, cy = py, r = 1; for (const a of list) { x.font = MONO(size); const w = x.measureText(a.toUpperCase()).width + h; if (cx + w > px + maxW) { if (++r > rows) break; cx = px; cy += h + gap; } pillAt(a.toUpperCase(), cx, cy, size, h, false, true); cx += w + gap; } };
+    const stats = [`${d.hero} · ${d.form}`, `achievements ${d.ach.length}/${d.achN}`, `laps ${d.laps} · ${clock(d.time)}`];
+    const title = `POWER LEVEL ${num(d.pl)}`;
     x.fillStyle = '#fcfcfb'; x.fillRect(0, 0, W, H);
-    const sc = d.scene, k = Math.max(W / sc.width, H / sc.height); x.drawImage(sc, (W - sc.width * k) / 2, (H - sc.height * k) / 2, sc.width * k, sc.height * k);
-    const pill = (text, y, size, h) => { x.font = `${size}px "Fragment Mono"`; const tw = x.measureText(text).width; x.fillStyle = '#fff'; x.strokeStyle = '#ececec'; x.lineWidth = 2; x.beginPath(); x.roundRect((W - tw) / 2 - h / 2, y, tw + h, h, h / 2); x.fill(); x.stroke(); x.fillStyle = '#0b0b0b'; x.fillText(text, (W - tw) / 2, y + h / 2 + size * .36); };
-    pill(`POWER LEVEL ${d.pl.toLocaleString('en-US')}`, 40, 34, 74);
-    pill('HIGHSKORE.COM', H - 84, 26, 52);
+    if (style === 1) {          // the game on the left, a stats panel on the right
+      frame(0, 0, 700, H);
+      x.fillStyle = '#8a8a86'; x.font = MONO(22); x.fillText('POWER LEVEL', 740, 90);
+      x.fillStyle = '#0b0b0b'; let fs = 104; do { x.font = `italic ${fs}px "Instrument Serif"`; fs -= 4; } while (x.measureText(num(d.pl)).width > 420 && fs > 40); x.fillText(num(d.pl), 736, 190);
+      x.font = MONO(20); stats.forEach((t, i) => { x.fillStyle = i ? '#8a8a86' : '#d4a017'; x.fillText(t.toUpperCase(), 740, 240 + i * 34); });
+      pills(d.ach, 740, 360, 420, 16, 36, 8, 4);
+      x.fillStyle = '#0b0b0b'; x.font = MONO(22); x.fillText('HIGHSKORE.COM', 740, 590);
+    } else if (style === 2) {   // the full frame, a white stats bar along the bottom
+      frame(0, 0, W, H - 120);
+      pillAt(title, 40, 34, 30, 64);
+      if (d.ach.length) pills(d.ach.slice(0, 6), 40, 112, 1120, 16, 34, 8, 1);
+      x.fillStyle = '#fff'; x.fillRect(0, H - 120, W, 120); x.fillStyle = '#ececec'; x.fillRect(0, H - 120, W, 2);
+      x.font = MONO(22); stats.forEach((t, i) => { x.fillStyle = i ? '#4a4a4a' : '#d4a017'; x.fillText(t.toUpperCase(), 40 + i * 340, H - 52); });
+      x.fillStyle = '#0b0b0b'; x.textAlign = 'right'; x.fillText('HIGHSKORE.COM', W - 40, H - 52); x.textAlign = 'left';
+    } else if (style === 3) {   // the full frame, a floating card of achievements
+      frame(0, 0, W, H);
+      const tw = (x.font = MONO(30), x.measureText(title).width + 64); pillAt(title, (W - tw) / 2, 34, 30, 64);
+      x.fillStyle = 'rgba(255,255,255,.94)'; x.strokeStyle = '#e4e4e4'; x.lineWidth = 2; x.beginPath(); x.roundRect(36, 330, 470, 260, 22); x.fill(); x.stroke();
+      x.fillStyle = '#8a8a86'; x.font = MONO(18); x.fillText(`ACHIEVEMENTS ${d.ach.length}/${d.achN}`, 60, 370);
+      if (d.ach.length) pills(d.ach, 60, 392, 430, 15, 32, 7, 4); else { x.fillStyle = '#b0b0ac'; x.fillText('NONE YET', 60, 420); }
+      pillAt(stats[0].toUpperCase(), W - 40 - (x.font = MONO(20), x.measureText(stats[0].toUpperCase()).width + 44), H - 150, 20, 44);
+      pillAt('HIGHSKORE.COM', W - 40 - (x.font = MONO(22), x.measureText('HIGHSKORE.COM').width + 48), H - 90, 22, 48);
+    } else {                    // a trophy shelf: the frame on top, achievements underneath
+      frame(0, 0, W, 400);
+      pillAt(title, 40, 30, 28, 60);
+      x.fillStyle = '#fff'; x.fillRect(0, 400, W, H - 400); x.fillStyle = '#ececec'; x.fillRect(0, 400, W, 2);
+      x.fillStyle = '#8a8a86'; x.font = MONO(18); x.fillText(`ACHIEVEMENTS ${d.ach.length}/${d.achN}   ·   ${stats[0].toUpperCase()}   ·   ${stats[2].toUpperCase()}`, 40, 446);
+      if (d.ach.length) pills(d.ach, 40, 470, 1120, 16, 36, 8, 2); else { x.fillStyle = '#b0b0ac'; x.fillText('NO ACHIEVEMENTS YET', 40, 500); }
+      x.fillStyle = '#0b0b0b'; x.font = MONO(22); x.textAlign = 'right'; x.fillText('HIGHSKORE.COM', W - 40, H - 30); x.textAlign = 'left';
+    }
     return c;
   }
+  window.__cards = () => [1, 2, 3, 4].map(n => drawCard(n, { pl: 1023012301, laps: 42, time: 754 }).toDataURL('image/png'));   // preview only
   let timer = 0;
   new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); game.resize(); }, 60); }).observe(st.el);
   let visible = true; new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(st.el);
