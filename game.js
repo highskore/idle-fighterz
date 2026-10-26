@@ -88,7 +88,7 @@ const ACH = [
   ['lap1', 'first steps', 'run a lap of the planet'], ['laps100', 'marathon', 'run 100 laps'], ['ss', 'super saiyan', 'reach super saiyan'], ['ui', 'ultra instinct', 'reach ultra instinct'],
   ['o9k', "it's over 9000", 'pass 9,000 power'], ['villains10', 'villain slayer', 'beat 10 villains'], ['frieza', 'emperor down', 'beat frieza'], ['cell', 'perfect no more', 'beat cell'],
   ['beerus', 'god of destruction', 'beat beerus'], ['all4', 'clean sweep', 'beat frieza, cell, kid buu and beerus'], ['ginyu', 'ginyu force', 'defeat the ginyu force'], ['fleet', "frieza's fleet", "drop every soldier from frieza's ship"],
-  ['greg5', 'faster than gregory', 'win 5 gregory races'], ['yamcha', 'yamcha!', 'help yamcha out of his crater'], ['stars25', 'stargazer', 'catch 25 shooting stars'], ['storm20', 'meteor buster', 'bust 20 meteors in one storm'],
+  ['greg5', 'faster than gregory', 'win 5 gregory races'], ['yamcha', 'yamcha!', 'help yamcha out of his crater'], ['stars25', 'pod catcher', 'catch 25 space pods'], ['storm20', 'meteor buster', 'bust 20 meteors in one storm'],
   ['spirit', 'spirit bomb', 'throw a spirit bomb'], ['struggle', 'beam struggle', 'win a beam struggle'], ['ape', 'great ape', 'look at the full moon'], ['fusion', 'fusion ha!', 'fuse with bubbles'],
   ['kaioken', 'kaioken', 'use the kaioken'], ['shenron', 'eternal dragon', 'summon shenron'], ['porunga', 'namekian dragon', 'summon porunga'], ['chamber', 'a year in a day', 'enter the time chamber'],
   ['tournament', 'tournament of power', 'finish a tournament'], ['ascend', 'ascended', 'ascend for the first time'],
@@ -140,28 +140,54 @@ const FRIEZA = shapeSprite(26, 34, G => {
   G.line([[11, 25], [10, 32]], 3, 2.6, 'w'); G.line([[15, 25], [16, 32]], 3, 2.6, 'w');              // legs
   G.ell(10, 29, 1.3, 1.2, 'p'); G.ell(16, 29, 1.3, 1.2, 'p');                                        // shin gems
 }, { o: 0x1d1030, w: 0xf6f4fa, W: 0xb8b0cc, p: 0xa25ae8, P: 0x5a1f8a, q: 0xe6d0ff, r: 0xe0302a, k: 0x2a1840 }, { w: 'W', p: 'P' });
-const CELL = shapeSprite(30, 35, G => {
-  G.poly([[11, 17], [2, 29], [5, 30], [11, 24]], 'K'); G.poly([[17, 17], [26, 29], [23, 30], [17, 24]], 'K');   // folded wings
-  G.poly([[8, 9], [7.5, 3], [9.5, 0], [11, 4], [14, 2.5], [17, 4], [18.5, 0], [20.5, 3], [20, 9]], 'g');          // crest
-  G.line([[9.5, .5], [10.8, 5]], 1, 1, 'k'); G.line([[18.5, .5], [17.2, 5]], 1, 1, 'k');
-  G.ell(14, 10.5, 3.8, 4.4, 'f');                                                                    // pale face
-  G.set(12, 10, 'P'); G.set(16, 10, 'P'); G.set(12, 9, 'k'); G.set(16, 9, 'k');                     // eyes
-  G.line([[11, 11], [12, 13]], 1, 1, 'P'); G.line([[17, 11], [16, 13]], 1, 1, 'P');                 // cheek stripes
-  G.rect(13, 13, 3, 1, 'k'); G.rect(12, 15, 5, 2, 'g');                                              // mouth, neck
-  G.ell(14, 20, 6.5, 4.5, 'g'); G.poly([[10, 22], [18, 22], [17, 27], [11, 27]], 'g');               // chest, waist
-  G.poly([[9, 18], [13, 18], [13, 21], [9, 21]], 'k'); G.poly([[15, 18], [19, 18], [19, 21], [15, 21]], 'k');   // black chest plates
-  G.line([[8, 19], [6, 24], [7, 28]], 2.6, 2.2, 'g'); G.line([[20, 19], [22, 24], [21, 28]], 2.6, 2.2, 'g');   // arms
-  G.line([[12, 27], [11, 33]], 3, 2.6, 'g'); G.line([[16, 27], [17, 33]], 3, 2.6, 'g');              // legs
-  G.rect(9, 32, 4, 2, 'k'); G.rect(15, 32, 4, 2, 'k');                                               // boots
-  for (const [x, y] of [[10, 23], [17, 24], [13, 25], [8, 20], [20, 20], [12, 29], [16, 30], [14, 22]]) G.set(x, y, 'k');   // spots
-}, { o: 0x0d2210, g: 0x7acb5c, G: 0x3f8a3a, k: 0x1a2a1a, K: 0x24342a, f: 0xf2e8f2, F: 0xc8b8d0, P: 0x9a4ad8, r: 0xd03050 }, { g: 'G', f: 'F' });
-const KIDBUU = shapeSprite(22, 30, G => {
-  G.line([[11, 7], [13, 3], [12, 1]], 2.2, 1.2, 'p');                                               // antenna
-  G.ell(11, 10, 3.8, 3.8, 'p'); G.set(9, 10, 'r'); G.set(13, 10, 'r'); G.set(9, 9, 'k'); G.set(13, 9, 'k'); G.rect(10, 12, 3, 1, 'k');   // head, red eyes, grin
-  G.ell(11, 18, 4, 3.5, 'p'); G.rect(8, 20, 7, 2, 'y');                                             // body, gold belt
-  G.line([[7, 16], [4, 20], [3, 24]], 2.2, 1.8, 'p'); G.line([[15, 16], [18, 19], [19, 15]], 2.2, 1.8, 'p');   // arms, one fist up
-  G.poly([[7, 22], [15, 22], [16, 27], [6, 27]], 'w'); G.rect(6, 27, 4, 2, 'k'); G.rect(12, 27, 4, 2, 'k');   // baggy pants, shoes
-}, { o: 0x2a0f1a, p: 0xf59ac8, P: 0xc8669a, w: 0xffffff, W: 0xc8c8d8, k: 0x1a1a1a, y: 0xf2c84a, Y: 0xb88a1a, r: 0xd8241e }, { p: 'P', w: 'W', y: 'Y' });
+const CP = { o: 0x0b140c, g: 0x6cc94e, G: 0x3a8a34, L: 0xa8ec84, k: 0x15171c, K: 0x2c3036, f: 0xf2eaf4, F: 0xc4b6d4, P: 0x8a3ac8, w: 0xffffff, e: 0x111111, c: 0x9fdcff, C: 0x2f6ae0 };
+const CS = { g: 'G', f: 'F' };
+// perfect cell: a tall two-horned crest, pale face with vegeta-style eyes and purple stripes, dark chest plates, spotted green armour, beetle wings behind
+function cell(G, { arms = 'fold', wings = 'fold' } = {}) {
+  if (wings === 'fold') { G.poly([[10, 18], [7, 38], [12, 36], [14, 20]], 'K'); G.poly([[22, 18], [25, 38], [20, 36], [18, 20]], 'K'); }
+  else { G.poly([[11, 19], [0, 10], [0, 24], [6, 34], [12, 30]], 'K'); G.poly([[21, 19], [32, 10], [32, 24], [26, 34], [20, 30]], 'K'); for (const x of [2, 30]) G.line([[16, 22], [x, 14]], 1, 1, 'k'); }
+  // crest: two horns sweeping up from the brow
+  G.poly([[10.5, 13], [8, 6], [7.5, 0], [11, 3], [13, 7], [16, 6], [19, 7], [21, 3], [24.5, 0], [24, 6], [21.5, 13]], 'g');
+  G.line([[8, .5], [10, 6]], 1.4, 1, 'k'); G.line([[24, .5], [22, 6]], 1.4, 1, 'k');                              // dark horn tips
+  for (const [x, y] of [[11, 8], [14, 9], [18, 9], [21, 8], [16, 7]]) G.set(x, y, 'k');                             // spots
+  G.set(9, 4, 'L'); G.set(10, 7, 'L');
+  // face
+  G.poly([[11.5, 10], [20.5, 10], [20.5, 14], [18.5, 18], [13.5, 18], [11.5, 14]], 'f');
+  G.poly([[12, 11.6], [15.4, 12.4], [15.4, 13.2], [12, 12.6]], 'e'); G.poly([[20, 11.6], [16.6, 12.4], [16.6, 13.2], [20, 12.6]], 'e');   // hard brows
+  G.rect(13, 13, 2, 1, 'w'); G.set(14, 13, 'e'); G.rect(17, 13, 2, 1, 'w'); G.set(17, 13, 'e');                    // vegeta-style eyes
+  G.line([[12.5, 14], [13.5, 17]], 1, 1, 'P'); G.line([[19.5, 14], [18.5, 17]], 1, 1, 'P');                         // purple cheek stripes
+  G.rect(15, 16, 2, 1, 'P');                                                                                         // mouth
+  G.rect(14, 18, 4, 2, 'k');                                                                                         // neck
+  // body
+  G.ell(9, 21, 4, 3, 'g'); G.ell(23, 21, 4, 3, 'g');                                                                 // shoulder armour
+  G.poly([[11, 19], [21, 19], [21.5, 25], [10.5, 25]], 'k'); G.rect(16, 19, 1, 6, 'K');                              // black chest plates
+  G.set(13, 21, 'K'); G.set(19, 21, 'K');
+  G.poly([[11, 25], [21, 25], [20, 31], [12, 31]], 'g'); G.rect(12, 31, 8, 1, 'k');                                  // abdomen, belt
+  for (const [x, y] of [[13, 27], [18, 28], [15, 29], [8, 21], [24, 22], [10, 20], [22, 20]]) G.set(x, y, 'k');
+  G.line([[14, 32], [13, 40]], 3.4, 3, 'g'); G.line([[18, 32], [19, 40]], 3.4, 3, 'g');                              // legs
+  for (const [x, y] of [[13, 35], [19, 36], [14, 38]]) G.set(x, y, 'k');
+  G.rect(11, 40, 4, 2, 'w'); G.rect(18, 40, 4, 2, 'w');                                                              // white feet
+}
+const cArm = (G, pts) => { G.line(pts, 4.8, 4.2, 'o'); G.line(pts, 3, 2.4, 'g'); const [x, y] = pts[1]; G.set(Math.round(x), Math.round(y), 'k'); };
+const CELL = shapeSprite(33, 43, G => { cell(G); cArm(G, [[8, 21], [10, 26], [22, 25]]); cArm(G, [[24, 21], [22, 26], [10, 25]]); }, CP, CS);   // arms crossed
+const BP = { o: 0x2a0f1a, p: 0xf28ab8, P: 0xc25a8e, l: 0xffc0dc, w: 0xe6e2f4, W: 0xb4b0d0, k: 0x1a1a1a, y: 0xf2c84a, Y: 0xb88a1a, r: 0xe0202a, e: 0x111111, m: 0x6a1020, t: 0xffffff };
+const BS = { p: 'P', w: 'W', y: 'Y' };
+// kid buu: big round head, the thick antenna sweeping down his back, black eyes with red irises, a fanged grin, broad muscled shoulders, baggy pants
+function buu(G, { mouth = 'grin' } = {}) {
+  G.line([[13, 3], [8, 2], [4, 5], [3, 9]], 3.4, 2, 'p');                                                            // the antenna, flopping back
+  G.ell(14, 8, 5.2, 5.4, 'p'); G.set(11, 4, 'P'); G.set(16, 5, 'P'); G.set(5, 6, 'P'); G.set(12, 3, 'l');          // head, steam holes, shine
+  G.poly([[10.5, 7.4], [13.6, 8.4], [13.6, 9.2], [10.5, 8.4]], 'e'); G.poly([[19, 7.4], [15.4, 8.4], [15.4, 9.2], [19, 8.4]], 'e');   // furious brows
+  G.rect(11, 9, 3, 2, 'e'); G.rect(16, 9, 3, 2, 'e'); G.set(12, 9, 'r'); G.set(16, 9, 'r');                         // black eyes, red irises
+  if (mouth === 'grin') { G.rect(11, 12, 8, 1, 'e'); G.set(12, 13, 't'); G.set(17, 13, 't'); G.set(11, 11, 'e'); G.set(18, 11, 'e'); }
+  else { G.ell(14.5, 12.6, 3.4, 1.8, 'm'); G.rect(12, 11, 6, 1, 't'); G.set(12, 14, 't'); G.set(17, 14, 't'); }
+  G.ell(14.5, 18.5, 6.4, 4.4, 'p'); G.set(12, 18, 'P'); G.set(17, 18, 'P'); G.rect(14, 20, 1, 2, 'P');               // broad chest, pecs
+  G.rect(10, 22, 10, 2, 'k'); G.rect(13, 22, 3, 2, 'y');                                                              // belt and buckle
+  G.poly([[9, 24], [20, 24], [22, 31], [15, 29.5], [8, 31]], 'w');                                                    // baggy pants
+  G.rect(7, 31, 6, 2, 'k'); G.rect(16, 31, 6, 2, 'k'); G.set(7, 31, 'y'); G.set(21, 31, 'y');                         // shoes
+}
+const bArm = (G, pts) => { G.line(pts, 4.4, 3.6, 'o'); G.line(pts, 2.6, 2, 'p'); };
+const bFist = (G, x, y) => { G.ell(x, y, 2, 2, 'o'); G.ell(x, y, 1.3, 1.3, 'p'); };
+const KIDBUU = shapeSprite(29, 34, G => { buu(G); bArm(G, [[9, 17], [11, 21], [19, 20]]); bArm(G, [[20, 17], [18, 21], [10, 20]]); }, BP, BS);   // arms crossed
 const BEERUS = shapeSprite(26, 34, G => {
   G.poly([[8.5, 7], [7, -1], [11.5, 4]], 's'); G.poly([[17.5, 7], [19, -1], [14.5, 4]], 's');      // tall ears
   G.ell(13, 9, 4.4, 4.6, 's'); G.set(11, 9, 'e'); G.set(15, 9, 'e'); G.set(11, 8, 'k'); G.set(15, 8, 'k'); G.rect(12, 12, 3, 1, 'S');   // head, yellow eyes
@@ -253,7 +279,8 @@ const VILLAINS = (() => {
     { name: 'beerus', spr: BEERUS },
   ];
 })();
-const STAR = makeSprite(['....o....', '...oyo...', '..oyYyo..', 'ooyYWYyoo', 'oyYWWWYyo', '.oyYYYyo.', '.oyYoYyo.', 'oyyo.oyyo', 'ooo...ooo'], { o: 0x8a5a12, y: 0xf2b134, Y: 0xffd84a, W: 0xffffff }, { emit: 'oyYW' });
+// a saiyan space pod streaks across the sky now and then; tap it for a boost
+const POD = makeSprite(['....oooo....', '..oowwwwoo..', '.owwwwwwwwo.', '.owwwwrrrwo.', 'owwwwwrRRrwo', 'owwwwwrRRrwo', 'owwwwwwrrwwo', 'oWwwwwwwwwWo', '.oWwwwwwwWo.', '.oWWwwwwWWo.', '..ooWWWWoo..', '....oooo....'], { o: 0x2a2a3a, w: 0xf2f2f6, W: 0xb8bcc8, r: 0xd8241e, R: 0xff8a7a });
 
 const TONES = {
   grass: [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e],
@@ -289,7 +316,9 @@ GAMES.push({
   mount(st, ui) {
     const SAVE = 'hs-power';
     const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, piccolo: 0, chamber: 0, spirit: 0, world: 0, orbs7: 0, wishes: 0, ascend: 0, form: 0 };
-    try { Object.assign(S, JSON.parse(localStorage.getItem(SAVE) || '{}')); } catch (_) {}
+    // every visit starts from zero; only achievements, unlocked heroes and the counters behind them carry over
+    const KEEP = ['ach', 'hero', 'lapsTotal', 'stars', 'gregWins', 'beaten', 'bosses', 'daily'];
+    try { const saved = JSON.parse(localStorage.getItem(SAVE) || '{}'); for (const k of KEEP) if (k in saved) S[k] = saved[k]; } catch (_) {}
     delete S.gold;
     delete S.nextSuper;
     // transformations: unlocked by power level, permanent until you ascend
@@ -306,7 +335,7 @@ GAMES.push({
       { name: 'ultra instinct', at: 2e11, x: 3.5, aura: [0xffffff, 0xd8e8ff, 0x8aa0c8], sparks: 0xffffff },
     ];
     S.form = Math.min(S.form || 0, FORMS.length - 1);
-    const save = () => { S.last = Date.now(); try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (_) {} };
+    const save = () => { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (_) {} };
     const SHOP = {
       boots: { base: 50, k: 1.7, label: 'weighted boots', what: '+1 per step' },
       partner: { base: 250, k: 1.7, label: 'bubbles', what: '+4/s, trains with you' },
@@ -436,9 +465,9 @@ GAMES.push({
       if (door && Math.hypot(px - door.x, py - (door.y - 8)) < 12) { chamberT0 = st.t; chamberUntil = st.t + 10 + 5 * S.chamber; ach('chamber'); ui.event(`hyperbolic time chamber — time slows, training ×2 for ${10 + 5 * S.chamber}s`); flashT = 1; ui.sfx && ui.sfx('form'); door = null; return; }
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.abs(px - m.x) < (m.spr.w / 2 + 2) * m.k && py > m.y - (m.spr.h + 2) * m.k && py < m.y + 3) { combo = st.t - lastClick < .6 ? Math.min(2, combo + .1) : 1; lastClick = st.t; ginyuHit(m, (1 + S.boots) * mult() * combo * 6); ui.sfx && ui.sfx('hit'); return; }
       if (capsule && Math.hypot(px - capsule.x, py - capsule.y) < 11) { openCapsule(); return; }
-      if (star && Math.hypot(px - star.x, py - star.y) < 10) {
-        boostUntil = st.t + 15; S.stars = (S.stars || 0) + 1; if (S.stars >= 25) ach('stars25'); gain(Math.max(50, rate() * 20), star.x, star.y - 6, true); ui.event('shooting star — ×2 for 15s'); goal('star'); ui.fx && ui.fx('star');
-        for (let k = 0; k < 24; k++) fx.add({ x: star.x, y: star.y, vx: (Math.random() - .5) * 120, vy: (Math.random() - .5) * 120, drag: 2.5, life: .7, c: [0xffffff, 0xffd84a, 0xf2b134], raw: true });
+      if (star && Math.hypot(px - star.x, py - star.y) < 13) {
+        boostUntil = st.t + 15; S.stars = (S.stars || 0) + 1; if (S.stars >= 25) ach('stars25'); gain(Math.max(50, rate() * 20), star.x, star.y - 6, true); ui.event('space pod caught — ×2 for 15s'); goal('star'); ui.fx && ui.fx('star');
+        for (let k = 0; k < 24; k++) fx.add({ x: star.x, y: star.y, vx: (Math.random() - .5) * 120, vy: (Math.random() - .5) * 120, drag: 2.5, life: .7, c: [0xffffff, 0xffd84a, 0xff8a3a], raw: true });
         star = null; return;
       }
       for (const m of meteors) if (!m.dead && Math.hypot(px - m.x, py - m.y) < 9) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + laps * .1), m.x, m.y - 6, true); for (let k = 0; k < 16; k++) fx.add({ x: m.x, y: m.y, vx: (Math.random() - .5) * 110, vy: (Math.random() - .5) * 110, drag: 2.5, life: .6, c: [0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], raw: true }); return; }
@@ -494,7 +523,7 @@ GAMES.push({
     const GOALS = [
       { id: 'combo', n: 1, text: 'hit a ×2 combo' },
       { id: 'laps', n: 10, text: 'run 10 laps' },
-      { id: 'star', n: 3, text: 'catch 3 shooting stars' },
+      { id: 'star', n: 3, text: 'catch 3 space pods' },
       { id: 'saiba', n: 15, text: 'defeat 15 saibamen' },
       { id: 'meteor', n: 10, text: 'bust 10 meteors' },
       { id: 'boss', n: 1, text: 'defeat a villain' },
@@ -705,7 +734,7 @@ GAMES.push({
       if ((saveAcc += dt) > 3) { saveAcc = 0; save(); }
 
       // ── timeline: the longer you stay, the more happens
-      if (session > 12) { once('stars', 'shooting stars — click one'); if (!star && (nextStar -= dt) < 0) { star = { x: -8, y: st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = 18 + Math.random() * 14; } }
+      if (session > 12) { once('stars', 'a saiyan space pod — tap it'); if (!star && (nextStar -= dt) < 0) { star = { x: -8, y: st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = 18 + Math.random() * 14; } }
       if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < (S.world ? .4 : .2) }); }
       if (session > 50) { if ((nextShower -= dt) < 0) { once('meteors', 'meteor shower — bust them'); for (let i = 0; i < 6; i++) meteors.push({ x: st.W * (.15 + Math.random() * .9), y: -10 - i * 18, vx: -st.W * .12, vy: st.H * .22, delay: i * .5 }); nextShower = 45 + Math.random() * 20; } }
       if (session > 75 || S.cloud > 0) { if (!cloudFly && riding <= 0 && (nextCloud -= dt * (1 + S.cloud * .6)) < 0) { once('cloud', 'flying nimbus is here'); cloudFly = { x: -30, y: st.H * .3 }; nextCloud = 60 + Math.random() * 25; } }
@@ -797,7 +826,7 @@ GAMES.push({
         for (let k = 0; k < 90; k++) { const q = kidScreen(10); fx.add({ x: q.x, y: q.y, vx: (Math.random() - .5) * 200, vy: (Math.random() - .5) * 200, drag: 2, life: 1.1, c: F.aura, raw: true }); }
         save();
       }
-      if (star) { star.x += star.vx * dt; star.y += Math.sin(t * 3) * .3; if (Math.random() < .8) fx.add({ x: star.x - 4, y: star.y, vx: -12, vy: 4, life: .6, s: 2, c: [0xffd84a, 0xf2b134], raw: true }); if (star.x > st.W + 12) star = null; }
+      if (star) { star.x += star.vx * dt; star.y += Math.sin(t * 3) * .3; if (Math.random() < .9) fx.add({ x: star.x - 7, y: star.y + (Math.random() - .5) * 4, vx: -30, vy: 0, life: .45, s: 2, c: [0xffffff, 0xffd84a, 0xff8a3a], raw: true }); if (star.x > st.W + 12) star = null; }
       for (const m of meteors) { if (m.delay > 0) { m.delay -= dt; continue; } m.x += m.vx * dt; m.y += m.vy * dt; if (!m.dead && Math.random() < .9) fx.add({ x: m.x + 2, y: m.y - 2, vx: -m.vx * .1, vy: -m.vy * .1, life: .5, s: 2, grow: 1, c: [0xfff1c0, 0xffb35a, 0xe0473e, 0x8a8f98], raw: true }); }
       meteors = meteors.filter(m => !m.dead && m.y < st.H + 10);
       if (cloudFly) { const k = kidScreen(10); cloudFly.x += (k.x - cloudFly.x) * dt * 1.8; cloudFly.y += (k.y - 10 - cloudFly.y) * dt * 1.8; if (Math.hypot(k.x - cloudFly.x, k.y - 10 - cloudFly.y) < 6) { cloudFly = null; riding = 10 + S.cloud * 2; ui.event('riding flying nimbus — ×1.5'); } }
@@ -822,7 +851,7 @@ GAMES.push({
       if (dailyUntil > t) fxs.push(`daily ×1.25 ${Math.ceil((dailyUntil - t) / 60)}m`);
       if (tour) fxs.push(`tournament ${Math.ceil(tour.until - t)}s · ${tour.ko} KO`);
       if (kaioUntil > t) fxs.push(`kaioken ×${KAIO()} ${Math.ceil(kaioUntil - t)}s`); else if (tiredUntil > t) fxs.push(`tired ×0.5 ${Math.ceil(tiredUntil - t)}s`);
-      if (boostUntil > t) fxs.push(`star ×2 ${Math.ceil(boostUntil - t)}s`);
+      if (boostUntil > t) fxs.push(`boost ×2 ${Math.ceil(boostUntil - t)}s`);
       if (senzuUntil > t) fxs.push(`senzu ×1.5 ${Math.ceil(senzuUntil - t)}s`);
       if (riding > 0) fxs.push('nimbus ×1.5');
       if (apeUntil > t) fxs.push(`great ape ×3 ${Math.ceil(apeUntil - t)}s`);
@@ -987,7 +1016,7 @@ GAMES.push({
       for (const kb of kis) for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) { const d = Math.hypot(x, y); if (d <= 2.2) st.px(kb.x + x, kb.y + y, d < 1.2 ? 0xffffff : 0x8fd8ff); }
       for (const m of meteors) if (m.delay <= 0) { st.px(m.x, m.y, 0xffffff); st.px(m.x + 1, m.y, 0xffe08a); st.px(m.x, m.y + 1, 0xffb35a); st.px(m.x + 1, m.y + 1, 0xe0473e); }
       fx.step(st, dt);
-      if (star) st.blit(STAR, star.x - 4, star.y - 4, false, true);   // in front of the planet, like its tail
+      if (star) st.blit(POD, star.x - 6, star.y - 6, false, true);   // in front of the planet
       drawSea(t, true);
       if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
       if (shen) {
@@ -1022,6 +1051,7 @@ GAMES.push({
     if (/fusion/.test(location.hash)) { S.partner = Math.max(3, S.partner); S.best = Math.max(S.best, 5e4); nextFuse = 2; }   // preview hook: #fusion
     if (/namek|porunga/.test(location.hash)) { S.best = Math.max(S.best, 1e7); S.namekAt = 1e7; }   // preview hooks: #namek, #porunga (namek, then summon)
     if (/chamber/.test(location.hash)) setTimeout(() => { chamberT0 = st.t; chamberUntil = st.t + 60; }, 800);   // preview hook: #chamber
+    if (/pod/.test(location.hash)) { session = 13; nextStar = 0; }   // preview hook: #pod (a saiyan space pod)
     if (/storm/.test(location.hash)) { session = 121; nextStorm = 0; }   // preview hook: #storm (meteor storm)
     if (/spirit/.test(location.hash)) { S.spirit = Math.max(1, S.spirit); spirit = .97; }   // preview hook: #spirit (a nearly full spirit bomb)
     if (/struggle/.test(location.hash)) { session = 111; nextBoss = 0; S.galick = Math.max(1, S.galick); }   // preview hook: #struggle (a villain who fires back)
@@ -1036,12 +1066,9 @@ GAMES.push({
     const thumb = (id, k = 4) => { const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); } return c; };
     return { menu, pick, thumb, frame, kaioken, start: () => {
       playing = true; syncShop();
-      // while you were away: half of your idle rate, up to eight hours
-      const away = S.last ? Math.min(8 * 3600, (Date.now() - S.last) / 1000) : 0, idle = (lapValue() / 7 + passive()) * Math.pow(1.5, S.gravity) * Math.pow(2, S.wishes) * (1 + .5 * S.ascend) * FORMS[S.form].x;
-      if (away > 90 && idle > 0) { const got = Math.round(idle * away * .5); gain(got); setTimeout(() => ui.event(`while you were away: +${fmtShort(got)}`), 900); }
       // first visit of the day: ×1.25 for five minutes and a dragon ball
       const today = new Date().toDateString();
-      if (S.daily !== today) { const first = !S.daily; S.daily = today; if (!first) { dailyUntil = st.t + 300; S.orbs7 = Math.min(6, S.orbs7 + 1); setTimeout(() => ui.event('daily bonus: ×1.25 for 5 min + a dragon ball'), away > 90 ? 3600 : 900); } }
+      if (S.daily !== today) { const first = !S.daily; S.daily = today; if (!first) { dailyUntil = st.t + 300; S.orbs7 = Math.min(6, S.orbs7 + 1); setTimeout(() => ui.event('daily bonus: ×1.25 for 5 min + a dragon ball'), 900); } }
       if (/porunga/.test(location.hash)) setTimeout(() => summon(), 2500);
       save();
     }, resize: layout, train: () => { const k = kidScreen(14); onClick(k.x + 999, k.y + 999); } };
