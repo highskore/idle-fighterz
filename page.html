@@ -235,7 +235,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
   .brand { top: 54px; bottom: auto; left: -9vw; right: -9vw; height: 125vw; }
   .page.past #brand { pointer-events: none; }
   .game:has(.shop.open) .hud { opacity: 0; visibility: hidden; }
-  body:has(.shop.open) .brand, .game:has(.shop.open) .toast { opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }   /* the upgrades sheet would sit under the title and popups */   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
+  body.shop-over .brand, .game:has(.shop.open) .toast { opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }   /* the title hides only once the upgrades sheet reaches it */   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
   .hud { top: auto; bottom: max(64px, 11svh); right: 50%; transform: translateX(50%); text-align: center; padding: 6px 14px; }
   .hud .n { transform-origin: 50% 50%; }
   .hud .meta, .hud .row { justify-content: center; }
@@ -352,6 +352,9 @@ __PLANET__
   }));
   document.addEventListener('pointerdown', e => { const f = $('foot'); if (f.classList.contains('open') && !f.contains(e.target) && !e.target.closest('#menuBtn, [data-tab="links"]')) f.classList.remove('open'); });
   $('shopToggle').addEventListener('click', () => { const open = $('shop').classList.toggle('open'); $('shopToggle').setAttribute('aria-expanded', String(open)); });
+  // phones: the upgrades sheet grows as upgrades unlock; hide the title only once the sheet's top reaches its letters (the canvas is taller than the letters)
+  const shopOver = () => { const sh = $('shop'), b = $('brand').getBoundingClientRect(), r = sh.getBoundingClientRect(); document.body.classList.toggle('shop-over', sh.classList.contains('open') && r.height > 0 && r.top < b.top + b.height * .22); };
+  new ResizeObserver(shopOver).observe($('shop')); new MutationObserver(shopOver).observe($('shop'), { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', shopOver);
   /* scroll intro: measure where the title and card sit when settled, then interpolate from the hero pose */
   const pageEl = document.querySelector('.page'), scroller = $('scroller'), brandEl = $('brand'), gameEl = $('game'), cueEl = $('cue');
   function introLayout() {
