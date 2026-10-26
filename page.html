@@ -15,6 +15,10 @@
   color-scheme: light;
 }
 * { box-sizing: border-box; }
+/* a game you tap fast: no double-tap zoom, no text selection or callout loupe, no grey tap flash.
+   manipulation keeps scrolling and pinch-zoom, it only drops the double-tap zoom delay */
+html, body, .page, .game, .game *, .brand, .brand * { touch-action: manipulation; }
+.game, .brand, .foot { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
 html, body { background: var(--bg); color: var(--ink); }
 body { margin: 0; font-family: var(--mono); font-size: 12px; line-height: 1.5; letter-spacing: .01em; }
 a { color: inherit; text-decoration: none; }
@@ -344,6 +348,11 @@ __PLANET__
   addEventListener('resize', () => requestAnimationFrame(introLayout));
   $('cue').addEventListener('click', e => { e.preventDefault(); scrollTo({ top: scroller.offsetHeight - innerHeight, behavior: 'smooth' }); });
   introLayout();
+  // older iOS ignores touch-action for double taps on some elements: swallow a second tap that lands within
+  // 300ms outside the game canvas (the canvas handles its own double tap for the big bang attack)
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', e => { const now = Date.now(); if (now - lastTouchEnd < 300 && !e.target.closest('.stage canvas, a, button')) e.preventDefault(); lastTouchEnd = now; }, { passive: false });
+  document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const st = makeStage($('game')); st.resize(); st.night = false;
   const game = GAMES.find(g => g.id === 'planet').mount(st, ui);
