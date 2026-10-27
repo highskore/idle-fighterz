@@ -545,7 +545,8 @@ GAMES.push({
       if (crit) for (let i = 0; i < 10; i++) fx.add({ x: k.x, y: k.y - 14, vx: (Math.random() - .5) * 90, vy: -20 - Math.random() * 60, drag: 2, life: .5, c: [0xffffff, 0x9cf0b8, 0x34d873], raw: true });
       ui.bump();
     }
-    st.cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); drag = { x: e.clientX, y: e.clientY, moved: 0, t: st.t, ax: bx, ay: by }; try { st.cv.setPointerCapture(e.pointerId); } catch (_) {} });
+    st.cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); if (playing && S.world === 3 && snk) { snakeTap(bx, by); return; }   // snake way acts on the press: no drag, beam charge or double-tap to swallow it
+      drag = { x: e.clientX, y: e.clientY, moved: 0, t: st.t, ax: bx, ay: by }; try { st.cv.setPointerCapture(e.pointerId); } catch (_) {} });
     st.cv.addEventListener('pointermove', e => {
       if (!drag) return;
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
@@ -649,7 +650,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right to switch lanes, middle to jump'][w], w === 3 ? 6000 : 2600); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right (or ← →) to switch lanes, middle (or space) to jump'][w], w === 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) startSnake(); else snk = null;
     }
@@ -799,14 +800,22 @@ GAMES.push({
     }
     function snakeTap(px, py) {
       // a ghost under the finger takes a ki blast instead of a lane change
-      const g = !snk.fall && snk.ghosts.filter(g => !g.dead && g.sx !== undefined && Math.hypot(px - g.sx, py - g.sy) < g.r + 10).sort((a, b) => a.s - b.s)[0];
+      const g = !snk.fall && snk.ghosts.filter(g => !g.dead && g.sx !== undefined && Math.hypot(px - g.sx, py - g.sy) < g.r + 3).sort((a, b) => a.s - b.s)[0];
       if (g) {
         g.dead = true; snk.blasted++; snk.shots.push({ x: g.sx, y: g.sy, t0: st.t }); burst(g.sx, g.sy, [0xffffff, 0xdff4ff, 0xfff3a0], 18, 120);
         gain(lapValue() * mult() * 3, g.sx, g.sy - g.r - 4, true); ui.sfx && ui.sfx('beam'); return;
       }
       const third = px / st.W;
-      if (third < .33) snk.lane = Math.max(-1, snk.lane - 1); else if (third > .67) snk.lane = Math.min(1, snk.lane + 1); else if (st.t - snk.jumpT > .6) { snk.jumpT = st.t; ui.sfx && ui.sfx('tap'); }
+      if (third < .33) snakeMove(-1); else if (third > .67) snakeMove(1); else snakeJump();
     }
+    const snakeMove = d => { if (!snk.fall && !snk.done) snk.lane = Math.max(-1, Math.min(1, snk.lane + d)); };
+    const snakeJump = () => { if (!snk.fall && !snk.done && st.t - snk.jumpT > .6) { snk.jumpT = st.t; ui.sfx && ui.sfx('tap'); } };
+    addEventListener('keydown', e => {
+      if (!playing || S.world !== 3 || !snk || e.repeat) return;
+      const k = e.key.toLowerCase();
+      if (k === 'arrowleft' || k === 'a') snakeMove(-1); else if (k === 'arrowright' || k === 'd') snakeMove(1); else if (k === 'arrowup' || k === 'w' || k === ' ') snakeJump(); else return;
+      e.preventDefault();
+    });
     const airborne = t => t - snk.jumpT < .6 || t < snk.nimbus;
     function updateSnake(t, dt) {
       if (!snk) startSnake();
@@ -1003,7 +1012,7 @@ GAMES.push({
       // world from best / 1M % 3 sent every form-up at 2M, 20M, 200M… to planet vegeta, since 2·10^k % 3 is always 2)
       if (!S.world && S.best >= (S.namekAt || PLANET_EVERY) && !tour && !shen && !boss) { S.namekAt = (Math.floor(S.best / PLANET_EVERY) + 1) * PLANET_EVERY; S.trips = (S.trips || 0) + 1; travel([1, 2, 3][(S.trips - 1) % 3]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
-      if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen) { travel(0); namekUntil = 0; S.namekAt = Math.max(S.namekAt || 0, (Math.floor(S.best / PLANET_EVERY) + 1) * PLANET_EVERY); } }   // home after any wishes, and the next trip is a full 1M away
+      if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen && (S.world !== 3 || snk?.done)) { travel(0); namekUntil = 0; S.namekAt = Math.max(S.namekAt || 0, (Math.floor(S.best / PLANET_EVERY) + 1) * PLANET_EVERY); } }   // home after any wishes, and the next trip is a full 1M away
       if (S.world !== 3) {
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
