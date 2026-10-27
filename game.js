@@ -1760,7 +1760,7 @@ GAMES.push({
       ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for ki seeds', unlock: () => S.best >= 1e6 },
     };
     const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber'];
-    const cost = k => k === 'ascend' ? Math.max(1e6, Math.floor(S.pl)) : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));   // ascending spends all you hold (1M at least), so that's its price
+    const cost = k => k === 'ascend' ? Math.max(1e6, Math.floor(S.pl)) : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]) * (1 - .05 * lvl('deal')));   // ascending spends all you hold (1M at least), so that's its price
     // permanent: gravity ×1.15 a level, wishes ×1.25 each, ascensions +10% each; temporary boosts add up rather than multiply
     const KAIO = () => 1.25 + .25 * S.kaio;
     // milestones: every 10th, 25th, 50th and 100th level of a producer doubles its output
@@ -1783,6 +1783,7 @@ GAMES.push({
       { id: 'pods', branch: 'fate', tier: 0, name: 'pod magnet', what: 'space pods 12% sooner a rank', max: 5 },
       { id: 'balls', branch: 'fate', tier: 0, name: 'dragon radar', what: '+5% dragon ball orbs a rank', max: 5 },
       { id: 'bounty', branch: 'fate', tier: 1, name: 'bounty hunter', what: 'villain prizes +50% a rank', max: 5 },
+      { id: 'deal', branch: 'fate', tier: 1, name: 'bulma\'s discount', what: 'every upgrade costs 5% less a rank', max: 5 },
       { id: 'wish', branch: 'fate', tier: 1, name: 'shenron\'s favour', what: 'each wish +5% more a rank', max: 5 },
       { id: 'head', branch: 'fate', tier: 2, name: 'head start', what: 'keep 1% of your power a rank when you ascend', max: 3 },
       { id: 'saga', branch: 'fate', tier: 3, name: 'legend', what: 'saga villains drop a ki seed', max: 1 },
@@ -1961,6 +1962,8 @@ GAMES.push({
     function heroOpen(id) { const c = CHARS.find(x => x.id === id); return !!c && (!c.need || !!S.ach[c.need]); }
     const standAng = v => Math.atan2(v[0], v[1]) * Math.min(1, (v[0] * v[0] + v[1] * v[1]) * 1.6);
     const WHIS_AT = capPt(.5, 3.3), CHI_AT = capPt(.45, 3.2), TURTLE_AT = capPt(.5, 5.2), OOLONG_AT = capPt(.62, 4.1);   // whis by beerus, chi-chi by the house, umigame and oolong on roshi's island
+    // a krillin who follows you is the first thing every villain goes for: three in four raids, he's blown up on arrival
+    const krillinHit = by => { if (!S.krillinAlly || kril || Math.random() > .75) return; kril = { c: roadPt(phi - .5), t0: st.t - 1, boom: st.t + 1.2, by }; ui.event(`${by} goes straight for krillin…`); };
     const DANCE = { vegeta: ['goku', 'gogeta'], goku: ['vegeta', 'gogeta'], gohan: ['videl', 'gohanVidel'], trunks: ['goten', 'gotenks'] };
     function HERO() { return HEROES[S.hero] || HEROES.vegeta; }
     function ach(id) {
@@ -2549,7 +2552,7 @@ GAMES.push({
       if (satan && t > satan.until) satan = null;
       // king kai pops out to tell a terrible joke — laugh (tap him) for ×1.25
       if (!kai && session > 45 && !shen && (nextKai -= dt) < 0) { kai = { c: capPt(.35, 3.6), t0: t, until: t + 9 }; ui.event('king kai: ' + PUNS[Math.floor(Math.random() * PUNS.length)], 6000); nextKai = 140 + Math.random() * 40; }
-      if (!ginyu && !tour && !boss && !shen && session > 200 && S.best >= 2e5 && (nextAndro -= dt) < 0) { const hp = Math.max(500, rate() * 14); ginyu = { androids: true, members: [{ name: 'android 17', spr: A17 }, { name: 'android 18', spr: A18 }].map((g, i) => ({ ...g, hp, max: hp, i, x: 0, y: 0, k: 1, flash: 0, dead: false })), max: hp * 2, t0: t, until: t + 45, nextKi: 1 }; ui.event('androids 17 and 18 drop in — "we\'re just bored"'); ui.sfx && ui.sfx('boss'); nextAndro = 340 + Math.random() * 60; }
+      if (!ginyu && !tour && !boss && !shen && session > 200 && S.best >= 2e5 && (nextAndro -= dt) < 0) { krillinHit('the androids'); const hp = Math.max(500, rate() * 14); ginyu = { androids: true, members: [{ name: 'android 17', spr: A17 }, { name: 'android 18', spr: A18 }].map((g, i) => ({ ...g, hp, max: hp, i, x: 0, y: 0, k: 1, flash: 0, dead: false })), max: hp * 2, t0: t, until: t + 45, nextKi: 1 }; ui.event('androids 17 and 18 drop in — "we\'re just bored"'); ui.sfx && ui.sfx('boss'); nextAndro = 340 + Math.random() * 60; }
       // android 18 drops by: krillin goes red and hands over his wallet (if he's alive)
       if (!date && session > 160 && !shen && (nextDate -= dt) < 0) { const kr = !S.krillinDead; date = { c: capPt(.45, .35), c2: capPt(.45, .55), t0: t, until: t + (kr ? 10 : 4), kr }; ui.event(kr ? 'android 18 drops by — krillin is a mess. tap him' : 'android 18 drops by, sees no krillin, shrugs and leaves'); nextDate = 300 + Math.random() * 120; }
       if (date && t > date.until) date = null;
@@ -2600,7 +2603,7 @@ GAMES.push({
       // piccolo zaps a meteor with his special beam cannon
       if (S.piccolo > 0 && (nextZap -= dt) < 0) { nextZap = 5; const m = meteors.find(m => !m.dead && m.delay <= 0); if (m && piccoloAt) { zap = { x0: piccoloAt.x, y0: piccoloAt.y - 8, x1: m.x, y1: m.y, t0: t }; m.dead = true; goal('meteor'); gain(25 * mult() * (1 + laps * .1), m.x, m.y - 6, true); burst(m.x, m.y, [0xffffff, 0xfff08a, 0x9a6ad8], 12, 90); ui.sfx && ui.sfx('beam'); } }
       // the ginyu force
-      if (!ginyu && !tour && !boss && !shen && session > 150 && S.best >= 5e4 && (nextGinyu -= dt) < 0) { const hp = Math.max(300, rate() * 9); ginyu = { members: GINYU.map((g, i) => ({ ...g, hp, max: hp, i, x: 0, y: 0, k: 1, flash: 0, dead: false })), max: hp * 5, t0: t, until: t + 45, nextKi: 1 }; ui.event('the ginyu force strikes a pose!'); ui.sfx && ui.sfx('boss'); nextGinyu = 300 + Math.random() * 60; }
+      if (!ginyu && !tour && !boss && !shen && session > 150 && S.best >= 5e4 && (nextGinyu -= dt) < 0) { krillinHit('the ginyu force'); const hp = Math.max(300, rate() * 9); ginyu = { members: GINYU.map((g, i) => ({ ...g, hp, max: hp, i, x: 0, y: 0, k: 1, flash: 0, dead: false })), max: hp * 5, t0: t, until: t + 45, nextKi: 1 }; ui.event('the ginyu force strikes a pose!'); ui.sfx && ui.sfx('boss'); nextGinyu = 300 + Math.random() * 60; }
       if (ginyu && !ginyu.done && t > ginyu.until) { ui.event(ginyu.androids ? '17 and 18 got bored and flew off' : 'the ginyu force retreats'); ginyu.done = t; }
       if (ginyu && ginyu.done && t - ginyu.done > 1.5) ginyu = null;
       // the scouter can't take it
@@ -2634,7 +2637,7 @@ GAMES.push({
         // the next saga in story order; after beerus it all starts over, tougher
         const n = VILLAINS.length, V0 = VILLAINS[S.saga % n], hp = Math.max(600, rate() * 40) * (1 + .15 * S.saga), me = V0.name === 'vegeta' && S.hero === 'vegeta', twin = V0.name === 'goku black' && S.hero === 'goku';
         boss = { name: me ? 'past vegeta' : V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 40, x: 0, y: 0, k: 1, flash: 0, nextKi: 1, saga: true };
-        ui.event(`saga ${S.saga % n + 1}/${n}: ` + (me ? 'your younger self shows up, scouter and all — "that\'s MY hair!" tap him' : twin ? 'goku black is attacking — "hey, that\'s MY face!" tap him' : `${V0.name} is attacking — tap him!`), 4000); nextBoss = 160 + Math.random() * 60;
+        ui.event(`saga ${S.saga % n + 1}/${n}: ` + (me ? 'your younger self shows up, scouter and all — "that\'s MY hair!" tap him' : twin ? 'goku black is attacking — "hey, that\'s MY face!" tap him' : `${V0.name} is attacking — tap him!`), 4000); nextBoss = 160 + Math.random() * 60; krillinHit(V0.name);
       }
       // meteor storm: a 12s downpour; every bust counts and pays out at the end
       if (!storm && session > 120 && !tour && !shen && !boss && (nextStorm -= dt) < 0) { storm = { until: t + 12, next: t, hit: 0 }; ui.event('meteor storm! bust as many as you can'); ui.sfx && ui.sfx('boss'); nextStorm = 260 + Math.random() * 60; }
