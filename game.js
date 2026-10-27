@@ -1768,28 +1768,28 @@ GAMES.push({
     const ms = k => 2 ** MS.filter(n => S[k] >= n).length, nextMile = k => MS.find(n => S[k] < n);
     // the training tree: ki seeds from ascending buy ranks; every seed you've earned also boosts everything, spent or not
     const TREE = [
-      { id: 'fist', branch: 'body', tier: 0, name: 'iron fist', what: 'taps +50% a rank', max: 5 },
+      { id: 'fist', branch: 'body', tier: 0, name: 'iron fist', what: 'taps +50% a rank', max: Infinity },
       { id: 'crit', branch: 'body', tier: 0, name: 'eagle eye', what: '+8% crit chance a rank', max: 5 },
-      { id: 'legs', branch: 'body', tier: 1, name: 'road work', what: 'lap bonus +50% a rank', max: 5 },
-      { id: 'brawl', branch: 'body', tier: 1, name: 'brawler', what: 'villain taps +50% a rank', max: 5 },
-      { id: 'critx', branch: 'body', tier: 2, name: 'pressure point', what: 'crits hit ×1 harder a rank', max: 3 },
+      { id: 'legs', branch: 'body', tier: 1, name: 'road work', what: 'lap bonus +50% a rank', max: Infinity },
+      { id: 'brawl', branch: 'body', tier: 1, name: 'brawler', what: 'villain taps +50% a rank', max: Infinity },
+      { id: 'critx', branch: 'body', tier: 2, name: 'pressure point', what: 'crits hit ×1 harder a rank', max: Infinity },
       { id: 'pride', branch: 'body', tier: 3, name: 'saiyan pride', what: 'combo goes to ×4', max: 1 },
-      { id: 'idle', branch: 'spirit', tier: 0, name: 'meditation', what: 'idle income +50% a rank', max: 5 },
-      { id: 'beam', branch: 'spirit', tier: 0, name: 'ki control', what: 'beams +50% a rank', max: 5 },
-      { id: 'chamber', branch: 'spirit', tier: 1, name: 'patience', what: 'time chamber +5s a rank', max: 5 },
-      { id: 'seedx', branch: 'spirit', tier: 1, name: 'zenkai', what: 'each ki seed +2% more a rank', max: 5 },
-      { id: 'auto', branch: 'spirit', tier: 2, name: 'instinct', what: 'an auto tap every second a rank', max: 3 },
+      { id: 'idle', branch: 'spirit', tier: 0, name: 'meditation', what: 'idle income +50% a rank', max: Infinity },
+      { id: 'beam', branch: 'spirit', tier: 0, name: 'ki control', what: 'beams +50% a rank', max: Infinity },
+      { id: 'chamber', branch: 'spirit', tier: 1, name: 'patience', what: 'time chamber +5s a rank', max: Infinity },
+      { id: 'seedx', branch: 'spirit', tier: 1, name: 'zenkai', what: 'each ki seed +2% more a rank', max: Infinity },
+      { id: 'auto', branch: 'spirit', tier: 2, name: 'instinct', what: 'an auto tap every second a rank', max: Infinity },
       { id: 'eternal', branch: 'spirit', tier: 3, name: 'eternal ki', what: 'idle income ×3', max: 1 },
       { id: 'pods', branch: 'fate', tier: 0, name: 'pod magnet', what: 'space pods 12% sooner a rank', max: 5 },
       { id: 'balls', branch: 'fate', tier: 0, name: 'dragon radar', what: '+5% dragon ball orbs a rank', max: 5 },
-      { id: 'bounty', branch: 'fate', tier: 1, name: 'bounty hunter', what: 'villain prizes +50% a rank', max: 5 },
+      { id: 'bounty', branch: 'fate', tier: 1, name: 'bounty hunter', what: 'villain prizes +50% a rank', max: Infinity },
       { id: 'deal', branch: 'fate', tier: 1, name: 'bulma\'s discount', what: 'every upgrade costs 5% less a rank', max: 5 },
-      { id: 'wish', branch: 'fate', tier: 1, name: 'shenron\'s favour', what: 'each wish +5% more a rank', max: 5 },
+      { id: 'wish', branch: 'fate', tier: 1, name: 'shenron\'s favour', what: 'each wish +5% more a rank', max: Infinity },
       { id: 'head', branch: 'fate', tier: 2, name: 'head start', what: 'keep 1% of your power a rank when you ascend', max: 3 },
       { id: 'saga', branch: 'fate', tier: 3, name: 'legend', what: 'saga villains drop a ki seed', max: 1 },
     ];
     const TIER_COST = [1, 2, 5, 15], TIER_NEED = [0, 4, 8, 12];   // seeds per rank, and points in the branch to open the tier
-    const lvl = id => S.tree[id] || 0, nodeCost = n => TIER_COST[n.tier], nodeMax = n => n.max;
+    const lvl = id => S.tree[id] || 0, rankCost = (n, r) => TIER_COST[n.tier] * 2 ** Math.floor(r / 5), nodeCost = n => rankCost(n, lvl(n.id)), nodeMax = n => n.max;   // uncapped nodes cost double every 5 ranks
     const branchPts = b => TREE.filter(n => n.branch === b).reduce((a, n) => a + lvl(n.id), 0), nodeOpen = n => branchPts(n.branch) >= TIER_NEED[n.tier];
     const seedBoost = () => 1 + S.ascend * (.1 + .02 * lvl('seedx')), comboCap = () => lvl('pride') ? 4 : 2;
     const tapPower = () => 1 + S.boots * ms('boots') + passive() / 10;   // villain taps keep pace with idle builds
@@ -2159,7 +2159,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right (or ← →) to switch lanes, middle (or space) to jump', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right (or ← →) to switch lanes, middle (or space) to jump, tap a ghost to blast it', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) startSnake(); else snk = null;
       bz = w === 4 ? { c: capPt(.3, 4.4), noise: 0, awake: 0 } : null; pud = null; gadgets = []; nextGadget = 2;
@@ -2354,7 +2354,7 @@ GAMES.push({
     }
     function snakeTap(px, py) {
       // a ghost under the finger takes a ki blast instead of a lane change
-      const g = !snk.fall && snk.ghosts.filter(g => !g.dead && g.sx !== undefined && Math.hypot(px - g.sx, py - g.sy) < g.r + 3).sort((a, b) => a.s - b.s)[0];
+      const g = !snk.fall && snk.ghosts.filter(g => !g.dead && g.sx !== undefined && Math.hypot(px - g.sx, py - g.sy) < g.r + 12).sort((a, b) => a.s - b.s)[0];
       if (g) {
         g.dead = true; snk.blasted++; snk.shots.push({ x: g.sx, y: g.sy, t0: st.t }); burst(g.sx, g.sy, [0xffffff, 0xdff4ff, 0xfff3a0], 18, 120);
         gain(lapValue() * mult() * 3, g.sx, g.sy - g.r - 4, true); ui.sfx && ui.sfx('beam'); return;
@@ -2980,7 +2980,7 @@ GAMES.push({
     // the achievements / characters popup reads from here
     const menu = () => ({ seeds: S.seeds, boost: seedBoost().toFixed(1), branches: ['body', 'spirit', 'fate'].map(b => ({ name: b, pts: branchPts(b) })), tree: TREE.map(n => ({ id: n.id, branch: n.branch, tier: n.tier, need: TIER_NEED[n.tier], open: nodeOpen(n), name: n.name, what: n.what, lvl: lvl(n.id), max: nodeMax(n), cost: nodeCost(n), can: nodeOpen(n) && lvl(n.id) < nodeMax(n) && S.seeds >= nodeCost(n) })), spent: TREE.some(n => lvl(n.id)), ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
     const learn = id => { const n = TREE.find(x => x.id === id); if (!n || !nodeOpen(n) || lvl(id) >= nodeMax(n) || S.seeds < nodeCost(n)) return; S.seeds -= nodeCost(n); S.tree[id] = lvl(id) + 1; ui.sfx && ui.sfx('buy'); save(); syncShop(); };
-    const respec = () => { for (const n of TREE) S.seeds += lvl(n.id) * nodeCost(n); S.tree = {}; save(); syncShop(); };
+    const respec = () => { for (const n of TREE) for (let r = 0; r < lvl(n.id); r++) S.seeds += rankCost(n, r); S.tree = {}; save(); syncShop(); };
     const pick = id => { if (!heroOpen(id)) return false; S.hero = id; save(); return true; };
     const thumb = (id, k = 4) => { const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); } return c; };
     // what the share card shows: the exact power level, the form, and the hero as he looks right now

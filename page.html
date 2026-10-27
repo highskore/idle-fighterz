@@ -574,7 +574,7 @@ __PLANET__
       m.branches.forEach((br, col) => m.tree.filter(x => x.branch === br.name).forEach((n, row) => {   // a column per branch, tiers top to bottom
         const tier = n.tier;
         const b = document.createElement('button'); b.type = 'button'; b.className = 'node' + (n.can ? ' can' : '') + (n.lvl ? ' on' : '') + (n.open ? '' : ' locked') + (tier === 3 ? ' cap' : ''); b.disabled = !n.can;
-        b.innerHTML = `<i>${row ? '' : br.name + ' · ' + br.pts + ' pts'}</i><b>${n.name}</b><span>${n.what}</span><em>${!n.open ? `needs ${n.need} in ${n.branch}` : n.lvl + '/' + n.max + (n.lvl < n.max ? ' · ' + n.cost + ' seed' + (n.cost > 1 ? 's' : '') : '')}</em>`;
+        b.innerHTML = `<i>${row ? '' : br.name + ' · ' + br.pts + ' pts'}</i><b>${n.name}</b><span>${n.what}</span><em>${!n.open ? `needs ${n.need} in ${n.branch}` : (n.max === Infinity ? 'lv ' + n.lvl : n.lvl + '/' + n.max) + (n.lvl < n.max ? ' · ' + n.cost + ' seed' + (n.cost > 1 ? 's' : '') : '')}</em>`;
         b.style.gridColumn = col + 1; b.style.gridRow = row + 2;
         b.addEventListener('click', () => { game.learn(n.id); renderMenu(); }); body.append(b);
       }));
