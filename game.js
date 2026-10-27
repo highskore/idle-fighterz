@@ -890,7 +890,7 @@ GAMES.push({
     let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, car = null, nextCar = 140, carUntil = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
     let gadgets = [], nextGadget = 2, robotUntil = 0, robotAcc = 0, autoAcc = 0, gadgetUntil = 0, bikeUntil = 0, calmUntil = 0, nextAndro = 340, date = null, nextDate = 300, gero = null, nextGero = 230, a16 = null, nextA16 = 180;
     let bz = null, pud = null;   // beerus asleep on his planet, and the pudding that calms him
-    let preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
+    let cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
@@ -985,6 +985,7 @@ GAMES.push({
     function onClick(px, py) {
       if (!playing) return;
       if (S.world === 3 && snk) { snakeTap(px, py); return; }
+      if (cling) { const k = kidScreen(12); if (Math.hypot(px - k.x, py - k.y) < 16) { burst(k.x, k.y, [0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a]); gain(Math.max(60, rate() * 20), k.x, k.y - 16, true); ui.event('shook the saibaman off — it pops harmlessly'); cling = null; return; } }
       if (struggle) { struggle.p += .055; ui.sfx && ui.sfx('tap'); shake = Math.max(shake, .08); return; }   // a beam struggle takes every tap
       if (spiritReady && !spiritShot) { const b = spiritPos(); if (Math.hypot(px - b.x, py - b.y) < b.r + 8) { throwSpirit(); return; } }
       if (fuseOffer > st.t && monkeyAt && Math.hypot(px - monkeyAt.x, py - (monkeyAt.y - 5)) < 12) {
@@ -992,7 +993,7 @@ GAMES.push({
         burst(monkeyAt.x, monkeyAt.y - 6, [0xffffff, 0xffe08a, 0xff9a3c, 0x6fb0ff], 50, 200); return;
       }
       if (car && car.sx !== undefined && Math.hypot(px - car.sx, py - (car.sy - 6)) < 16) { carUntil = st.t + 15; ui.event("riding with king kai — ×1.5 for 15s"); ui.sfx && ui.sfx('coin'); burst(car.sx, car.sy - 6, [0xffffff, 0xd8241e, 0xdfe3ea], 16, 110); car = null; return; }
-      if (yam && yam.sx !== undefined && !yam.helped && Math.hypot(px - yam.sx, py - (yam.sy - 3)) < 12) { yam.helped = true; ach('yamcha'); yam.until = st.t + 1.2; senzuUntil = Math.max(senzuUntil, st.t + 10); const g = Math.max(200, rate() * 40); gain(g, yam.sx, yam.sy - 10, true); ui.event('yamcha: "i\'m fine!" — senzu ×1.5 for 10s'); ui.sfx && ui.sfx('coin'); return; }
+      if (yam && !yam.boom && yam.sx !== undefined && !yam.helped && Math.hypot(px - yam.sx, py - (yam.sy - 3)) < 12) { yam.helped = true; ach('yamcha'); yam.until = st.t + 1.2; senzuUntil = Math.max(senzuUntil, st.t + 10); const g = Math.max(200, rate() * 40); gain(g, yam.sx, yam.sy - 10, true); ui.event('yamcha: "i\'m fine!" — senzu ×1.5 for 10s'); ui.sfx && ui.sfx('coin'); return; }
       if (greg && greg.sx !== undefined && Math.hypot(px - greg.sx, py - (greg.sy - 4)) < 10) { const g = Math.max(300, rate() * 120) * (1 + .5 * (S.gregWins || 0)); S.gregWins = (S.gregWins || 0) + 1; if (S.gregWins >= 5 && !S.ach.greg5) { ach('greg5'); S.spirit = 1; setTimeout(() => ui.event('king kai taught you the spirit bomb — it charges on its own, tap the ball'), 4200); } gain(g, greg.sx, greg.sy - 10, true); ui.event(`you caught gregory! +${fmtShort(Math.round(g))} — race ${S.gregWins} won`); ui.sfx && ui.sfx('coin'); burst(greg.sx, greg.sy - 4, [0xffffff, 0xd8a868, 0xa8743a], 18, 120); greg = null; return; }
       if (kai && kai.sx !== undefined && !kai.laughed && Math.hypot(px - kai.sx, py - (kai.sy - 8)) < 12) { kai.laughed = true; laughUntil = st.t + 10; ui.event('ha! ha! ha! — ×1.25 for 10s'); ui.sfx && ui.sfx('coin'); burst(kai.sx, kai.sy - 14, [0xffffff, 0xbfe9ff, 0x3a7ad8], 14, 90); return; }
       if (gero && Math.hypot(px - gero.x, py - (gero.y - gero.spr.h / 2)) < 16) { const g = Math.max(gero.drained * 2, rate() * 20); gain(g, gero.x, gero.y - gero.spr.h - 4, true); ach('gero'); ui.event(`${gero.name} lets go — you take it all back, twice over: +${fmtShort(Math.round(g))}`); burst(gero.x, gero.y - 10, [0xffffff, 0xffe08a, 0xe0473e], 20, 160); ui.sfx && ui.sfx('hit'); gero = null; return; }
@@ -1527,8 +1528,12 @@ GAMES.push({
         if (ship.left && t - ship.left > 1.5) ship = null;
       }
       // yamcha turns up flattened in a crater now and then; help him up for a senzu
-      if (!yam && session > 100 && !shen && (nextYam -= dt) < 0) { yam = { c: capPt(.3 + Math.random() * .6, Math.random() * 6.28), until: t + 14 }; ui.event('yamcha got wrecked again — tap him'); nextYam = 200 + Math.random() * 80; }
+      if (!yam && session > 100 && !shen && (nextYam -= dt) < 0) { yam = { c: capPt(.3 + Math.random() * .6, Math.random() * 6.28), boom: t + 2.4, until: t + 16 }; ui.event('a saibaman jumps on yamcha…'); nextYam = 200 + Math.random() * 80; }
+      if (yam && yam.boom && t > yam.boom) { yam.boom = 0; shake = .6; if (yam.sx !== undefined) burst(yam.sx, yam.sy - 6, [0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160); ui.sfx && ui.sfx('boom'); ui.event('BOOM. yamcha got wrecked again — tap him'); }
       if (yam && t > yam.until) yam = null;
+      // a saibaman clings to you now and then: tap it off before it blows
+      if (!cling && session > 150 && !shen && !boss && !tour && !S.world && (nextCling -= dt) < 0) { cling = { boom: t + 3.5 }; ui.event('a saibaman is hugging you — tap it off!'); nextCling = 240 + Math.random() * 120; }
+      if (cling && t > cling.boom) { const k = kidScreen(10); burst(k.x, k.y, [0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160); shake = .8; flashT = .6; tiredUntil = Math.max(tiredUntil, t + 6); ui.sfx && ui.sfx('boom'); ui.event('BOOM — you got yamcha\'d. tired ×0.75 for 6s'); cling = null; }
       // king kai takes his car for a spin round the road; tap it for a ride
       if (!car && session > 70 && !shen && (nextCar -= dt) < 0) { car = { phi: phi + Math.PI, until: t + 16 }; ui.event("king kai's out for a drive — tap his car"); nextCar = 170 + Math.random() * 60; }
       if (car) { car.phi += .85 * dt; if (t > car.until) car = null; }
@@ -1697,6 +1702,7 @@ GAMES.push({
         const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for (let k = 0; k < 8; k++) fx.add({ x: kd.x + (Math.random() - .5) * 30, y: kd.y, vx: (Math.random() - .5) * 60, vy: -20 - Math.random() * 30, drag: 2, life: .5, s: 2, c: [0xffffff, 0xe7e2d4], raw: true }); }
         blitZ(APE[step % 2], kd.x, kd.y, kd.ang, flip, lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
       } else blitZ(spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+      if (cling) blitZ(SAIBA, kd.x - Math.cos(kd.ang) * 5, kd.y - Math.sin(kd.ang) * 5, kd.ang, !flip, lift + 6 + (cling.boom - t < 1 && Math.floor(t * 16) % 2 ? 1 : 0), depth + 1, .9);   // hugging his back, shaking before it blows
       // piccolo meditates above the planet; king kai and gregory stand on it
       if (S.piccolo > 0) { const c = capPt(.6, .9), v = M3.ap(M, V.mul(c, 1.28)); piccoloAt = v[2] > -.2 ? { x: cx + v[0] * R, y: cy - v[1] * R + st.bob + Math.sin(t * 1.6) * 2 } : null; if (piccoloAt) blitZ(PICCOLO, piccoloAt.x, piccoloAt.y, 0, false, 0, v[2] * R + 8, .95); } else piccoloAt = null;
       if (car) { const c = roadPt(car.phi), v = M3.ap(M, c), ahead = M3.ap(M, roadPt(car.phi + .05)), ax = cx + ahead[0] * R; if (v[2] > .05) { car.sx = cx + v[0] * R; car.sy = cy - v[1] * R + st.bob; blitZ(KAICAR, car.sx, car.sy, Math.atan2(v[0], v[1]), ax > car.sx, 0, v[2] * R + 6, .9); } else car.sx = undefined; }
@@ -1727,7 +1733,7 @@ GAMES.push({
       } else kril.sx = undefined; }
       if (satan && t > satan.t0) { const v = M3.ap(M, satan.c), up = Math.min(1, (t - satan.t0) / .3); if (v[2] > .05) { satan.sx = cx + v[0] * R; satan.sy = cy - v[1] * R + st.bob; blitZ(SATAN, satan.sx, satan.sy, Math.atan2(v[0], v[1]), Math.floor(t * 2) % 2 === 0, (up - 1) * 18 + Math.abs(Math.sin(t * 5)) * 3, v[2] * R + 6, 1); } else satan.sx = undefined; }
       if (ship) { const v = M3.ap(M, ship.c), land = Math.min(1, (t - ship.t0) / 1.2), lift = ship.left ? Math.pow((t - ship.left) / 1.5, 2) : 0; if (v[2] > .05) { ship.sx = cx + v[0] * R; ship.sy = cy - v[1] * R + st.bob; blitZ(SHIP, ship.sx, ship.sy, Math.atan2(v[0], v[1]), false, (1 - land) * 70 + lift * 90, v[2] * R + 5, .9); } }
-      if (yam) { const v = M3.ap(M, yam.c); if (v[2] > .05) { yam.sx = cx + v[0] * R; yam.sy = cy - v[1] * R + st.bob + 3; decal(YAMCHA, v, 1.1); } else yam.sx = undefined; }
+      if (yam) { const v = M3.ap(M, yam.c); if (v[2] > .05) { yam.sx = cx + v[0] * R; yam.sy = cy - v[1] * R + st.bob + 3; if (yam.boom) blitZ(SAIBA, yam.sx, yam.sy - 3, Math.atan2(v[0], v[1]), false, Math.abs(Math.sin(t * 14)) * 2, v[2] * R + 6, 1.1); else decal(YAMCHA, v, 1.1); } else yam.sx = undefined; }
       if (greg) { const k = Math.min(1, (t - greg.hopT) / .35), from = greg.from || greg.c, c = V.norm(V.add(V.mul(from, 1 - k), greg.c, k)), v = M3.ap(M, c); if (v[2] > .05) { greg.sx = cx + v[0] * R; greg.sy = cy - v[1] * R + st.bob; blitZ(GREGORY, greg.sx, greg.sy, Math.atan2(v[0], v[1]), k < 1 && from[0] > greg.c[0], Math.sin(k * Math.PI) * 9, v[2] * R + 4, 1.1); } else greg.sx = undefined; }
       if (S.partner > 0 && fuseUntil <= t) {
         const mv = M3.ap(M, roadPt(phi - .32)), mx = cx + mv[0] * R, my = cy - mv[1] * R + st.bob, ma = Math.atan2(mv[0], mv[1]);
@@ -1888,6 +1894,7 @@ GAMES.push({
     if (/struggle/.test(HASH)) { session = 111; nextBoss = 0; S.galick = Math.max(1, S.galick); }   // preview hook: #struggle (a villain who fires back)
     if (/frieza/.test(HASH)) { session = 151; nextShip = 0; }   // preview hook: #frieza (his ship lands)
     if (/yamcha/.test(HASH)) { session = 101; nextYam = 0; }   // preview hook: #yamcha
+    if (/cling/.test(HASH)) { session = 151; nextCling = 0; }   // preview hook: #cling (a saibaman hugs you)
     if (/gregory/.test(HASH)) { session = 61; nextGreg = 0; }   // preview hook: #gregory (the race)
     if (/tournament/.test(HASH)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
     if (/shenron/.test(HASH)) setTimeout(() => summon(+(HASH.match(/shenron(\d)/) || [0, 1])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
