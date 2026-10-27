@@ -321,6 +321,10 @@ body.night .game { background-color: #07070d !important; background-image: radia
 
 /* the share popup: a preview of the card, then share or download it */
 .share-card { width: min(640px, 100%); }
+.asc-card { width: min(440px, 100%); }
+.asc-body { padding: 16px; display: grid; gap: 10px; line-height: 1.45; }
+.asc-body p { margin: 0; }
+.asc-body b { color: var(--gold); font-weight: inherit; }
 .share-title { text-transform: uppercase; color: var(--muted); }
 .share-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .share-body img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; image-rendering: pixelated; background: #fcfcfb; }
@@ -371,6 +375,10 @@ body.paozu:not(.night) .game { background: linear-gradient(#eef6f2, #b4d8cc 75%)
     <header><span class="share-title">share your power level</span><button type="button" class="menu-x" id="shareX" aria-label="close">×</button></header>
     <div class="share-body"><img id="shareImg" alt="your power level card"><div class="share-actions"><button type="button" class="share-go" id="shareGo">share</button><button type="button" id="shareDl">download</button></div></div>
   </div></div>
+  <div class="menu" id="ascBox" hidden><div class="menu-card asc-card" role="dialog" aria-modal="true" aria-labelledby="ascTitle">
+    <header><span class="share-title" id="ascTitle">ascend?</span><button type="button" class="menu-x" id="ascX" aria-label="close">×</button></header>
+    <div class="asc-body"><p id="ascLose"></p><p id="ascKeep"></p><div class="share-actions"><button type="button" class="share-go" id="ascGo">ascend</button><button type="button" id="ascNo">not yet</button></div></div>
+  </div></div>
   <footer class="foot gutter" id="foot"><span class="copy"><button type="button" class="snd" id="snd" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="snd" id="share"><span class="long">share score</span><span class="short">share</span></button></span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
   <nav class="tabbar" aria-label="Game menu"><button type="button" data-tab="shop">upgrades <i id="tabCount"></i></button><button type="button" data-tab="train" class="train">train</button><button type="button" data-tab="links">links</button></nav>
   <div class="edge" aria-hidden="true"></div>
@@ -414,7 +422,7 @@ __PLANET__
     shop(items) {
       const el = $('shop');
       const keys = Object.keys(items).join();
-      if (shopBuilt !== keys) { goalKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyFn && buyFn(b.dataset.buy))); shopBuilt = keys; ui.achieved && ui.achieved(); }
+      if (shopBuilt !== keys) { goalKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyFn && (b.dataset.buy === 'ascend' ? askAscend() : buyFn(b.dataset.buy)))); shopBuilt = keys; ui.achieved && ui.achieved(); }
       $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
       for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + v.level : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
     },
@@ -523,6 +531,13 @@ __PLANET__
     try { await navigator.clipboard.writeText(`${text} ${url}`); flash($('shareGo'), 'copied text'); } catch (_) {}
   });
   $('shareDl').addEventListener('click', () => { if (!cardUrl) return; const a = document.createElement('a'); a.href = cardUrl; a.download = 'highskore.png'; a.click(); });
+  // ascending wipes the run, so it asks first and says exactly what goes and what stays
+  const askAscend = () => { const a = game.ascendInfo(); $('ascLose').innerHTML = `<b>you lose</b> all ${a.pl} power, every upgrade, and your form (back to base).`; $('ascKeep').innerHTML = `<b>you keep</b> ki seeds and the training tree, achievements, characters, wishes and saga progress. you get <b>+${a.seeds} ki seeds</b>: everything goes from ×${a.now} to <b>×${a.next}</b>${a.keep ? `, and head start keeps ${a.keep}% of your power` : ''}.`; $('ascBox').hidden = false; $('ascGo').focus(); };
+  const closeAsc = () => { $('ascBox').hidden = true; };
+  $('ascGo').addEventListener('click', () => { closeAsc(); buyFn && buyFn('ascend'); });
+  $('ascNo').addEventListener('click', closeAsc); $('ascX').addEventListener('click', closeAsc);
+  $('ascBox').addEventListener('click', e => { if (e.target === $('ascBox')) closeAsc(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeAsc(); });
   $('shareX').addEventListener('click', () => { $('shareBox').hidden = true; });
   $('shareBox').addEventListener('click', e => { if (e.target === $('shareBox')) $('shareBox').hidden = true; });
   addEventListener('keydown', e => { if (e.key === 'Escape') $('shareBox').hidden = true; });
