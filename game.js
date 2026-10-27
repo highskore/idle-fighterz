@@ -1371,6 +1371,8 @@ const OOLONG = shapeSprite(18, 21, G => {
 // B: "nyah!" — tugging an eyelid down, tongue out
 return { whis: WHIS, chichi: CHICHI, turtle: TURTLE, oolong: OOLONG };
 })();
+// what you surf across roshi's sea on
+const SURFBOARD = shapeSprite(22, 5, G => { G.poly([[1, 2], [4, 0.5], [18, 0.5], [21.5, 2], [18, 3.5], [4, 3.5]], 'b'); G.rect(4, 2, 15, 1, 'r'); }, { o: 0x1c1410, b: 0xfff4dc, B: 0xd8c8a8, r: 0xe0402e }, { b: 'B' });
 // roshi's kamehameha, three frames: ki ball at the hip, arms thrust out, the blast at his palms (picked take D: low stance, big shell)
 const ROSHI_KAME = (() => {
 // roshi at max power doing the kamehameha, facing right: ka-me-ha-me (charge at the hip), ha (thrust), HAAA (flare at the palms)
@@ -1914,7 +1916,7 @@ GAMES.push({
       houses([[1.0, 3.5, .1], [.45, 5.3, .1], [1.15, 4.5, .1], [1.25, 3.85, .09], [.3, 5.85, .09], [.85, .9, .1], [1.25, 5.2, .1], [.85, 2.8, .09], [1.25, .2, .1]]);
 
     }
-    // kame house: an island cap with roshi's house and palms, a sandbar for the road, open sea all round
+    // kame house: an island cap with roshi's house and palms, open sea all round; you surf across it
     let kh = null;   // { house, roshi }: where the sprites stand
     function kameScenery() {
       const palm = (th, a, k = 1, lean = 0) => {
@@ -1931,7 +1933,8 @@ GAMES.push({
     // the sea shader: e is how far inland a point is (negative is out to sea); sand, wet sand, a line of surf, shallows, then deep water
     function shadeKame(nb, lum, x, y) {
       const c = V.dot(nb, N), w = vnoise3(nb[0] * 5 + 3, nb[1] * 5, nb[2] * 5 + 7) - .5, t = st.t;
-      const e = Math.max(c - .66 + w * .1, .06 - Math.abs(c));
+      const e = c - .66 + w * .1;
+      if (e < -.1 && Math.abs(c) < .02) { const a = Math.atan2(V.dot(nb, E2), V.dot(nb, E1)), back = ((phi - a) % 6.283 + 6.283) % 6.283; if (back < .9 && bayer(x, y) < (1 - back / .9) * .9) return lum > .35 ? 0xffffff : 0xcfe6f2; }   // your wake
       if (e > .03) return tone(TONES.road, lum + w * .35, x, y);
       if (e > 0) return tone(TONES.band, lum, x, y);
       if (e > -.02 - .01 * Math.sin(t * 2.2 + (nb[0] + nb[2]) * 20)) return lum + (bayer(x, y) - .5) * .3 > .45 ? 0xffffff : 0xcfe6f2;   // surf
@@ -2748,11 +2751,14 @@ GAMES.push({
       // kid (and the monkey) against the depth buffer
       const kd = kidScreen(), set = fuseUntil > t ? HERO().fused : HERO().forms[S.form];
       const ahead = M3.ap(M, roadPt(phi + .05)), ax = cx + ahead[0] * R, flip = ax < kd.x;
-      const spr = poseUntil > t || struggle ? set.pose : jumpH > 1 ? set.run[0] : set.run[Math.floor(t * (9 + sprint * 10)) % 4];
-      const lift = jumpH + (riding > 0 ? 9 : 0), depth = kd.v[2] * R + 6; flipNow = flip; liftNow = lift;
+      const surf = S.world === 6;
+      const spr = poseUntil > t || struggle ? set.pose : jumpH > 1 || surf ? set.run[0] : set.run[Math.floor(t * (9 + sprint * 10)) % 4];
+      const lift = jumpH + (riding > 0 ? 9 : 0) + (surf ? 3 + Math.sin(t * 4) : 0), depth = kd.v[2] * R + 6; flipNow = flip; liftNow = lift;
       // auras and sparks only while he's in view: behind the planet the depth buffer hides him, and must hide them too
       const seen = (() => { const x = Math.round(kd.x + Math.sin(kd.ang) * (lift + 8)), y = Math.round(kd.y - Math.cos(kd.ang) * (lift + 8)); return x < 0 || y < 0 || x >= st.W || y >= st.H || zb[y * st.W + x] <= depth + 4; })();
       if (riding > 0) blitZ(puff, kd.x, kd.y, kd.ang, flip, lift - 9, depth + 1, 1.25, true);
+      if (surf && !riding) { blitZ(SURFBOARD, kd.x, kd.y, kd.ang, flip, lift - 2, depth + 1, 1.1);   // the board under you, bobbing on the swell, kicking up spray
+        if (seen && Math.random() < .45) { const bx = kd.x + Math.sin(kd.ang) * lift + (flip ? 10 : -10) * Math.cos(kd.ang), by = kd.y - Math.cos(kd.ang) * lift + (flip ? 10 : -10) * Math.sin(kd.ang); fx.add({ x: bx, y: by, vx: (flip ? 20 : -20) + (Math.random() - .5) * 20, vy: -20 - Math.random() * 25, drag: 2, life: .5, c: [0xffffff, 0xcfe6f2], raw: true }); } }
       if (seen && (aura || boostUntil > t || riding > 0 || S.form > 0 || kaioUntil > t || S.aura)) for (let i = 0; i < (S.form > 0 ? 4 : 3); i++) { const a = kd.ang + (Math.random() - .5) * .9, r = 4 + Math.random() * 8; fx.add({ x: kd.x + Math.sin(kd.ang) * (lift + 10) + Math.cos(a) * r, y: kd.y - Math.cos(kd.ang) * (lift + 10) + Math.sin(a) * r * .5, vx: Math.sin(kd.ang) * 20, vy: -Math.cos(kd.ang) * 30, life: .5, s: 1, grow: 1, c: kaioUntil > t ? [0xffffff, 0xff9a8a, 0xe0332b] : !S.form && S.aura ? AURAS[(S.aura - 1) % AURAS.length] : FORMS[S.form].aura, raw: true }); }
       // super saiyan 2+: crackling sparks around him
       if (seen && FORMS[S.form].sparks && Math.random() < .35) { let x = kd.x + (Math.random() - .5) * 22, y = kd.y - Math.cos(kd.ang) * (lift + 14) + (Math.random() - .5) * 26; for (let k = 0; k < 6; k++) { st.px(x, y, FORMS[S.form].sparks); x += (Math.random() - .5) * 4; y += 1 + Math.random() * 2; } }
