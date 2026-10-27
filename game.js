@@ -301,49 +301,203 @@ const NAPPA = shapeSprite(28, 34, G => {
   for (const pts of [[[5, 16], [1.5, 13], [4, 8]], [[23, 16], [26.5, 13], [24, 8]]]) { G.line(pts, 5.4, 5, 'o'); G.line(pts, 3.6, 3.2, 's'); }   // both arms up, flexing
   G.ell(4, 7, 1.9, 1.9, 'w'); G.ell(24, 7, 1.9, 1.9, 'w');                                                                   // white gloves
 }, { o: 0x1a1210, s: 0xe8b48a, S: 0xc08460, k: 0x15110f, w: 0xf6f4ee, W: 0xc8c4b8, m: 0x7a3a2a, y: 0xd8b05a, Y: 0x9a7a3a, a: 0x3a2e2a, A: 0x2a201c, b: 0x2a2a46 }, { s: 'S', y: 'Y', w: 'W' });
-// raditz: a mane of black hair down to his knees, green scouter, saiyan armour, arms folded
-const RADITZ = shapeSprite(26, 34, G => {
-  G.poly([[8, 3], [18, 3], [22, 10], [23, 29], [20, 33], [15, 30], [11, 33], [6, 33], [3, 29], [4, 10]], 'h');   // the mane, behind him
-  G.ell(13, 8, 3.8, 4, 's'); G.rect(11, 8, 2, 1, 'k'); G.rect(15, 8, 2, 1, 'k'); G.rect(12, 11, 3, 1, 'S');   // head, eyes, sneer
-  G.poly([[9.5, 4], [16.5, 4], [17, 6.5], [9, 6.5]], 'h'); G.rect(16, 6, 3, 2, 'g');                          // fringe, scouter
-  G.ell(8, 15, 3, 2, 'y'); G.ell(18, 15, 3, 2, 'y');                                                          // shoulder pads
-  G.poly([[9, 14], [17, 14], [16.5, 22], [9.5, 22]], 'a'); G.rect(9, 22, 8, 1, 't');                          // chest armour, tail as a belt
-  G.line([[11, 23], [10, 31]], 3, 2.6, 'b'); G.line([[15, 23], [16, 31]], 3, 2.6, 'b');                     // legs
-  G.rect(8, 31, 4, 2, 'w'); G.rect(14, 31, 4, 2, 'w');                                                        // boots
-  G.line([[8, 16], [9, 20], [17, 19]], 2.6, 2.2, 'b'); G.line([[18, 16], [17, 20], [9, 19]], 2.6, 2.2, 'B');   // arms folded
-}, { o: 0x120c10, h: 0x1a1622, H: 0x2c2838, s: 0xe8b48a, S: 0xb07a58, k: 0x111111, g: 0x5ae07a, y: 0x7a5a3a, Y: 0x553e28, a: 0xf2f0e8, A: 0xc8c4b8, t: 0x6a4a2a, b: 0x2a2a46, B: 0x1c1c30, w: 0xf6f4ee, W: 0xc8c4b8 }, { a: 'A', y: 'Y', w: 'W', h: 'H' });
-// vegeta in his saiyan-saga armour: flame hair with a widow's peak, scouter, white chest plate, gold shoulders, arms folded
-const VEGETA_V = shapeSprite(24, 32, G => {
-  G.poly([[7.5, 9], [6.5, 3], [9, 1], [12, -1], [15, 1], [18, 3], [17.5, 9], [15, 6], [10, 6]], 'h');       // flame hair
-  G.ell(12.5, 9, 3.6, 3.8, 's'); G.poly([[9.5, 8.6], [12, 9.4], [12, 9.8], [9.5, 9.2]], 'k'); G.poly([[15.5, 8.6], [13, 9.4], [13, 9.8], [15.5, 9.2]], 'k');   // face, scowl
-  G.set(10, 10, 'k'); G.set(14, 10, 'k'); G.rect(11, 12, 3, 1, 'S'); G.rect(15, 8, 3, 2, 'r');              // eyes, mouth, red scouter
-  G.ell(7.5, 15.5, 2.8, 1.8, 'y'); G.ell(17.5, 15.5, 2.8, 1.8, 'y');                                        // gold shoulders
-  G.poly([[8.5, 14], [16.5, 14], [16, 21.5], [9, 21.5]], 'a'); G.rect(9, 21, 7, 1, 'y');                    // chest plate
-  G.line([[10.5, 22], [10, 29]], 2.8, 2.4, 'b'); G.line([[14.5, 22], [15, 29]], 2.8, 2.4, 'b');             // legs
-  G.rect(8, 29, 4, 2, 'w'); G.rect(13, 29, 4, 2, 'w');                                                      // boots
-  G.line([[8, 16], [9, 19.5], [16, 19]], 2.4, 2, 'b'); G.line([[17, 16], [16, 19.5], [9, 19]], 2.4, 2, 'B'); G.set(9, 19, 'w'); G.set(16, 19, 'w');   // arms folded, gloves
-}, { o: 0x120c18, h: 0x1a1826, H: 0x2a2a3e, s: 0xf6c8a2, S: 0xb88060, k: 0x120c18, r: 0xe0302a, y: 0xe8c040, Y: 0xa8841a, a: 0xf4f4f6, A: 0xc2c6d2, b: 0x2b4fc8, B: 0x1c3584, w: 0xffffff, W: 0xc8ccda }, { a: 'A', y: 'Y', w: 'W' });
-// broly, legendary: a wild green-gold mane, blank white eyes, huge bare chest, gold necklace and belt, baggy white trousers
-const BROLY = shapeSprite(30, 38, G => {
-  G.poly([[6, 11], [3, 3], [8, 5], [10, -1], [15, 3], [20, -1], [22, 5], [27, 3], [24, 11], [20, 8], [10, 8]], 'h');   // the mane
-  G.ell(15, 11, 4, 4.4, 's'); G.rect(12, 10, 2, 1, 'w'); G.rect(16, 10, 2, 1, 'w');                        // head, white eyes
-  G.poly([[11.5, 9], [14, 10], [11.5, 10]], 'k'); G.poly([[18.5, 9], [16, 10], [18.5, 10]], 'k'); G.rect(13, 13, 4, 1, 'k');   // brows, gritted teeth
-  G.ell(15, 21, 8.4, 5.8, 's'); G.set(12, 20, 'S'); G.set(18, 20, 'S'); G.rect(15, 22, 1, 3, 'S');          // the chest
-  G.rect(10, 16, 10, 1, 'y'); G.ell(15, 17.5, 1.4, 1, 'y');                                                 // gold necklace
-  G.rect(9, 26, 12, 2, 'y'); G.rect(14, 26, 2, 2, 'r');                                                     // belt, red gem
-  G.poly([[8, 28], [22, 28], [25, 36], [17, 35], [15, 31], [13, 35], [5, 36]], 'w');                       // baggy trousers
-  G.rect(5, 36, 6, 2, 'k'); G.rect(19, 36, 6, 2, 'k');                                                      // shoes
-  for (const pts of [[[7, 19], [4, 25], [5, 30]], [[23, 19], [26, 25], [25, 30]]]) { G.line(pts, 5.6, 5, 'o'); G.line(pts, 3.8, 3.4, 's'); }   // arms hanging, fists clenched
-  G.rect(3, 24, 4, 1, 'y'); G.rect(24, 24, 4, 1, 'y');                                                       // gold armbands
-}, { o: 0x14100c, h: 0xc8f04a, H: 0x8ab82a, s: 0xe8b48a, S: 0xb88060, k: 0x111111, w: 0xf6f4ee, W: 0xc0bcae, y: 0xf2c84a, Y: 0xb88a1a, r: 0xd8241e }, { h: 'H', w: 'W', y: 'Y', s: 'S' });
-// krillin: bald with six dots, orange gi with the blue undershirt and belt
-const KRILLIN = shapeSprite(14, 21, G => {
-  G.ell(7, 5, 3.4, 3.6, 's'); for (const [x, y] of [[5, 2], [7, 2], [9, 2], [6, 3], [8, 3]]) G.set(x, y, 'k');   // head and dots
-  G.set(5, 5, 'k'); G.set(9, 5, 'k'); G.rect(6, 7, 3, 1, 'S');                                               // eyes, grin
-  G.poly([[3, 9], [11, 9], [11, 15], [3, 15]], 'g'); G.rect(6, 9, 2, 2, 'b'); G.rect(3, 14, 8, 1, 'b');      // gi, undershirt, belt
-  G.line([[3, 10], [1.5, 14]], 1.8, 1.6, 'g'); G.line([[11, 10], [12.5, 14]], 1.8, 1.6, 'g'); G.set(1, 15, 'b'); G.set(13, 15, 'b');   // arms, wristbands
-  G.line([[5, 15], [5, 19]], 2.2, 2, 'g'); G.line([[9, 15], [9, 19]], 2.2, 2, 'g'); G.rect(4, 19, 2, 1, 'k'); G.rect(8, 19, 2, 1, 'k');   // legs, shoes
-}, { o: 0x2a1406, s: 0xf6c8a2, S: 0xc08a6a, k: 0x2a1a14, g: 0xf08a24, G: 0xc0641a, b: 0x2a5ad8 }, { g: 'G', s: 'S' });
+// the saga villains, krillin and mr. satan: big chibi heads so faces read, after the gba-era sprites
+// villains, round 2: chibi LoG II / Supersonic Warriors proportions (big head, big hair) so the faces read
+const mir = (W, pts) => pts.map(([x, y]) => [W - x, y]);
+const sym = (W, half) => [...half, ...mir(W, half).reverse()];
+// a stroke with its own dark rim, so a limb stays readable over hair/armour of a similar tone
+const oline = (G, pts, w0, w1, c) => { G.line(pts, w0 + 2, w1 + 2, 'o'); G.line(pts, w0, w1, c); };
+
+// ---------- raditz ----------
+const RAD_PAL = { o: 0x0c0a12, h: 0x1e1f2e, H: 0x111119, j: 0x3a4468, s: 0xf0bc8e, S: 0xc08060, k: 0x140e14, w: 0xffffff, W: 0xc8ccd4, g: 0x48e070, G: 0xb0ffc0, n: 0x1e8a44, a: 0x2e2c2c, A: 0x1c1a1a, q: 0x8e8a86, y: 0x8a5a32, Y: 0x5e3c20, t: 0x8e5e34, T: 0x5e3c20, u: 0xc89a5a, b: 0x2c2c4a, B: 0x1c1c30, v: 0x9a44d8, V: 0x62289a };
+const RAD_SH = { h: 'H', a: 'A', y: 'Y', t: 'T', b: 'B', w: 'W', v: 'V' };
+const RAD_MANE = {
+  // right half of the outline, top centre round to the bottom
+  long: [[13, 0.6], [15.2, 3], [17.6, -0.2], [18.6, 3.4], [23, 1.6], [21.2, 6.2], [25.8, 7.6], [22, 10.6], [25.8, 15], [21.8, 15.6], [25, 21.6], [21, 21], [22.6, 28], [19.4, 25.6], [19.6, 32], [16.4, 28]],
+  fan: [[13, 0.5], [15, 3], [17, 0], [18.5, 3], [22.5, 1], [21, 5.5], [25.6, 5], [22.4, 9.5], [25.6, 12.5], [22.2, 14.5], [25.4, 19], [21.8, 20], [24, 25.5], [20.4, 24.5], [21, 31], [17.6, 27]],
+};
+function raditz(o = {}) {
+  const W = 26, pose = o.pose || 'hips';
+  return shapeSprite(W, 34, G => {
+    G.poly(sym(W, RAD_MANE[o.mane || 'long']), 'h');
+    for (const pts of [[[17.5, 3.5], [20.5, 7], [23, 11.5]], [[20.5, 13.5], [22.5, 18]], [[19.6, 19.5], [20.6, 25]]]) { G.line(pts, 1, 1, 'j'); G.line(mir(W, pts), 1, 1, 'j'); }
+    // legs dangling as he hovers, rimmed so they stand off the mane
+    oline(G, [[11, 24], [10.5, 30]], 3.6, 3, 'b'); oline(G, [[15, 24], [15.5, 30]], 3.6, 3, 'b');
+    G.rect(9, 26, 3, 1, 'v');                                                                              // purple leg sash
+    for (const x of [8.6, 13.6]) { G.poly([[x - 1, 29], [x + 4.8, 29], [x + 4.4, 33], [x - .6, 33]], 'o'); G.poly([[x, 29.5], [x + 3.8, 29.5], [x + 3.4, 32.5], [x + 1.9, 33.3], [x + .4, 32.5]], 'w'); }
+    G.rect(9, 32, 3, 1, 'y'); G.rect(14, 32, 3, 1, 'y');                                                  // boot tips
+    if (pose === 'up') oline(G, [[19, 16], [22, 11], [22.5, 6.5]], 3, 2.6, 's');                           // right arm raised
+    // torso: black plate with grey trim, brown shoulder straps, tail wound round as a belt
+    G.poly([[7.5, 14], [18.5, 14], [18.2, 25.5], [7.8, 25.5]], 'o');
+    G.poly([[8.5, 15], [17.5, 15], [17.2, 23.5], [8.8, 23.5]], 'a');
+    G.rect(9, 15, 8, 1, 'q'); G.line([[9.5, 19.5], [13, 20.5], [16.5, 19.5]], 1, 1, 'q');
+    const flap = [[16.4, 14.6], [20.6, 14.8], [21.2, 18.4], [17.4, 18.8]]; G.poly(flap, 'y'); G.poly(mir(W, flap), 'y');
+    G.rect(9, 23, 8, 2, 't'); G.set(10, 23, 'u'); G.set(13, 24, 'u'); G.set(16, 23, 'u');
+    G.rect(11, 13, 4, 2, 's');                                                                             // neck
+    const arm = (pts, band, fist) => { oline(G, pts, 2.8, 2.4, 's'); G.ell(band[0], band[1], 1.5, 1, 'v'); G.ell(fist[0], fist[1], 1.5, 1.5, 's'); };
+    const hip = [[7, 17], [4.5, 20.5], [8, 23]], side = [[6.5, 17], [5, 21], [5, 25]];
+    if (pose === 'hips') { arm(hip, [5.4, 21.8], [8.4, 23]); arm(mir(W, hip), [W - 5.4, 21.8], [W - 8.4, 23]); }
+    if (pose === 'down') { arm(side, [5, 23.4], [5, 25.8]); arm(mir(W, side), [21, 23.4], [21, 25.8]); }
+    if (pose === 'up') { arm(side, [5, 23.4], [5, 25.8]); G.poly(flap, 'y'); G.ell(22.6, 9.6, 1.5, 1, 'v'); G.ell(22.6, 6.4, 1.8, 1.8, 's'); G.set(23, 5, 'S'); G.set(22, 5, 'S'); }
+    if (pose === 'fold') { oline(G, [[7, 17], [8, 19.6], [16.5, 19]], 2.6, 2.4, 's'); oline(G, [[19, 17], [18, 22], [9.5, 22]], 2.6, 2.4, 's'); G.rect(8, 19, 2, 1, 'v'); G.rect(16, 21, 2, 2, 'v'); }
+    // head: big, Vegeta-style widow's peak, heavy brows, smirk; scouter over his left eye
+    G.ell(13, 9.4, 4.6, 4.8, 's');
+    G.poly([[8, 3.5], [18, 3.5], [18.2, 9], [17, 7.2], [13, 9.4], [9, 7.2], [7.8, 9]], 'h');
+    G.rect(8, 8, 1, 3, 'h'); G.rect(17, 8, 1, 3, 'h');
+    for (const [x, y] of [[9, 9], [10, 9], [10, 10], [11, 10], [15, 9], [16, 9], [14, 10], [15, 10], [11, 11], [14, 11]]) G.set(x, y, 'k');
+    G.set(10, 11, 'w'); G.set(15, 11, 'w'); G.set(13, 12, 'S');
+    if (o.mouth === 'grin') { G.rect(11, 13, 4, 1, 'w'); G.set(10, 13, 'k'); G.set(15, 12, 'k'); G.set(14, 13, 'W'); }
+    else { G.set(11, 13, 'k'); G.set(12, 13, 'k'); G.set(13, 13, 'k'); G.set(14, 12, 'k'); }
+    G.rect(14, 9, 3, 3, 'g'); G.set(14, 9, 'G'); G.set(15, 9, 'G'); G.set(15, 11, 'n'); G.rect(17, 8, 2, 4, 'w'); G.set(18, 11, 'W'); G.set(17, 12, 'q');
+  }, RAD_PAL, RAD_SH);
+}
+const RADITZ = raditz({ pose: 'hips' });
+const VEG_PAL = { o: 0x0c0a18, h: 0x1c1a28, H: 0x0f0e18, j: 0x38385a, s: 0xf6c8a0, S: 0xc48c66, k: 0x120c18, w: 0xffffff, W: 0xbcc2d4, r: 0xff3a30, R: 0xffb0a0, x: 0x3ad070, X: 0xb8ffc8, a: 0xf6f6f8, A: 0xc0c6d6, y: 0xf0c838, Y: 0xb08a1a, b: 0x2f56d8, B: 0x1c3592 };
+const VEG_SH = { h: 'H', a: 'A', y: 'Y', b: 'B', w: 'W' };
+const shift = (G, dy) => { const m = p => p.map(([x, y]) => [x, y + dy]); return { ell: (x, y, a, b, c) => G.ell(x, y + dy, a, b, c), rect: (x, y, w, h, c) => G.rect(x, y + dy, w, h, c), poly: (p, c) => G.poly(m(p), c), line: (p, a, b, c) => G.line(m(p), a, b, c), set: (x, y, c) => G.set(x, y + dy, c) }; };
+// the flame: a solid crown plus tapering spikes, [base, tip] pairs
+const VEG_HAIR = {
+  flame: [[[12, 7], [12, 0]], [[10, 7], [8, 0.8]], [[14, 7], [16, 0.8]], [[8.4, 8.6], [4.4, 3.2]], [[15.6, 8.6], [19.6, 3.2]]],
+  tall: [[[12, 7], [11.4, -0.2]], [[10, 7], [7.4, 0.6]], [[14, 7], [15.8, 0.2]], [[8.4, 8.6], [3.8, 2.6]], [[15.6, 8.6], [20, 2]], [[13, 7], [19, 0.6]]],
+};
+function vegeta(o = {}) {
+  const W = 24, pose = o.pose || 'fold', lens = o.green ? 'x' : 'r', glint = o.green ? 'X' : 'R';
+  return shapeSprite(W, 34, G0 => {
+    // the flame of hair is drawn on the full grid; everything else sits two rows lower
+    G0.poly([[7.2, 15], [7, 9], [7.6, 5.6], [12, 4.4], [16.4, 5.6], [17, 9], [16.8, 15]], 'h');
+    for (const [b, t] of VEG_HAIR[o.hair || 'flame']) { G0.line([b, t], 3.4, .8, 'h'); G0.line([[b[0] + (t[0] - b[0]) * .3 - .5, b[1] + (t[1] - b[1]) * .3], [b[0] + (t[0] - b[0]) * .65 - .5, b[1] + (t[1] - b[1]) * .65]], 1, 1, 'j'); }
+    const H = shift(G0, 1);
+    const G = shift(G0, 2);
+    // legs and boots
+    oline(G, [[10, 22], [9.6, 28]], 3.4, 3, 'b'); oline(G, [[14, 22], [14.4, 28]], 3.4, 3, 'b');
+    for (const x of [7.8, 12.4]) { G.poly([[x, 27], [x + 3.8, 27], [x + 3.4, 30.4], [x + 1.9, 31.2], [x + .4, 30.4]], 'w'); G.rect(Math.round(x + 1), 30, 2, 1, 'y'); }
+    if (pose === 'point') oline(G, [[17, 15.5], [20, 11], [20.6, 7]], 2.6, 2.4, 'b');
+    // armour: white chest, gold belly band, gold shoulder pads flaring out flat
+    G.poly([[6.6, 14.4], [17.4, 14.4], [17, 23.4], [7, 23.4]], 'o');
+    G.poly([[7.5, 15], [16.5, 15], [16, 20.5], [8, 20.5]], 'a');
+    G.poly([[8, 20.4], [16, 20.4], [15.6, 22.6], [8.4, 22.6]], 'y');
+    G.rect(10, 21, 4, 1, 'Y');
+    G.poly([[16, 14.4], [21.2, 14.4], [21.6, 16.4], [16.4, 17.2]], 'y'); G.poly(mir(W, [[16, 14.4], [21.2, 14.4], [21.6, 16.4], [16.4, 17.2]]), 'y');
+    G.rect(10, 15, 4, 1, 'b');                                                  // high blue collar
+    const glove = (x, y) => { G.ell(x, y, 1.5, 1.5, 'w'); };
+    if (pose === 'fold') { const l = [[6, 17], [7.4, 19.6], [15.4, 19]], rr = [[18, 17], [16.6, 20.2], [8.6, 20]]; G.line(l, 4.6, 4.4, 'o'); G.line(rr, 4.6, 4.4, 'o'); G.line(l, 2.6, 2.4, 'b'); G.line(rr, 2.6, 2.4, 'B'); glove(8.3, 18.7); glove(15.7, 19.4); }
+    if (pose === 'fists') { const a = [[5.2, 17], [4.4, 21], [5.4, 24]]; oline(G, a, 2.6, 2.4, 'b'); oline(G, mir(W, a), 2.6, 2.4, 'b'); glove(5.4, 24.2); glove(18.6, 24.2); }
+    if (pose === 'point') { const a = [[5.2, 17], [4.6, 20.6], [7.6, 22.4]]; oline(G, a, 2.6, 2.4, 'b'); glove(7.8, 22.4); G.poly(mir(W, [[16, 14.4], [21.2, 14.4], [21.6, 16.4], [16.4, 17.2]]), 'y'); glove(20.6, 7.6); G.rect(20, 4, 1, 3, 'o'); G.set(20, 5, 'w'); G.set(20, 6, 'w'); }
+    if (pose === 'palm') { const a = [[5.2, 17], [4.4, 21], [5.4, 24]]; oline(G, a, 2.6, 2.4, 'b'); glove(5.4, 24.2); oline(G, [[18.6, 16.2], [21, 18.4], [21.4, 20.4]], 2.6, 2.4, 'b'); G.ell(21.4, 21.4, 1.7, 1.7, 'w'); }
+    // head: narrow face, sharp M hairline, heavy scowl, scouter over his left eye
+    { const G = H;
+    G.ell(12, 10.6, 4.4, 4.4, 's'); G.poly([[7.6, 10], [16.4, 10], [16.2, 13.6], [14.4, 15.4], [9.6, 15.4], [7.8, 13.6]], 's');
+    G.poly([[7, 4], [17, 4], [17, 9.8], [15.4, 6.8], [12, 10.2], [8.6, 6.8], [7, 9.8]], 'h');
+    for (const [x, y] of [[8, 9], [9, 9], [9, 10], [10, 10], [15, 9], [14, 9], [14, 10], [13, 10], [10, 11], [13, 11]]) G.set(x, y, 'k');
+    G.set(9, 11, 'w'); G.set(14, 11, 'w'); G.set(12, 12, 'S');
+    if (o.mouth === 'smirk') { G.set(10, 13, 'k'); G.set(11, 13, 'k'); G.set(12, 13, 'k'); G.set(13, 12, 'k'); }
+    else { G.set(10, 13, 'k'); G.set(11, 13, 'k'); G.set(12, 13, 'k'); G.set(13, 13, 'k'); G.set(9, 14, 'S'); G.set(14, 14, 'S'); }
+    G.rect(13, 9, 3, 3, lens); G.set(13, 9, glint); G.rect(16, 8, 2, 4, 'w'); G.set(17, 11, 'W'); }
+  }, VEG_PAL, VEG_SH);
+}
+const VEGETA_V = vegeta({ pose: 'fold' });
+const BRO_PAL = { o: 0x141008, h: 0xc8e040, H: 0x8aa424, j: 0xf2ff9c, s: 0xeab486, S: 0xb87c58, k: 0x1a120c, w: 0xffffff, g: 0xf2c43a, G: 0xa8801a, r: 0xff2a3a, e: 0xc8202c, E: 0x861420, p: 0xf6f4ee, P: 0xc4c2c8, d: 0x3a2a1c, D: 0x241810 };
+const BRO_SH = { h: 'H', g: 'G', e: 'E', p: 'P', s: 'S', d: 'D' };
+const BRO_MANE = {
+  wild: [[15, 0.2], [17, 3], [19.6, -0.2], [20.2, 3.4], [24.4, 1], [22.8, 5.2], [28.6, 4.4], [24.8, 8], [29.6, 10], [25, 11], [28.4, 15.2], [23, 13.4], [20.5, 15], [18, 13]],
+  tall: [[15, -0.4], [16.8, 3], [18.8, -0.4], [19.8, 3.4], [23.4, 0.6], [22.6, 4.6], [28, 2.6], [25, 7.2], [29.6, 7.6], [25.6, 10.4], [29.4, 13.2], [23.6, 12.8], [21, 15], [18, 13]],
+};
+function broly(o = {}) {
+  const W = 30, pose = o.pose || 'down';
+  return shapeSprite(W, 38, G => {
+    G.poly(sym(W, BRO_MANE[o.mane || 'wild']), 'h');
+    for (const pts of [[[19.5, 1.5], [18.6, 5.5]], [[23, 2.4], [20.6, 7]], [[26.4, 5], [22.4, 9]], [[27.6, 9.6], [23.4, 11]]]) { G.line(pts, 1, 1, 'j'); G.line(mir(W, pts), 1, 1, 'j'); }
+    // baggy white trousers, dark boots with gold cuffs
+    G.poly([[8, 26], [22, 26], [26, 33.6], [19.4, 34.6], [15, 30.5], [10.6, 34.6], [4, 33.6]], 'p');
+    G.line([[15, 28], [15, 31]], 1, 1, 'P'); G.line([[9, 28], [7.6, 33]], 1, 1, 'P'); G.line([[21, 28], [22.4, 33]], 1, 1, 'P');
+    for (const x of [6, 19]) { G.rect(x, 34, 5, 1, 'g'); G.poly([[x + .4, 35], [x + 4.6, 35], [x + 4, 37.2], [x + 1, 37.2]], 'd'); }
+    // the slab of a torso: traps, pecs, abs
+    G.poly([[11, 12], [19, 12], [26, 15.4], [24.6, 20], [21.6, 26], [8.4, 26], [5.4, 20], [4, 15.4]], 's');
+    G.ell(5.6, 17.4, 3.6, 3.2, 's'); G.ell(24.4, 17.4, 3.6, 3.2, 's');
+    G.line([[7.8, 15.8], [8.4, 19.6]], 1, 1, 'S'); G.line([[22.2, 15.8], [21.6, 19.6]], 1, 1, 'S'); G.line([[8.6, 20.4], [11, 21.4], [14, 20.6]], 1, 1, 'S'); G.line([[21.4, 20.4], [19, 21.4], [16, 20.6]], 1, 1, 'S');
+    G.line([[15, 17.6], [15, 25]], 1, 1, 'S'); for (const y of [22.6, 24.4]) { G.set(12, Math.floor(y), 'S'); G.set(17, Math.floor(y), 'S'); }
+    G.line([[10, 14.4], [15, 17.4], [20, 14.4]], 1.6, 1.6, 'g'); G.set(15, 17, 'r'); G.set(12, 15, 'G'); G.set(18, 15, 'G');   // gold necklace
+    // gold belt with a red gem, red sash hanging off his left hip
+    G.rect(8, 25, 14, 2, 'g'); G.rect(14, 25, 2, 2, 'r');
+    G.poly([[17, 26.5], [21, 26.5], [21.6, 31], [19.2, 30], [18, 31.4]], 'e');
+    const arm = (a, fist) => { oline(G, a, 4.6, 4, 's'); G.ell(fist[0], fist[1], 2.3, 2.1, 's'); };
+    const hang = [[5, 18], [4, 23], [4.6, 27]];
+    if (pose === 'down') { arm(hang, [4.6, 28.6]); arm(mir(W, hang), [25.4, 28.6]); for (const x of [4.6, 25.4]) { G.rect(Math.round(x - 2.4), 20, 5, 1, 'g'); G.rect(Math.round(x - 2.4), 26, 5, 1, 'g'); } }
+    if (pose === 'flex') for (const f of [p => p, p => mir(W, p)]) { oline(G, f([[23.6, 17], [27, 16.4]]), 4.4, 4, 's'); oline(G, f([[27, 17], [27, 10.6]]), 4, 3.6, 's'); G.ell(...f([[27, 9.6]])[0], 2.1, 2, 's'); G.rect(...f([[25.4, 13]])[0].map(Math.round), 3, 1, 'g'); G.line(f([[25.4, 15.4], [25.4, 17.6]]), 1, 1, 'g'); G.line(f([[26, 13.4], [28, 13.4]]), 1, 1, 'S'); }
+    if (pose === 'reach') { arm(hang, [4.6, 28.6]); G.rect(2, 20, 5, 1, 'g'); G.rect(2, 26, 5, 1, 'g'); oline(G, [[24.6, 17.4], [24, 20.6], [20.6, 22]], 4.4, 4, 's'); G.rect(21, 20, 4, 1, 'g'); G.ell(19.6, 22.2, 3.6, 3.2, 'o'); G.ell(19.6, 22.2, 2.7, 2.4, 's'); for (const x of [18, 19.4, 20.8]) G.line([[x, 20.6], [x, 22.2]], 1, 1, 'S'); G.rect(18, 23, 3, 1, 'S'); }
+    if (pose === 'guard') { const a = [[5, 18], [6, 23], [11, 23]]; arm(a, [11.6, 22.4]); arm(mir(W, a), [18.4, 22.4]); G.rect(5, 21, 3, 2, 'g'); G.rect(22, 21, 3, 2, 'g'); }
+    // little head on a huge body: spiky bangs, gold circlet with a gem, blank white eyes, snarl
+    G.ell(15, 9.4, 3.9, 4.4, 's');
+    G.poly([[10.6, 3], [19.4, 3], [19.4, 7.4], [18.2, 6.4], [17, 7.6], [15.6, 6], [14.4, 7.6], [13, 6], [11.8, 7.6], [10.6, 7.2]], 'h');
+    G.rect(11, 7, 8, 1, 'g'); G.rect(14, 7, 2, 1, 'r');
+    for (const [x, y] of [[12, 8], [13, 8], [16, 8], [17, 8], [11, 8], [18, 8]]) G.set(x, y, 'k');
+    G.rect(12, 9, 2, 1, 'w'); G.rect(16, 9, 2, 1, 'w'); G.set(14, 9, 'S'); G.set(15, 9, 'S');
+    if (o.mouth === 'roar') { G.rect(13, 11, 4, 2, 'k'); G.rect(13, 11, 4, 1, 'w'); }
+    else { G.rect(13, 11, 4, 1, 'w'); G.set(12, 11, 'k'); G.set(17, 11, 'k'); G.rect(13, 12, 4, 1, 'k'); }
+  }, BRO_PAL, BRO_SH);
+}
+const BROLY = broly({ pose: 'guard', mane: 'tall' });
+
+// krillin: peach dome with a cream crown highlight, brown incense dots, tall eyes, navy collar, blue belt with tails
+const krPal = { o: 0x2a1406, s: 0xf8d0a0, S: 0xd09058, h: 0xfff2dc, d: 0xb87440, k: 0x1a1212, m: 0x9a2a2a, g: 0xf8a018, G: 0xd05410, b: 0x2a5ae8, B: 0x1a3098, n: 0x1a2468, w: 0xffffff, K: 0x34343e, p: 0xf07a7a, l: 0x8a5a2a, L: 0x5a3818, c: 0x9fdcff, y: 0xfff27a, Y: 0xf2b830 };
+const krShade = { g: 'G', s: 'S', b: 'B', l: 'L' };
+function krHead(G, x, y, face = 'smile', eyes = face === 'shut' ? 'shut' : 'open') {          // dome centred on pixel x, top row y, 10 rows tall
+  G.ell(x + .5, y + 5, 4.2, 5.1, 's'); G.rect(x - 5, y + 5, 1, 2, 's'); G.rect(x + 5, y + 5, 1, 2, 's');   // dome, ears
+  G.set(x - 1, y + 0, 'h'); G.set(x - 3, y + 2, 'h'); G.set(x - 3, y + 3, 'h');                           // crown highlight
+  for (const i of [-2, 0, 2]) { G.set(x + i, y + 1, 'd'); G.set(x + i, y + 3, 'd'); }                       // six dots
+  if (eyes === 'shut') { G.set(x - 3, y + 6, 'k'); G.set(x - 2, y + 5, 'k'); G.set(x - 1, y + 6, 'k'); G.set(x + 1, y + 6, 'k'); G.set(x + 2, y + 5, 'k'); G.set(x + 3, y + 6, 'k'); }   // happy ^ ^
+  else { G.rect(x - 2, y + 5, 1, 2, 'k'); G.rect(x + 2, y + 5, 1, 2, 'k'); }
+  if (face === 'blush') { G.rect(x - 4, y + 7, 2, 1, 'p'); G.rect(x + 3, y + 7, 2, 1, 'p'); G.set(x - 1, y + 8, 'm'); G.set(x, y + 7, 'm'); G.set(x + 1, y + 8, 'm'); }   // wobbly mouth
+  else if (face === 'open') { G.rect(x - 1, y + 7, 3, 2, 'm'); }
+  else { G.rect(x - 1, y + 8, 3, 1, 'm'); G.set(x - 2, y + 7, 'm'); G.set(x + 2, y + 7, 'm'); }            // grin
+}
+function krBody(G, x, y) {                          // gi from the collar row y down to the boots
+  G.poly([[x - 3.5, y], [x + 4.5, y], [x + 4.5, y + 5], [x - 3.5, y + 5]], 'g');
+  G.rect(x - 1, y, 3, 1, 'n'); G.set(x, y + 1, 'n'); G.set(x - 2, y + 2, 'w');            // navy collar V, chest kanji patch
+  G.line([[x - 1.5, y + 5], [x - 2, y + 7.5]], 2.6, 2.6, 'g'); G.line([[x + 2.5, y + 5], [x + 3, y + 7.5]], 2.6, 2.6, 'g');   // legs
+  G.rect(x - 3, y + 4, 8, 1, 'b'); G.set(x, y + 5, 'b'); G.set(x + 1, y + 6, 'b');          // belt, tails
+  G.rect(x - 4, y + 8, 3, 2, 'K'); G.rect(x + 2, y + 8, 3, 2, 'K');                         // boots
+}
+// krillin A: waving hello with a big open hand, the other hand on his belt
+const KRILLIN = shapeSprite(16, 22, G => {
+  G.line([[9.5, 13], [12.5, 12], [13.5, 7]], 2, 2, 'g'); G.rect(13, 7, 2, 1, 'b'); G.rect(13, 4, 2, 3, 's'); G.set(12, 3, 's'); G.set(14, 3, 's'); G.set(15, 5, 's');   // waving arm, open hand
+  krHead(G, 6, 1, 'grin'); krBody(G, 6, 11);
+  G.line([[2.5, 12], [1.5, 14.5]], 2, 2, 'g'); G.set(1, 15, 'b'); G.set(2, 15, 's');          // arm down to the belt
+}, krPal, krShade);
+// krillin B: red-faced in front of 18, holding his wallet out with both hands, a sweat drop
+const satPal = { o: 0x120a06, a: 0x2e1c10, A: 0x1a0e06, c: 0x5e3e24, s: 0xdca868, S: 0xa87436, k: 0x140c08, w: 0xf6f4ee, W: 0xb4b8c8, t: 0xffffff, y: 0xf2c440, Y: 0xb8861a, r: 0xc8241e, R: 0x7a1010, K: 0x2a2a30, m: 0x9a1e1e };
+const satShade = { a: 'A', s: 'S', w: 'W', y: 'Y', r: 'R' };
+const satDown = G => ({                             // paints one row lower, so the afro's top bumps stay on the grid
+  set: (x, y, c) => G.set(x, y + 1, c), rect: (x, y, w, h, c) => G.rect(x, y + 1, w, h, c), ell: (x, y, rx, ry, c) => G.ell(x, y + 1, rx, ry, c),
+  poly: (p, c) => G.poly(p.map(([x, y]) => [x, y + 1]), c), line: (p, a, b, c) => G.line(p.map(([x, y]) => [x, y + 1]), a, b, c),
+});
+function satHead(G, x, mouth = 'grin') {            // afro and face centred on pixel x
+  G.ell(x + .5, 6.5, 7, 5, 'a');
+  for (const [i, j] of [[-7, 8.5], [-7.5, 5.5], [-6, 3], [-3.2, 1.8], [0, 1.5], [3.2, 1.8], [6, 3], [7.5, 5.5], [7, 8.5], [-6, 10.5], [6, 10.5]]) G.ell(x + .5 + i, j, 2.1, 1.9, 'a');   // scalloped edge
+  for (const [i, j] of [[-6, 4], [-2, 2], [3, 3], [6, 6], [-4, 7], [0, 5], [-7, 9], [7, 9]]) { G.set(x + i, j, 'c'); G.set(x + i + 1, j - 1, 'c'); }   // curls
+  G.ell(x + .5, 10.5, 3.6, 3.4, 's');                                     // face
+  G.rect(x - 3, 8, 3, 1, 'k'); G.rect(x + 1, 8, 3, 1, 'k');                 // heavy brows
+  G.set(x - 2, 9, 't'); G.set(x - 1, 9, 'k'); G.set(x + 1, 9, 't'); G.set(x + 2, 9, 'k'); G.set(x, 10, 'S');   // eyes, nose
+  G.rect(x - 3, 11, 7, 1, 'k'); G.set(x - 3, 12, 'k'); G.set(x + 3, 12, 'k');   // thick moustache, drooping ends
+  G.rect(x - 2, 12, 5, 1, 't');                                                 // the grin
+  if (mouth === 'laugh') { G.rect(x - 2, 13, 5, 1, 'm'); G.set(x - 3, 13, 'k'); G.set(x + 3, 13, 'k'); G.rect(x - 2, 14, 5, 1, 'a'); }
+  else { G.rect(x - 2, 13, 5, 1, 'a'); G.set(x - 2, 13, 'c'); G.set(x + 2, 13, 'c'); }               // fuzzy chin beard closing the ring
+}
+function satBody(G, x) {                            // white gi, gold champion's belt, white trousers, black boots
+  G.poly([[x - 4, 15], [x + 5, 15], [x + 4.5, 21], [x - 3.5, 21]], 'w'); G.poly([[x - 1, 15], [x + 2, 15], [x + .5, 17.5]], 's');   // gi, open chest
+  G.line([[x - 1.5, 21], [x - 2.5, 24]], 3, 3, 'w'); G.line([[x + 2.5, 21], [x + 3.5, 24]], 3, 3, 'w');   // trousers
+  G.rect(x - 4, 19, 9, 2, 'y'); G.rect(x - 1, 19, 3, 2, 'Y'); G.set(x, 19, 't'); G.set(x, 20, 'r');    // belt and its plate with a red jewel
+  G.rect(x - 4, 24, 3, 2, 'K'); G.rect(x + 3, 24, 3, 2, 'K');
+}
+const satCape = (G, x) => { G.poly([[x - 5, 15], [x + 6, 15], [x + 9.5, 26], [x - 8.5, 26]], 'r'); G.line([[x - 5, 17], [x - 7, 25]], 1, 1, 'R'); G.line([[x + 6, 17], [x + 8, 25]], 1, 1, 'R'); };
+// satan A: the V sign thrown out wide, other fist on his hip
+const SATAN = shapeSprite(24, 27, G0 => {
+  const G = satDown(G0); satCape(G, 11); satHead(G, 11); satBody(G, 11);
+  G.line([[7.5, 16], [3, 16], [2, 12]], 2.6, 2.4, 'w'); G.line([[15.5, 16], [20, 16], [21, 12]], 2.6, 2.4, 'w');   // arms
+  G.rect(1, 12, 3, 1, 'K'); G.rect(20, 12, 3, 1, 'K'); G.rect(1, 9, 3, 3, 's'); G.rect(20, 9, 3, 3, 's');       // wristbands, fists
+}, satPal, satShade);
+// satan C: thumb jabbed at his chest, other fist punched high, laughing
+
 // master roshi: bald, a long white beard, sunglasses, turtle shell on his back, cane; and roshi at max power, all muscle
 const RP = { o: 0x1a1210, s: 0xf2c8a0, S: 0xc89a76, k: 0x111111, K: 0x5a6a7a, w: 0xffffff, W: 0xd8d8e0, r: 0xf08a24, R: 0xc0641a, y: 0xfff0a0, p: 0x6a5a48, P: 0x4a3e30, g: 0x4a9a3a, G: 0x2e6a26, n: 0x7a4a2a, m: 0xe0302a, b: 0xb86a1a, B: 0x7a4210, c: 0xe8a0a0 };
 // roshi B: an old man hunched right over his cane, the big shell riding high on his back
@@ -375,15 +529,6 @@ const ROSHI_MAX = shapeSprite(28, 30, G => {
   G.rect(8, 25, 12, 1, 'r'); G.rect(8, 26, 12, 1, 'p'); G.line([[11, 26], [9, 29]], 3.4, 3, 'p'); G.line([[17, 26], [19, 29]], 3.4, 3, 'p');   // shirt hem, trousers
 }, MP, { w: 'W', s: 'S', p: 'P', r: 'R' });
 // roshi max D: lat spread, a huge V from shoulder to a tiny waist, fists on hips, shell still strapped on behind
-// mr. satan: a huge afro, moustache, white gi with the champion's belt, both arms up in victory
-const SATAN = shapeSprite(20, 26, G => {
-  G.ell(10, 4.5, 5.6, 4, 'h');                                                                               // the afro
-  G.ell(10, 9, 3.2, 3.2, 's'); G.set(9, 8, 'k'); G.set(11, 8, 'k'); G.rect(8, 10, 5, 1, 'h'); G.rect(9, 11, 3, 1, 'w');   // face, moustache, grin
-  G.poly([[6, 13], [14, 13], [13.5, 20], [6.5, 20]], 'w'); G.rect(6, 17, 8, 2, 'y'); G.set(10, 17, 'r');   // gi, champion's belt
-  for (const pts of [[[6, 14], [3, 9], [2, 3]], [[14, 14], [17, 9], [18, 3]]]) { G.line(pts, 3.4, 3, 'o'); G.line(pts, 2, 1.8, 'w'); }   // arms raised
-  G.ell(2, 2.5, 1.3, 1.3, 's'); G.ell(18, 2.5, 1.3, 1.3, 's');                                             // fists
-  G.line([[8, 20], [7, 25]], 2.4, 2.2, 'w'); G.line([[12, 20], [13, 25]], 2.4, 2.2, 'w');                  // legs
-}, { o: 0x1a1008, h: 0x3a2414, H: 0x24160c, s: 0xe8b48a, S: 0xb88060, k: 0x111111, w: 0xf6f4ee, W: 0xc8c4b8, y: 0xf2c84a, Y: 0xb88a1a, r: 0xd8241e }, { w: 'W', y: 'Y', h: 'H' });
 // beerus' favourite: a wobbling custard pudding with a caramel top, on a little plate
 const PUDDING = shapeSprite(12, 10, G => { G.ell(6, 8.6, 5.6, 1.4, 'w'); G.poly([[2.5, 8], [9.5, 8], [8.5, 3], [3.5, 3]], 'y'); G.ell(6, 3, 2.6, 1.2, 'c'); G.set(4, 5, 'l'); }, { o: 0x3a2410, w: 0xf6f4ee, W: 0xc8c4b8, y: 0xf8d468, Y: 0xd8a83a, c: 0x8a4a1a, l: 0xfff4c0 }, { y: 'Y', w: 'W' });
 // the android arc and west city: 17, 18, 16 and his birds, 19, dr. gero, bulma and her capsules
@@ -391,7 +536,7 @@ const PUDDING = shapeSprite(12, 10, G => { G.ell(6, 8.6, 5.6, 1.4, 'w'); G.poly(
 // an arm stroke with its own outline so it separates from the torso behind it
 const limb = (G, pts, w0, w1, c) => { G.line(pts, w0 + 1.4, w1 + 1.4, 'o'); G.line(pts, w0, w1, c); };
 
-/* ---------- android 17 ---------- */
+// android 17
 const P17 = { o: 0x101018, h: 0x1a1922, H: 0x2e2c3a, s: 0xf6d2b0, S: 0xc89a78, k: 0x141a30, f: 0xf28a22, F: 0xb85e10, b: 0x26252e, B: 0x141318, w: 0xf4f4f0, W: 0xbcbcc4, j: 0x3c6cc0, J: 0x284a8a, g: 0x3a9a4a, n: 0x8a6a48, N: 0x5a4430, r: 0xe0302a };
 const S17 = { f: 'F', b: 'B', j: 'J', w: 'W', n: 'N' };
 const head17 = (G, x, y, s = 1) => {
@@ -481,7 +626,7 @@ const BIRD_D = shapeSprite(9, 7, G => {
   G.set(6, 3, 'k'); G.set(8, 3, 'y'); G.set(4, 6, 'y');
 }, birdPal(0xf6f6f2, 0xa8b0c4, 0xffffff), {});
 
-/* ---------- android 19 ---------- */
+// android 19
 const P19 = { o: 0x16121a, w: 0xf6f2ee, W: 0xc8c0c8, k: 0x1c1c24, K: 0x0c0c10, b: 0x4a62a8, B: 0x2e3e78, r: 0xd8241e, y: 0xf2c84a, Y: 0xb88a1a, l: 0x4a6ad8, e: 0x111111, m: 0xf4a0a8, g: 0x9a9aa8, c: 0x3a4a5a, C: 0x223038 };
 const S19 = { w: 'W', b: 'B', y: 'Y', k: 'K', c: 'C' };
 // round white face, black hat with RR star, blue lips, ear studs
@@ -1398,7 +1543,7 @@ GAMES.push({
       if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
       if (tour) {
         if ((tour.next -= dt) < 0 && saibas.length < 8) { saibas.push({ c: capPt(.2 + Math.random() * .9, Math.random() * 6.28), born: t, life: 6 }); tour.next = Math.max(.45, 1.2 - (t - tour.t0) / 80); }
-        if (!tour.villain && t - tour.t0 > 28 && !boss) { tour.villain = true; const V0 = VILLAINS[(S.bosses || 0) % VILLAINS.length], hp = Math.max(400, rate() * 18); boss = { name: V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 25, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event(`${V0.name} joins the tournament!`); }
+        if (!tour.villain && t - tour.t0 > 28 && !boss) { tour.villain = true; const V0 = VILLAINS[(S.bosses || 0) % VILLAINS.length], hp = Math.max(400, rate() * 18); boss = { name: V0.name === 'vegeta' && S.hero === 'vegeta' ? 'past vegeta' : V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 25, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event(`${V0.name} joins the tournament!`); }
         if (t > tour.until) {
           const ko = tour.ko, best = S.tourBest || 0, prize = Math.max(500, rate() * ko * 8); S.tourBest = Math.max(best, ko); gain(prize); goal('tour', ko, true);
           ui.event(ko > best ? `tournament over — ${ko} KO, new best! +${fmtShort(Math.round(prize))}` : `tournament over — ${ko} KO (best ${best}) +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star');
