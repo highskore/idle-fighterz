@@ -2198,7 +2198,7 @@ GAMES.push({
       ui.sfx && ui.sfx('boom');
       const r = 18 * (1 + .25 * (S.bigbang - 1)) * Math.max(1, R / 50);
       blasts.push({ x, y, r, t0: st.t }); shake = Math.max(shake, .45);
-      gain((1 + S.boots * ms('boots')) * mult() * (1 + .5 * lvl('fist')), x, y - 10);   // the blast itself is worth a tap; what it hits pays the rest
+      gain(Math.pow(1.6, Math.max(1, S.galick)) * lapValue() * 6.25 * mult() * (1 + .5 * lvl('beam')) * (1.1 + .1 * S.bigbang), x, y - 10, true);   // a bit more than a full-charge beam (its cooldown is about a beam's charge time); what it hits pays on top
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(sb.sx - x, sb.sy - 6 - y) < r + 6) killSaiba(sb);
       for (const m of meteors) if (!m.dead && m.delay <= 0 && Math.hypot(m.x - x, m.y - y) < r + 4) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); }
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.hypot(m.x - x, m.y - m.spr.h / 2 * m.k - y) < r + 6) ginyuHit(m, Math.max(rate(), lapValue() * mult()) * 8 * S.bigbang);
