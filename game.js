@@ -852,32 +852,43 @@ GAMES.push({
     // milestones: every 10th, 25th, 50th and 100th level of a producer doubles its output
     const MILES = { boots: 1, partner: 1, house: 1, piccolo: 1 }, MS = [10, 25, 50, 100];
     const ms = k => 2 ** MS.filter(n => S[k] >= n).length, nextMile = k => MS.find(n => S[k] < n);
-    // the training tree: ascending pays ki seeds; zenkai costs 1 a level, every other node 1, 2, 4, 8, 16
+    // the training tree: ki seeds from ascending buy ranks; every seed you've earned also boosts everything, spent or not
     const TREE = [
-      { id: 'all', branch: 'zenkai', name: 'zenkai boost', what: '+10% to everything', max: 1e9 },
-      { id: 'fist', branch: 'body', name: 'iron fist', what: 'taps hit ×1.5' },
-      { id: 'crit', branch: 'body', name: 'eagle eye', what: '+8% crit chance' },
-      { id: 'legs', branch: 'body', name: 'road work', what: 'lap bonus ×1.5' },
-      { id: 'idle', branch: 'spirit', name: 'meditation', what: 'idle income ×1.5' },
-      { id: 'beam', branch: 'spirit', name: 'ki control', what: 'beams hit ×1.5' },
-      { id: 'chamber', branch: 'spirit', name: 'patience', what: 'time chamber +5s' },
-      { id: 'pods', branch: 'fate', name: 'pod magnet', what: 'space pods come 12% sooner' },
-      { id: 'balls', branch: 'fate', name: 'dragon radar', what: '+5% dragon ball orbs' },
-      { id: 'bounty', branch: 'fate', name: 'bounty hunter', what: 'villain prizes ×1.5' },
+      { id: 'fist', branch: 'body', tier: 0, name: 'iron fist', what: 'taps +50% a rank', max: 5 },
+      { id: 'crit', branch: 'body', tier: 0, name: 'eagle eye', what: '+8% crit chance a rank', max: 5 },
+      { id: 'legs', branch: 'body', tier: 1, name: 'road work', what: 'lap bonus +50% a rank', max: 5 },
+      { id: 'brawl', branch: 'body', tier: 1, name: 'brawler', what: 'villain taps +50% a rank', max: 5 },
+      { id: 'critx', branch: 'body', tier: 2, name: 'pressure point', what: 'crits hit ×1 harder a rank', max: 3 },
+      { id: 'pride', branch: 'body', tier: 3, name: 'saiyan pride', what: 'combo goes to ×4', max: 1 },
+      { id: 'idle', branch: 'spirit', tier: 0, name: 'meditation', what: 'idle income +50% a rank', max: 5 },
+      { id: 'beam', branch: 'spirit', tier: 0, name: 'ki control', what: 'beams +50% a rank', max: 5 },
+      { id: 'chamber', branch: 'spirit', tier: 1, name: 'patience', what: 'time chamber +5s a rank', max: 5 },
+      { id: 'seedx', branch: 'spirit', tier: 1, name: 'zenkai', what: 'each ki seed +2% more a rank', max: 5 },
+      { id: 'auto', branch: 'spirit', tier: 2, name: 'instinct', what: 'an auto tap every second a rank', max: 3 },
+      { id: 'eternal', branch: 'spirit', tier: 3, name: 'eternal ki', what: 'idle income ×3', max: 1 },
+      { id: 'pods', branch: 'fate', tier: 0, name: 'pod magnet', what: 'space pods 12% sooner a rank', max: 5 },
+      { id: 'balls', branch: 'fate', tier: 0, name: 'dragon radar', what: '+5% dragon ball orbs a rank', max: 5 },
+      { id: 'bounty', branch: 'fate', tier: 1, name: 'bounty hunter', what: 'villain prizes +50% a rank', max: 5 },
+      { id: 'wish', branch: 'fate', tier: 1, name: 'shenron\'s favour', what: 'each wish +5% more a rank', max: 5 },
+      { id: 'head', branch: 'fate', tier: 2, name: 'head start', what: 'keep 1% of your power a rank when you ascend', max: 3 },
+      { id: 'saga', branch: 'fate', tier: 3, name: 'legend', what: 'saga villains drop a ki seed', max: 1 },
     ];
-    const lvl = id => S.tree[id] || 0, nodeCost = n => n.id === 'all' ? 1 : 2 ** lvl(n.id), nodeMax = n => n.max || 5;
+    const TIER_COST = [1, 2, 5, 15], TIER_NEED = [0, 4, 8, 12];   // seeds per rank, and points in the branch to open the tier
+    const lvl = id => S.tree[id] || 0, nodeCost = n => TIER_COST[n.tier], nodeMax = n => n.max;
+    const branchPts = b => TREE.filter(n => n.branch === b).reduce((a, n) => a + lvl(n.id), 0), nodeOpen = n => branchPts(n.branch) >= TIER_NEED[n.tier];
+    const seedBoost = () => 1 + S.ascend * (.1 + .02 * lvl('seedx')), comboCap = () => lvl('pride') ? 4 : 2;
     const tapPower = () => 1 + S.boots * ms('boots') + passive() / 10;   // villain taps keep pace with idle builds
-    const seedsNow = () => Math.max(1, Math.floor(Math.sqrt(S.pl / 1e5)));   // 1M → 3, 100M → 31, 10B → 316
+    const seedsNow = () => Math.max(1, Math.floor(Math.sqrt(S.pl / 1e4)));   // 1M → 10, 100M → 100, 10B → 1000
     const chamberLen = () => 10 + 5 * S.chamber + 5 * lvl('chamber');
     const ECON = .35;   // every gain runs through mult(); an active player reaches super saiyan god in about half an hour
     const mult = () => {   // permanent boosts multiply; temporary ones add their bonuses, so a pile of buffs can't explode
       const T = st.t, b = 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * 2 + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (laughUntil > T) * .25 + (chamberUntil > T) * 1 + (rageUntil > T) * 1 + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
-      return Math.pow(1.15, S.gravity) * Math.pow(1.25, S.wishes) * (1 + .1 * lvl('all')) * FORMS[S.form].x * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1) * ECON;
+      return Math.pow(1.15, S.gravity) * Math.pow(1.25 + .05 * lvl('wish'), S.wishes) * seedBoost() * FORMS[S.form].x * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1) * ECON;
     };
     const lapValue = () => 30 * (1 + S.boots * ms('boots'));
-    const passive = () => (S.partner * 4 * ms('partner') + S.house * 40 * ms('house') + S.piccolo * 60 * ms('piccolo')) * (1 + .5 * lvl('idle'));
+    const passive = () => (S.partner * 4 * ms('partner') + S.house * 40 * ms('house') + S.piccolo * 60 * ms('piccolo')) * (1 + .5 * lvl('idle')) * (lvl('eternal') ? 3 : 1);
     let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, car = null, nextCar = 140, carUntil = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
-    let gadgets = [], nextGadget = 2, robotUntil = 0, robotAcc = 0, gadgetUntil = 0, bikeUntil = 0, calmUntil = 0, nextAndro = 340, date = null, nextDate = 300, gero = null, nextGero = 230, a16 = null, nextA16 = 180;
+    let gadgets = [], nextGadget = 2, robotUntil = 0, robotAcc = 0, autoAcc = 0, gadgetUntil = 0, bikeUntil = 0, calmUntil = 0, nextAndro = 340, date = null, nextDate = 300, gero = null, nextGero = 230, a16 = null, nextA16 = 180;
     let bz = null, pud = null;   // beerus asleep on his planet, and the pudding that calms him
     let rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
@@ -887,9 +898,9 @@ GAMES.push({
     ui.onBuy(k => {
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') {
-        // seeds grow with the square root of the power you give up; forms and trips start over from this run's best
-        const gainA = seedsNow(); S.ascend += gainA; S.seeds += gainA; ach('ascend'); S.pl = 0; S.runBest = 0; S.namekAt = 0; for (const r of RESETS) S[r] = 0; S.form = 0; ui.fx && ui.fx('form', 0); scenery();
-        ui.event(`ascended — +${gainA} ki seed${gainA > 1 ? 's' : ''}: spend them in menu → training`, 4000); ui.fx && ui.fx('super'); save(); syncShop(); return;
+        // seeds grow with the square root of the power you give up; you drop one form and trips start over
+        const gainA = seedsNow(), keep = Math.floor(S.pl * .01 * lvl('head')); S.ascend += gainA; S.seeds += gainA; ach('ascend'); S.pl = keep; S.runBest = keep; S.namekAt = 0; for (const r of RESETS) S[r] = 0; S.form = Math.max(0, S.form - 1); ui.fx && ui.fx('form', S.form); scenery();
+        ui.event(`ascended — +${gainA} ki seed${gainA > 1 ? 's' : ''} (×${seedBoost().toFixed(1)} on everything), back to ${FORMS[S.form].name}: spend seeds in menu → training`, 4500); ui.fx && ui.fx('super'); save(); syncShop(); return;
       }
       S.pl -= c; S[k]++; ui.fx && ui.fx('buy');
       if (k === 'partner' && S.partner === 1) ui.event('bubbles wants to train with you');
@@ -992,7 +1003,7 @@ GAMES.push({
       if (roshi && !roshi.max && roshi.sx !== undefined && Math.hypot(px - roshi.sx, py - (roshi.sy - 9)) < 12) { roshi.max = st.t; roshi.until = st.t + 5; shake = .5; ui.event('roshi: "MAX POWER!"'); ui.sfx && ui.sfx('form'); return; }
       if (satan && satan.sx !== undefined && st.t > satan.t0 && Math.hypot(px - satan.sx, py - (satan.sy - 10)) < 13) { gain(satan.prize, satan.sx, satan.sy - 20, true); ach('satan'); ui.event(`hercule cash prize! +${fmtShort(Math.round(satan.prize))} — "keep it between us, kid"`, 3500); ui.sfx && ui.sfx('coin'); burst(satan.sx, satan.sy - 12, [0xffffff, 0xf2c84a, 0xb88a1a], 18, 120); satan = null; return; }
       if (door && door.sx !== undefined && Math.hypot(px - door.sx, py - (door.sy - 9)) < 13) { chamberT0 = st.t; chamberUntil = st.t + chamberLen(); ach('chamber'); ui.event(`hyperbolic time chamber — time slows, training ×2 for ${chamberLen()}s`); flashT = 1; ui.sfx && ui.sfx('form'); door = null; return; }
-      if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.abs(px - m.x) < (m.spr.w / 2 + 2) * m.k && py > m.y - (m.spr.h + 2) * m.k && py < m.y + 3) { combo = st.t - lastClick < .6 ? Math.min(2, combo + .1) : 1; lastClick = st.t; ginyuHit(m, tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist'))); ui.sfx && ui.sfx('hit'); return; }
+      if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.abs(px - m.x) < (m.spr.w / 2 + 2) * m.k && py > m.y - (m.spr.h + 2) * m.k && py < m.y + 3) { combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; ginyuHit(m, tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist')) * (1 + .5 * lvl('brawl'))); ui.sfx && ui.sfx('hit'); return; }
       if (capsule && Math.hypot(px - capsule.x, py - capsule.y) < 11) { openCapsule(); return; }
       if (star && Math.hypot(px - star.x, py - star.y) < 13) {
         boostUntil = st.t + 15; S.stars = (S.stars || 0) + 1; if (S.stars >= 25) ach('stars25'); gain(Math.max(50, rate() * 20), star.x, star.y - 6, true); ui.event('space pod caught — ×2 for 15s'); goal('star'); ui.fx && ui.fx('star');
@@ -1008,15 +1019,15 @@ GAMES.push({
       }
       // senzu bean on the planet
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(px - sb.sx, py - (sb.sy - 6)) < 9) { killSaiba(sb); return; }
-      if (boss && !boss.dead && Math.abs(px - boss.x) < (boss.spr.w / 2 + 3) * boss.k && py > boss.y - (boss.spr.h + 2) * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(2, combo + .1) : 1; lastClick = st.t; hitBoss(tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist')), px, py); return; }
+      if (boss && !boss.dead && Math.abs(px - boss.x) < (boss.spr.w / 2 + 3) * boss.k && py > boss.y - (boss.spr.h + 2) * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; hitBoss(tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist')) * (1 + .5 * lvl('brawl')), px, py); return; }
       if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - bean.sy) < 9) { senzuUntil = st.t + 15; ui.event('senzu bean — ×1.5 for 15s'); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
       // train: rhythm builds a combo up to ×2; the scouter adds crits
-      combo = st.t - lastClick < .6 ? Math.min(2, combo + .1) : 1; lastClick = st.t; if (combo >= 2) goal('combo');
+      combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; if (combo >= 2) goal('combo');
       sprint = Math.min(1.2, sprint + .5);
       if (bz && !bz.awake) bz.noise += .04;
       if (jumpH <= 0) jumpV = 120;
       const crit = Math.random() < S.scouter * .1 + lvl('crit') * .08, k = kidScreen(14);
-      gain((1 + S.boots * ms('boots')) * mult() * combo * (crit ? 2 : 1) * (1 + .5 * lvl('fist')), k.x, k.y - 10, crit); ui.sfx && ui.sfx('tap');
+      gain((1 + S.boots * ms('boots')) * mult() * combo * (crit ? 2 + lvl('critx') : 1) * (1 + .5 * lvl('fist')), k.x, k.y - 10, crit); ui.sfx && ui.sfx('tap');
       if (crit) for (let i = 0; i < 10; i++) fx.add({ x: k.x, y: k.y - 14, vx: (Math.random() - .5) * 90, vy: -20 - Math.random() * 60, drag: 2, life: .5, c: [0xffffff, 0x9cf0b8, 0x34d873], raw: true });
       ui.bump();
     }
@@ -1164,7 +1175,7 @@ GAMES.push({
       boss.hp -= dmg * (1 + .5 * S.armor); boss.flash = .12; ui.sfx && ui.sfx('hit'); burst(x, y, [0xffffff, 0xffe08a, 0xff9a3c], 6, 70);
       if (boss.hp <= 0 && !boss.dead) {
         boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; let prize = Math.max(boss.max * 1.5, rate() * 90) * (1 + .5 * lvl('bounty'));
-        if (boss.saga) { prize *= 2; S.saga++; if (S.saga >= VILLAINS.length) ach('sagas'); satan = { c: capPt(.42, 2.9), t0: st.t + 1.2, until: st.t + 9, prize: prize * .5 }; setTimeout(() => ui.event('mr. satan: "i did it! it was all me!" — tap him for the prize money', 4500), 2800); }
+        if (boss.saga) { prize *= 2; S.saga++; if (lvl('saga')) { S.seeds++; S.ascend++; setTimeout(() => ui.event('legend — the villain drops a ki seed'), 5200); } if (S.saga >= VILLAINS.length) ach('sagas'); satan = { c: capPt(.42, 2.9), t0: st.t + 1.2, until: st.t + 9, prize: prize * .5 }; setTimeout(() => ui.event('mr. satan: "i did it! it was all me!" — tap him for the prize money', 4500), 2800); }
         victory(); S.beaten = S.beaten || {}; S.beaten[boss.name] = 1; if (S.bosses >= 10) ach('villains10'); if (boss.name === 'frieza') ach('frieza'); if (boss.name === 'nappa' && S.world === 2) ach('nappa'); if (boss.name === 'cell') ach('cell'); if (boss.name === 'beerus') ach('beerus'); if (['frieza', 'cell', 'kid buu', 'beerus'].every(n => S.beaten[n])) ach('all4'); gain(prize, boss.x, boss.y - (boss.spr.h + 10) * boss.k, true); ui.event(boss.name === 'past vegeta' ? `you beat your younger self — technically you also lost. +${fmtShort(Math.round(prize))}` : `${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
         for (let k = 0; k < 4; k++) burst(boss.x + (Math.random() - .5) * 20, boss.y - boss.spr.h / 2 * boss.k + (Math.random() - .5) * 20, [0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 20, 180);
         save();
@@ -1504,6 +1515,7 @@ GAMES.push({
       if (a16 && t > a16.until) a16 = null;
       // west city: bulma's capsules pop up on the planet; each one is a gadget
       if (S.world === 5 && gadgets.length < 3 && (nextGadget -= dt) < 0) { gadgets.push({ c: capPt(.25 + Math.random() * .8, Math.random() * 6.28), t0: t, kind: Math.random() * 4 | 0 }); nextGadget = 4 + Math.random() * 3; }
+      if (lvl('auto') && playing) { autoAcc += dt * lvl('auto'); while (autoAcc > 1) { autoAcc -= 1; const k = kidScreen(14); gain((1 + S.boots * ms('boots')) * mult() * (1 + .5 * lvl('fist')), k.x, k.y - 10); } }
       if (robotUntil > t) { robotAcc += dt; while (robotAcc > .25) { robotAcc -= .25; const k = kidScreen(14); gain((1 + S.boots * ms('boots')) * mult() * (1 + .5 * lvl('fist')), k.x, k.y - 10); } }
       if (bikeUntil > t) sprint = 1.2;
       // frieza's ship lands and four soldiers hop out; drop them all before it lifts off
@@ -1591,8 +1603,8 @@ GAMES.push({
       kis = kis.filter(kb => !kb.done);
       }
       // super mode: a 25s golden-hair burst (×2) each time power level passes the next milestone
-      // transform when this run's best power reaches the next form (spending doesn't hold it back)
-      if (S.form < FORMS.length - 1 && S.runBest >= FORMS[S.form + 1].at) transform();
+      // transform once you're holding the next form's power: spend now or save up for it. a form you reach stays for the run
+      if (S.form < FORMS.length - 1 && S.pl >= FORMS[S.form + 1].at) transform();
       if (star) { star.x += star.vx * dt; star.y += Math.sin(t * 3) * .3; if (Math.random() < .9) fx.add({ x: star.x - 7, y: star.y + (Math.random() - .5) * 4, vx: -30, vy: 0, life: .45, s: 2, c: [0xffffff, 0xffd84a, 0xff8a3a], raw: true }); if (star.x > st.W + 12) star = null; }
       for (const m of meteors) { if (m.delay > 0) { m.delay -= dt; continue; } m.x += m.vx * dt; m.y += m.vy * dt; if (!m.dead && Math.random() < .9) fx.add({ x: m.x + 2, y: m.y - 2, vx: -m.vx * .1, vy: -m.vy * .1, life: .5, s: 2, grow: 1, c: [0xfff1c0, 0xffb35a, 0xe0473e, 0x8a8f98], raw: true }); }
       meteors = meteors.filter(m => !m.dead && m.y < st.H + 10);
@@ -1623,10 +1635,10 @@ GAMES.push({
       if (riding > 0) fxs.push('nimbus ×1.5');
       if (carUntil > t) fxs.push(`king kai's car ×1.5 ${Math.ceil(carUntil - t)}s`);
       if (apeUntil > t) fxs.push(`great ape ×3 ${Math.ceil(apeUntil - t)}s`);
-      const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.wishes ? `dragon balls ${S.orbs7}/7` : '', S.wishes ? `wishes ${S.wishes}` : '', S.saga || session > 110 ? `saga ${S.saga % VILLAINS.length + 1}/${VILLAINS.length}` : '', S.seeds ? `ki seeds ${S.seeds}` : '', lvl('all') ? `zenkai ×${(1 + .1 * lvl('all')).toFixed(1)}` : ''].filter(Boolean).join(' · ');
+      const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.wishes ? `dragon balls ${S.orbs7}/7` : '', S.wishes ? `wishes ${S.wishes}` : '', S.saga || session > 110 ? `saga ${S.saga % VILLAINS.length + 1}/${VILLAINS.length}` : '', S.seeds ? `ki seeds ${S.seeds}` : '', S.ascend ? `ki seeds ×${seedBoost().toFixed(1)}` : ''].filter(Boolean).join(' · ');
       const nf = FORMS[S.form + 1], cf = FORMS[S.form];
       const G = GOALS.find(g => g.id === S.goal.id);
-      ui.update({ goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, Math.max(0, (S.runBest - (cf.at || 0)) / (nf.at - (cf.at || 0)))) : 1 }, balls: S.orbs7, wishes: S.wishes, ascend: lvl('all') ? (1 + .1 * lvl('all')).toFixed(1) : '' });
+      ui.update({ goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, S.pl / nf.at) : 1 }, balls: S.orbs7, wishes: S.wishes, ascend: S.ascend ? seedBoost().toFixed(1) : '' });
       syncShop();
       }
 
@@ -1878,9 +1890,9 @@ GAMES.push({
     if (/shenron/.test(HASH)) setTimeout(() => summon(+(HASH.match(/shenron(\d)/) || [0, 1])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
     S.runBest = Math.max(S.runBest, S.best);   // hooks raise best; this run's best follows
     // the achievements / characters popup reads from here
-    const menu = () => ({ seeds: S.seeds, tree: TREE.map(n => ({ id: n.id, branch: n.branch, name: n.name, what: n.what, lvl: lvl(n.id), max: nodeMax(n), cost: nodeCost(n), can: lvl(n.id) < nodeMax(n) && S.seeds >= nodeCost(n) })), spent: TREE.some(n => lvl(n.id)), ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
-    const learn = id => { const n = TREE.find(x => x.id === id); if (!n || lvl(id) >= nodeMax(n) || S.seeds < nodeCost(n)) return; S.seeds -= nodeCost(n); S.tree[id] = lvl(id) + 1; ui.sfx && ui.sfx('buy'); save(); syncShop(); };
-    const respec = () => { for (const n of TREE) S.seeds += n.id === 'all' ? lvl(n.id) : 2 ** lvl(n.id) - 1; S.tree = {}; save(); syncShop(); };
+    const menu = () => ({ seeds: S.seeds, boost: seedBoost().toFixed(1), branches: ['body', 'spirit', 'fate'].map(b => ({ name: b, pts: branchPts(b) })), tree: TREE.map(n => ({ id: n.id, branch: n.branch, tier: n.tier, need: TIER_NEED[n.tier], open: nodeOpen(n), name: n.name, what: n.what, lvl: lvl(n.id), max: nodeMax(n), cost: nodeCost(n), can: nodeOpen(n) && lvl(n.id) < nodeMax(n) && S.seeds >= nodeCost(n) })), spent: TREE.some(n => lvl(n.id)), ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
+    const learn = id => { const n = TREE.find(x => x.id === id); if (!n || !nodeOpen(n) || lvl(id) >= nodeMax(n) || S.seeds < nodeCost(n)) return; S.seeds -= nodeCost(n); S.tree[id] = lvl(id) + 1; ui.sfx && ui.sfx('buy'); save(); syncShop(); };
+    const respec = () => { for (const n of TREE) S.seeds += lvl(n.id) * nodeCost(n); S.tree = {}; save(); syncShop(); };
     const pick = id => { if (!heroOpen(id)) return false; S.hero = id; save(); return true; };
     const thumb = (id, k = 4) => { const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); } return c; };
     // what the share card shows: the exact power level, the form, and the hero as he looks right now
