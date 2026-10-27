@@ -2143,7 +2143,7 @@ GAMES.push({
       }
       // super mode: a 25s golden-hair burst (×2) each time power level passes the next milestone
       // transform once you're holding the next form's power: spend now or save up for it. a form you reach stays for the run
-      if (preview && t > preview.until) { if (S.pl < FORMS[preview.from + 1].at) { S.form = preview.from; ui.fx && ui.fx('form', S.form); ui.event(`the wish wears off — back to ${FORMS[S.form].name}`); } preview = null; }   // keep it if you're holding enough by now
+      if (preview && t > preview.until) { if (S.pl < FORMS[preview.from + 1].at) { S.form = preview.from; ui.fx && ui.fx('form', S.form); ui.event(`the wish wears off — back to ${FORMS[S.form].name}`); } else ui.event(`the wish wears off — but you're holding enough power: ${FORMS[S.form].name} stays`); preview = null; }   // keep it if you're holding enough by now
       if (S.form < FORMS.length - 1 && S.pl >= FORMS[S.form + 1].at) transform(!!preview);
       if (star) { star.x += star.vx * dt; star.y += Math.sin(t * 3) * .3; if (Math.random() < .9) fx.add({ x: star.x - 7, y: star.y + (Math.random() - .5) * 4, vx: -30, vy: 0, life: .45, s: 2, c: [0xffffff, 0xffd84a, 0xff8a3a], raw: true }); if (star.x > st.W + 12) star = null; }
       for (const m of meteors) { if (m.delay > 0) { m.delay -= dt; continue; } m.x += m.vx * dt; m.y += m.vy * dt; if (!m.dead && Math.random() < .9) fx.add({ x: m.x + 2, y: m.y - 2, vx: -m.vx * .1, vy: -m.vy * .1, life: .5, s: 2, grow: 1, c: [0xfff1c0, 0xffb35a, 0xe0473e, 0x8a8f98], raw: true }); }
@@ -2167,6 +2167,7 @@ GAMES.push({
       if (laughUntil > t) fxs.push(`laughing ×1.25 ${Math.ceil(laughUntil - t)}s`);
       if (ginyu && !ginyu.done) fxs.push(`ginyu force ${Math.ceil(ginyu.until - t)}s`);
       if (fuseUntil > t) fxs.push(`fusion ×2 ${Math.ceil(fuseUntil - t)}s`);
+      if (preview) fxs.push(`${FORMS[S.form].name} (wish) ${Math.ceil(preview.until - t)}s`);
       if (dailyUntil > t) fxs.push(`daily ×1.25 ${Math.ceil((dailyUntil - t) / 60)}m`);
       if (tour) fxs.push(`tournament ${Math.ceil(tour.until - t)}s · ${tour.ko} KO`);
       if (kaioUntil > t) fxs.push(`kaioken ×${KAIO()} ${Math.ceil(kaioUntil - t)}s`); else if (tiredUntil > t) fxs.push(`tired ×0.75 ${Math.ceil(tiredUntil - t)}s`);
