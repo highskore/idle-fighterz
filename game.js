@@ -2211,7 +2211,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', SNAKE_HELP, 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) startSnake(); else snk = null;
       bz = w === 4 ? { c: capPt(.3, 4.4), noise: 0, awake: 0 } : null; pud = null; gadgets = []; nextGadget = 2;
@@ -2448,7 +2448,10 @@ GAMES.push({
     const sblit = (spr, x, y, k = 1, flip = false, a = 1) => { x = Math.round(x); y = Math.round(y); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const c = spr.col[j * spr.w + (flip ? spr.w - 1 - i : i)]; if (c < 0) continue; for (let p = 0; p < k; p++) for (let q = 0; q < k; q++) st.px(x + i * k + p, y + j * k + q, c, a); } };
     const pay = m => lapValue() * mult() * m;
     const sayAt = (s, x, y, kind) => floats.push({ x, y, s, life: 1.1, [kind || 'n']: true });
-    const SNAKE_HELP = 'knocked into other world — run snake way back to king kai! ← → (or tap the sides) to switch lanes, ↑ / space (or tap the middle) to jump: a jump also blasts the ghost ahead — halfway the road twists side-on: then swipe up (or ↑ / space) to jump, → dash, ← brake'
+    const HOW1 = [['tap the sides or arrow keys', 'switch lanes'], ['quick tap or space', 'jump the gaps and spines'], ['hold then let go or f', 'blast the nearest ghost']];   // plain words: the pixel font has no arrows or dashes
+    const HOW2 = [['quick tap swipe up or space', 'jump  hold for higher'], ['swipe right or left', 'dash or brake'], ['hold then let go or f', 'blast the nearest ghost']];
+    const howto = (title, rows) => { snk.paused = st.t; snk.how = { title, rows, t0: st.t }; const done = () => { if (snk) { snk.paused = 0; snk.how = null; } };
+      snk.how.done = done; };   // the run waits while the box is up (it closes itself after 10s)
     const HFIL_HOW = 'he floats back up on his own — tap to hurry';
     function startSnake() {
       SNV = 1; const R = Math.random, gaps = [], orbs = [], spikes = [], ghosts = [], nimbi = [], split = SNL * .5, end = SNL - 24;
@@ -2464,6 +2467,7 @@ GAMES.push({
       }
       for (let q = 22; q < end + 8; q += 12 + R() * 8) { const v = q < split ? 1 : 2; if (v === 2 && gaps.some(g => q > g[0] - 4 && q < g[1] + 3)) continue; ghosts.push({ s: q, u: (R() * 2 - 1) * LANE * 1.2, h: v === 2 ? 1.7 + R() * .9 : 1.6 + R() * 1.6, ph: R() * 6 }); }
       nimbi.push(...[gaps[Math.floor(gaps.length * .15)], gaps[Math.floor(gaps.length * .35)]].filter(Boolean).map(g => ({ s: g[1] + 3, u: [-1, 0, 1][(R() * 3) | 0] * LANE })));   // the clouds only fly the behind-view half
+      setTimeout(() => snk && !snk.shown && (snk.shown = 1, howto('run snake way to king kai', HOW1)), 0);
       snk = { split, dist: 0, len: SNL, lane: 0, x: 0, jumpT: -9, jq: 0, edge: 0, fall: 0, hf: null, stun: -9, nimbus: /nimbus/.test(HASH) ? st.t + 30 : 0, gaps, orbs, spikes, ghosts, nimbi, shots: [], sets: {}, done: 0, got: 0, blasted: 0,
         yy: 0, vy: 0, hold: 0, ground: 0, dashT: 0, brakeT: 0, ptr: null, t0: st.t };
     }
@@ -2478,16 +2482,19 @@ GAMES.push({
       const off = SNV === 1 ? 1.6 : 0, here = snk.dist + off, g = snk.gaps.find(g => here >= g[0] - 1.5 && here <= g[1] + 1);
       if (g) snk.dist = g[1] + .4 - off;
     }
+    const ghostAhead = () => SNV === 2 ? snk.ghosts.filter(g => !g.dead && g.sx !== undefined && g.sx > 0 && g.sx < st.W).sort((a, b) => a.s - b.s)[0] : snk.ghosts.filter(g => !g.dead && g.s > snk.dist + 1.6 && g.s - snk.dist < 18).sort((a, b) => a.s - b.s)[0];
     function blastGhost(g, x, y) {
       g.dead = true; snk.blasted++; x = x ?? g.sx ?? st.W / 2; y = y ?? g.sy ?? st.H / 3; snk.shots.push({ x, y, t0: st.t }); burst(x, y, [0xffffff, 0xdff4ff, 0xfff3a0], 18, 120);
       gain(pay(3), x, y - 8, true); ui.sfx && ui.sfx('beam');
     }
     function snakeWin(t) { snk.done = t; ach('snakeway'); snk.nimbus = 0; const g = Math.max(rate() * 120, pay(80)); gain(g, st.W / 2, st.H * .4, true); ui.event(`made it to king kai's planet at ${(t - snk.t0).toFixed(0)}s! +${fmtShort(Math.round(g))}`); victory(); }
     // ── input
-    function snakeDown(px, py) { if (SNV === 2) { snk.ptr = { x: px, y: py, t: st.t }; return; } snakeTap(px, py); }
+    function snakeDown(px, py) { if (snk.how && snk.how.done) { snk.how.done(); return; } snk.ptr = { x: px, y: py, t: st.t }; }   // a press decides on release: a quick tap jumps or steers, a held one blasts
     function snakeUp(px, py) {   // v2: a swipe steers, a short tap blasts
       const p = snk.ptr; snk.ptr = null; if (!p || snk.done) return;
       if (snk.fall) { snakeTap(px, py); return; }
+      if (st.t - p.t > .3) { const g = ghostAhead(); if (g) blastGhost(g); return; }   // a held press is a charged blast
+      if (SNV === 1) { snakeTap(px, py); return; }
       const dx = px - p.x, dy = py - p.y, len = Math.hypot(dx, dy), sw = Math.max(8, st.W * .035);
       if (len < sw) { snakeTap(px, py); return; }
       if (-dy > Math.abs(dx)) snakeJump2(Math.min(1.3, 1 + (len - sw) / (st.H * .6)));
@@ -2498,9 +2505,7 @@ GAMES.push({
       const t = st.t, W = st.W;
       if (snk.done) return;
       if (snk.fall) { const h = snk.hf; if (h && !h.up) h.m += .5; return; }   // in hfil every tap hurries him back up
-      if (SNV === 2) {   // a tap blasts the ghost under the finger, or failing that the nearest one on screen
-        const live = snk.ghosts.filter(g => !g.dead && g.sx !== undefined && g.sx > 0 && g.sx < W), g = live.filter(g => Math.hypot(px - g.sx, py - g.sy) < g.r + 14)[0] || live.sort((a, b) => a.s - b.s)[0];
-        if (g) blastGhost(g); return; }
+      if (SNV === 2) { snakeJump(); return; }
       const third = px / W;
       if (third < .33) snakeMove(-1); else if (third > .67) snakeMove(1); else snakeJump();
     }
@@ -2511,13 +2516,14 @@ GAMES.push({
       if (SNV === 2) { snakeJump2(1); snk.hold = 1; return; }
       if (t - snk.jumpT < .6) { snk.jq = t; return; }   // pressed just before landing: he jumps the moment he lands
       snk.jumpT = t; snk.jq = 0; ui.sfx && ui.sfx('tap');
-      if (SNV === 1) { const g = snk.ghosts.filter(g => !g.dead && g.s > snk.dist + 1.6 && g.s - snk.dist < 18).sort((a, b) => a.s - b.s)[0]; if (g) blastGhost(g); }   // the jump's ki burst takes the ghost ahead: no tap has to aim
     }
     function snakeJump2(str) { const t = st.t; if (snk.fall || snk.done) return; if (snk.yy > -.3 && (snk.yy <= .01 || t - snk.ground < .12) && t - snk.jumpT > .15) { snk.vy = 13 * str; snk.jumpT = t; snk.yy = Math.max(0, snk.yy) + .01; ui.sfx && ui.sfx('tap'); } else snk.jq = t; }
     addEventListener('keydown', e => {
       if (!playing || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, [contenteditable]')) return;
       const k = e.key.toLowerCase();
       if (S.world === 3 && snk) {
+        if (snk.how && snk.how.done) { snk.how.done(); e.preventDefault(); return; }   // any key closes the controls
+        if (k === 'f' && !snk.fall) { const g = ghostAhead(); if (g) blastGhost(g); e.preventDefault(); return; }
         if (SNV === 2 && !snk.fall) { if (k === 'arrowleft' || k === 'a') { snk.brakeT = st.t + .8; snk.dashT = 0; } else if (k === 'arrowright' || k === 'd') { snk.dashT = st.t + 1; snk.brakeT = 0; } else if (k === 'arrowdown' || k === 's') snk.vy = Math.min(snk.vy, -22); else if (k === 'arrowup' || k === 'w' || k === ' ') snakeJump(); else return; }
         else if (k === 'arrowleft' || k === 'a') snakeMove(-1); else if (k === 'arrowright' || k === 'd') snakeMove(1); else if (k === 'arrowup' || k === 'w' || k === ' ') snakeJump(); else return; }
       else if (k === ' ') { e.target.blur?.(); const q = kidScreen(14); onClick(q.x + 999, q.y + 999); }   // space trains and hops like a click; held space doesn't repeat
@@ -2530,8 +2536,9 @@ GAMES.push({
     function updateSnake(t, dt) {
       if (!snk) startSnake();
       if (snk.done) { if (t - snk.done > 2.5) namekUntil = t; return; }
+      if (snk.paused) { snk.jumpT += dt; snk.t0 += dt; if (snk.how && snk.how.done && t - snk.how.t0 > 10) snk.how.done(); if (t - snk.paused > 11) { snk.paused = 0; snk.how = null; } return; }   // never wait on a box longer than its own 10s   // nothing moves while you read the controls
       if (snk.fall) { updHfil(t, dt); return; }
-      if (SNV === 1 && snk.dist >= snk.split && !airborne(t)) { SNV = 2; snk.yy = 0; snk.vy = 0; snk.lane = 0; snk.x = 0; snk.nimbus = 0; shake = .3; sayAt('THE ROAD TWISTS', st.W / 2, st.H * .35, 'gold'); ui.event('the road twists — side view now: swipe up (or ↑ / space) to jump, hold for higher; swipe → to dash, ← to brake; tap ghosts to blast them', 5000); }   // halfway, the camera swings round to the side
+      if (SNV === 1 && snk.dist >= snk.split && !airborne(t)) { SNV = 2; snk.yy = 0; snk.vy = 0; snk.lane = 0; snk.x = 0; snk.nimbus = 0; shake = .3; sayAt('THE ROAD TWISTS', st.W / 2, st.H * .35, 'gold'); howto('the road twists', HOW2); }   // halfway, the camera swings round to the side
       if (SNV === 2) upd2(t, dt); else upd3D(t, dt);
       if (!snk.fall && !snk.done && snk.dist >= snk.len) snakeWin(t);
     }
@@ -2602,8 +2609,9 @@ GAMES.push({
         for (let yy = -R - 1; yy <= R + 1; yy++) for (let xx = -R - 1; xx <= R + 1; xx++) { const d = Math.hypot(xx, yy) / Math.max(1, R); if (d > 1) continue; st.px(cx0 + xx, cy0 + yy, !pass ? 0x7a3e06 : yy < -R * .35 && d < .65 ? 0xfffbe0 : yy > R * .35 ? 0xeea21e : 0xffe36a); } }
     }
     const HFIL_GLYPH = ['101011101110100', '101010000100100', '111011000100100', '101010000100100', '101010001110111'];
-    function heroBack(t, x, y, k) { const set = HERO().backs[S.form] || HERO().backs[0], spr = set[Math.floor(t * 8) % 2]; sblit(spr, x - spr.w * k / 2, y - spr.h * k, k); return spr; }
-    function heroSide(t, x, y, k, still) { const run = HERO().forms[S.form].run, spr = still ? HERO().forms[S.form].pose : run[Math.floor(t * 10) % run.length]; sblit(spr, x - spr.w * k / 2, y - spr.h * k, k); return spr; }
+    const halo = (x, y, k) => { for (const [r, c] of [[1, 0x5a3a08], [0, 0]]) for (let a = 0; a < 6.28; a += .04) for (let d = -r; d <= r; d++) st.px(x + Math.cos(a) * (5 * k + d), y + Math.sin(a) * (1.6 * k + d) - (r ? 0 : 0), r ? c : Math.sin(a) < 0 ? 0xfff8c8 : 0xffd23a); };   // the dead wear a halo in other world
+    function heroBack(t, x, y, k) { const set = HERO().backs[S.form] || HERO().backs[0], spr = set[Math.floor(t * 8) % 2]; sblit(spr, x - spr.w * k / 2, y - spr.h * k, k); halo(x, y - spr.h * k - 2 * k, k); return spr; }
+    function heroSide(t, x, y, k, still) { const run = HERO().forms[S.form].run, spr = still ? HERO().forms[S.form].pose : run[Math.floor(t * 10) % run.length]; sblit(spr, x - spr.w * k / 2, y - spr.h * k, k); halo(x, y - spr.h * k - 2 * k, k); return spr; }
     function hud(t, dt, prog, col) {
       const W = st.W, H = st.H, bw = W - 40; for (let x = 0; x < bw; x++) for (let y = 0; y < 2; y++) st.px(20 + x, H - 3 + y, x < bw * prog ? col[0] : col[1]);
       fx.step(st, dt);
@@ -2622,6 +2630,13 @@ GAMES.push({
       if (fadeIn) { const f = (t - h.t0) / .35; for (let y = 0; y < st.H; y++) for (let x = 0; x < st.W; x++) if (bayer(x, y) < f) st.px(x, y, 0x3a0606); }
       else if (snk.fall) hfil3(t, h);
       hud(t, dt, Math.min(1, snk.dist / snk.len), [0xd4a017, 0xf2e2c0]);
+      if (snk.how && snk.how.done) {   // the controls on a framed panel over the dimmed run; any tap or key (or 10s) closes it
+        const W = st.W, H = st.H, left = Math.ceil(10 - (t - snk.how.t0)), rows = snk.how.rows, ink = 0x1a0e08, gold = 0xd4a017, pw = Math.min(W - 16, 240), ph = 40 + rows.length * 30, x0 = Math.round((W - pw) / 2), y0 = Math.round((H - ph) / 2);
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) st.px(x, y, 0x0c0604, .55);
+        for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) { const edge = x < 2 || y < 2 || x >= pw - 2 || y >= ph - 2; if (!((x < 3 || x >= pw - 3) && (y < 3 || y >= ph - 3))) st.px(x0 + x, y0 + y, edge ? gold : ink); }
+        label(snk.how.title.toUpperCase(), W / 2, y0 + 10, 0xffe08a, ink); rows.forEach(([k, v], i) => { const y = y0 + 30 + i * 30; label(k.toUpperCase(), W / 2, y, 0xffffff, ink); label(v.toUpperCase(), W / 2, y + 11, gold, ink); });
+        label(`TAP TO GO  ${left}`, W / 2, y0 + ph + 6, 0xffffff, 0x0c0604); }
+      if (snk.ptr && !snk.fall && t - snk.ptr.t > .12) { const k = Math.min(1, (t - snk.ptr.t) / .3), r = 4 + k * 8; for (let a = 0; a < 6.28; a += .1) st.px(st.W / 2 + Math.cos(a) * r, st.H * .78 + Math.sin(a) * r * .6, k >= 1 ? 0xfff3a0 : 0xbfe9ff); }   // the charge builds round him
       st.flush();
     }
     // ── the first half: behind the hero, down the snake's back
@@ -2670,7 +2685,6 @@ GAMES.push({
     function draw1(t, dt) {
       const W = st.W, H = st.H; P1.hz = Math.round(H * (W / H < .8 ? .4 : .36)); P1.RW = W * (W / H < .8 ? .6 : .42);
       road3D(t, P1);
-      if (t - snk.t0 < 6) label('LEFT RIGHT  LANES     UP OR MIDDLE  JUMP + BLAST', W / 2, 6, 0x6a3a08);
     }
     // ── v2: side-on, parallax layers, the road rolling across the screen
     function draw2(t, dt) {
@@ -2703,7 +2717,6 @@ GAMES.push({
       if (t < snk.dashT) for (let i = 0; i < 8; i++) { const yy = hy - 4 - i * 2.5 * k; for (let j = 0; j < 6 + (i * 7 + Math.floor(t * 30)) % 9; j++) px(hx - 8 * k - j, yy, 0xfffbe0); }   // dash streaks
       if (t - snk.stun > .5 || Math.floor(t * 12) % 2) heroSide(t, hx, hy + 1, k, false);
       shotsDraw(t, hx + 4 * k, hy - 12 * k);
-      if (t - snk.t0 < 6) label('SWIPE UP JUMP  RIGHT DASH  LEFT BRAKE  TAP GHOSTS', W / 2, 6, 0x6a3a08);
     }
     // ── v3: high above, the road coiling up the screen like a board game
     const bend3 = s => Math.sin(s * .06) + .45 * Math.sin(s * .021 + 1);
@@ -2727,9 +2740,10 @@ GAMES.push({
       for (let i = 0; i < 22; i++) { const cx = hash(i) * W, cy = (i + hash(i + 50)) / 22 * H * 1.15, nh = 14 + hash(i + 7) * 22, nw = 2 + hash(i + 3) * 3; for (let xx = -nw * 2; xx <= nw * 2; xx++) px(cx + xx + 2, cy + 1, 0x5a0a08); for (let yy = 0; yy < nh; yy++) { const half = nw * (1 - yy / nh); for (let xx = -half; xx <= half; xx++) px(cx + xx, cy - yy, xx > half * .2 ? 0x5a0e0e : xx < -half * .5 ? 0xe8703a : 0xa8301e); } }   // needle mountains, seen at a slant
       const fx0 = W * .28 + Math.sin(t * .8) * 10, fy0 = H * .3 + Math.cos(t * .6) * 5; sblit(FRIEZA, fx0 - FRIEZA.w * k / 2, fy0, k, false, .6); for (let a = -4; a <= 4; a++) px(fx0 + a, fy0 - 2, 0xfff3a0);
       label('FRIEZA - HMPH.', fx0, fy0 + FRIEZA.h * k + 4, 0x3a0a3a, 0xf0d0ff);
-      const hy = H * .62 - up * up * H * 1.2; heroBack(t, W / 2, hy, k * 2);
-      for (let a = 0; a < 6.28; a += .04) if (a / 6.28 < h.m / 4) px(W / 2 + Math.sin(a) * 18 * k, hy - 16 * k - Math.cos(a) * 18 * k, 0xfff3a0);
-      if (!h.up) { label('FLOATING BACK UP... TAP TO HURRY', W / 2, H * .1, 0xffffff, 0x5a0a08); if (snk.loss) { sayAt('-' + fmtShort(snk.loss), W / 2, H * .3, 'red'); snk.loss = 0; } }
+      const rise = Math.min(1, h.m / 4), hy = H * (.78 - rise * .28) - up * up * H * 1.2 + Math.sin(t * 5) * 2 * k, pose = HERO().forms[S.form].pose;   // he flies back up: higher as he goes, then gone
+      for (let i = 0; i < 9; i++) { const sx = W / 2 + (hash(i * 3.1) - .5) * pose.w * k * 3, sy = (hy + ((t * 220 + hash(i) * 400) % (H * .6))) | 0; for (let j = 0; j < 6 * k; j++) px(sx, sy + j, 0xffe0c0); }   // wind streaming past
+      sblit(pose, W / 2 - pose.w * k, hy - pose.h * k * 2, k * 2); halo(W / 2, hy - pose.h * k * 2 - 3 * k, k * 2);
+      if (!h.up) { label('FLYING BACK UP... TAP TO GO FASTER', W / 2, H * .1, 0xffffff, 0x5a0a08); if (snk.loss) { sayAt('-' + fmtShort(snk.loss), W / 2, H * .3, 'red'); snk.loss = 0; } }
     }
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
