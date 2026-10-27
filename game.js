@@ -722,6 +722,238 @@ const GADGET_D = shapeSprite(10, 10, G => {
 
 const BIRDS = [BIRD_A, BIRD_B, BIRD_C, BIRD_D], GADGETS = [GADGET_A, GADGET_B, GADGET_C, GADGET_D];
 
+// the saga villains after beerus: hit, goku black, jiren, moro, gas (picked takes)
+// ---------- hit: purple dome split down the middle, paler face framed by lines from the eyes to the chin, red eyes,
+// a dark purple turtleneck trench coat, dark cyan undershirt with a yellow buckle ----------
+const HIT_PAL = { o: 0x140a1c, s: 0x9a6cc8, S: 0x6a4696, f: 0xc8a8ea, F: 0x9c7cc4, c: 0x4e2e72, C: 0x2e1a46, k: 0x140a18, w: 0xffffff, e: 0xf03a2a, a: 0x46345e, A: 0x2a1e3c, q: 0x5c6c8c, Q: 0x3c4864, u: 0x2a7884, U: 0x1a4c56, y: 0xf2c840, b: 0x3e2a56, B: 0x1c1424, p: 0xd8a0ff, P: 0x9a5aee };
+const HIT_SH = { s: 'S', a: 'A', u: 'U', q: 'Q', b: 'B' };
+function hitSpr(o = {}) {
+  const W = 26, pose = o.pose || 'pockets';
+  return shapeSprite(W, 36, G => {
+    if (pose === 'skip') for (const r of [[13, 21, 12.4, 13.8], [13, 21, 10.8, 12.2]]) { G.ell(r[0], r[1], r[2], r[3], 'P'); G.ell(r[0], r[1], r[2] - .9, r[3] - .9, '.'); }   // time-skip ripple
+    // cyan trousers in the split of the coat, dark purple boots with black toes
+    oline(G, [[11, 26], [10.6, 32]], 3, 2.8, 'u'); oline(G, [[15, 26], [15.4, 32]], 3, 2.8, 'u');
+    G.rect(8, 32, 5, 2, 'b'); G.rect(14, 32, 5, 2, 'b'); G.rect(8, 33, 2, 1, 'B'); G.rect(17, 33, 2, 1, 'B');
+    // the long coat: two panels flaring to the shins, open below the belt
+    const panel = [[6.6, 14.6], [13, 15], [12.4, 24], [10.4, 31.4], [4.4, 31.4]];
+    G.poly(panel, 'a'); G.poly(mir(W, panel), 'a');
+    G.line([[12.4, 23], [10.8, 31]], 1, 1, 'A'); G.line([[13.6, 23], [15.2, 31]], 1, 1, 'A');
+    G.poly([[10.4, 15], [15.6, 15], [14.6, 20.6], [11.4, 20.6]], 'u');                                    // undershirt
+    G.rect(8, 21, 10, 2, 'u'); G.rect(12, 21, 2, 2, 'y');                                                  // cyan belt, yellow buckle
+    const arm = pts => oline(G, pts, 3, 2.6, 'a');
+    const pocket = side => { const p = [[7.4, 16], [5.4, 20], [7.2, 23.8]]; arm(side ? mir(W, p) : p); G.rect(side ? 17 : 6, 24, 3, 1, 'C'); };
+    if (pose !== 'fold') pocket(0);
+    if (pose === 'pockets') pocket(1);
+    if (pose === 'jab') {
+      arm([[18.6, 16.4], [22, 17.6], [23.6, 17.6]]); G.ell(24, 17.6, 1.5, 1.5, 's'); G.rect(21, 17, 1, 2, 'c');
+      for (const y of [15, 20]) G.line([[17.6, y], [21.4, y]], 1, 1, 'p');                                // the blur of the punch
+    }
+    if (pose === 'fold') { const l = [[7, 16.6], [8.6, 19.4], [16.6, 19]], r = [[19, 16.6], [17.6, 20.4], [9.4, 20.2]]; G.line(l, 5, 4.6, 'o'); G.line(r, 5, 4.6, 'o'); G.line(l, 3, 2.6, 'a'); G.line(r, 3, 2.6, 'q'); G.ell(9.2, 19.6, 1.3, 1.2, 's'); G.ell(16.8, 20.4, 1.3, 1.2, 's'); }
+    if (pose === 'skip') { arm(mir(W, [[7.4, 16], [4.2, 17], [3.4, 12.6]])); G.ell(22.6, 12.4, 1.4, 1.4, 's'); G.rect(22, 9, 1, 3, 's'); G.rect(23, 9, 1, 3, 's'); G.rect(21, 13, 3, 1, 'c'); }
+    // the turtleneck collar
+    const col = [[7, 13], [10.6, 14.4], [10.6, 16.6], [6.4, 16]]; G.poly(col, 'q'); G.poly(mir(W, col), 'q'); G.rect(10, 14, 6, 2, 'q');
+    // head: purple dome with a raised split down the middle, flat ears, paler face framed in dark lines
+    G.ell(13, 8.8, 4.9, 5.2, 's'); G.rect(11, 13, 4, 1, 's');
+    G.ell(7.8, 9.6, 1, 1.8, 's'); G.ell(18.2, 9.6, 1, 1.8, 's');
+    G.poly([[11.8, 4], [12.4, 2.6], [13, 2.4], [13.6, 2.6], [14.2, 4], [13, 3.8]], 's'); G.line([[13, 3], [13, 7.4]], 1, 1, 'C');   // the split crest
+    G.set(11, 5, 'f'); G.set(10, 6, 'f');
+    G.poly([[9.2, 9.4], [16.8, 9.4], [16.4, 12], [14.6, 14.4], [11.4, 14.4], [9.6, 12]], 'f');
+    G.line([[9.2, 10.4], [9.8, 12.4], [11.6, 14.4], [14.4, 14.4], [16.2, 12.4], [16.8, 10.4]], 1, 1, 'c');   // the framing lines
+    const eye = o.glow ? 'p' : 'e';
+    G.rect(9, 8, 3, 1, 'C'); G.rect(14, 8, 3, 1, 'C'); G.set(11, 9, 'C'); G.set(14, 9, 'C');               // brows
+    G.rect(10, 9, 2, 2, eye); G.rect(14, 9, 2, 2, eye); G.set(10, 9, 'k'); G.set(15, 9, 'k'); if (!o.glow) { G.set(11, 10, 'k'); G.set(14, 10, 'k'); }
+    if (o.mouth === 'smirk') { G.rect(12, 12, 2, 1, 'C'); G.set(14, 11, 'C'); }
+    else G.rect(12, 12, 2, 1, 'F');
+  }, HIT_PAL, HIT_SH);
+}
+
+// ---------- goku black: goku's face, darker skin, cruel narrowed eyes; grey dogi over a black long-sleeved turtleneck,
+// red sash, black trousers, pointy white boots, green-and-gold potara on his left ear; rosé turns the hair pink ----------
+const BLK_PAL = { o: 0x050408, h: 0x343448, H: 0x22222f, j: 0x5c5c7c, s: 0xe8b48c, S: 0xb47c5a, k: 0x120c12, w: 0xffffff, W: 0xbcc0cc, v: 0x9aa0b0, g: 0x80808e, G: 0x585866, n: 0x26263a, N: 0x3c3c52, r: 0xc0242e, R: 0x7a141c, x: 0x3ad070, y: 0xf2c840, p: 0xf27ac0, P: 0xc04a8e, l: 0xffc4e4, m: 0x9a50e0 };
+const BLK_SH = { h: 'H', g: 'G', r: 'R', s: 'S', p: 'P', w: 'W' };
+const BLK_HAIR = {
+  base: [[[13, 6], [12.4, 0]], [[11, 6.4], [6, 0.8]], [[15, 6.4], [19.6, 1.4]], [[9.4, 8], [2.4, 4.6]], [[16.6, 8], [23.6, 5]], [[9, 10], [2.6, 11]], [[17, 10], [23.2, 11.4]]],
+  rose: [[[13, 6], [13, -0.6]], [[10.6, 6.4], [6.6, 0]], [[15.4, 6.4], [19.6, 0.2]], [[9.2, 8.4], [2.6, 3.4]], [[16.8, 8.4], [23.4, 3.8]], [[9, 10.6], [2.8, 9]], [[17, 10.6], [23.2, 9.4]]],
+};
+function blackSpr(o = {}) {
+  const W = 26, pose = o.pose || 'fold', rose = !!o.rose, hc = rose ? 'p' : 'h', hl = rose ? 'l' : 'j';
+  return shapeSprite(W, 36, G0 => {
+    G0.poly([[7.4, 14], [7.2, 8.6], [8, 5.4], [13, 4], [18, 5.4], [18.8, 8.6], [18.6, 14]], hc);
+    for (const [b, t] of BLK_HAIR[rose ? 'rose' : 'base']) { G0.line([b, t], rose ? 4.4 : 3.8, 1, hc); G0.line([[b[0] + (t[0] - b[0]) * .3, b[1] + (t[1] - b[1]) * .3], [b[0] + (t[0] - b[0]) * .62, b[1] + (t[1] - b[1]) * .62]], 1, 1, hl); }
+    if (pose === 'scythe') G0.line([[3, 35], [20, 4]], 1.6, 1.6, 'P');                                     // the scythe's shaft behind him
+    const G = shift(G0, 2);
+    // black trousers, pointy white boots
+    oline(G, [[11, 22], [10.4, 28.4]], 3.6, 3, 'n'); oline(G, [[15, 22], [15.6, 28.4]], 3.6, 3, 'n');
+    G.poly([[8, 28], [12.6, 28], [12.6, 31.4], [7, 31.4], [6.8, 30.4]], 'w'); G.poly([[13.4, 28], [18, 28], [19.2, 30.4], [19, 31.4], [13.4, 31.4]], 'w');
+    // grey dogi over the black turtleneck, red sash with a hanging tail
+    G.poly([[7.4, 14.2], [18.6, 14.2], [18, 22.4], [8, 22.4]], 'g');
+    G.poly([[10.6, 14.2], [15.4, 14.2], [13, 18.4]], 'n'); G.rect(11, 13, 4, 2, 'n');
+    G.rect(8, 20, 10, 2, 'r'); G.poly([[9, 21.6], [11, 21.6], [10.4, 25], [8.6, 24.6]], 'r');
+    G.ell(6.8, 15.8, 2.4, 2, 'g'); G.ell(19.2, 15.8, 2.4, 2, 'g');                                        // dogi shoulders
+    const arm = (pts, fist) => { oline(G, pts, 2.6, 2.4, 'n'); if (fist) G.ell(fist[0], fist[1], 1.4, 1.4, 's'); };
+    if (pose === 'fold') { const l = [[6.2, 16.6], [7.6, 19.2], [15.4, 18.8]], r = [[19.8, 16.6], [18.4, 19.8], [10.6, 19.6]]; G.line(l, 4.6, 4.4, 'o'); G.line(r, 4.6, 4.4, 'o'); G.line(l, 2.6, 2.4, 'n'); G.line(r, 2.6, 2.4, 'N'); G.ell(8, 19.2, 1.2, 1.2, 's'); G.ell(18, 19.8, 1.2, 1.2, 's'); }
+    if (pose === 'blade') {
+      arm([[6, 16.6], [4.6, 20], [5.6, 23]], [5.6, 23.6]);
+      G.line([[19.6, 17], [23.4, 5.4]], 3, .8, 'm'); G.line([[20, 15.6], [22.6, 8]], 1, .6, 'l');        // the ki blade off his hand
+      arm([[19.6, 16.4], [21.2, 19.6], [19.6, 18.4]]); G.ell(19.6, 18, 1.5, 1.5, 's'); G.set(20, 17, 'x');  // time ring
+    }
+    if (pose === 'orb') {
+      arm([[6, 16.6], [4.6, 20], [5.6, 23]], [5.6, 23.6]);
+      arm([[19.6, 16.2], [22.4, 14], [22.4, 10.6]]); G.ell(22.4, 7.6, 2.8, 2.8, 'P'); G.ell(22.4, 7.6, 1.7, 1.7, 'l'); G.ell(22.4, 9.8, 1.3, 1.3, 's');
+    }
+    if (pose === 'scythe') {
+      arm([[6, 16.6], [5, 19.4], [7.6, 21.4]], [7.8, 21.4]);
+      arm([[19.6, 16.2], [19.4, 12.6]]); G.ell(19.2, 11.6, 1.5, 1.5, 's');
+    }
+    // head: goku's face, narrowed eyes, smirk; potara on his left ear
+    { const H = shift(G0, 1);
+      H.ell(13, 10.4, 4.5, 4.6, 's'); H.poly([[8.6, 10], [17.4, 10], [17.2, 13.4], [15.4, 15.2], [10.6, 15.2], [8.8, 13.4]], 's');
+      H.rect(8, 10, 1, 3, 's'); H.rect(17, 10, 1, 3, 's');
+      H.poly([[8, 5], [18, 5], [18, 8.6], [16.6, 7], [15.6, 9.6], [14.2, 7], [12.6, 9.8], [11, 7], [9.4, 9.6], [8, 8.6]], hc);
+      for (const [x, y] of [[9, 9], [10, 10], [11, 10], [17, 9], [16, 10], [15, 10]]) H.set(x, y, 'k');
+      H.set(10, 11, 'w'); H.set(11, 11, rose ? 'v' : 'k'); H.set(16, 11, 'w'); H.set(15, 11, rose ? 'v' : 'k');
+      H.set(13, 12, 'S');
+      if (o.mouth === 'grin') { H.rect(11, 13, 4, 1, 'w'); H.set(10, 13, 'k'); H.set(15, 12, 'k'); }
+      else { H.set(11, 13, 'k'); H.set(12, 13, 'k'); H.set(13, 13, 'k'); H.set(14, 12, 'k'); }
+      H.set(18, 12, 'y'); H.set(18, 13, 'x'); H.set(18, 14, 'x'); }
+    if (pose === 'scythe') { G0.line([[21, 4.4], [17, 1.6], [11, 1.2], [3.6, 4.4]], 4.6, .8, 'o'); G0.line([[20.6, 4.4], [17, 2], [11, 1.6], [4.6, 4.2]], 3.2, .4, 'p'); G0.line([[18.4, 2], [13, 1], [9, 1.4]], 1, .6, 'l'); }   // the pink scythe blade over his head
+  }, BLK_PAL, BLK_SH);
+}
+
+// ---------- jiren: huge sleek grey head, giant round black eyes, red spandex pride trooper suit with black collar and legs,
+// white gloves and boots ----------
+const JIR_PAL = { o: 0x140a0c, g: 0xa89498, G: 0x6e5a62, l: 0xd2c0c4, k: 0x0e0a0e, K: 0x3a3438, r: 0xd8282e, R: 0x8e161c, n: 0x1c1a20, N: 0x34323a, w: 0xf6f4f6, W: 0xbcb8c4, e: 0xff3a30, a: 0xff6a3a, A: 0xc8201c, y: 0xffd060 };
+const JIR_SH = { g: 'G', r: 'R', w: 'W' };
+function jirenSpr(o = {}) {
+  const W = 28, pose = o.pose || 'fold';
+  return shapeSprite(W, 36, G => {
+    if (o.aura) { G.poly([[14, 0], [17, 4], [21, 1], [21.6, 7], [26.6, 6], [24.6, 13], [27.6, 18], [24.6, 24], [27.4, 31], [22, 30], [21, 35.4], [7, 35.4], [6, 30], [.6, 31], [3.4, 24], [.4, 18], [3.4, 13], [1.4, 6], [6.4, 7], [7, 1], [11, 4]], 'A'); G.poly([[14, 3], [19, 6], [24, 9], [22, 18], [25, 29], [3, 29], [6, 18], [4, 9], [9, 6]], 'a'); }
+    // short black legs, white boots
+    oline(G, [[11.4, 26], [10.6, 31.6]], 4, 3.6, 'n'); oline(G, [[16.6, 26], [17.4, 31.6]], 4, 3.6, 'n');
+    G.rect(8, 31, 6, 3, 'w'); G.rect(15, 31, 6, 3, 'w');
+    // barrel chest: red suit, black collar yoke, black belt line
+    G.poly([[7, 16], [21, 16], [20.2, 26.6], [7.8, 26.6]], 'r');
+    G.poly([[9, 16], [19, 16], [18, 18], [14, 19.4], [10, 18]], 'n');
+    G.rect(8, 25, 12, 2, 'n');
+    G.line([[14, 20.4], [14, 24]], 1, 1, 'R'); G.set(11, 21, 'R'); G.set(16, 21, 'R');
+    G.ell(6.4, 18, 3, 2.6, 'r'); G.ell(21.6, 18, 3, 2.6, 'r');                                             // shoulders
+    const glove = (x, y, r = 1.7) => { G.ell(x, y, r + 1, r + 1, 'o'); G.ell(x, y, r, r, 'w'); };
+    const arm = pts => oline(G, pts, 3.4, 3, 'g');
+    if (pose === 'fold') { const l = [[5.4, 18.6], [7, 22], [17.4, 21.4]], r = [[22.6, 18.6], [21, 23], [10.6, 22.8]]; G.line(l, 5.6, 5.2, 'o'); G.line(r, 5.6, 5.2, 'o'); G.line(l, 3.6, 3.2, 'g'); G.line(r, 3.6, 3.2, 'G'); glove(8.4, 22.6, 1.6); glove(19.4, 22, 1.6); }
+    if (pose === 'punch') {
+      arm([[5.4, 18.6], [4, 22.4], [5.6, 25]]); glove(5.6, 25.4);
+      arm([[22.4, 18.4], [24.6, 19]]); glove(25.2, 19, 2.2); for (const [x, y] of [[27, 15], [27, 23], [24, 14]]) G.set(x, y, 'y');
+    }
+    if (pose === 'fists') { const a = [[5.4, 18.6], [4, 22.4], [5.6, 25]]; arm(a); arm(mir(W, a)); glove(5.6, 25.4); glove(22.4, 25.4); }
+    if (pose === 'raise') {
+      arm([[5.4, 18.6], [4, 22.4], [5.6, 25]]); glove(5.6, 25.4);
+      arm([[22.6, 18], [25, 14.6], [24.6, 10.4]]); glove(24.6, 9.4, 2);
+    }
+    // the head: a wide sleek cranium narrowing to a small jaw, flat round ears
+    G.ell(14, 8.6, 5.8, 5.6, 'g'); G.poly([[8.4, 9], [19.6, 9], [18.4, 14], [16, 16.4], [12, 16.4], [9.6, 14]], 'g');
+    G.ell(7.8, 11, 1, 1.6, 'g'); G.ell(20.2, 11, 1, 1.6, 'g'); G.set(7, 11, 'G'); G.set(21, 11, 'G');
+    G.set(11, 4, 'l'); G.set(12, 4, 'l'); G.set(10, 5, 'l');
+    G.rect(12, 16, 4, 1, 'g');
+    // big round black eyes with dark-grey rims, small pupils
+    G.poly([[9.4, 9.4], [13, 10.4], [13, 13.2], [11.4, 13.6], [9.6, 12]], 'k'); G.poly(mir(W, [[9.4, 9.4], [13, 10.4], [13, 13.2], [11.4, 13.6], [9.6, 12]]), 'k');
+    G.set(10, 10, 'K'); G.set(17, 10, 'K');
+    if (o.glow) { G.rect(11, 11, 2, 1, 'e'); G.rect(15, 11, 2, 1, 'e'); G.set(11, 12, 'y'); G.set(16, 12, 'y'); }
+    else { G.set(11, 11, 'K'); G.set(16, 11, 'K'); G.set(12, 11, 'w'); G.set(15, 11, 'w'); }
+    G.line([[9, 8.8], [13, 9.8]], 1, 1, 'G'); G.line([[19, 8.8], [15, 9.8]], 1, 1, 'G');
+    G.set(14, 13, 'G');
+    if (o.mouth === 'roar') { G.rect(12, 14, 4, 2, 'k'); G.rect(12, 14, 4, 1, 'w'); }
+    else G.rect(13, 15, 2, 1, 'G');
+  }, JIR_PAL, JIR_SH);
+}
+
+// ---------- moro: hunched old blue goat sorcerer, horns curling round to his cheeks, long pointy ears, round red eyes,
+// a shaggy white beard, red hooded robe, fur tufts on the shoulders, bandaged wrists, crooked staff ----------
+const MOR_PAL = { o: 0x120a10, g: 0x5a7ad0, G: 0x3c5296, l: 0x9cb8f0, h: 0xe0d2b0, H: 0xa08c66, k: 0x100a10, w: 0xffffff, W: 0xc4c6d4, y: 0xffd23a, e: 0xff3828, v: 0xb02a2c, V: 0x6e1418, b: 0x7a5232, B: 0x4e321c, f: 0x8a6440, d: 0x2e2a3e, m: 0x5a1018, u: 0xa070ff, U: 0x6a3ac8, z: 0x5aff9a, Z: 0x1aa858 };
+const MOR_SH = { g: 'G', h: 'H', v: 'V', b: 'B', w: 'W' };
+function moroSpr(o = {}) {
+  const W = 26, pose = o.pose || 'staff';
+  return shapeSprite(W, 36, G => {
+    const staff = pts => G.line(pts, 1.6, 1.6, 'b');
+    if (pose === 'staff') { staff([[21.4, 9], [21, 35]]); G.line([[21.4, 9], [21.6, 5.4], [23.6, 4.2], [24.8, 6], [23.6, 7.6]], 1.8, 1.2, 'b'); }
+    if (pose === 'cast') { staff([[20.4, 4], [21, 33]]); G.ell(20.4, 3, 3, 3, 'U'); G.ell(20.4, 3, 2, 2, 'u'); G.set(20, 2, 'w'); for (const [x, y] of [[15, 2], [24, 8], [16, 6], [25, 1]]) G.set(x, y, 'u'); }
+    // the robe: red, hooded, to the floor; dark trousers peek out, bandaged ankles
+    G.poly([[7.6, 15], [18.4, 15], [21.6, 32.4], [4.4, 32.4]], 'v');
+    G.line([[13, 22], [13, 32]], 1, 1, 'V'); G.line([[9, 23], [7.4, 32]], 1, 1, 'V');
+    G.rect(7, 32, 4, 2, 'd'); G.rect(15, 32, 4, 2, 'd'); G.rect(7, 32, 4, 1, 'W'); G.rect(15, 32, 4, 1, 'W');
+    G.rect(7, 25, 12, 2, 'f');                                                                             // fur pelt at the waist
+    G.ell(7, 15.6, 2.8, 2, 'f'); G.ell(19, 15.6, 2.8, 2, 'f');                                             // fur tufts on the shoulders
+    const hand = (x, y) => { G.ell(x, y, 1.4, 1.4, 'g'); };
+    const arm = (pts, cuff) => { oline(G, pts, 2.8, 2.4, 'v'); G.ell(cuff[0], cuff[1], 1.2, 1, 'w'); };
+    if (pose === 'staff') { arm([[7, 17], [5.2, 21], [8, 23.6]], [7.4, 23.4]); hand(8.8, 23.6); arm([[19, 17], [20.8, 19.4], [20.6, 21]], [20.8, 20.6]); hand(21.2, 21.8); }
+    if (pose === 'cast') { arm([[7, 17], [5.2, 21], [8, 23.6]], [7.4, 23.4]); hand(8.8, 23.6); arm([[19, 17], [21.4, 13], [20.6, 9]], [21, 10]); hand(20.6, 8); }
+    if (pose === 'laugh') { arm([[7, 17], [3.6, 16], [2.6, 12.4]], [2.8, 12.6]); hand(2.6, 11); arm([[19, 17], [22.4, 16], [23.4, 12.4]], [23.2, 12.6]); hand(23.4, 11); }
+    if (pose === 'drain') {
+      arm([[7, 17], [5.2, 21], [8, 23.6]], [7.4, 23.4]); hand(8.8, 23.6);
+      arm([[19, 17], [22.4, 19.4], [23.6, 18.6]], [22.8, 19]); G.ell(24.4, 18.2, 1.5, 1.5, 'g');
+      for (const [x, y] of [[22, 13], [24, 11], [20, 12], [25, 14], [23, 23], [25, 22]]) G.set(x, y, 'z'); G.line([[24.4, 14.6], [24.2, 16]], 1, 1, 'Z');   // life energy drawn in
+    }
+    // hood behind the head, long pointy ears, ram horns curling round to the cheeks
+    G.ell(13, 9, 6.4, 6.2, 'V');
+    G.line([[9.4, 11.4], [3.4, 10.4]], 2, .6, 'g'); G.line(mir(W, [[9.4, 11.4], [3.4, 10.4]]), 2, .6, 'g');
+    G.ell(13, 10, 4.2, 4.4, 'g');
+    const horn = [[10, 6.6], [7, 4.4], [4.6, 6], [5, 9.2], [7.8, 10.6]];
+    oline(G, horn, 2.4, 1.2, 'h'); oline(G, mir(W, horn), 2.4, 1.2, 'h');
+    G.set(6, 5, 'H'); G.set(20, 5, 'H'); G.set(5, 8, 'H'); G.set(21, 8, 'H');
+    G.poly([[10.6, 12], [15.4, 12], [14.6, 15.6], [11.4, 15.6]], 'l');                                    // pale snout
+    G.poly([[10, 14], [16, 14], [15.4, 20], [14.2, 24.6], [13, 26], [11.8, 24.6], [10.6, 20]], 'w');    // shaggy beard to the belly
+    G.set(12, 19, 'W'); G.set(14, 22, 'W'); G.set(13, 17, 'W');
+    // round eyes under heavy brows: red with a slit pupil
+    for (const x of [10.8, 15.2]) { G.ell(x, 10.2, 1.8, 1.7, 'k'); G.ell(x, 10.2, 1.1, 1.1, o.glow ? 'y' : 'e'); }
+    if (!o.glow) { G.set(11, 10, 'k'); G.set(15, 10, 'k'); }
+    G.line([[8.6, 7.8], [12.2, 8.6]], 1, 1, 'G'); G.line([[17.4, 7.8], [13.8, 8.6]], 1, 1, 'G');
+    G.set(12, 13, 'G'); G.set(14, 13, 'G');                                                                  // nostrils
+    if (o.mouth === 'laugh') { G.rect(11, 14, 4, 2, 'm'); G.rect(11, 14, 4, 1, 'w'); G.set(10, 14, 'k'); G.set(15, 14, 'k'); }
+    else G.rect(12, 14, 2, 1, 'G');
+  }, MOR_PAL, MOR_SH);
+}
+
+// ---------- gas: tallest heeter, blue skin, long pale dreadlocks, dark rings under red eyes, bone headband,
+// red jacket with gold trim and long flaps over a white bodysuit, blue boots ----------
+const GAS_PAL = { o: 0x0c0a16, b: 0x5a86d6, B: 0x3a5aa4, l: 0x9cbcf4, c: 0x2a8a8a, h: 0xece6f8, H: 0xa894c8, k: 0x100c18, w: 0xf6f4f8, W: 0xbcbad0, e: 0xff3030, y: 0xf2c640, Y: 0xa8841a, r: 0xc8282e, R: 0x7e161c, t: 0xe8dcc0, T: 0xa89a7a, u: 0x2a5ad8, U: 0x1a3a94, m: 0x6a1020 };
+const GAS_SH = { b: 'B', h: 'H', r: 'R', w: 'W', u: 'U', t: 'T' };
+function gasSpr(o = {}) {
+  const W = 28, pose = o.pose || 'fold';
+  return shapeSprite(W, 38, G => {
+    // long dreadlocks hanging behind the head to the shoulders
+    const locks = o.wild ? [[[9, 6], [5, 4], [1.6, 6]], [[9, 8], [4.4, 10], [1.4, 14]], [[9.4, 10], [6, 15], [5, 20]], [[11, 4], [8.6, 1], [5.6, 0.6]]] : [[[9, 6], [6.4, 9], [6.6, 21]], [[9, 8], [4.6, 12], [4.2, 19]], [[9.6, 10], [8.4, 14], [8.6, 18]], [[10.6, 4.6], [7.4, 6], [3, 15]]];
+    for (const p of locks) { oline(G, p, 1.8, 1.4, 'h'); oline(G, mir(W, p), 2.2, 1.8, 'h'); const m = p[1]; G.set(Math.round(m[0]), Math.round(m[1]), 'H'); G.set(Math.round(W - m[0]) - 1, Math.round(m[1]), 'H'); }
+    G.ell(14, 6.4, 5, 3.4, 'h');
+    // white bodysuit legs, blue boots with white soles
+    oline(G, [[11.6, 27], [11, 33.4]], 3.6, 3.2, 'w'); oline(G, [[16.4, 27], [17, 33.4]], 3.6, 3.2, 'w');
+    G.rect(8, 33, 6, 3, 'u'); G.rect(15, 33, 6, 3, 'u'); G.rect(8, 35, 6, 1, 'w'); G.rect(15, 35, 6, 1, 'w'); G.set(10, 33, 'y'); G.set(17, 33, 'y');
+    // red jacket: gold-trimmed front, the heeter crest on the chest, long flaps from the hips to below the knee
+    G.poly([[8, 25], [11.4, 25], [10.4, 31], [7, 30.4]], 'r'); G.poly(mir(W, [[8, 25], [11.4, 25], [10.4, 31], [7, 30.4]]), 'r');
+    G.poly([[8, 16], [20, 16], [19.4, 26.4], [8.6, 26.4]], 'r');
+    G.line([[14, 16.4], [14, 26]], 1, 1, 'y'); G.rect(9, 25, 10, 1, 'y');
+    G.ell(11.4, 19.4, 1.3, 1.3, 'y'); G.set(11, 19, 'r');                                                    // heeter crest
+    G.rect(12, 15, 4, 2, 'w');                                                                             // bodysuit collar
+    G.ell(7.2, 17.6, 2.8, 2.4, 'r'); G.ell(20.8, 17.6, 2.8, 2.4, 'r'); G.rect(5, 16, 3, 1, 'y'); G.rect(20, 16, 3, 1, 'y');
+    const arm = pts => oline(G, pts, 3, 2.6, 'w');
+    const fist = (x, y, r = 1.6) => G.ell(x, y, r, r, 'b');
+    if (pose === 'fold') { const l = [[6, 18.6], [7.6, 21.6], [17, 21.2]], r = [[22, 18.6], [20.6, 22.8], [11, 22.6]]; G.line(l, 5, 4.6, 'o'); G.line(r, 5, 4.6, 'o'); G.line(l, 3, 2.6, 'w'); G.line(r, 3, 2.6, 'W'); fist(9.4, 21.6, 1.4); fist(18.6, 22.6, 1.4); }
+    if (pose === 'punch') { arm([[6, 18.6], [4.6, 22.6], [6, 26]]); fist(6, 26.6); arm([[22, 18.6], [25.6, 19.4]]); fist(26.2, 19.4, 1.8); for (const [x, y] of [[23, 15], [23, 23]]) G.set(x, y, 'y'); }
+    if (pose === 'claw') for (const f of [p => p, p => mir(W, p)]) { arm(f([[6, 18.6], [3, 21], [3.4, 16]])); const [cx, cy] = f([[3.4, 15]])[0]; fist(cx, cy, 1.6); G.set(Math.round(cx - 1), Math.round(cy - 2), 'b'); G.set(Math.round(cx + 1), Math.round(cy - 2), 'b'); }
+    // head: long face, no brows or nose, pointy ears
+    G.line([[9.4, 10.6], [6.4, 8.6]], 1.8, .6, 'b'); G.line(mir(W, [[9.4, 10.6], [6.4, 8.6]]), 1.8, .6, 'b');
+    G.ell(14, 10.4, 4.4, 4.6, 'b'); G.poly([[9.6, 10], [18.4, 10], [17.6, 14], [15.4, 16.4], [12.6, 16.4], [10.4, 14]], 'b'); G.rect(12, 16, 4, 1, 'b');
+    G.poly([[9.4, 5], [18.6, 5], [18.8, 7.6], [16.4, 6.6], [14, 7.4], [11.6, 6.6], [9.2, 7.6]], 'h');         // locks swept off the forehead
+    if (o.horns) { G.rect(10, 6, 8, 2, 'b'); G.set(12, 6, 'l'); const hn = [[10, 7.4], [6.8, 9.6], [6.4, 15.6]]; oline(G, hn, 2.6, .8, 't'); oline(G, mir(W, hn), 2.6, .8, 't'); }
+    else { G.rect(9, 7, 10, 1, 't'); for (const x of [10, 14, 17]) G.set(x, 7, 'T'); G.set(9, 8, 't'); G.set(18, 8, 't'); }      // bone headband
+    // eyes with dark turquoise rings beneath
+    G.rect(10, 10, 3, 1, 'k'); G.rect(15, 10, 3, 1, 'k');
+    G.rect(11, 11, 2, 1, o.glow ? 'y' : 'w'); G.rect(15, 11, 2, 1, o.glow ? 'y' : 'w'); G.set(12, 11, 'e'); G.set(15, 11, 'e');
+    G.rect(10, 12, 3, 1, 'c'); G.rect(15, 12, 3, 1, 'c');
+    if (o.mouth === 'grin') { G.rect(12, 14, 4, 1, 'w'); G.set(11, 13, 'k'); G.set(16, 13, 'k'); G.rect(12, 15, 4, 1, 'm'); }
+    else G.rect(13, 14, 2, 1, 'B');
+  }, GAS_PAL, GAS_SH);
+}
+
+const HIT = hitSpr({ pose: 'pockets' }), GOKU_BLACK = blackSpr({ pose: 'fold' }), JIREN = jirenSpr({ pose: 'fold' }), MORO = moroSpr({ pose: 'laugh', mouth: 'laugh' }), GAS = gasSpr({ pose: 'fold' });
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
   return [
@@ -733,6 +965,11 @@ const VILLAINS = (() => {
     { name: 'kid buu', spr: KIDBUU },
     { name: 'broly', spr: BROLY },
     { name: 'beerus', spr: BEERUS },
+    { name: 'hit', spr: HIT },
+    { name: 'goku black', spr: GOKU_BLACK },
+    { name: 'jiren', spr: JIREN },
+    { name: 'moro', spr: MORO },
+    { name: 'gas', spr: GAS },
   ];
 })();
 // a saiyan space pod streaks across the sky now and then; tap it for a boost
@@ -1576,9 +1813,9 @@ GAMES.push({
       if (S.world === 2 && nextNappa > 0 && !boss && !shen && (nextNappa -= dt) <= 0) { nextNappa = 0; const hp = Math.max(800, rate() * 50); boss = { name: 'nappa', spr: NAPPA, hp, max: hp, t0: t, until: t + 35, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event('nappa: "vegeta, let me handle this!" — tap him'); }
       if (!tour && session > 110 && !boss && !shen && (nextBoss -= dt) < 0) {
         // the next saga in story order; after beerus it all starts over, tougher
-        const n = VILLAINS.length, V0 = VILLAINS[S.saga % n], hp = Math.max(600, rate() * 40) * (1 + .15 * S.saga), me = V0.name === 'vegeta' && S.hero === 'vegeta';
+        const n = VILLAINS.length, V0 = VILLAINS[S.saga % n], hp = Math.max(600, rate() * 40) * (1 + .15 * S.saga), me = V0.name === 'vegeta' && S.hero === 'vegeta', twin = V0.name === 'goku black' && S.hero === 'goku';
         boss = { name: me ? 'past vegeta' : V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 40, x: 0, y: 0, k: 1, flash: 0, nextKi: 1, saga: true };
-        ui.event(`saga ${S.saga % n + 1}/${n}: ` + (me ? 'your younger self shows up, scouter and all — "that\'s MY hair!" tap him' : `${V0.name} is attacking — tap him!`), 4000); nextBoss = 160 + Math.random() * 60;
+        ui.event(`saga ${S.saga % n + 1}/${n}: ` + (me ? 'your younger self shows up, scouter and all — "that\'s MY hair!" tap him' : twin ? 'goku black is attacking — "hey, that\'s MY face!" tap him' : `${V0.name} is attacking — tap him!`), 4000); nextBoss = 160 + Math.random() * 60;
       }
       // meteor storm: a 12s downpour; every bust counts and pays out at the end
       if (!storm && session > 120 && !tour && !shen && !boss && (nextStorm -= dt) < 0) { storm = { until: t + 12, next: t, hit: 0 }; ui.event('meteor storm! bust as many as you can'); ui.sfx && ui.sfx('boss'); nextStorm = 260 + Math.random() * 60; }
@@ -1869,7 +2106,7 @@ GAMES.push({
     if (/ginyu/.test(HASH)) { session = 151; S.best = Math.max(S.best, 5e4); nextGinyu = 0; }   // preview hook: #ginyu
     if (/visitors/.test(HASH)) { session = 61; nextGreg = 0; nextKai = 0; }   // preview hook: #visitors (gregory, king kai)
     if (/raid/.test(HASH)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
-    { const sg = HASH.match(/saga(\d)/); if (sg) { S.saga = Math.max(0, +sg[1] - 1); session = 111; nextBoss = 0; } }   // preview hook: #saga3 (that saga's villain raids now)
+    { const sg = HASH.match(/saga(\d+)/); if (sg) { S.saga = Math.max(0, +sg[1] - 1); session = 111; nextBoss = 0; } }   // preview hook: #saga3 (that saga's villain raids now)
     if (/roshi/.test(HASH)) { session = 91; nextRoshi = 0; }   // preview hook: #roshi
     if (/westcity/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 4; }   // preview hook: #westcity
     if (/androids/.test(HASH)) { session = 201; S.best = Math.max(S.best, 2e5); nextAndro = 0; }   // preview hook: #androids (17 and 18)
