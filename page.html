@@ -407,6 +407,7 @@ __PLANET__
   let lastCombo = 1, goalKey = '';
   let toastT = 0, buyFn = null, shopBuilt = false, titleFx = null;
   let lastPl = 0;
+  const SEAS = ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c'];   // each world's deepest sea tone
   const ui = {
     onBuy(fn) { buyFn = fn; },
     update(s) {
@@ -439,7 +440,7 @@ __PLANET__
       box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { box.hidden = true; $('game').classList.remove('wishing'); done(options[+b.dataset.i].key); }));
       box.querySelector('button').focus({ preventScroll: true });
     },
-    world(w) { root.style.setProperty('--sea', ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c'][w] || '#e2a93a'); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); document.body.classList.toggle('kame', w === 6); document.body.classList.toggle('paozu', w === 7); document.body.classList.toggle('future', w === 8); },
+    world(w) { root.style.setProperty('--sea', SEAS[w] || SEAS[0]); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); document.body.classList.toggle('kame', w === 6); document.body.classList.toggle('paozu', w === 7); document.body.classList.toggle('future', w === 8); },
     fx(kind, arg) { if (titleFx) titleFx(kind, arg); },
     bump() { const n = $('pl'); n.classList.add('bump'); clearTimeout(ui._b); ui._b = setTimeout(() => n.classList.remove('bump'), 110); },
   };
@@ -614,28 +615,50 @@ __PLANET__
   addEventListener('keydown', e => { if (e.key === 'Escape') $('menu').hidden = true; });
   ui.achieved = achCount; achCount();
 
-  // the share card: a 1200×630 frame of the game, with your exact power level on a pill
-  // the share card: the game on the left; power level, achievements and run stats on the right
+  // the share card, 1200×630: the game beside your power, a stat strip, dragon balls and achievements
   function drawCard(demo) {
     const d = Object.assign(game.card(), demo || {}), W = 1200, H = 630, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
-    const MONO = s => `${s}px "Fragment Mono"`, num = n => n.toLocaleString('en-US'), clock = t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+    const MONO = s => `${s}px "Fragment Mono"`, SERIF = s => `italic ${s}px "Instrument Serif"`, num = n => n.toLocaleString('en-US');
+    const clock = t => { const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = String(Math.floor(t % 60)).padStart(2, '0'); return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${String(m).padStart(2, '0')}:${s}`; };
+    const n = d.sagas, sagaTxt = d.saga < n ? `${d.saga}/${n}` : `CLEARED ×${Math.floor(d.saga / n)}`;
+    // the exact number while it reads; past a trillion, three figures and a suffix
+    const pl = n => n < 1e12 ? num(n) : fmt(n);
     const frame = (fx, fy, fw, fh) => { const sc = d.scene, k = Math.max(fw / sc.width, fh / sc.height); x.save(); x.beginPath(); x.rect(fx, fy, fw, fh); x.clip(); x.fillStyle = '#fcfcfb'; x.fillRect(fx, fy, fw, fh); x.drawImage(sc, fx + (fw - sc.width * k) / 2, fy + (fh - sc.height * k) / 2, sc.width * k, sc.height * k); x.restore(); };
+    const fit = (text, font, maxW, size, min = 12) => { do { x.font = font(size); } while (x.measureText(text).width > maxW && (size -= 2) > min); return size; };
+    const starPath = (cx, cy, r) => { x.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .45 : r; x.lineTo(cx + Math.cos(a) * q, cy + Math.sin(a) * q); } x.closePath(); };
+    // a dragon ball: lit with its stars once you hold it, an empty ring until then
+    const ball = (cx, cy, r, stars, on) => {
+      x.beginPath(); x.arc(cx, cy, r, 0, 7);
+      if (!on) { x.fillStyle = 'rgba(0,0,0,.05)'; x.fill(); x.strokeStyle = '#d8d6d0'; x.lineWidth = 2; x.stroke(); return; }
+      const g = x.createRadialGradient(cx - r * .35, cy - r * .4, r * .08, cx, cy, r); g.addColorStop(0, '#fff6cf'); g.addColorStop(.3, '#ffb02a'); g.addColorStop(1, '#de6410'); x.fillStyle = g; x.fill();
+      x.fillStyle = '#d4281a'; const sr = r * (stars > 4 ? .2 : .26), ring = stars > 1 ? r * .42 : 0;
+      for (let i = 0; i < stars; i++) { const a = -Math.PI / 2 + i * 2 * Math.PI / stars; starPath(cx + Math.cos(a) * ring, cy + Math.sin(a) * ring, sr); x.fill(); }
+    };
+    const balls = (px, cy, r, gap) => { for (let i = 0; i < 7; i++) ball(px + r + i * (2 * r + gap), cy, r, i + 1, i < d.orbs); return 7 * (2 * r + gap) - gap; };
     const pillAt = (text, px, py, size, h) => { x.font = MONO(size); const w = x.measureText(text).width + h; x.fillStyle = '#fff7e6'; x.strokeStyle = '#f2d9a8'; x.lineWidth = 2; x.beginPath(); x.roundRect(px, py, w, h, h / 2); x.fill(); x.stroke(); x.fillStyle = '#0b0b0b'; x.fillText(text, px + h / 2, py + h / 2 + size * .36); return w; };
     // as many achievement pills as fit in the rows, newest first; whatever doesn't fit becomes a "+N more" pill
     const pills = (list, px, py, maxW, size, h, gap, rows) => {
       x.font = MONO(size); const wOf = t => x.measureText(t).width + h, place = items => { const out = []; let cx = px, r = 0; for (const t of items) { const w = wOf(t); if (cx > px && cx + w > px + maxW) { if (++r >= rows) return null; cx = px; } out.push([t, cx, py + r * (h + gap)]); cx += w + gap; } return out; };
-      const names = list.map(a => a.toUpperCase()); let n = names.length, laid = place(names);
-      while (!laid && n > 0) { n--; laid = place(names.slice(0, n).concat(`+${names.length - n} MORE`)); }
+      const names = list.map(a => a.toUpperCase()); let k = names.length, laid = place(names);
+      while (!laid && k > 0) { k--; laid = place(names.slice(0, k).concat(`+${names.length - k} MORE`)); }
       for (const [t, cx, cy] of laid || []) pillAt(t, cx, cy, size, h);
     };
-    const stats = [`${d.hero} · ${d.form}`, `achievements ${d.ach.length}/${d.achN}`, `laps ${d.laps} · ${clock(d.time)}`];
+    const right = (text, px, py) => { x.textAlign = 'right'; x.fillText(text, px, py); x.textAlign = 'left'; };
+
     x.fillStyle = '#fcfcfb'; x.fillRect(0, 0, W, H);
     frame(0, 0, 700, H);
-    x.fillStyle = '#8a8a86'; x.font = MONO(22); x.fillText('POWER LEVEL', 740, 90);
-    x.fillStyle = '#0b0b0b'; let fs = 104; do { x.font = `italic ${fs}px "Instrument Serif"`; fs -= 4; } while (x.measureText(num(d.pl)).width > 420 && fs > 40); x.fillText(num(d.pl), 736, 190);
-    x.font = MONO(20); stats.forEach((t, i) => { x.fillStyle = i ? '#8a8a86' : '#d4a017'; x.fillText(t.toUpperCase(), 740, 240 + i * 34); });
-    pills(d.ach, 740, 360, 420, 16, 36, 8, 4);
+    pillAt(d.worldName.toUpperCase(), 24, H - 58, 14, 34);
+    x.fillStyle = '#8a8a86'; x.font = MONO(22); x.fillText('POWER LEVEL', 740, 78);
+    const big = pl(d.pl); x.fillStyle = '#0b0b0b'; fit(big, SERIF, 420, 104, 40); x.fillText(big, 736, 170);
+    x.font = MONO(20); x.fillStyle = '#d4a017'; x.fillText(`${d.hero} · ${d.form}`.toUpperCase(), 740, 216);
+    x.fillStyle = '#8a8a86'; x.fillText(`BEST ${pl(d.best)}`, 740, 248);
+    const sy = 270, cells = [['WISHES', String(d.wishes)], d.saga < n ? ['SAGA', sagaTxt] : ['VILLAINS', num(d.saga)], ['KI SEEDS', fmt(d.seeds)], ['LAPS', `${fmt(d.laps)}`]];
+    x.fillStyle = '#ececec'; x.fillRect(740, sy, 420, 2); x.fillRect(740, sy + 78, 420, 2);
+    cells.forEach(([l, val], i) => { const cx = 740 + i * 105; if (i) { x.fillStyle = '#ececec'; x.fillRect(cx - 8, sy + 14, 2, 50); } x.fillStyle = '#8a8a86'; x.font = MONO(13); x.fillText(l, cx, sy + 26); x.fillStyle = '#0b0b0b'; fit(val, MONO, 92, 26); x.fillText(val, cx, sy + 60); });
+    x.fillStyle = '#8a8a86'; x.font = MONO(13); x.fillText('DRAGON BALLS', 740, 390); balls(856, 385, 12, 6); x.fillStyle = '#8a8a86'; x.fillText(`${d.orbs}/7`, 856 + 7 * 30, 390);
+    pills(d.ach, 740, 414, 420, 15, 32, 8, 3);
     x.fillStyle = '#0b0b0b'; x.font = MONO(22); x.fillText('HIGHSKORE.COM', 740, 590);
+    x.fillStyle = '#8a8a86'; x.font = MONO(15); right(`${d.ach.length}/${d.achN} · ${clock(d.time)}`, 1160, 590);
     return c;
   }
   let timer = 0;

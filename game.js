@@ -3079,7 +3079,8 @@ GAMES.push({
     const pick = id => { if (!heroOpen(id)) return false; S.hero = id; save(); return true; };
     const thumb = (id, k = 4) => { const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); } return c; };
     // what the share card shows: the exact power level, the form, and the hero as he looks right now
-    const card = () => ({ ach: ACH.filter(a => S.ach[a.id]).sort((a, b) => S.ach[b.id] - S.ach[a.id]).map(a => a.name), achN: ACH.length, laps, time: session, best: Math.floor(S.best), pl: Math.floor(S.pl), form: FORMS[S.form].name, hero: (CHARS.find(c => c.id === S.hero) || CHARS[0]).name, spr: (fuseUntil > st.t ? HERO().fused : HERO().forms[S.form]).idle, world: S.world, scene: st.cv });
+    const card = () => ({ ach: ACH.filter(a => S.ach[a.id]).sort((a, b) => S.ach[b.id] - S.ach[a.id]).map(a => a.name), achN: ACH.length, laps, time: session, best: Math.floor(S.best), pl: Math.floor(S.pl), form: FORMS[S.form].name, hero: (CHARS.find(c => c.id === S.hero) || CHARS[0]).name, spr: (fuseUntil > st.t ? HERO().fused : HERO().forms[S.form]).idle, world: S.world, scene: st.cv,
+      worldName: WORLDS[S.world].name, wishes: S.wishes, orbs: S.orbs7, seeds: S.ascend, sagas: VILLAINS.length, saga: S.saga });
     const ascendInfo = () => { const g = seedsNow(); return { pl: fmtShort(Math.floor(S.pl)), seeds: g, now: seedBoost().toFixed(1), next: (1 + (S.ascend + g) * (.1 + .02 * lvl('seedx'))).toFixed(1), keep: lvl('head') }; };   // what the ascend confirm box spells out
     return { menu, learn, respec, ascendInfo, pick, thumb, card, frame, kaioken, start: () => {
       playing = true; syncShop();
