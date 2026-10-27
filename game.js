@@ -2073,7 +2073,7 @@ GAMES.push({
         for (let k = 0; k < 24; k++) fx.add({ x: star.x, y: star.y, vx: (Math.random() - .5) * 120, vy: (Math.random() - .5) * 120, drag: 2.5, life: .7, c: [0xffffff, 0xffd84a, 0xff8a3a], raw: true });
         star = null; return;
       }
-      for (const m of meteors) if (!m.dead && Math.hypot(px - m.x, py - m.y) < 9) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); for (let k = 0; k < 16; k++) fx.add({ x: m.x, y: m.y, vx: (Math.random() - .5) * 110, vy: (Math.random() - .5) * 110, drag: 2.5, life: .6, c: [0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], raw: true }); return; }
+      for (const m of meteors) if (!m.dead && m.delay <= 0 && Math.hypot(px - m.x, py - m.y) < 15) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); for (let k = 0; k < 16; k++) fx.add({ x: m.x, y: m.y, vx: (Math.random() - .5) * 110, vy: (Math.random() - .5) * 110, drag: 2.5, life: .6, c: [0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], raw: true }); return; }
       // anywhere else: train — a sprint burst and a few points
       if (moon && moon.a > .3 && !moon.leaving && Math.hypot(px - moon.x, py - moon.y) < moon.r + 6) {
         apeUntil = st.t + 15; moon.leaving = true; ach('ape'); flashT = 1; shake = .8; ui.event('great ape mode — ×3'); ui.fx && ui.fx('super');
@@ -3146,7 +3146,7 @@ GAMES.push({
       } else echo = null;
       for (const kb of kis) if (kb.disc) { for (let x = -5; x <= 5; x++) st.px(kb.x + x, kb.y, Math.abs(x) < 3 ? 0xfff6c0 : 0xffd23a); for (let x = -3; x <= 3; x++) { st.px(kb.x + x, kb.y - 1, 0xffe880); st.px(kb.x + x, kb.y + 1, 0xffe880); } }   // destructo disc, flat and spinning
       else for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) { const d = Math.hypot(x, y); if (d <= 2.2) st.px(kb.x + x, kb.y + y, d < 1.2 ? 0xffffff : 0x8fd8ff); }
-      for (const m of meteors) if (m.delay <= 0) { st.px(m.x, m.y, 0xffffff); st.px(m.x + 1, m.y, 0xffe08a); st.px(m.x, m.y + 1, 0xffb35a); st.px(m.x + 1, m.y + 1, 0xe0473e); }
+      for (const m of meteors) if (m.delay <= 0) for (let yy = -4; yy <= 4; yy++) for (let xx = -4; xx <= 4; xx++) { const d = Math.hypot(xx + .5, yy + .5); if (d < 4.2) st.px(m.x + xx, m.y + yy, d > 3.3 ? 0x7a2a14 : xx + yy < -2 ? 0xfff6d0 : xx + yy < 1 ? 0xffc04a : 0xe0602a); else if (d < 5.6) st.px(m.x + xx, m.y + yy, 0xffb040, .35); }   // a glowing rock big enough to tap
       fx.step(st, dt);
       if (star) st.blit(POD, star.x - 7, star.y - 7, false, true);   // in front of the planet
       if (gero) { const h = handPos(); if (t - gero.t0 > 1.2) for (let i = 0; i <= 1; i += .02) if ((i * 50 + t * 20) % 4 < 2) st.px(h.x + (gero.x - h.x) * i, h.y + (gero.y - gero.spr.h * .55 - h.y) * i, 0xe0473e); st.blit(gero.spr, gero.x - gero.spr.w / 2, gero.y - gero.spr.h + Math.sin(t * 3) * 2, true, true); }
