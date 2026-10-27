@@ -326,6 +326,24 @@ body.night .game { background-color: #07070d !important; background-image: radia
 /* the share popup: a preview of the card, then share or download it */
 .share-card { width: min(640px, 100%); }
 .asc-card { width: min(440px, 100%); }
+/* snake way's controls box, in three looks: a card, a bottom sheet, king kai's speech bubble */
+.how { position: absolute; z-index: 7; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.how[hidden] { display: none; }
+.how-card { pointer-events: auto; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; width: min(420px, 92%); box-shadow: 0 12px 40px rgba(0,0,0,.18); display: grid; gap: 10px; }
+.how-title { margin: 0; font-family: var(--serif); font-style: italic; font-size: 24px; color: var(--ink); }
+.how dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: baseline; }
+.how dt { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink); }
+.how dd { margin: 0; color: var(--muted); }
+.how .share-go { justify-self: end; }
+.how-2 { place-items: end center; padding-bottom: 12px; }
+.how-2 .how-card { width: min(720px, 96%); border-radius: 14px; padding: 10px 14px; background: rgba(255,255,255,.92); grid-template-columns: 1fr auto; align-items: center; }
+.how-2 .how-title { font-size: 18px; grid-column: 1 / -1; }
+.how-2 dl { grid-template-columns: repeat(3, auto auto); gap: 4px 10px; }
+.how-3 { place-items: start start; padding: 18px; }
+.how-3 .how-card { position: relative; width: min(380px, 88%); border: 3px solid #1d1a24; border-radius: 22px; background: #fffef6; box-shadow: 4px 4px 0 #1d1a24; }
+.how-3 .how-card::after { content: ""; position: absolute; left: 34px; bottom: -18px; border: 9px solid transparent; border-top: 12px solid #1d1a24; }
+.how-3 .how-title { font-family: inherit; font-style: normal; text-transform: uppercase; font-size: 15px; color: #2a6ad0; }
+@media (max-width: 560px) { .how-2 dl { grid-template-columns: auto 1fr; } .how-card { padding: 12px 14px; } .how-title { font-size: 20px; } }
 .asc-body { padding: 16px; display: grid; gap: 10px; line-height: 1.45; }
 .asc-body p { margin: 0; }
 .asc-body b { color: var(--gold); font-weight: inherit; }
@@ -381,6 +399,7 @@ body.future:not(.night) .game { background: linear-gradient(#7a828c, #4e5866 75%
     <header><span class="share-title">share your power level</span><button type="button" class="menu-x" id="shareX" aria-label="close">×</button></header>
     <div class="share-body"><img id="shareImg" alt="your power level card"><div class="share-actions"><button type="button" class="share-go" id="shareGo">share</button><button type="button" id="shareDl">download</button></div></div>
   </div></div>
+  <div class="how" id="howBox" hidden role="dialog" aria-modal="false" aria-labelledby="howTitle"><div class="how-card"><img class="how-kai" id="howKai" alt="" hidden><p class="how-title" id="howTitle"></p><dl id="howRows"></dl><button type="button" class="share-go" id="howGo">go!</button></div></div>
   <div class="menu" id="ascBox" hidden><div class="menu-card asc-card" role="dialog" aria-modal="true" aria-labelledby="ascTitle">
     <header><span class="share-title" id="ascTitle">ascend?</span><button type="button" class="menu-x" id="ascX" aria-label="close">×</button></header>
     <div class="asc-body"><p id="ascLose"></p><p id="ascKeep"></p><div class="share-actions"><button type="button" class="share-go" id="ascGo">ascend</button><button type="button" id="ascNo">not yet</button></div></div>
@@ -414,6 +433,14 @@ __PLANET__
   const SEAS = ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c'];   // each world's deepest sea tone
   const ui = {
     onBuy(fn) { buyFn = fn; },
+    howto(title, rows, done, look) {   // a short "how to play" box; it closes itself after 10s so it never blocks the run
+      const box = $('howBox'); box.className = 'how how-' + look; $('howTitle').textContent = look === 3 ? 'king kai: "listen up!"' : title;
+      $('howRows').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join(''); box.hidden = false;
+      let left = 10; const go = $('howGo'); const tick = () => { go.textContent = `go! (${left})`; };
+      const close = () => { clearInterval(iv); box.hidden = true; go.onclick = null; removeEventListener('keydown', key, true); done(); };
+      const key = e => { if (!e.repeat) { e.preventDefault(); e.stopPropagation(); close(); } };
+      const iv = setInterval(() => { if (--left <= 0) close(); else tick(); }, 1000); tick(); go.onclick = close; addEventListener('keydown', key, true);
+    },
     update(s) {
       lastPl = s.pl;
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
