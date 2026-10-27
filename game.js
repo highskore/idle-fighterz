@@ -1710,12 +1710,26 @@ const PAOZU = Object.assign({}, KAI, {
   trunk: [0x3a2414, 0x553620, 0x74502e, 0x94683e],
   stone: [0x3e4a4a, 0x5e6c68, 0x84928a, 0xb0bcb0, 0xd8e0d4],
 });
-const PLANET_EVERY = 1e6;   // the first trip to another world at 1M best power, then at 4x your best each time: namek, planet vegeta, snake way, beerus' planet, west city, kame house, mount paozu, in turn
+// future trunks' timeline in the rain: wet grey rubble, black asphalt, a ring of broken concrete skyscrapers, rusted rebar
+const FUTURE = Object.assign({}, KAI, {
+  grass: [0x1e2228, 0x2a3038, 0x384048, 0x4a525a, 0x5e666e, 0x767e86],
+  road: [0x14161a, 0x1e2226, 0x2a2e34, 0x3a4048],
+  dome: [0x3a4048, 0x545a62, 0x6e747c, 0x8a9098, 0xa8aeb4],     // concrete
+  band: [0x22262c, 0x30343c, 0x40464e, 0x545a62],
+  glass: [0x1a1a22, 0x2a2a36, 0x4a4a5a, 0x8a8aa0],
+  leaf: [0x22262a, 0x30343a, 0x40464c, 0x545a60, 0x6a7076],
+  trunk: [0x1a1412, 0x2e221c, 0x4a3022, 0x6a4028],              // rebar, burnt car shells
+  stone: [0x2e3238, 0x464c54, 0x60666e, 0x7e848c],
+});
+// puddles mirror the grey sky; a few windows, fires and craters still glow
+const FUT = { sky: [0x4e5866, 0x6a7480, 0x8a929c, 0xc4ccd4], lit: [0xe8a050, 0x9aaab8], fire: [0x5a1a0e, 0xa03a14, 0xe0702a, 0xffb050], fleck: [0xc4d0dc, 0x8a96a2] };
+const PLANET_EVERY = 1e6;   // the first trip to another world at 1M best power, then at 4x your best each time: namek, planet vegeta, snake way, beerus' planet, west city, kame house, mount paozu, the future, in turn
 const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }, { name: "beerus' planet", tones: BEERUSP, sea: [0x4a2a7a, 0x6a3ea0, 0x9a6ad0, 0xd8c0f0] }, { name: 'west city', tones: EARTH, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'kame house', tones: KAMEP, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'mount paozu', tones: PAOZU, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }];
 function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
 
 // preview hooks (#raid, #snake, ...) jump straight to things for testing; on the live site they're ignored so nobody can cheat with them
 const HASH = /(^|\.)highskore\.com$/.test(location.hostname.replace(/\.$/, '')) ? '' : location.hash;
+WORLDS[8] = { name: 'the future', tones: FUTURE, sea: [0x1e242c, 0x323a44, 0x4e5864, 0x7a8692] };
 GAMES.push({
   id: 'planet',
   mount(st, ui) {
@@ -1868,10 +1882,12 @@ GAMES.push({
       bush(.7, 2.0, .05); bush(.32, 3.9, .04); rock(.75, 3.0, .04); rock(.6, 5.0, .035);
       dino(B, .3, 4.9, .5, .7); dino(C, .36, 2.3, .55, .5, .4);
     }
+    const slabs = [];                        // the future's skyscrapers: { b: base, t: top, w: half-width, seed }
     function scenery() {
-      solids.length = 0; wcRoads.length = 0;
+      solids.length = 0; wcRoads.length = 0; slabs.length = 0;
       if (S.world === 5) return westcityScenery();
       if (S.world === 6) return kameScenery();
+      if (S.world === 8) return futureScenery();
       const dome = (th, a, r) => { const s = capPt(th, a), door = V.norm(V.cross(s, V.cross(N, s))); solids.push({ c: s, r, kind: 'dome', s, door: V.mul(door, -1) }); for (let i = 1; i <= 5; i++) solids.push({ c: V.mul(s, 1 + r + .018 * i), r: .009, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + r + .11), r: .02, kind: 'knob' }); };
       const tree = (th, a, k = 1) => S.world === 2 ? spire(th, a, k) : S.world ? ajissa(th, a, k) : kaiTree(th, a, k);
       const spire = (th, a, k) => { const s = capPt(th, a); for (let i = 0; i <= 8; i++) solids.push({ c: V.mul(s, 1 + .05 * i * k), r: (.1 - .011 * i) * k, kind: 'stone' }); };   // planet vegeta: jagged rock spires
@@ -1942,6 +1958,32 @@ GAMES.push({
       const g = vnoise3(nb[0] * 22 + t * .15, nb[1] * 22, nb[2] * 22); if (g > .86 && lum > .45) return g > .9 ? 0xffffff : 0xbfe6ff;   // glints
       return tone(TONES.grass, lum + (w - .2) * .3, x, y);
     }
+    // the future timeline: broken skyscrapers ring the rim, where they stand side-on against the sky; streets, wrecks and craters fill the middle
+    const smokes = []; let futAndro = [];
+    function futureScenery() {
+      smokes.length = 0;
+      // a skyscraper is a flat slab standing on the rim at screen angle deg, just behind the road so the runner passes in front;
+      // back pushes it further round the planet so a taller row peeks over the front one, lean tips it over
+      const tower = (deg, h, w, lean = 0, smoke = false, back = 0) => {
+        const f = deg * Math.PI / 180, zr = -.38 * Math.sin(Math.atan2(Math.sin(f) / .92, Math.cos(f))), z = Math.min(zr, 0) - .04 - back, q = Math.sqrt(1 - z * z), b = [Math.cos(f) * q, Math.sin(f) * q, z];
+        const s = V.norm(V.add(b, [-Math.sin(f), Math.cos(f), 0], lean)), t = V.add(b, s, Math.abs(lean) > 1 ? h : (1 + h) / q - 1); slabs.push({ b: V.mul(b, .97), t, w, seed: slabs.length * 7 + 3 }); if (smoke) smokes.push(V.add(t, s, .01));
+      };
+      const rubble = (th, a, r) => { const b = capPt(th, a), t1 = V.norm(V.cross(b, N)), t2 = V.cross(b, t1); solids.push({ c: V.mul(b, 1 - r * .3), r, kind: 'stone' }, { c: V.add(V.mul(b, 1 - r * .4), t1, r * .9), r: r * .7, kind: 'leaf' }, { c: V.add(V.mul(b, 1 - r * .5), t2, -r * .8), r: r * .6, kind: 'stone' }); };
+      // a sphere sunk almost to its crown leaves a flat disc: a puddle of sky, or a crater still smouldering
+      const pool = (th, a, r, lava = false) => { const b = capPt(th, a); solids.push({ c: V.mul(b, 1 - r * 2.3), r: r * 2.5, kind: 'pool', s: b, lava }); if (lava) smokes.push(V.mul(b, 1.02)); };
+      // a burnt-out car: chassis and cab, nose along the road
+      const car = (th, a) => { const b = capPt(th, a), d = V.norm(V.cross(N, b)); solids.push({ c: V.add(V.mul(b, 1 + .012), d, .022), r: .03, kind: 'trunk' }, { c: V.add(V.mul(b, 1 + .012), d, -.022), r: .03, kind: 'trunk' }, { c: V.mul(b, 1 + .04), r: .022, kind: 'stone' }); };
+      // the skyline round the top and sides: a tall back row and a shorter front row filling its gaps, some leaning, two toppled across the rest
+      for (let d = -32, i = 0; d <= 212; d += (5 + 6 * hash(i * 5.3)) * (1.5 - .7 * Math.max(0, 1 - Math.abs(d - 90) / 120)), i++) { const r1 = hash(i * 3.7), r2 = hash(i * 9.1 + 2), up = Math.max(0, 1 - Math.abs(d - 90) / 120); tower(d, (.22 + .45 * r1 * r1 + (r1 > .8 ? .2 : 0)) * (.3 + 1.5 * up * up), .065 + .03 * r2, r2 > .82 ? .25 : r2 < .12 ? -.2 : 0, i % 4 === 1, .07); if (r2 > .35) tower(d + 4, .1 + .14 * r2, .08 + .02 * r1); }
+      tower(64, .3, .065, 1.6, false, .04); tower(150, .26, .06, -1.5, false, .04);
+      // short broken blocks down the lower rims
+      [-48, -58, 228, 238].forEach((d, i) => tower(d, .12 + .06 * (i % 2), .085));
+      [[1.42, 4.0], [1.43, 4.5], [1.7, 4.8], [1.42, 5.2], [1.72, .2], [1.42, 2.9]].forEach(([th, a]) => car(th, a));
+      [[.3, .9, .12], [.7, 1.3, .1], [.6, 3.0, .09], [.5, 4.5, .1], [1.05, 5.4, .12], [.25, 5.0, .09], [1.1, 3.5, .11]].forEach(([th, a, r]) => pool(th, a, r));
+      pool(.85, 2.2, .14, true); pool(.95, 4.2, .12, true); pool(.15, 2.6, .1, true);
+      rubble(.85, 2.8, .05); rubble(1.1, 1.7, .045); rubble(.45, 1.7, .04); rubble(.6, 5.8, .05); rubble(1.15, .6, .045); rubble(.4, 3.9, .045); rubble(1.2, 4.9, .04);
+      futAndro = [capPt(1.3, 3.55), capPt(1.3, 3.78)];
+    }
 
     let R = 40, cx = 0, cy = 0, zb = null, ib = null, dm = null;
     function layout() {
@@ -1962,6 +2004,7 @@ GAMES.push({
     S.ach = S.ach || {}; if (S.ach.greg5) S.spirit = 1;   // the spirit bomb is king kai's reward for catching gregory, not something you buy
     if (!HEROES[S.hero] || !heroOpen(S.hero)) S.hero = 'vegeta';
     function heroOpen(id) { const c = CHARS.find(x => x.id === id); return !!c && (!c.need || !!S.ach[c.need]); }
+    const FUT_GOHAN = capPt(1.3, 3.25);
     const standAng = v => Math.atan2(v[0], v[1]) * Math.min(1, (v[0] * v[0] + v[1] * v[1]) * 1.6);
     const WHIS_AT = capPt(.5, 3.3), CHI_AT = capPt(.45, 3.2), TURTLE_AT = capPt(.5, 5.2), OOLONG_AT = capPt(.62, 4.1);   // whis by beerus, chi-chi by the house, umigame and oolong on roshi's island
     const DANCE = { vegeta: ['goku', 'gogeta'], goku: ['vegeta', 'gogeta'], gohan: ['videl', 'gohanVidel'], trunks: ['goten', 'gotenks'] };
@@ -2159,7 +2202,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right (or ← →) to switch lanes, middle (or space) to jump', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right (or ← →) to switch lanes, middle (or space) to jump', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) startSnake(); else snk = null;
       bz = w === 4 ? { c: capPt(.3, 4.4), noise: 0, awake: 0 } : null; pud = null; gadgets = []; nextGadget = 2;
@@ -2236,6 +2279,7 @@ GAMES.push({
     }
     const tone = (pal, lum, x, y) => pal[Math.max(0, Math.min(pal.length - 1, Math.floor((lum + (bayer(x, y) - .5) * .2) * pal.length)))];
     const light = n => Math.max(0, V.dot(n, L)) * .78 + .22;
+    const street = c => Math.abs(c) < .7 && Math.abs(c * 4 - Math.round(c * 4)) < .04;
     function shadePlanet(o, n, x, y) {
       const nb = M3.apT(M, n), lum = light(n) + Math.pow(1 - n[2], 3) * .15;
       if (S.world === 6) return shadeKame(nb, lum, x, y);
@@ -2247,7 +2291,8 @@ GAMES.push({
         return Math.abs(d - (q.lo + q.hi) / 2) < .005 && (Math.atan2(v, u) * 12 + 99) % 1 < .55 ? 0xf6d84a : tone(TONES.road, lum + .2, x, y); }
       if (pzWater && pzWater(nb)) return tone(PZ_WATER, lum + .1 + Math.sin(nb[0] * 60 + nb[1] * 45) * .08, x, y);   // paozu's river and lake
       const patch = vnoise3(nb[0] * 3 + 9, nb[1] * 3, nb[2] * 3), f = vnoise3(nb[0] * 24, nb[1] * 24 + 4, nb[2] * 24);
-      if (f > .9 && lum > .4) return f > .94 ? 0xffffff : 0xfff2a8;
+      if (f > .9 && lum > .4) return S.world === 8 ? FUT.fleck[f > .94 ? 0 : 1] : f > .94 ? 0xffffff : 0xfff2a8;
+      if (S.world === 8 && patch > .45 && (street(nb[0]) || street(nb[1]) || street(nb[2]))) return tone(TONES.road, lum + (f - .5) * .6, x, y);   // the old street grid, buried in places
       return tone(TONES.grass, lum + (patch - .5) * .22, x, y);
     }
     function shadeDome(o, n, x, y) {
@@ -2283,6 +2328,37 @@ GAMES.push({
     }
     const shadeBy = pal => (o, n, x, y) => tone(pal, light(n) + (pal === TONES.leaf ? (h2(x * 3, y * 5) - .5) * .25 : 0), x, y);
     const SHADE = { planet: shadePlanet, karst: (o, n, x, y) => h2(x * 5, y * 3) > .9 && light(n) > .45 ? tone(TONES.leaf, light(n), x, y) : tone(TONES.stone, light(n) + (h2(x * 3, y * 7) - .5) * .3, x, y), pal: (o, n, x, y) => tone(o.pal, light(n) + o.lift, x, y), dome: shadeDome, hq: shadeHQ, tower: shadeTower, knob: (o, n, x, y) => tone(TONES.orb, light(n) + .25, x, y), leaf: shadeBy(TONES.leaf), trunk: shadeBy(TONES.trunk), stone: shadeBy(TONES.stone), orb: (o, n, x, y) => tone(TONES.orb, light(n) * .5 + .55, x, y), dorb: (o, n, x, y) => tone(TONES.dorb, light(n) * .55 + .5, x, y), bean: (o, n, x, y) => tone(TONES.bean, light(n), x, y), dragon: (o, n, x, y) => { const inward = -(n[0] * o.vr[0] + n[1] * o.vr[1] + n[2] * o.vr[2]); if (inward > .45) return tone(TONES.belly, light(n) + .25 - (o.seg % 4 === 0 ? .3 : 0), x, y); const scale = ((x >> 1) + (y >> 1) * 2 + o.seg) % 4 === 0 ? -.16 : 0; return tone(TONES.dragon, light(n) + scale, x, y); }, spine: (o, n, x, y) => tone(TONES.dorb, light(n) + .2, x, y) };
+    // puddles mirror the sky and shimmer in the rain; craters smoulder from the middle out
+    function shadePool(o, n, x, y) {
+      const k = (V.dot(M3.apT(M, n), o.s) - .92) * 12.5, lum = light(n);
+      if (k < .2) return tone(o.lava ? TONES.trunk : TONES.road, lum * .8, x, y);
+      if (o.lava) return tone(FUT.fire, k + Math.sin(st.t * 3 + x * .7 + y * .5) * .15 - .15, x, y);
+      return tone(FUT.sky, .15 + k * .5 + Math.sin(st.t * 6 + x * .9 + y * 1.3) * .12, x, y);
+    }
+    SHADE.pool = shadePool;
+    // a skyscraper drawn as an upright slab in screen space: crisp edges, window grid, a snapped jagged top with holes and bent rebar
+    function slab(o, id) {
+      const b = M3.ap(M, o.b), t = M3.ap(M, o.t), X0 = cx + b[0] * R, Y0 = cy - b[1] * R + st.bob, X1 = cx + t[0] * R, Y1 = cy - t[1] * R + st.bob;
+      const len = Math.hypot(X1 - X0, Y1 - Y0) || 1, ux = (X1 - X0) / len, uy = (Y1 - Y0) / len, w = o.w * R, W = st.W, H = st.H, buf = st.buf;
+      const side = Math.sign(-uy * -.62 + ux * -.78) || 1;   // which face catches the upper-left light
+      const x0 = Math.max(0, Math.floor(Math.min(X0, X1) - w - 4)), x1 = Math.min(W - 1, Math.ceil(Math.max(X0, X1) + w + 4)), y0 = Math.max(0, Math.floor(Math.min(Y0, Y1) - w - 4)), y1 = Math.min(H - 1, Math.ceil(Math.max(Y0, Y1) + w + 4));
+      const jag = w * 1.2, cut = c => len - jag * (.35 + .65 * h2(c >> 1, o.seed)) - (o.seed % 2 ? 1 : -1) * (c / (2 * w) - .5) * jag * .8;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const dx = x + .5 - X0, dy = y + .5 - Y0, al = dx * ux + dy * uy, ac = -dx * uy + dy * ux;
+        if (al < 0 || ac < -w || ac > w) continue;
+        const ci = (ac + w) | 0, top = cut(ci); if (al > top) continue;
+        if (al > top - 5 && h2((al | 0) * 7 + ci, o.seed) > .78) continue;   // blown-out holes under the break
+        const bulge = Math.sqrt(Math.max(0, w * w - ac * ac)), z = (b[2] + (t[2] - b[2]) * al / len) * R + bulge, k = y * W + x; if (z <= zb[k]) continue;
+        zb[k] = z; ib[k] = id;
+        const ai = al | 0, lum = .4 + side * (ac / w) * .25;
+        let c;
+        if (ai % 4 > 1 && ci % 3 === 1 && ci < 2 * w - 1 && al < top - 2) { const q = h2((ai >> 2) * 31 + ci, o.seed); c = q > .9 ? FUT.lit[0] : q > .78 ? FUT.lit[1] : TONES.road[0]; }
+        else c = TONES.dome[Math.max(0, Math.min(4, ((lum - (ai % 8 === 0 ? .15 : 0)) * 5) | 0))];   // flat bands, no dither, so the window grid stays legible
+        buf[k] = PK(c);
+      }
+      // rebar poking out of the break
+      for (const f of o.seed % 3 ? [-.45] : [-.45, .35]) { const ac = f * w, s = f < 0 ? -1 : 1, top = cut((ac + w) | 0); for (let i = 0; i < 3; i++) { const al = top + i, a2 = ac + s * i * .45, x = Math.round(X0 + ux * al - uy * a2), y = Math.round(Y0 + uy * al + ux * a2); if (x < 0 || y < 0 || x >= W || y >= H) continue; const k = y * W + x, z = (b[2] + (t[2] - b[2]) * al / len) * R; if (z <= zb[k]) continue; zb[k] = z; ib[k] = id; buf[k] = PK(i < 2 ? 0x4a3022 : 0x6a4028); } }
+    }
 
     function outline() {
       const W = st.W, H = st.H, buf = st.buf;
@@ -2552,9 +2628,9 @@ GAMES.push({
       if (satan && t > satan.until) satan = null;
       // king kai pops out to tell a terrible joke — laugh (tap him) for ×1.25
       if (!kai && session > 45 && !shen && (nextKai -= dt) < 0) { kai = { c: capPt(.35, 3.6), t0: t, until: t + 9 }; ui.event('king kai: ' + PUNS[Math.floor(Math.random() * PUNS.length)], 6000); nextKai = 140 + Math.random() * 40; }
-      if (!ginyu && !tour && !boss && !shen && session > 200 && S.best >= 2e5 && (nextAndro -= dt) < 0) { const hp = Math.max(500, rate() * 14); ginyu = { androids: true, members: [{ name: 'android 17', spr: A17 }, { name: 'android 18', spr: A18 }].map((g, i) => ({ ...g, hp, max: hp, i, x: 0, y: 0, k: 1, flash: 0, dead: false })), max: hp * 2, t0: t, until: t + 45, nextKi: 1 }; ui.event('androids 17 and 18 drop in — "we\'re just bored"'); ui.sfx && ui.sfx('boss'); nextAndro = 340 + Math.random() * 60; }
+      if (!ginyu && !tour && !boss && !shen && S.world !== 8 && session > 200 && S.best >= 2e5 && (nextAndro -= dt) < 0) { const hp = Math.max(500, rate() * 14); ginyu = { androids: true, members: [{ name: 'android 17', spr: A17 }, { name: 'android 18', spr: A18 }].map((g, i) => ({ ...g, hp, max: hp, i, x: 0, y: 0, k: 1, flash: 0, dead: false })), max: hp * 2, t0: t, until: t + 45, nextKi: 1 }; ui.event('androids 17 and 18 drop in — "we\'re just bored"'); ui.sfx && ui.sfx('boss'); nextAndro = 340 + Math.random() * 60; }
       // android 18 drops by: krillin goes red and hands over his wallet (if he's alive)
-      if (!date && session > 160 && !shen && (nextDate -= dt) < 0) { const kr = !S.krillinDead; date = { c: capPt(.45, .35), c2: capPt(.45, .55), t0: t, until: t + (kr ? 10 : 4), kr }; ui.event(kr ? 'android 18 drops by — krillin is a mess. tap him' : 'android 18 drops by, sees no krillin, shrugs and leaves'); nextDate = 300 + Math.random() * 120; }
+      if (!date && session > 160 && !shen && S.world !== 8 && (nextDate -= dt) < 0) { const kr = !S.krillinDead; date = { c: capPt(.45, .35), c2: capPt(.45, .55), t0: t, until: t + (kr ? 10 : 4), kr }; ui.event(kr ? 'android 18 drops by — krillin is a mess. tap him' : 'android 18 drops by, sees no krillin, shrugs and leaves'); nextDate = 300 + Math.random() * 120; }
       if (date && t > date.until) date = null;
       // dr. gero / android 19 flies in and drains your power until you tap him
       if (!gero && session > 140 && !shen && !boss && (nextGero -= dt) < 0) { S.geros = (S.geros || 0) + 1; gero = { spr: S.geros % 2 ? A20 : A19, name: S.geros % 2 ? 'dr. gero' : 'android 19', x: st.W + 20, y: st.H * .28, t0: t, drained: 0 }; ui.event(`${gero.name} is absorbing your power — tap him!`); ui.sfx && ui.sfx('boss'); nextGero = 230 + Math.random() * 80; }
@@ -2615,8 +2691,8 @@ GAMES.push({
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
       }
-      // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the seven worlds strictly in turn
-      if (!S.world && S.runBest >= (S.namekAt || PLANET_EVERY) && !tour && !shen && !boss) { S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7][(S.trips - 1) % 7]); namekUntil = t + (S.world === 3 ? 75 : 45); }
+      // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the eight worlds strictly in turn
+      if (!S.world && S.runBest >= (S.namekAt || PLANET_EVERY) && !tour && !shen && !boss) { S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8][(S.trips - 1) % 8]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
       if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen && (S.world !== 3 || snk?.done)) { travel(0); namekUntil = 0; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
       if (S.world !== 3) {
@@ -2685,7 +2761,7 @@ GAMES.push({
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
-      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way', 'beerus', 'west city', 'kame house', 'paozu'][S.world]; if (bz) fxs.push(bz.awake ? 'beerus AWAKE ×0.25 — find pudding' : `noise ${Math.round(bz.noise * 100)}%`); fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
+      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way', 'beerus', 'west city', 'kame house', 'paozu', 'the future'][S.world]; if (bz) fxs.push(bz.awake ? 'beerus AWAKE ×0.25 — find pudding' : `noise ${Math.round(bz.noise * 100)}%`); fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
       if (storm && t < storm.until) fxs.push(`meteor storm ${Math.ceil(storm.until - t)}s`);
       if (struggle) fxs.push(`struggle ${Math.ceil(struggle.until - t)}s`);
       if (greg) fxs.push(`gregory ${Math.ceil(greg.until - t)}s`);
@@ -2727,6 +2803,7 @@ GAMES.push({
       let id = 1;
       sphere({ c: [0, 0, 0], r: 1 }, id++, shadePlanet);
       for (const o of solids) { if (o.fly) o.c = o.fly(t); sphere(o, id++, SHADE[o.kind]); }   // west city hover cars move
+      for (const o of slabs) slab(o, id++);
       for (const o of orbs) sphere({ c: V.mul(roadPt(o.phi), 1.14 + Math.sin(t * 4 + o.phi) * .015), r: o.star ? .055 : .045 }, id++, o.star ? SHADE.dorb : SHADE.orb);
       if (bean) { const v = M3.ap(M, bean.c); if (v[2] > 0) { bean.sx = cx + v[0] * R; bean.sy = cy - v[1] * R + st.bob; bean.v = v; } else bean.sx = undefined; }
       const shenCtx = shen && { z: 0, px(x, y, hex, dz = 0) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= st.W || y >= st.H) return; const k = y * st.W + x, z = this.z + dz; if (zb[k] > z) return; zb[k] = z; st.buf[k] = PK(hex); dm[k] = 1; }, W: st.W, H: st.H, cx, cy: cy + st.bob, R, t, rise: Math.min(1, (t - shen.t0) / 1.1), age: t - shen.t0, gone: shen.phase === 'leave' ? Math.min(1, (t - shen.t1) / 1.6) : 0, glow: shen.look === 3 };
@@ -2753,7 +2830,7 @@ GAMES.push({
       const ahead = M3.ap(M, roadPt(phi + .05)), ax = cx + ahead[0] * R, flip = ax < kd.x;
       const surf = S.world === 6;
       const spr = poseUntil > t || struggle ? set.pose : jumpH > 1 || surf ? set.run[0] : set.run[Math.floor(t * (9 + sprint * 10)) % 4];
-      const lift = jumpH + (riding > 0 ? 9 : 0) + (surf ? 3 + Math.sin(t * 4) : 0), depth = kd.v[2] * R + 6; flipNow = flip; liftNow = lift;
+      const lift = jumpH + (riding > 0 ? 9 : 0) + (surf && !riding ? 3 + Math.sin(t * 4) : 0), depth = kd.v[2] * R + 6; flipNow = flip; liftNow = lift;
       // auras and sparks only while he's in view: behind the planet the depth buffer hides him, and must hide them too
       const seen = (() => { const x = Math.round(kd.x + Math.sin(kd.ang) * (lift + 8)), y = Math.round(kd.y - Math.cos(kd.ang) * (lift + 8)); return x < 0 || y < 0 || x >= st.W || y >= st.H || zb[y * st.W + x] <= depth + 4; })();
       if (riding > 0) blitZ(puff, kd.x, kd.y, kd.ang, flip, lift - 9, depth + 1, 1.25, true);
@@ -2784,6 +2861,7 @@ GAMES.push({
       for (const g of gadgets) { const v = M3.ap(M, g.c), up = Math.min(1, (t - g.t0) / .3); if (v[2] > .05) { g.sx = cx + v[0] * R; g.sy = cy - v[1] * R + st.bob; blitZ(GADGETS[g.kind], g.sx, g.sy, Math.atan2(v[0], v[1]), false, (1 - up) * 30 + Math.abs(Math.sin(t * 3 + g.t0)) * 2, v[2] * R + 6, 1); } else g.sx = undefined; }
       const npc = (spr, c, flip = false, k = 1) => { const v = M3.ap(M, c); if (v[2] > .05) blitZ(spr, cx + v[0] * R, cy - v[1] * R + st.bob, standAng(v), flip, 0, v[2] * R + 6, k); };   // standing up on the face of the planet, tipping out only near the rim
       if (S.world === 6 && kh) { const v = M3.ap(M, kh.house); if (v[2] > .05) blitZ(KAMEHOUSE, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), false, 0, v[2] * R + 6, 1); npc(ROSHI, kh.roshi, Math.floor(t / 3) % 2 === 0, .95); }   // roshi stays home by his door
+      if (S.world === 8) drawFuture(t, dt);
       if (S.world === 5) { const v = M3.ap(M, capPt(.55, 3.2)); if (v[2] > .05) blitZ(BULMA, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), Math.floor(t / 2) % 2 === 0, 0, v[2] * R + 6, 1); }
       if (S.world === 7) drawPaozu(t);
       if (bz) npc(NPCS.whis, WHIS_AT, Math.floor(t / 3) % 2 === 0);
@@ -2929,15 +3007,22 @@ GAMES.push({
     // by night the cloud sea turns moonlit blue, fading in step with the sky
     const NIGHT_SEA = [0x141a3a, 0x232c5a, 0x3a4a82, 0x6a7ab8];
     const seaPal = () => { const day = WORLDS[S.world].sea; if (nightK <= 0) return day; return day.map((c, i) => { const n = NIGHT_SEA[i], k = nightK, ch = sh => Math.round(((c >> sh) & 255) + (((n >> sh) & 255) - ((c >> sh) & 255)) * k); return (ch(16) << 16) | (ch(8) << 8) | ch(0); }); };
+    // the future: 17 and 18 stand among the ruins, smoke columns climb from the burning towers, and it rains
+    function drawFuture(t, dt) {
+      futAndro.forEach((c, i) => { const v = M3.ap(M, c); if (v[2] > .05) blitZ(i ? A18 : A17, cx + v[0] * R, cy - v[1] * R + st.bob, standAng(v), i === 0, 0, v[2] * R + 6, 1); });
+      { const v = M3.ap(M, FUT_GOHAN); if (v[2] > .05) blitZ(FUSED.futureGohan, cx + v[0] * R, cy - v[1] * R + st.bob, standAng(v), false, 0, v[2] * R + 6, .85); }   // future gohan squares up to them, one arm and all
+      for (const p of smokes) { const v = M3.ap(M, p); if ((v[2] > .1 || Math.hypot(v[0], v[1]) > 1.02) && Math.random() < dt * 9) fx.add({ x: cx + v[0] * R + (Math.random() - .5) * 3, y: cy - v[1] * R + st.bob, vx: 2 + Math.random() * 3, vy: -11 - Math.random() * 5, life: 3.4, s: 2, grow: 4, c: [0x5a5e64, 0x4a4e54, 0x3a3e44, 0x2e3238], raw: true }); }
+      for (let i = 0; i < 90; i++) { const y = (hash(i * 5.3) * st.H + t * (150 + hash(i * 3.1) * 60)) % (st.H + 8) - 4, x = ((hash(i * 1.7) * st.W - y * .3) % st.W + st.W) % st.W; for (let k = 0; k < 4; k++) st.px(Math.round(x + k * .3), Math.round(y - k), 0xc8d4e0, .45); }
+    }
     function drawSea(t, front) {
       // cloud puffs keep the same on-screen size whatever the pixel scale (phones render at 2×, desktop at 3×)
-      const ck = 3 / st.scale, base = st.H - (st.H * (front ? .06 : .14) * (st.scale === 2 ? .7 : 1)), W = st.W, pal = seaPal(), sp = (front ? 6 : 3) * ck, rr = Math.round((front ? 9 : 7) * ck);
+      const glint = S.world === 8, ck = 3 / st.scale, base = st.H - (st.H * (front ? .06 : .14) * (st.scale === 2 ? .7 : 1)), W = st.W, pal = seaPal(), sp = (front ? 6 : 3) * ck, rr = Math.round((front ? 9 : 7) * ck);
       for (let i = -2; i < W / (rr * 1.3) + 3; i++) {
         const px = ((i * rr * 1.3 - t * sp) % (W + rr * 4) + W + rr * 4) % (W + rr * 4) - rr * 2, py = base + Math.sin(i * 1.7) * rr * .45 + (front ? 0 : -6 * ck), r = rr * (.8 + .4 * hash(i * 3.3 + (front ? 9 : 0)));
         for (let y = Math.floor(py - r); y < st.H; y++) for (let x = Math.floor(px - r); x <= px + r; x++) {
           const dx = x - px, dy = y - py; if (dy < 0 && dx * dx + dy * dy > r * r) continue; if (dy >= 0 && Math.abs(dx) > r) continue;
           const l = dy < 0 ? -(dx * .5 + dy * .9) / r : -.6 - dy / (st.H - py + 1), v = l + bayer(x, y) * .3;
-          st.px(x, y, pal[v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0]);
+          st.px(x, y, glint && v < -.2 && !((x * 3 + y) & 7) && h2(x * 7 + (t * 4 | 0), y) > .94 ? FUT.fire[2] : pal[v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0]);   // embers glint in the future's smoke
         }
       }
     }
@@ -2952,6 +3037,7 @@ GAMES.push({
     if (/paozu/.test(HASH)) { S.best = Math.max(S.best, 7e6); S.namekAt = 7e6; S.trips = 6; }   // preview hook: #paozu
     if (/westcity/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 4; }   // preview hook: #westcity
     if (/kame/.test(HASH)) { S.best = Math.max(S.best, 6e6); S.namekAt = 6e6; S.trips = 5; }   // preview hook: #kame
+    if (/future/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 7; }   // preview hook: #future (trunks' timeline)
     if (/androids/.test(HASH)) { session = 201; S.best = Math.max(S.best, 2e5); nextAndro = 0; }   // preview hook: #androids (17 and 18)
     if (/date/.test(HASH)) { session = 161; nextDate = 0; }   // preview hook: #date (18 visits krillin)
     if (/gero/.test(HASH)) { session = 141; nextGero = 0; }   // preview hook: #gero
