@@ -1760,7 +1760,7 @@ GAMES.push({
       ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for ki seeds', unlock: () => S.best >= 1e6 },
     };
     const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber'];
-    const cost = k => k === 'ascend' ? 1e6 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));
+    const cost = k => k === 'ascend' ? Math.max(1e6, Math.floor(S.pl)) : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]));   // ascending spends all you hold (1M at least), so that's its price
     // permanent: gravity ×1.15 a level, wishes ×1.25 each, ascensions +10% each; temporary boosts add up rather than multiply
     const KAIO = () => 1.25 + .25 * S.kaio;
     // milestones: every 10th, 25th, 50th and 100th level of a producer doubles its output
