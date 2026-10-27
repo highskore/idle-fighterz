@@ -1259,6 +1259,11 @@ const VILLAINS = (() => {
     { name: 'gas', spr: GAS },
   ];
 })();
+// a senzu bean: kidney-shaped, bright green with a shine, outlined in white so it stands out on the grass
+const SENZU = shapeSprite(12, 8, G => {
+  G.ell(6, 4.3, 5.2, 3, 'g'); G.set(5, 1, '.'); G.set(6, 1, '.'); G.set(7, 1, '.'); G.set(6, 2, '.');   // an oval with a shallow dent on top: a bean
+  G.ell(3.6, 3.8, 1.5, .9, 'l'); G.set(8, 5, 'l');                                                   // shine
+}, { o: 0xffffff, g: 0x8ee04a, G: 0x3f9a26, l: 0xeaffd0 }, { g: 'G' });
 // a saiyan space pod streaks across the sky now and then; tap it for a boost
 const POD = shapeSprite(14, 14, G => {   // white attack pod with a purple window and the door seam
   G.ell(7, 7, 5.9, 5.9, 'w'); G.line([[4.3, 2.8], [3.9, 7], [4.7, 11.3]], 1, 1, 'W');
@@ -1547,7 +1552,7 @@ GAMES.push({
       // senzu bean on the planet
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(px - sb.sx, py - (sb.sy - 6)) < 9) { killSaiba(sb); return; }
       if (boss && !boss.dead && Math.abs(px - boss.x) < (boss.spr.w / 2 + 3) * boss.k && py > boss.y - (boss.spr.h + 2) * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; hitBoss(tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist')) * (1 + .5 * lvl('brawl')), px, py); return; }
-      if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - bean.sy) < 9) { senzuUntil = st.t + 15; ui.event('senzu bean — ×1.5 for 15s'); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
+      if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - (bean.sy - 6)) < 13) { senzuUntil = st.t + 15; ui.event('senzu bean — ×1.5 for 15s'); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
       // train: rhythm builds a combo up to ×2; the scouter adds crits
       combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; if (combo >= 2) goal('combo');
       sprint = Math.min(1.2, sprint + .5);
@@ -2200,7 +2205,7 @@ GAMES.push({
       sphere({ c: [0, 0, 0], r: 1 }, id++, shadePlanet);
       for (const o of solids) sphere(o, id++, SHADE[o.kind]);
       for (const o of orbs) sphere({ c: V.mul(roadPt(o.phi), 1.14 + Math.sin(t * 4 + o.phi) * .015), r: o.star ? .055 : .045 }, id++, o.star ? SHADE.dorb : SHADE.orb);
-      if (bean) { sphere({ c: bean.c, r: .04 }, id++, SHADE.bean); const v = M3.ap(M, bean.c); if (v[2] > 0) { bean.sx = cx + v[0] * R; bean.sy = cy - v[1] * R + st.bob; } else bean.sx = undefined; }
+      if (bean) { const v = M3.ap(M, bean.c); if (v[2] > 0) { bean.sx = cx + v[0] * R; bean.sy = cy - v[1] * R + st.bob; bean.v = v; } else bean.sx = undefined; }
       const shenCtx = shen && { z: 0, px(x, y, hex, dz = 0) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= st.W || y >= st.H) return; const k = y * st.W + x, z = this.z + dz; if (zb[k] > z) return; zb[k] = z; st.buf[k] = PK(hex); dm[k] = 1; }, W: st.W, H: st.H, cx, cy: cy + st.bob, R, t, rise: Math.min(1, (t - shen.t0) / 1.1), age: t - shen.t0, gone: shen.phase === 'leave' ? Math.min(1, (t - shen.t1) / 1.6) : 0, glow: shen.look === 3 };
       outline();
       // dragon balls get a proper red star on their face
@@ -2256,6 +2261,7 @@ GAMES.push({
         if (bz.awake) { blitZ(BEERUS, x + (Math.random() - .5) * 2, y, ang, false, 0, v[2] * R + 6, .9); if (Math.random() < .5) fx.add({ x: x + (Math.random() - .5) * 16, y: y - 10 - Math.random() * 20, vx: 0, vy: -30, life: .5, s: 1, grow: 1, c: [0xffffff, 0xd9c8ff, 0x7a4ae0], raw: true }); }
         else { blitZ(BEERUS, x, y, ang + 1.45, false, -12, v[2] * R + 6, .9); const z = (t * .8) % 1; st.text(z < .33 ? 'z' : z < .66 ? 'zz' : 'zzz', x + 6, y - 22 - z * 6, 0x5e44a0); }
       } }
+      if (bean && bean.sx !== undefined) { const ang = Math.atan2(bean.v[0], bean.v[1]), hop = 3 + Math.abs(Math.sin(t * 3)) * 3; blitZ(SENZU, bean.sx, bean.sy, ang, false, hop, bean.v[2] * R + 6, 1.5); if (Math.random() < .12) fx.add({ x: bean.sx + (Math.random() - .5) * 14, y: bean.sy - hop - 8 - Math.random() * 8, vx: 0, vy: -12, life: .5, c: [0xffffff, 0xdaf8b4], raw: true }); }   // hopping a little and sparkling so you spot it
       if (pud) { const v = M3.ap(M, pud.c); if (v[2] > .05) { pud.sx = cx + v[0] * R; pud.sy = cy - v[1] * R + st.bob; blitZ(PUDDING, pud.sx, pud.sy, Math.atan2(v[0], v[1]), false, Math.abs(Math.sin(t * 4)) * 3, v[2] * R + 6, 1.1); } else pud.sx = undefined; }
       if (roshi) { const v = M3.ap(M, roshi.c), up = Math.min(1, (t - roshi.t0) / .4) * Math.min(1, (roshi.until - t) / .4); if (v[2] > .05) {
         const ang = Math.atan2(v[0], v[1]), big = roshi.max && (!roshi.fired || t - roshi.fired < .7), down = roshi.fired && t - roshi.fired >= .7;
