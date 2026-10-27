@@ -2257,14 +2257,14 @@ GAMES.push({
     const wishSeeds = () => Math.max(3, Math.ceil(seedsNow() / 5));
     const wished = k => (wishBuff[k] || 0) > st.t;
     const buff = (k, secs, msg) => { wishBuff[k] = st.t + secs; ui.event(`your wish is granted — ${msg}`); };
-    // twenty wishes; the dragon offers three you can use right now (plus krillin whenever he's dead)
+    // twenty wishes; the dragon offers three you can use right now (plus krillin whenever he's dead), the strong ones rarely
     const WISHES = [
       { key: 'power', label: 'eternal power', what: () => '×1.25 to everything, forever, even after ascending', grant: () => { S.wishes++; ui.event('your wish is granted — ×1.25 forever'); } },
       { key: 'form', label: () => 'a taste of ' + FORMS[S.form + 1].name, what: () => `×${FORMS[S.form + 1].x} for 60 seconds`, ok: () => S.form < FORMS.length - 1, grant: () => { preview = { from: preview ? preview.from : S.form, until: st.t + 60 }; transform(true); } },   // a second taste still falls back to where you started
       { key: 'seeds', label: 'the seeds of power', what: () => `+${wishSeeds()} ki seeds, kept forever`, grant: () => { const g = wishSeeds(); S.seeds += g; S.ascend += g; ui.event(`your wish is granted — +${g} ki seeds (×${seedBoost().toFixed(1)} on everything)`); } },
       { key: 'fortune', label: 'a fortune in power', what: () => '+10 minutes of income', grant: () => { gain(wrate() * 600); ui.event('your wish is granted — +' + fmtShort(wrate() * 600)); } },
-      { key: 'skills', label: 'ki talent mastery', what: () => '+1 rank to every ki talent you\'ve learned (training tree)', ok: () => TREE.some(n => lvl(n.id) && lvl(n.id) < nodeMax(n)), grant: () => { for (const n of TREE) if (lvl(n.id) && lvl(n.id) < nodeMax(n)) S.tree[n.id]++; ui.event('your wish is granted — every ki talent +1 rank'); } },
-      { key: 'gear', label: 'capsule corp delivery', what: () => '+1 level to every shop upgrade you own', ok: () => RESETS.some(r => S[r] > 0), grant: () => { for (const r of RESETS) if (S[r] > 0) S[r]++; ui.event('your wish is granted — every shop upgrade +1 level'); } },
+      { key: 'skills', w: .1, label: 'ki talent mastery', what: () => '+1 rank to every ki talent you\'ve learned (training tree)', ok: () => TREE.some(n => lvl(n.id) && lvl(n.id) < nodeMax(n)), grant: () => { for (const n of TREE) if (lvl(n.id) && lvl(n.id) < nodeMax(n)) S.tree[n.id]++; ui.event('your wish is granted — every ki talent +1 rank'); } },
+      { key: 'gear', w: .5, label: 'capsule corp delivery', what: () => '+1 level to every shop upgrade you own', ok: () => RESETS.some(r => S[r] > 0), grant: () => { for (const r of RESETS) if (S[r] > 0) S[r]++; ui.event('your wish is granted — every shop upgrade +1 level'); } },
       { key: 'fast', label: 'flying nimbus legs', what: () => 'run 50% faster for 3 minutes', grant: () => buff('fast', 180, 'running 50% faster for 3 minutes') },
       { key: 'taps', label: 'golden fists', what: () => 'taps ×3 for 3 minutes', grant: () => buff('taps', 180, 'taps ×3 for 3 minutes') },
       { key: 'idle', label: 'a hundred clones', what: () => 'idle income ×3 for 3 minutes', ok: () => passive() > 0, grant: () => buff('idle', 180, 'idle income ×3 for 3 minutes') },
@@ -2277,14 +2277,14 @@ GAMES.push({
       { key: 'bubbles', label: 'a bigger monkey', what: () => 'bubbles +5 levels', ok: () => S.partner > 0, grant: () => { S.partner += 5; ui.event('your wish is granted — bubbles +5 levels'); } },
       { key: 'trip', label: 'a space pod', what: () => 'fly to the next world as soon as the dragon leaves', ok: () => !S.world, grant: () => { homeSince = -1e9; ui.event('your wish is granted — a space pod is on its way'); } },
       { key: 'radar', label: 'dragon radar', what: () => '+3 dragon balls toward the next summon', grant: () => { S.orbs7 = Math.min(6, S.orbs7 + 3); ui.event(`your wish is granted — ${S.orbs7}/7 dragon balls already`); } },
-      { key: 'again', label: 'one more wish', what: () => 'the dragon grants an extra wish', grant: () => { shen.wishes++; ui.event('your wish is granted — one more wish!'); } },
+      { key: 'again', w: .5, label: 'one more wish', what: () => 'the dragon grants an extra wish', grant: () => { shen.wishes++; ui.event('your wish is granted — one more wish!'); } },
       { key: 'satan', label: 'mr. satan\'s autograph', what: () => '"the world champion\'s signature!" (a little power)', grant: () => { gain(wrate() * 30); ui.event('mr. satan signs it with a flourish — +' + fmtShort(wrate() * 30) + '. it\'s worthless.'); } },
     ];
     const KRILLIN_WISH = { key: 'krillin', label: 'bring krillin back', what: () => `he trains with you: idle ×1.5 and destructo discs. next death: rage ×${3 + (S.krillinRevives || 0)}`, grant: () => { S.krillinDead = 0; S.krillinAlly = 1; S.krillinRevives = (S.krillinRevives || 0) + 1; nextKril = 240; ui.event('krillin is back! "did i miss anything?" — he trains with you: idle ×1.5 and destructo discs'); } };
     const val = v => typeof v === 'function' ? v() : v;
     function openWish() {
         shen.phase = 'wish';
-        const pool = WISHES.filter(w => !w.ok || w.ok()).sort(() => Math.random() - .5).slice(0, 3), offer = S.krillinDead ? [...pool, KRILLIN_WISH] : pool;
+        const pool = WISHES.filter(w => !w.ok || w.ok()).map(w => [w, Math.random() ** (1 / (w.w ?? 1))]).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([w]) => w), offer = S.krillinDead ? [...pool, KRILLIN_WISH] : pool;
         ui.wish(offer.map(w => ({ key: w.key, label: val(w.label), what: val(w.what) })), k => {
           if (!shen || shen.phase !== 'wish') return; shen.phase = 'granting';   // a wish is granted once, however often the box fires
           const w = offer.find(w => w.key === k); if (w) w.grant();
