@@ -333,7 +333,11 @@ body.vegeta:not(.night) .game { background: linear-gradient(#f6d2b0, #e89a72 75%
 /* beerus' planet: a pink-to-violet sky */
 body.beerus:not(.night) .game { background: linear-gradient(#f6d6ec, #b89ae0 75%) !important; }
 /* west city: a clear blue sky */
-body.westcity:not(.night) .game { background: linear-gradient(#e6f4ff, #9ac8f2 75%) !important; }
+body.westcity:not(.night) .game { background: linear-gradient(#a8d8ff, #5aa2ec 75%) !important; }   /* bright blue so the white capsule corp domes pop */
+/* kame house: a bright tropical sky over open sea */
+body.kame:not(.night) .game { background: linear-gradient(#eafaff, #8fd4f0 75%) !important; }
+/* mount paozu: a hazy mountain-morning sky over the forest */
+body.paozu:not(.night) .game { background: linear-gradient(#eef6f2, #b4d8cc 75%) !important; }
 </style>
 
 <div class="scroller" id="scroller">
@@ -425,7 +429,7 @@ __PLANET__
       box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { box.hidden = true; $('game').classList.remove('wishing'); done(options[+b.dataset.i].key); }));
       box.querySelector('button').focus({ preventScroll: true });
     },
-    world(w) { root.style.setProperty('--sea', ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#9fb4cc'][w] || '#e2a93a'); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); },
+    world(w) { root.style.setProperty('--sea', ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#d2dce8', '#1a4f9a', '#d2dce8'][w] || '#e2a93a'); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); document.body.classList.toggle('kame', w === 6); document.body.classList.toggle('paozu', w === 7); },
     fx(kind, arg) { if (titleFx) titleFx(kind, arg); },
     bump() { const n = $('pl'); n.classList.add('bump'); clearTimeout(ui._b); ui._b = setTimeout(() => n.classList.remove('bump'), 110); },
   };

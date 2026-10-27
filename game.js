@@ -1270,6 +1270,149 @@ const POD = shapeSprite(14, 14, G => {   // white attack pod with a purple windo
   G.ell(9, 5.5, 2.8, 2.6, 'k'); G.ell(9, 5.5, 2.1, 1.9, 'm'); G.set(8, 4, 'M'); G.set(8, 5, 'M');
 }, { o: 0x22222e, w: 0xf4f4f8, W: 0xbcc0cc, k: 0x3a3a48, m: 0x6a2a8a, M: 0xc08ae0 }, { w: 'W' });
 
+/* ---------- mount paozu dinosaurs (draft sprites: four poses each, b1/c1 used as placeholders until picked) ---------- */
+const DINOS = (() => {
+// earth's dinosaurs, take two: bigger, four poses each, all facing right
+// a stroke with its own outline so a limb/neck reads in front of the body behind it
+const dl = (G, pts, w0, w1, c) => { G.line(pts, w0 + 1.6, w1 + 1.6, 'o'); G.line(pts, w0, w1, c); };
+const de = (G, cx, cy, rx, ry, c) => { G.ell(cx, cy, rx + .9, ry + .9, 'o'); G.ell(cx, cy, rx, ry, c); };
+const dp = (G, pts, c) => { G.poly(pts, 'o'); G.poly(pts.map(([x, y]) => [x, y]), c); };
+
+/* ---------- B: the classic DBZ theropod (gohan's tail donor / goku's dinner) ---------- */
+// orange-brown hide, cream belly and throat, dark-brown back ridge and head crest, stubby arms, thick legs
+const PB = { o: 0x2a1408, b: 0xd07a38, B: 0x8e4a1e, h: 0xeea05a, y: 0xf6e2aa, Y: 0xc9a868, d: 0x7a3a18, D: 0x52240c, w: 0xffffff, k: 0x140a04, m: 0x6a1412, n: 0xe0606a, t: 0xfff8e8, p: 0xf08c8c, P: 0xc05a5a };
+const SB = { b: 'B', y: 'Y', d: 'D', p: 'P' };
+// skull at (x,y) = top-left of the cranium; mouth: 'shut' | 'open' | 'roar'
+function bHead(G, x, y, { mouth = 'shut', eye = 'open' } = {}) {
+  // crest: a backswept knobbed fin on the back of the skull
+  G.poly([[x + 1, y + 3], [x - 2, y - 1], [x + 1, y - 2], [x + 4, y - 1], [x + 6, y + 1]], 'd');
+  G.poly([[x + 4, y + 1], [x + 5, y - 3], [x + 8, y - 2], [x + 9, y + 1]], 'd');
+  if (mouth === 'shut') {
+    G.poly([[x, y + 3], [x + 3, y], [x + 11, y], [x + 15, y + 2], [x + 17, y + 5], [x + 16, y + 8], [x + 12, y + 10], [x + 3, y + 11], [x, y + 8]], 'b');
+    G.poly([[x + 3, y + 8], [x + 15, y + 8], [x + 12, y + 10], [x + 3, y + 11]], 'y');
+    G.line([[x + 6, y + 7.5], [x + 16, y + 7.5]], 1, 1, 'k');
+    for (const i of [8, 11, 14]) G.set(x + i, y + 8, 't');
+    G.set(x + 15, y + 3, 'B');
+  } else {
+    const r = mouth === 'roar';
+    // upper jaw tilted up, lower jaw dropped; dark mouth with teeth and tongue between
+    const up = r ? -3 : -1, dn = r ? 4 : 3;
+    G.poly([[x, y + 3], [x + 3, y], [x + 11, y + up * .3], [x + 16, y + up + 2], [x + 18, y + up + 4], [x + 17, y + up + 6], [x + 7, y + 7], [x, y + 8]], 'b');
+    G.poly([[x + 2, y + 8], [x + 7, y + 7], [x + 16, y + 7 + dn], [x + 15, y + 9 + dn], [x + 8, y + 11 + dn * .5], [x + 2, y + 11]], 'b');
+    G.poly([[x + 4, y + 10], [x + 9, y + 10 + dn * .4], [x + 15, y + 8 + dn], [x + 14, y + 9 + dn], [x + 8, y + 11 + dn * .5], [x + 3, y + 11]], 'y');
+    G.poly([[x + 8, y + 7], [x + 19, y + up + 5], [x + 19, y + 8 + dn], [x + 8, y + 8]], '.');   // open jaws you can see through
+    G.set(x + 8, y + 7, 'm'); G.set(x + 9, y + 7, 'm');
+    for (const i of [10, 13, 16]) G.set(x + i, Math.round(y + 6 + (up) * (i - 7) / 10 + .4), 't');
+    for (const i of [11, 14]) G.set(x + i, Math.round(y + 7 + dn * (i - 7) / 9 - .2), 't');
+    G.set(x + 16, y + up + 3, 'B');
+  }
+  // the eye: white with a black pupil looking ahead, heavy brow
+  if (eye === 'open') { G.rect(x + 6, y + 2, 3, 3, 'w'); G.rect(x + 8, y + 3, 1, 2, 'k'); G.line([[x + 5, y + 1.5], [x + 10, y + 2]], 1.2, 1.2, 'd'); }
+  else if (eye === 'mad') { G.rect(x + 6, y + 3, 3, 2, 'w'); G.set(x + 8, y + 3, 'k'); G.set(x + 8, y + 4, 'k'); G.line([[x + 5, y + 1.5], [x + 10, y + 3.5]], 1.4, 1.2, 'd'); }
+  else { G.line([[x + 6, y + 3.5], [x + 9, y + 3.5]], 1, 1, 'k'); G.line([[x + 5, y + 2], [x + 10, y + 2.2]], 1.2, 1.2, 'd'); }   // shut, smug/sleepy
+  G.set(x + 4, y, 'h'); G.set(x + 5, y, 'h'); G.set(x + 9, y + 0, 'h');
+}
+function bRidge(G, pts) { for (const [x, y, s = 1] of pts) G.poly([[x - 1.8 * s, y + 1.5], [x - .6 * s, y - 2 * s], [x + 1.6 * s, y + 1.5]], 'd'); }
+// standing body: thigh-heavy, belly cream; bx,by = body centre
+function bBody(G, bx, by) {
+  G.ell(bx, by, 11, 8.5, 'b');
+  G.ell(bx + 4, by + 2.4, 6.6, 5.6, 'y');
+  for (const [i, j] of [[-6, -6], [-3, -7], [0, -7.5], [3, -7]]) G.set(Math.round(bx + i), Math.round(by + j), 'h');
+}
+const bFoot = (G, x, y, c = 'b') => { G.rect(x, y, 7, 2, c); G.set(x + 7, y + 1, 't'); G.set(x + 5, y + 1, 't'); };
+
+// 1: stomping forward, mouth shut, near leg lifted mid-stride, tail swinging up
+
+// 2: roaring at the sky, head thrown back, jaws wide, arms out, tail up
+const DB2 = shapeSprite(50, 40, G => {
+  G.line([[16, 25], [8, 23], [3, 18], [1, 12]], 8, 1.4, 'b');
+  bRidge(G, [[3, 16, .7], [7, 20, .9], [11, 21.5], [16, 18], [20, 16], [24, 15], [28, 14]]);
+  dl(G, [[19, 29], [18, 34], [17, 36.5]], 5, 3.4, 'B'); bFoot(G, 14, 36, 'B');
+  bBody(G, 24, 24);
+  G.poly([[27, 19], [29, 10], [35, 9], [36, 20], [31, 26]], 'b'); G.poly([[32, 16], [35, 12], [36, 20], [31, 25]], 'y');
+  bHead(G, 28, 3, { mouth: 'roar', eye: 'mad' });
+  dl(G, [[34, 23], [38, 22], [40, 19]], 2, 1.4, 'b');
+  de(G, 27, 28, 5, 5.5, 'b'); dl(G, [[28, 32], [30, 35], [30, 36.5]], 4.2, 3.4, 'b'); bFoot(G, 28, 36);
+}, PB, SB);
+
+// 3: sniffing the ground, head low and forward, tail level, hungry
+
+// 4: sitting back on its haunches, tail cut to a stub (gohan's dinner), eyes squeezed shut, pouting
+
+/* ---------- C: the long-neck sauropod ---------- */
+const PC = { o: 0x10200e, g: 0x6cae4c, G: 0x3c7a30, h: 0x9ad070, t: 0xece2b0, T: 0xbcae78, s: 0x4a8a36, k: 0x0c1408, w: 0xffffff, m: 0x5a1a14, n: 0xe07070, f: 0x58b0e0, F: 0x2a78b0, l: 0x2e8a5a, L: 0x1a5a3a };
+const SC = { g: 'G', t: 'T', l: 'L' };
+function cHead(G, x, y, { open = false, eye = 'open', tilt = 0 } = {}) {
+  G.ell(x, y, 3.6, 2.8, 'g'); G.ell(x + 3, y + 1 + tilt, 2.8, 2, 'g');
+  if (open) { G.poly([[x + 2, y + 2 + tilt], [x + 6, y + 1 + tilt], [x + 6, y + 4 + tilt], [x + 2, y + 3 + tilt]], 'm'); G.set(x + 5, y + 2 + tilt, 'n'); }
+  else G.line([[x + 2, y + 2.5 + tilt], [x + 5, y + 2.5 + tilt]], 1, 1, 'G');
+  if (eye === 'open') { G.rect(x - 1, y - 1, 2, 2, 'w'); G.set(x, y - 1, 'k'); G.set(x, y, 'k'); }
+  else G.rect(x - 1, y, 2, 1, 'k');
+  G.set(x - 2, y - 2, 'h'); G.set(x - 1, y - 2, 'h'); G.set(x + 5, y, 'G');
+}
+// barrel body + belly + back spots; legs drawn by caller
+function cBody(G, bx, by) {
+  G.ell(bx, by, 14, 8.6, 'g'); G.ell(bx + 2, by + 4, 10, 4, 't');
+  for (const [i, j] of [[-7, -4], [-2, -6], [4, -5], [-4, -1], [8, -2], [1, -2]]) G.ell(bx + i, by + j, 1.3, 1, 's');
+  for (const i of [-8, -5, -1, 3]) G.set(bx + i, by - 8, 'h');
+}
+const cLeg = (G, x, y, h, c) => { G.rect(x - 1, y, 6, h, 'o'); G.rect(x, y, 4, h, c); G.rect(x, y + h - 1, 4, 1, c === 'g' ? 'T' : 'G'); G.set(x + 1, y + h - 1, 't'); G.set(x + 3, y + h - 1, 't'); };
+
+// 1: plodding along, head held high, tail swaying
+const DC1 = shapeSprite(56, 40, G => {
+  G.line([[12, 25], [5, 27], [0, 32]], 6, 1.2, 'g');
+  cLeg(G, 14, 27, 12, 'G'); cLeg(G, 30, 27, 12, 'G');                                        // far legs
+  cBody(G, 23, 23);
+  dl(G, [[33, 21], [39, 14], [43, 8], [45, 5]], 7, 4, 'g'); G.line([[36, 20], [41, 13], [44, 8]], 2.4, 1.6, 't');
+  cHead(G, 47, 4);
+  cLeg(G, 18, 28, 11, 'g'); cLeg(G, 34, 28, 11, 'g');                                        // near legs
+}, PC, SC);
+
+// 2: grazing, neck bent down to a bush, tail high
+
+// 3: rearing up on its hind legs, neck stretched to the sky, calling
+
+// 4: lying down for a nap, legs tucked, neck curled round, eyes shut
+
+/* ---------- D: the pterodactyl ---------- */
+// dusky purple-grey hide, paler wing membrane, orange beak and backswept crest
+const PD2 = { o: 0x1a1428, p: 0x8a78b0, P: 0x5a4a80, v: 0xb8a8d8, V: 0x8a7aac, h: 0xc8bce0, c: 0xf09040, C: 0xb05a20, w: 0xffffff, k: 0x100818, y: 0xf0c040, Y: 0xc08a20, r: 0xe02a2a, s: 0xf2c49a, S: 0xc8906a, u: 0x2a6ad0, U: 0x1a3e88, q: 0xe8e0f0 };
+const SD2 = { p: 'P', v: 'V', c: 'C', y: 'Y', s: 'S', u: 'U' };
+// head at (x,y) = back of skull; beak points right; dive tilts it down
+function dHead(G, x, y, { dive = 0, open = false } = {}) {
+  G.poly([[x + 1, y - 1], [x - 7, y - 4], [x - 4, y + 1], [x + 1, y + 2]], 'c');            // crest
+  G.ell(x + 2, y + 1, 3.4, 2.8, 'p');
+  if (!open) G.poly([[x + 4, y - 1], [x + 15, y + 2 + dive], [x + 15, y + 3 + dive], [x + 4, y + 3]], 'c');
+  else { G.poly([[x + 4, y - 1], [x + 15, y + 1 + dive], [x + 4, y + 1.5]], 'c'); G.poly([[x + 4, y + 2], [x + 14, y + 5 + dive], [x + 4, y + 3.5]], 'c'); }
+  G.rect(x + 1, y - 1, 2, 2, 'w'); G.set(x + 2, y, 'k'); G.set(x + 2, y - 1, 'k');
+  G.line([[x, y - 2], [x + 4, y - 1.4]], 1, 1, 'P');
+  G.set(x + 1, y - 2, 'h');
+}
+// wing: arm bone along the leading edge, membrane hanging back to the body
+const dWing = (G, pts, c) => { G.poly(pts, c); };
+
+// 1: gliding, wings spread flat, feet tucked
+const DD1 = shapeSprite(54, 34, G => {
+  dWing(G, [[26, 15], [40, 9], [53, 8], [44, 13], [32, 19]], 'V');                            // far wing, peeking out ahead
+  G.ell(24, 18, 7, 3.6, 'p'); G.ell(25, 19.5, 5, 2, 'h');                                   // body
+  G.line([[17, 19], [10, 19], [6, 21]], 2, 1, 'p');                                         // tail
+  dWing(G, [[28, 16], [18, 10], [6, 7], [0, 9], [6, 12], [12, 18], [22, 21]], 'v');          // near wing
+  G.line([[28, 16], [18, 10], [6, 7], [0, 9]], 1.6, 1, 'p');
+  for (const x of [8, 14, 20]) G.line([[x, 9 + (x - 6) * .3], [x + 3, 15 + (x - 6) * .3]], 1, 1, 'V');
+  G.line([[30, 17], [33, 13]], 3, 2.4, 'p');                                                 // neck
+  dHead(G, 35, 12);
+  G.line([[22, 21], [19, 24]], 1.4, 1, 'P'); G.rect(17, 24, 3, 1, 'c');                     // tucked feet
+}, PD2, SD2);
+
+// 2: flapping hard, wings raised high, beak open, legs dangling
+
+// 3: diving, wings swept back, beak aimed down at prey
+
+// 4: carrying a four-star dragon ball in its talons, wings mid-beat
+return { b: DB2, c: DC1, d: DD1 };
+})();
+/* ---------- end mount paozu dinosaurs ---------- */
+
 const TONES = {
   grass: [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e],
   road: [0xcfc8b6, 0xe6e1d4, 0xf6f3ec, 0xffffff],
@@ -1284,6 +1427,11 @@ const TONES = {
   belly: [0x9a7a3a, 0xd2b060, 0xf2d48a, 0xfff0c0],
   dorb: [0xc4561a, 0xee7a1e, 0xffa63a, 0xffd27a, 0xfff2cc],
   bean: [0x2e6b22, 0x4a9a32, 0x76c64a, 0xb6ea7a],
+  hull: [0xa8a49a, 0xccc8bc, 0xe8e4d8, 0xf8f6ee, 0xffffff],     // west city building bodies
+  cc: [0x10306a, 0x1a4a9a, 0x2a6ac8, 0x4a8ae0],
+  pane: [0x16244a, 0x24406e, 0x3a6aa0, 0x8ac0ec],
+  peach: [0xb8642a, 0xe0884a, 0xf4ac72, 0xffd2a8],
+  aqua: [0x2a7a8a, 0x40a0b0, 0x6ac8d0, 0xb0ecee],
 };
 
 const KAI = Object.fromEntries(Object.entries(TONES).map(([k, v]) => [k, v.slice()]));
@@ -1323,8 +1471,38 @@ const EARTH = Object.assign({}, KAI, {
   band: [0xb88a1a, 0xd8a82a, 0xf2c84a, 0xffe08a],
   glass: [0x1c3a6a, 0x2a5a9a, 0x4a8ad0, 0x9fd0ff],
 });
-const PLANET_EVERY = 1e6;   // the first trip to another world at 1M best power, then at 4x your best each time: namek, planet vegeta, snake way, beerus' planet, west city, in turn
-const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }, { name: "beerus' planet", tones: BEERUSP, sea: [0x4a2a7a, 0x6a3ea0, 0x9a6ad0, 0xd8c0f0] }, { name: 'west city', tones: EARTH, sea: [0x9fb4cc, 0xc4d4e6, 0xe4edf7, 0xffffff] }];
+// kame house: the planet is open sea (grass), lagoon shallows (glass), dry sand (road) and wet sand (band); palm trees
+const KAMEP = Object.assign({}, KAI, {
+  grass: [0x123e86, 0x1a52a2, 0x2268bc, 0x2e80d0, 0x4a9ee0, 0x7cc0ee],
+  glass: [0x1a7aa8, 0x2a9ac0, 0x48bcd2, 0x7adae0, 0xb8f0ec],
+  road: [0xc8a464, 0xe0c080, 0xf0d89c, 0xfaecc4, 0xfff8e4],
+  band: [0x9a7a48, 0xb8945a, 0xcfac70, 0xe2c488],
+  leaf: [0x174a22, 0x23692c, 0x338a36, 0x52ac44, 0x8ad466],
+  trunk: [0x5a3a1c, 0x7a5228, 0x9a6c36, 0xbe8e4e],
+  stone: [0x5a5048, 0x7a7068, 0x9e968a, 0xc8c0b2],
+});
+// roshi's pink house: red hip roof, "KAME HOUSE" painted under the eaves, two white-framed windows and a door
+const KAMEHOUSE = shapeSprite(44, 30, G => {
+  G.poly([[0, 13], [8, 3], [36, 3], [44, 13]], 'r'); G.rect(9, 3, 26, 1, 'q'); for (const y of [6, 9]) for (let x = 6; x < 39; x += 2) G.set(x + (y === 9 ? 1 : 0), y, 'R');   // roof, ridge, tile rows
+  G.rect(1, 12, 42, 1, 'R'); G.rect(2, 13, 40, 15, 'p');
+  const F = { K: '1.11.111.1.11.1', A: '.1.1.11111.11.1', M: '1.11111111.11.1', E: '1111..11.1..111', H: '1.11.11111.11.1', O: '1111.11.11.1111', U: '1.11.11.11.1111', S: '1111..111..1111' };   // a 3x5 pixel font
+  [...'KAME HOUSE'].forEach((ch, i) => { const x0 = 4 + i * 4 - (i > 4 ? 2 : 0); if (F[ch]) for (let k = 0; k < 15; k++) if (F[ch][k] === '1') G.set(x0 + k % 3, 15 + (k / 3 | 0), 'm'); });
+  for (const x of [5, 32]) { G.rect(x, 21, 7, 6, 'w'); G.rect(x + 1, 22, 5, 4, 'g'); G.rect(x + 3, 22, 1, 4, 'w'); }   // windows
+  G.rect(19, 21, 6, 7, 'd'); G.set(23, 24, 'y'); G.rect(18, 28, 8, 2, 'w'); G.rect(2, 28, 40, 1, 'P');                  // door, step, footing
+}, { o: 0x2a1418, r: 0xe0402e, R: 0x9a2018, q: 0xff8a6a, p: 0xf6a2b6, P: 0xc87088, m: 0xd0202a, w: 0xfaf6f0, W: 0xc8c0c0, g: 0x7ac8f0, d: 0x7a3e22, y: 0xf2c84a }, { r: 'R', p: 'P', w: 'W' });
+// mount paozu: deep forest, a dirt track, goku's white dome house, grey karst pillars
+const PAOZU = Object.assign({}, KAI, {
+  grass: [0x1c5a22, 0x26722a, 0x348c32, 0x4aa63c, 0x72c454, 0xa8e080],
+  road: [0x8a6a44, 0xa8885a, 0xc6a676, 0xe2c89a],
+  dome: [0xa8a49a, 0xccc8bc, 0xe8e4d8, 0xf8f6ee, 0xffffff],
+  band: [0x7a2a18, 0xa83e22, 0xd05a30, 0xee8a54],
+  glass: [0x1c3a5a, 0x2a5a8a, 0x5a9ad0, 0xb0e0ff],
+  leaf: [0x0e3a18, 0x185a22, 0x24782c, 0x3a983a, 0x6ab852],
+  trunk: [0x3a2414, 0x553620, 0x74502e, 0x94683e],
+  stone: [0x3e4a4a, 0x5e6c68, 0x84928a, 0xb0bcb0, 0xd8e0d4],
+});
+const PLANET_EVERY = 1e6;   // the first trip to another world at 1M best power, then at 4x your best each time: namek, planet vegeta, snake way, beerus' planet, west city, kame house, mount paozu, in turn
+const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }, { name: "beerus' planet", tones: BEERUSP, sea: [0x4a2a7a, 0x6a3ea0, 0x9a6ad0, 0xd8c0f0] }, { name: 'west city', tones: EARTH, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'kame house', tones: KAMEP, sea: [0x1a4f9a, 0x2a78c8, 0x7cc4ee, 0xf4fcff] }, { name: 'mount paozu', tones: PAOZU, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }];
 function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
 
 // preview hooks (#raid, #snake, ...) jump straight to things for testing; on the live site they're ignored so nobody can cheat with them
@@ -1427,8 +1605,8 @@ GAMES.push({
     ui.onBuy(k => {
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') {
-        // seeds grow with the square root of the power you give up; you drop one form and trips start over
-        const gainA = seedsNow(), keep = Math.floor(S.pl * .01 * lvl('head')); S.ascend += gainA; S.seeds += gainA; ach('ascend'); S.pl = keep; S.runBest = keep; S.namekAt = 0; for (const r of RESETS) S[r] = 0; S.form = Math.max(0, (preview ? preview.from : S.form) - 1); preview = null; ui.fx && ui.fx('form', S.form); scenery();
+        // seeds grow with the square root of the power you give up; forms and trips start over from base
+        const gainA = seedsNow(), keep = Math.floor(S.pl * .01 * lvl('head')); S.ascend += gainA; S.seeds += gainA; ach('ascend'); S.pl = keep; S.runBest = keep; S.namekAt = 0; for (const r of RESETS) S[r] = 0; S.form = 0; preview = null; ui.fx && ui.fx('form', S.form); scenery();
         ui.event(`ascended — +${gainA} ki seed${gainA > 1 ? 's' : ''} (×${seedBoost().toFixed(1)} on everything), back to ${FORMS[S.form].name}: spend seeds in menu → training`, 4500); ui.fx && ui.fx('super'); save(); syncShop(); return;
       }
       S.pl -= c; S[k]++; ui.fx && ui.fx('buy');
@@ -1452,8 +1630,39 @@ GAMES.push({
     const capPt = (th, a) => V.norm(V.add(V.mul(N, Math.cos(th)), V.add(V.mul(E1, Math.cos(a)), E2, Math.sin(a)), Math.sin(th)));
     const L = V.norm([-.55, .7, .55]);
     const solids = [];                       // { c: body centre, r, kind, ... }
+    const wcRoads = [];                      // west city streets painted on the ground: { n, lo, hi, a, b, pave }
+    // mount paozu: karst pillars, round forest, goku's dome house by the water
+    let pzWater = null, pzDinos = [];   // surface water test, walking dinos
+    const PZ_ROOF = [0x6a1a10, 0x9a2c1a, 0xc8432a, 0xe86a44, 0xffa070], PZ_WATER = [0x1a4a7a, 0x2a6aa8, 0x4a94d0, 0x8ac8ee, 0xdaf2ff], PZ_MIST = [0xaab6be, 0xc6d0d6, 0xdee6ea, 0xf2f6f8, 0xffffff];
+    function paozuScenery(bush, rock) {
+      let sd = 12; const rnd = () => (sd = sd * 16807 % 2147483647) / 2147483647, pal = (c, r, p, lift = 0) => solids.push({ c, r, kind: 'pal', pal: p, lift });
+      // a karst tower: lumpy stacked stone that bulges midway, mossy ledges, a cap of forest
+      const pillar = (th, a, h, r, lean = 0, cap = 'leaf') => { const s = capPt(th, a), t1 = V.norm(V.cross(s, N)), t2 = V.cross(s, t1), n = Math.ceil(h / (r * .4)); let top = s;
+        for (let i = 0; i <= n; i++) { const f = i / n, w = r * (.8 + .35 * Math.sin(Math.PI * Math.min(1, f * 1.1))) * (1 - .25 * f); top = V.add(V.add(V.mul(s, 1 + h * f), t1, lean * f * f + (rnd() - .5) * r * .3), t2, (rnd() - .5) * r * .3); solids.push({ c: top, r: w, kind: 'karst' });
+          if (i > 1 && i < n - 1 && rnd() < .3) solids.push({ c: V.add(top, rnd() < .5 ? t1 : t2, (rnd() < .5 ? -1 : 1) * w * .8), r: w * .42, kind: 'leaf' }); }
+        if (cap === 'leaf') solids.push({ c: V.mul(top, 1 + r * .45), r: r * .85, kind: 'leaf' }, { c: V.add(V.mul(top, 1 + r * .8), t1, r * .35), r: r * .5, kind: 'leaf' });
+        return top; };
+      const round = (th, a, k = 1) => { const s = capPt(th, a); solids.push({ c: V.mul(s, 1 + .03 * k), r: .02 * k, kind: 'trunk' }, { c: V.mul(s, 1 + .085 * k), r: .065 * k, kind: 'leaf' }); };
+      const forest = (th0, a0, n, sp, f = round) => { for (let i = 0; i < n; i++) { const th = th0 + (rnd() - .5) * sp, a = a0 + (rnd() - .5) * sp * 2 / Math.max(.3, Math.sin(th)); if (Math.abs(th - 1.571) > .13 && !(pzWater && pzWater(capPt(th, a)))) f === round ? round(th, a, .65 + rnd() * .5) : pine(capPt(th, a), .9 + rnd() * .5); } };
+      // goku's house: a white dome with a red roof cap and a stovepipe chimney; little side huts
+      const house = (th, a, r) => { const s = capPt(th, a), door = V.mul(V.norm(V.cross(s, V.cross(N, s))), -1); solids.push({ c: s, r, kind: 'dome', s, door }); pal(V.mul(s, 1 + r * .55), r * .6, PZ_ROOF);
+        for (let i = 0; i <= 3; i++) solids.push({ c: V.add(V.mul(s, 1 + r * .62 + .022 * i), door, -r * .42), r: .016, kind: 'stone' }); };
+      const hut = (th, a, r) => { const s = capPt(th, a); solids.push({ c: s, r, kind: 'dome', s, door: V.mul(V.norm(V.cross(s, V.cross(N, s))), -1) }); };
+      const river = (A, w, F) => nb => Math.abs(V.dot(nb, A) + .05 * Math.sin(V.dot(nb, F) * 9)) < w;
+      const dino = (spr, th, a, k, sway = .3, hop = 1) => pzDinos.push({ spr, th, a, k, sway, hop });
+      const [B, C] = [DINOS.b, DINOS.c], UP = Math.PI / 2;
+      // the karst forest: a ring of green-capped towers, round trees everywhere, a winding river past the house
+      pzWater = river(V.norm(V.add(E1, E2, -.8)), .032, E2);
+      [[1.08, .3, .42, .1], [1.15, .95, .32, .085], [1.8, .9, .72, .11], [1.8, 2.15, .62, .1], [1.85, 2.7, .7, .11], [1.1, 2.6, .36, .09], [1.08, 3.4, .48, .1], [1.2, 4.2, .3, .08], [1.05, 5.4, .4, .1], [2.1, 3.0, .4, .09], [1.95, 4.6, .5, .1], [2.15, 5.9, .36, .085]].forEach(([th, a, h, r]) => pillar(th, a, h, r, (rnd() - .5) * .06));
+      forest(.85, .6, 10, .4); forest(.8, 4.6, 12, .45); forest(.55, 5.6, 6, .3); forest(.95, 2.4, 8, .3); forest(2.2, 2.2, 14, .6); forest(2.3, 4.8, 12, .6);
+      house(.55, 3.5, .15); hut(.66, 4.0, .08);
+      bush(.7, 2.0, .05); bush(.32, 3.9, .04); rock(.75, 3.0, .04); rock(.6, 5.0, .035);
+      dino(B, .3, 4.9, .5, .7); dino(C, .36, 2.3, .55, .5, .4);
+    }
     function scenery() {
-      solids.length = 0;
+      solids.length = 0; wcRoads.length = 0;
+      if (S.world === 5) return westcityScenery();
+      if (S.world === 6) return kameScenery();
       const dome = (th, a, r) => { const s = capPt(th, a), door = V.norm(V.cross(s, V.cross(N, s))); solids.push({ c: s, r, kind: 'dome', s, door: V.mul(door, -1) }); for (let i = 1; i <= 5; i++) solids.push({ c: V.mul(s, 1 + r + .018 * i), r: .009, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + r + .11), r: .02, kind: 'knob' }); };
       const tree = (th, a, k = 1) => S.world === 2 ? spire(th, a, k) : S.world ? ajissa(th, a, k) : kaiTree(th, a, k);
       const spire = (th, a, k) => { const s = capPt(th, a); for (let i = 0; i <= 8; i++) solids.push({ c: V.mul(s, 1 + .05 * i * k), r: (.1 - .011 * i) * k, kind: 'stone' }); };   // planet vegeta: jagged rock spires
@@ -1461,11 +1670,67 @@ GAMES.push({
       const kaiTree = (th, a, k = 1) => { const s = capPt(th, a), t1 = V.norm(V.cross(s, N)); for (let i = 1; i <= 4; i++) solids.push({ c: V.mul(s, 1 + .045 * i * k), r: .03 * k, kind: 'trunk' }); solids.push({ c: V.add(V.mul(s, 1 + .26 * k), t1, .05 * k), r: .13 * k, kind: 'leaf' }, { c: V.add(V.mul(s, 1 + .2 * k), t1, -.08 * k), r: .1 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .33 * k), r: .09 * k, kind: 'leaf' }); };
       const bush = (th, a, r) => solids.push({ c: capPt(th, a), r, kind: 'leaf' });
       const rock = (th, a, r) => solids.push({ c: V.mul(capPt(th, a), 1 - r * .3), r, kind: 'stone' });
+      pzWater = null; pzDinos = [];
+      if (S.world === 7) return paozuScenery(bush, rock);
       dome(.3, 2.5, .25); dome(.82, 3.55, .17);
       [[.75, 1.9, .15], [.6, 5.1, .16], [1.05, 4.0, .13], [2.0, 2.2, .16], [2.3, 4.2, .15], [1.9, .05, .14], [2.6, 5.8, .13], [3.0, 2.4, .15], [1.25, 2.65, .12]].slice(0, Math.min(9, S.house)).forEach(([a, b, r]) => dome(a, b, r));
       tree(.95, .5, 1.05); tree(.62, 1.35, .85); tree(1.0, 5.0, .95); tree(.55, 5.8, .7); tree(2.25, 1.2, 1); tree(2.5, 3.4, 1.1); tree(2.1, 5.2, .9); tree(2.75, .2, .8);
       bush(.7, 4.3, .07); bush(.98, 2.2, .06); bush(.4, .9, .05); bush(1.1, 3.0, .06); bush(2.3, 2.3, .08); bush(2.6, 4.5, .07);
       rock(.62, 4.05, .05); rock(1.05, 1.7, .04); rock(2.4, .6, .05);
+    }
+    // west city: capsule corp and the rounded towers around it, built from the same spheres
+    function westcityScenery() {
+      const put = (c, r, kind, o) => solids.push(Object.assign({ c, r, kind }, o));
+      const face = s => V.norm(V.add([0, 0, 1], s, -s[2]));   // the side that looks at the camera at rest
+      const frame = n => { const a = V.norm(V.cross(n, Math.abs(n[0]) < .9 ? [1, 0, 0] : [0, 1, 0])); return [a, V.cross(n, a)]; };
+      const onCircle = (n, r, q, h) => { const [a, b] = frame(n); return V.mul(V.norm(V.add(V.mul(n, Math.cos(r)), V.add(V.mul(a, Math.cos(q)), b, Math.sin(q)), Math.sin(r))), h); };
+      const ring = (n, r, w, pave) => { const [a, b] = frame(n), c = Math.cos(r); wcRoads.push({ n, lo: pave ? c : c - w, hi: pave ? 2 : c + w, a, b, pave }); };
+      const street = (n, w) => ring(n, Math.PI / 2, w);
+      // capsule corp hq: the big lettered dome; text 0 makes a plain capsule house with a door
+      const hq = (th, a, r, text = 1, p = 'hull') => { const s = capPt(th, a), door = face(s); put(s, r, 'hq', { s, door, side: V.cross(s, door), text, p }); };
+      // a round tower: one sphere per floor with a window ribbon round its waist, a dome on top, an antenna
+      const tower = (th, a, h, r, p = 'hull', top = 'pane', w = .16) => { const s = capPt(th, a); for (let z = 0; z <= h; z += r * .85) put(V.mul(s, 1 + z), r, 'tower', { s, p, w }); put(V.mul(s, 1 + h + r * .55), r * .78, 'tower', { s, p: top }); for (let i = 1; i <= 4; i++) put(V.mul(s, 1 + h + r * 1.2 + .016 * i), .008, 'tower', { s, p: 'stone' }); return s; };
+      const palm = (th, a, k = 1) => { const s = capPt(th, a), t1 = V.norm(V.cross(s, N)), t2 = V.cross(s, t1); for (let i = 1; i <= 7; i++) put(V.add(V.mul(s, 1 + .045 * i * k), t1, .05 * k * (i / 7) ** 2), .017 * k, 'trunk'); const top = V.add(V.mul(s, 1 + .33 * k), t1, .05 * k); put(top, .03 * k, 'leaf'); for (let j = 0; j < 6; j++) { const d = V.add(V.mul(t1, Math.cos(j * 1.05)), t2, Math.sin(j * 1.05)); for (let q = 1; q <= 3; q++) put(V.add(V.add(top, d, .045 * q * k), s, -.012 * q * q * k), (.03 - .005 * q) * k, 'leaf'); } };
+      // hover cars glide round a circle on the planet: a coloured body under a glass bubble
+      const car = (n, r, q0, w, p = 'peach', h = 1.05, k = 1) => { for (const [dq, dh, rr, pp] of [[-.032 * k, 0, .034 * k, p], [.032 * k, 0, .034 * k, p], [0, .03 * k, .024 * k, 'pane']]) { const fly = t => onCircle(n, r, q0 + dq / Math.sin(r) + w * t, h + dh); put(fly(0), rr, 'tower', { p: pp, fly }); } };
+      const bush = (th, a, r) => put(capPt(th, a), r, 'leaf');
+      const PAST = ['hull', 'peach', 'aqua'];
+      const houses = spots => spots.slice(0, Math.min(spots.length, S.house)).forEach(([a, b, r], i) => hq(a, b, r, 0, PAST[i % 3]));
+      // capsule corp hq on the skyline, a ring road round a park in front
+      street(E1, .03); ring(N, .62, .03); ring(capPt(.32, 3.9), .15, 0, 'pool'); ring(capPt(.45, 1.6), .2, 0, 'pave');
+      hq(.9, 1.6, .38); hq(1.0, .98, .2, 0); tower(1.1, 2.25, .3, .06);
+      tower(1.75, 1.0, .5, .07); tower(1.9, .7, .7, .06, 'aqua'); tower(1.8, 2.4, .6, .08, 'peach'); tower(2.0, 2.1, .9, .065);
+      palm(.95, .5); palm(.62, 3.3, .85); palm(1.05, 5.6, .9); palm(.75, 4.6); palm(1.2, 3.2, 1.1); palm(.4, 2.5, .7); palm(.4, 1.3, .7);
+      hq(.85, 4.0, .1, 0, 'peach'); hq(.95, 5.0, .1, 0, 'aqua'); hq(.85, .3, .1, 0);
+      car(N, .62, 0, .5); car(N, .62, 2.5, .5, 'aqua'); car(E1, Math.PI / 2, 1, -.4, 'hull');
+      bush(.3, 5.2, .05); bush(.55, 5.6, .04); bush(.2, .6, .045);
+      houses([[1.0, 3.5, .1], [.45, 5.3, .1], [1.15, 4.5, .1], [1.25, 3.85, .09], [.3, 5.85, .09], [.85, .9, .1], [1.25, 5.2, .1], [.85, 2.8, .09], [1.25, .2, .1]]);
+
+    }
+    // kame house: an island cap with roshi's house and palms, a sandbar for the road, open sea all round
+    let kh = null;   // { house, roshi }: where the sprites stand
+    function kameScenery() {
+      const palm = (th, a, k = 1, lean = 0) => {
+        const s = capPt(th, a), t1 = V.norm(V.cross(s, N)), t2 = V.cross(s, t1);
+        for (let i = 1; i <= 8; i++) { const f = i / 8; solids.push({ c: V.add(V.mul(s, 1 + .34 * k * f), t1, lean * .1 * k * f * f), r: (.028 - .008 * f) * k, kind: 'trunk' }); }
+        const C = V.add(V.mul(s, 1 + .36 * k), t1, lean * .1 * k); solids.push({ c: C, r: .045 * k, kind: 'leaf' });
+        for (let j = 0; j < 6; j++) { const d = V.add(V.mul(t1, Math.cos(j * 1.05 + .3)), t2, Math.sin(j * 1.05 + .3)); for (let m = 1; m <= 4; m++) solids.push({ c: V.add(V.add(C, d, .055 * m * k), s, (.02 * m - .014 * m * m) * k), r: (.042 - .006 * m) * k, kind: 'leaf' }); }   // fronds arch out and droop
+        for (let j = 0; j < 3; j++) solids.push({ c: V.add(V.add(C, s, -.035 * k), V.add(V.mul(t1, Math.cos(j * 2.1)), t2, Math.sin(j * 2.1)), .025 * k), r: .02 * k, kind: 'trunk' });   // coconuts
+      };
+      const rock = (th, a, r) => solids.push({ c: V.mul(capPt(th, a), 1 - r * .3), r, kind: 'stone' });
+      kh = { house: capPt(.1, 4.71), roshi: capPt(.34, 4.45) };
+      palm(.5, 5.95, 1, .8); palm(.48, 3.3, .85, -.7); rock(.72, 5.6, .045); rock(.62, 1.6, .035);
+    }
+    // the sea shader: e is how far inland a point is (negative is out to sea); sand, wet sand, a line of surf, shallows, then deep water
+    function shadeKame(nb, lum, x, y) {
+      const c = V.dot(nb, N), w = vnoise3(nb[0] * 5 + 3, nb[1] * 5, nb[2] * 5 + 7) - .5, t = st.t;
+      const e = Math.max(c - .66 + w * .1, .06 - Math.abs(c));
+      if (e > .03) return tone(TONES.road, lum + w * .35, x, y);
+      if (e > 0) return tone(TONES.band, lum, x, y);
+      if (e > -.02 - .01 * Math.sin(t * 2.2 + (nb[0] + nb[2]) * 20)) return lum + (bayer(x, y) - .5) * .3 > .45 ? 0xffffff : 0xcfe6f2;   // surf
+      if (e > -.1) return tone(TONES.glass, lum + .1 + e * 2.5, x, y);
+      const g = vnoise3(nb[0] * 22 + t * .15, nb[1] * 22, nb[2] * 22); if (g > .86 && lum > .45) return g > .9 ? 0xffffff : 0xbfe6ff;   // glints
+      return tone(TONES.grass, lum + (w - .2) * .3, x, y);
     }
 
     let R = 40, cx = 0, cy = 0, zb = null, ib = null, dm = null;
@@ -1678,7 +1943,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right (or ← →) to switch lanes, middle (or space) to jump', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right (or ← →) to switch lanes, middle (or space) to jump', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) startSnake(); else snk = null;
       bz = w === 4 ? { c: capPt(.3, 4.4), noise: 0, awake: 0 } : null; pud = null; gadgets = []; nextGadget = 2;
@@ -1757,7 +2022,14 @@ GAMES.push({
     const light = n => Math.max(0, V.dot(n, L)) * .78 + .22;
     function shadePlanet(o, n, x, y) {
       const nb = M3.apT(M, n), lum = light(n) + Math.pow(1 - n[2], 3) * .15;
-      if (Math.abs(V.dot(nb, N)) < .07) return tone(TONES.road, lum + .2, x, y);
+      if (S.world === 6) return shadeKame(nb, lum, x, y);
+      const dn = V.dot(nb, N);
+      if (Math.abs(dn) < .07) return S.world === 5 && Math.abs(dn) < .006 && (Math.atan2(V.dot(nb, E2), V.dot(nb, E1)) * 10 + 99) % 1 < .55 ? 0xf6d84a : tone(TONES.road, lum + .2, x, y);
+      for (const q of wcRoads) { const d = V.dot(nb, q.n); if (d < q.lo || d > q.hi) continue; const u = V.dot(nb, q.a), v = V.dot(nb, q.b);
+        if (q.pave === 'pool') return tone(TONES.glass, lum + (d - q.lo < .006 ? -.3 : .05), x, y);
+        if (q.pave) return tone(TONES.stone, lum + .2 - ((Math.floor(u * 50) + Math.floor(v * 50)) & 1) * .1, x, y);   // plaza tiles
+        return Math.abs(d - (q.lo + q.hi) / 2) < .005 && (Math.atan2(v, u) * 12 + 99) % 1 < .55 ? 0xf6d84a : tone(TONES.road, lum + .2, x, y); }
+      if (pzWater && pzWater(nb)) return tone(PZ_WATER, lum + .1 + Math.sin(nb[0] * 60 + nb[1] * 45) * .08, x, y);   // paozu's river and lake
       const patch = vnoise3(nb[0] * 3 + 9, nb[1] * 3, nb[2] * 3), f = vnoise3(nb[0] * 24, nb[1] * 24 + 4, nb[2] * 24);
       if (f > .9 && lum > .4) return f > .94 ? 0xffffff : 0xfff2a8;
       return tone(TONES.grass, lum + (patch - .5) * .22, x, y);
@@ -1771,8 +2043,30 @@ GAMES.push({
       for (const a of [.9, -.9]) { const w = V.norm(V.add(o.door, V.cross(o.s, o.door), a)); if (up < .72 && up > .44 && V.dot(u, w) > .955) return V.dot(u, w) > .975 ? tone(TONES.glass, lum + .2, x, y) : 0x3a2214; }
       return tone(TONES.dome, lum, x, y);
     }
+    // capsule corp: cream dome on a grey plinth, a blue band lettered across the front, a ring of round windows
+    const GLYPH = { C: 0x7927, A: 0x2bed, P: 0x6ba4, S: 0x388e, U: 0x5b6f, L: 0x4927, E: 0x79a7, O: 0x2b6a, R: 0x6bad, ' ': 0 };
+    const LABEL = 'CAPSULE';
+    function shadeHQ(o, n, x, y) {
+      const u = M3.apT(M, n), up = V.dot(u, o.s), lum = light(n), f = V.dot(u, o.door), sd = V.dot(u, o.side), ang = Math.atan2(sd, f);
+      if (up < .1) return tone(TONES.stone, lum + .1, x, y);
+      if (up < .36) {
+        const col = Math.floor((ang / 1.7 + .5) * LABEL.length * 4), row = Math.floor((.33 - up) / .2 * 5);
+        if (o.text && col >= 0 && col < LABEL.length * 4 && col % 4 < 3 && row >= 0 && row < 5 && (GLYPH[LABEL[col >> 2]] >> (14 - row * 3 - col % 4)) & 1) return 0xffffff;
+        if (!o.text && Math.abs(ang) < .22 && up < .3) return 0x24304a;                           // door
+        return tone(TONES.cc, lum + .15, x, y);
+      }
+      const w = (ang / (Math.PI / 5) + 99.5) % 1;
+      if (up > .44 && up < .58 && Math.abs(w - .5) < .2) return tone(TONES.pane, lum + .25, x, y);
+      return tone(TONES[o.p], lum, x, y);
+    }
+    // west city towers and cars: a body in its own palette with a window ribbon round each sphere's waist
+    function shadeTower(o, n, x, y) {
+      const lum = light(n), up = o.w ? Math.abs(V.dot(M3.apT(M, n), o.s)) : 1;
+      if (up < o.w) return tone(TONES.pane, lum + (up < o.w * .4 ? .3 : 0), x, y);
+      return tone(TONES[o.p], lum, x, y);
+    }
     const shadeBy = pal => (o, n, x, y) => tone(pal, light(n) + (pal === TONES.leaf ? (h2(x * 3, y * 5) - .5) * .25 : 0), x, y);
-    const SHADE = { planet: shadePlanet, dome: shadeDome, knob: (o, n, x, y) => tone(TONES.orb, light(n) + .25, x, y), leaf: shadeBy(TONES.leaf), trunk: shadeBy(TONES.trunk), stone: shadeBy(TONES.stone), orb: (o, n, x, y) => tone(TONES.orb, light(n) * .5 + .55, x, y), dorb: (o, n, x, y) => tone(TONES.dorb, light(n) * .55 + .5, x, y), bean: (o, n, x, y) => tone(TONES.bean, light(n), x, y), dragon: (o, n, x, y) => { const inward = -(n[0] * o.vr[0] + n[1] * o.vr[1] + n[2] * o.vr[2]); if (inward > .45) return tone(TONES.belly, light(n) + .25 - (o.seg % 4 === 0 ? .3 : 0), x, y); const scale = ((x >> 1) + (y >> 1) * 2 + o.seg) % 4 === 0 ? -.16 : 0; return tone(TONES.dragon, light(n) + scale, x, y); }, spine: (o, n, x, y) => tone(TONES.dorb, light(n) + .2, x, y) };
+    const SHADE = { planet: shadePlanet, karst: (o, n, x, y) => h2(x * 5, y * 3) > .9 && light(n) > .45 ? tone(TONES.leaf, light(n), x, y) : tone(TONES.stone, light(n) + (h2(x * 3, y * 7) - .5) * .3, x, y), pal: (o, n, x, y) => tone(o.pal, light(n) + o.lift, x, y), dome: shadeDome, hq: shadeHQ, tower: shadeTower, knob: (o, n, x, y) => tone(TONES.orb, light(n) + .25, x, y), leaf: shadeBy(TONES.leaf), trunk: shadeBy(TONES.trunk), stone: shadeBy(TONES.stone), orb: (o, n, x, y) => tone(TONES.orb, light(n) * .5 + .55, x, y), dorb: (o, n, x, y) => tone(TONES.dorb, light(n) * .55 + .5, x, y), bean: (o, n, x, y) => tone(TONES.bean, light(n), x, y), dragon: (o, n, x, y) => { const inward = -(n[0] * o.vr[0] + n[1] * o.vr[1] + n[2] * o.vr[2]); if (inward > .45) return tone(TONES.belly, light(n) + .25 - (o.seg % 4 === 0 ? .3 : 0), x, y); const scale = ((x >> 1) + (y >> 1) * 2 + o.seg) % 4 === 0 ? -.16 : 0; return tone(TONES.dragon, light(n) + scale, x, y); }, spine: (o, n, x, y) => tone(TONES.dorb, light(n) + .2, x, y) };
 
     function outline() {
       const W = st.W, H = st.H, buf = st.buf;
@@ -1809,6 +2103,17 @@ GAMES.push({
         const kk = y * W + x; if (zb[kk] > depth) continue;
         st.buf[kk] = PK(c);
       } }
+    }
+
+    // mount paozu's dinos plod back and forth in their clearings; a pterodactyl circles high over the cap
+    const pzRing = a => V.norm(V.add(V.add(V.mul(E1, Math.cos(a)), E2, Math.sin(a)), N, .55));
+    function drawPaozu(t) {
+      for (const d of pzDinos) {   // they stand nearly upright on the face of the planet, tipping outward only near the rim
+        const ph = t * .12 + d.a * 3, a = d.a + Math.sin(ph) * d.sway, v = M3.ap(M, capPt(d.th, a)); if (v[2] < .05) continue;
+        const ah = M3.ap(M, capPt(d.th, a + .02 * Math.cos(ph))), x = cx + v[0] * R, y = cy - v[1] * R + st.bob;
+        blitZ(d.spr, x, y, Math.atan2(v[0], v[1]) * Math.min(1, (v[0] * v[0] + v[1] * v[1]) * 1.6), cx + ah[0] * R < x, Math.abs(Math.sin(t * 5 + d.a)) * d.hop, v[2] * R + 6, d.k); }
+      const pa = t * .3, pv = M3.ap(M, V.mul(pzRing(pa), 1.6)), pn = M3.ap(M, pzRing(pa + .05)), px = cx + pv[0] * R, py = cy - pv[1] * R + st.bob;
+      blitZ(DINOS.d, px, py, 0, pn[0] * 1.6 * R + cx < px, 0, pv[2] * R + 4, .42);
     }
 
     // ── snake way: a pseudo-3D run along the snake's back to king kai's planet
@@ -2010,7 +2315,7 @@ GAMES.push({
       if (greg) { if (t > greg.until) { if (greg.sx !== undefined) burst(greg.sx, greg.sy, [0xffffff, 0xd8a868], 8, 60); greg = null; ui.event('gregory got away'); } else if (t - greg.hopT > greg.hop) { greg.from = greg.c; greg.c = V.norm(V.add(greg.c, [Math.random() - .5, Math.random() - .5, Math.random() - .5], .45)); if (V.dot(greg.c, N) < .1) greg.c = capPt(.3 + Math.random() * .6, Math.random() * 6.28); greg.hopT = t; } }
       if (bz && !bz.awake) { bz.noise = Math.max(0, bz.noise - dt * .14); if (bz.noise >= 1) { bz.awake = t; shake = .8; flashT = .5; ui.sfx && ui.sfx('boss'); ui.event('beerus is AWAKE — "who dares?!" everything ×0.25 until you find him pudding', 5000); pud = { c: capPt(.4 + Math.random() * .7, Math.random() * 6.28), t0: t }; } }
       // master roshi wanders over; tap him and he goes max power
-      if (!roshi && session > 90 && !shen && !boss && (nextRoshi -= dt) < 0) { roshi = { c: capPt(.5, 5.4), t0: t, until: t + 12 }; ui.event('master roshi wandered over — tap him'); nextRoshi = 200 + Math.random() * 80; }
+      if (!roshi && S.world !== 6 && session > 90 && !shen && !boss && (nextRoshi -= dt) < 0) { roshi = { c: capPt(.5, 5.4), t0: t, until: t + 12 }; ui.event('master roshi wandered over — tap him'); nextRoshi = 200 + Math.random() * 80; }
       if (roshi) {
         if (roshi.max && !roshi.fired && t - roshi.max > 1.1) {
           roshi.fired = t; roshiUntil = t + 20; flashT = .6; shake = .6; ach('roshi'); ui.sfx && ui.sfx('beam'); ui.event('kamehameha! roshi clears the sky — ×1.5 for 20s');
@@ -2020,7 +2325,7 @@ GAMES.push({
         if (t > roshi.until) roshi = null;
       }
       // krillin drops by to say hi… and doesn't make it. wish him back with the dragon
-      if (!kril && !S.krillinDead && session > 130 && !shen && !boss && !tour && (nextKril -= dt) < 0) { kril = { c: capPt(.38, 1.3), t0: t, boom: t + 3.2 }; ui.event('krillin: "hey guys! what did i miss?"'); nextKril = 360 + Math.random() * 180; }
+      if (!kril && !S.krillinDead && session > 130 && !shen && !boss && !tour && (nextKril -= dt) < 0) { kril = { c: capPt(.38, 1.3), t0: t, boom: t + 3.2 }; ui.event(S.krillinAlly ? 'krillin: "don\'t worry guys, i\'ve got this one!"' : 'krillin: "hey guys! what did i miss?"'); nextKril = 360 + Math.random() * 180; }
       if (kril) {
         if (!kril.dead && t > kril.boom) {
           kril.dead = t; S.krillinDead = 1; S.krillinAlly = 0; rage = 2 + (S.krillinRevives || 0); rageUntil = t + 20; flashT = 1; shake = .9; ach('krillin'); ui.sfx && ui.sfx('boom'); ui.event(`KRILLIN!!! — rage ×${rage} for 20s`, 4000);
@@ -2094,8 +2399,8 @@ GAMES.push({
       // villain raids: one hovers by the planet with a health bar; Vegeta fires ki blasts at him while you tap
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
       }
-      // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the five worlds strictly in turn
-      if (!S.world && S.runBest >= (S.namekAt || PLANET_EVERY) && !tour && !shen && !boss) { S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5][(S.trips - 1) % 5]); namekUntil = t + (S.world === 3 ? 75 : 45); }
+      // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the seven worlds strictly in turn
+      if (!S.world && S.runBest >= (S.namekAt || PLANET_EVERY) && !tour && !shen && !boss) { S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7][(S.trips - 1) % 7]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
       if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen && (S.world !== 3 || snk?.done)) { travel(0); namekUntil = 0; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
       if (S.world !== 3) {
@@ -2164,7 +2469,7 @@ GAMES.push({
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
-      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way', 'beerus', 'west city'][S.world]; if (bz) fxs.push(bz.awake ? 'beerus AWAKE ×0.25 — find pudding' : `noise ${Math.round(bz.noise * 100)}%`); fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
+      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way', 'beerus', 'west city', 'kame house', 'paozu'][S.world]; if (bz) fxs.push(bz.awake ? 'beerus AWAKE ×0.25 — find pudding' : `noise ${Math.round(bz.noise * 100)}%`); fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
       if (storm && t < storm.until) fxs.push(`meteor storm ${Math.ceil(storm.until - t)}s`);
       if (struggle) fxs.push(`struggle ${Math.ceil(struggle.until - t)}s`);
       if (greg) fxs.push(`gregory ${Math.ceil(greg.until - t)}s`);
@@ -2203,7 +2508,7 @@ GAMES.push({
       }
       let id = 1;
       sphere({ c: [0, 0, 0], r: 1 }, id++, shadePlanet);
-      for (const o of solids) sphere(o, id++, SHADE[o.kind]);
+      for (const o of solids) { if (o.fly) o.c = o.fly(t); sphere(o, id++, SHADE[o.kind]); }   // west city hover cars move
       for (const o of orbs) sphere({ c: V.mul(roadPt(o.phi), 1.14 + Math.sin(t * 4 + o.phi) * .015), r: o.star ? .055 : .045 }, id++, o.star ? SHADE.dorb : SHADE.orb);
       if (bean) { const v = M3.ap(M, bean.c); if (v[2] > 0) { bean.sx = cx + v[0] * R; bean.sy = cy - v[1] * R + st.bob; bean.v = v; } else bean.sx = undefined; }
       const shenCtx = shen && { z: 0, px(x, y, hex, dz = 0) { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= st.W || y >= st.H) return; const k = y * st.W + x, z = this.z + dz; if (zb[k] > z) return; zb[k] = z; st.buf[k] = PK(hex); dm[k] = 1; }, W: st.W, H: st.H, cx, cy: cy + st.bob, R, t, rise: Math.min(1, (t - shen.t0) / 1.1), age: t - shen.t0, gone: shen.phase === 'leave' ? Math.min(1, (t - shen.t1) / 1.6) : 0, glow: shen.look === 3 };
@@ -2256,7 +2561,9 @@ GAMES.push({
         for (const b of a16.birds) { const fly = b.free ? (t - b.free) * 60 : 0, bx = x + (b.i - 1) * 9 + fly * .6, by = y - 24 - (b.i % 2) * 6 - fly; b.sx = b.free ? undefined : bx; b.sy = by; if (by > -10) st.blit(BIRDS[b.kind], bx - 3, by - 3 + (b.free ? 0 : Math.abs(Math.sin(t * 3 + b.i)) * 1), b.i % 2 === 1, true); }
       } else for (const b of a16.birds) b.sx = undefined; }
       for (const g of gadgets) { const v = M3.ap(M, g.c), up = Math.min(1, (t - g.t0) / .3); if (v[2] > .05) { g.sx = cx + v[0] * R; g.sy = cy - v[1] * R + st.bob; blitZ(GADGETS[g.kind], g.sx, g.sy, Math.atan2(v[0], v[1]), false, (1 - up) * 30 + Math.abs(Math.sin(t * 3 + g.t0)) * 2, v[2] * R + 6, 1); } else g.sx = undefined; }
+      if (S.world === 6 && kh) { const v = M3.ap(M, kh.house), r = M3.ap(M, kh.roshi); if (v[2] > .05) blitZ(KAMEHOUSE, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), false, 0, v[2] * R + 6, 1); if (r[2] > .05) blitZ(ROSHI, cx + r[0] * R, cy - r[1] * R + st.bob, Math.atan2(r[0], r[1]), Math.floor(t / 3) % 2 === 0, 0, r[2] * R + 6, .95); }   // roshi stays home by his door
       if (S.world === 5) { const v = M3.ap(M, capPt(.55, 3.2)); if (v[2] > .05) blitZ(BULMA, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), Math.floor(t / 2) % 2 === 0, 0, v[2] * R + 6, 1); }
+      if (S.world === 7) drawPaozu(t);
       if (bz) { const v = M3.ap(M, bz.c); if (v[2] > .05) { const x = cx + v[0] * R, y = cy - v[1] * R + st.bob, ang = Math.atan2(v[0], v[1]);
         if (bz.awake) { blitZ(BEERUS, x + (Math.random() - .5) * 2, y, ang, false, 0, v[2] * R + 6, .9); if (Math.random() < .5) fx.add({ x: x + (Math.random() - .5) * 16, y: y - 10 - Math.random() * 20, vx: 0, vy: -30, life: .5, s: 1, grow: 1, c: [0xffffff, 0xd9c8ff, 0x7a4ae0], raw: true }); }
         else { blitZ(BEERUS, x, y, ang + 1.45, false, -12, v[2] * R + 6, .9); const z = (t * .8) % 1; st.text(z < .33 ? 'z' : z < .66 ? 'zz' : 'zzz', x + 6, y - 22 - z * 6, 0x5e44a0); }
@@ -2277,6 +2584,8 @@ GAMES.push({
       if (ship) { const v = M3.ap(M, ship.c), land = Math.min(1, (t - ship.t0) / 1.2), lift = ship.left ? Math.pow((t - ship.left) / 1.5, 2) : 0; if (v[2] > .05) { ship.sx = cx + v[0] * R; ship.sy = cy - v[1] * R + st.bob; blitZ(SHIP, ship.sx, ship.sy, Math.atan2(v[0], v[1]), false, (1 - land) * 70 + lift * 90, v[2] * R + 5, .9); } }
       if (yam) { const v = M3.ap(M, yam.c); if (v[2] > .05) { yam.sx = cx + v[0] * R; yam.sy = cy - v[1] * R + st.bob + 3; if (yam.boom) blitZ(SAIBA, yam.sx, yam.sy - 3, Math.atan2(v[0], v[1]), false, Math.abs(Math.sin(t * 14)) * 2, v[2] * R + 6, 1.1); else decal(YAMCHA, v, 1.1); } else yam.sx = undefined; }
       if (greg) { const k = Math.min(1, (t - greg.hopT) / .35), from = greg.from || greg.c, c = V.norm(V.add(V.mul(from, 1 - k), greg.c, k)), v = M3.ap(M, c); if (v[2] > .05) { greg.sx = cx + v[0] * R; greg.sy = cy - v[1] * R + st.bob; blitZ(GREGORY, greg.sx, greg.sy, Math.atan2(v[0], v[1]), k < 1 && from[0] > greg.c[0], Math.sin(k * Math.PI) * 9, v[2] * R + 4, 1.1); } else greg.sx = undefined; }
+      // a revived krillin jogs along behind you; he's off-screen while he's busy on his own (visiting, dying, on a date)
+      if (S.krillinAlly && !kril && !(date && date.kr)) { const kv = M3.ap(M, roadPt(phi - .5)); { const kx = cx + kv[0] * R, ky = cy - kv[1] * R + st.bob, ka = M3.ap(M, roadPt(phi - .45)); blitZ(KRILLIN, kx, ky, Math.atan2(kv[0], kv[1]), cx + ka[0] * R < kx, Math.abs(Math.sin(t * 9)) * 2, kv[2] * R + 5, 1); } }
       if (S.partner > 0 && fuseUntil <= t) {
         const mv = M3.ap(M, roadPt(phi - .32)), mx = cx + mv[0] * R, my = cy - mv[1] * R + st.bob, ma = Math.atan2(mv[0], mv[1]);
         monkeyAt = mv[2] > 0 ? { x: mx, y: my } : null;
@@ -2413,7 +2722,9 @@ GAMES.push({
     if (/raid/.test(HASH)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
     { const sg = HASH.match(/saga(\d+)/); if (sg) { S.saga = Math.max(0, +sg[1] - 1); session = 111; nextBoss = 0; } }   // preview hook: #saga3 (that saga's villain raids now)
     if (/roshi/.test(HASH)) { session = 91; nextRoshi = 0; }   // preview hook: #roshi
+    if (/paozu/.test(HASH)) { S.best = Math.max(S.best, 7e6); S.namekAt = 7e6; S.trips = 6; }   // preview hook: #paozu
     if (/westcity/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 4; }   // preview hook: #westcity
+    if (/kame/.test(HASH)) { S.best = Math.max(S.best, 6e6); S.namekAt = 6e6; S.trips = 5; }   // preview hook: #kame
     if (/androids/.test(HASH)) { session = 201; S.best = Math.max(S.best, 2e5); nextAndro = 0; }   // preview hook: #androids (17 and 18)
     if (/date/.test(HASH)) { session = 161; nextDate = 0; }   // preview hook: #date (18 visits krillin)
     if (/gero/.test(HASH)) { session = 141; nextGero = 0; }   // preview hook: #gero
