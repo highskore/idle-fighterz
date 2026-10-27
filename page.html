@@ -533,6 +533,8 @@ __PLANET__
     try { await navigator.clipboard.writeText(`${text} ${url}`); flash($('shareGo'), 'copied text'); } catch (_) {}
   });
   $('shareDl').addEventListener('click', () => { if (!cardUrl) return; const a = document.createElement('a'); a.href = cardUrl; a.download = 'highskore.png'; a.click(); });
+  // a held enter or space doesn't repeat-click buttons (the train button, the wish box): one press, one tap
+  addEventListener('keydown', e => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); }, true);
   // ascending wipes the run, so it asks first and says exactly what goes and what stays
   const askAscend = () => { const a = game.ascendInfo(); $('ascLose').innerHTML = `<b>you lose</b> all ${a.pl} power, every upgrade, and your form (back to base).`; $('ascKeep').innerHTML = `<b>you keep</b> ki seeds and the training tree, achievements, characters, wishes and saga progress. you get <b>+${a.seeds} ki seeds</b>: everything goes from ×${a.now} to <b>×${a.next}</b>${a.keep ? `, and head start keeps ${a.keep}% of your power` : ''}.`; $('ascBox').hidden = false; $('ascGo').focus(); };
   const closeAsc = () => { $('ascBox').hidden = true; };
