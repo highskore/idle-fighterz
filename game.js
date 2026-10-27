@@ -1437,7 +1437,7 @@ GAMES.push({
       if (k === 'armor' && S.armor === 1) ui.event('saiyan armor on — hit villains harder');
       save(); syncShop();
     });
-    const what = k => k === 'ascend' ? `reset for +${seedsNow()} ki seeds` : MILES[k] && S[k] && nextMile(k) ? `${SHOP[k].what} · ×2 at lv ${nextMile(k)}` : k === 'chamber' && S.chamber ? `train ×2 for ${chamberLen()}s` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.75` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? `next: ${kame() ? 'super kamehameha' : 'final flash'} (full charge ×3)` : S.galick >= 5 ? `full charge: ${kame() ? 'super kamehameha' : 'final flash'} ×3` : '+beam power') : SHOP[k].what;
+    const what = k => k === 'ascend' ? `reset for +${seedsNow()} ki seeds` : MILES[k] && S[k] && nextMile(k) ? `${SHOP[k].what} · ×2 at lv ${nextMile(k)}` : k === 'chamber' && S.chamber ? `train ×2 for ${chamberLen()}s` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.75` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? `beam ×1.6 · next: ${kame() ? 'super kamehameha' : 'final flash'}` : S.galick >= 5 ? `beam ×1.6 (now ×${fmtShort(Math.round(1.6 ** S.galick))}) · full charge ×3` : 'beam ×1.6') : SHOP[k].what;
     const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0).map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k), special: k === 'ascend' }])));
 
     // the planet: a road ring near the rim, a cap of scenery facing the viewer
@@ -2274,7 +2274,7 @@ GAMES.push({
         const mv = M3.ap(M, roadPt(phi - .32)), mx = cx + mv[0] * R, my = cy - mv[1] * R + st.bob, ma = Math.atan2(mv[0], mv[1]);
         monkeyAt = mv[2] > 0 ? { x: mx, y: my } : null;
         if (fuseOffer > t && Math.random() < .7) fx.add({ x: mx + (Math.random() - .5) * 12, y: my - 4 - Math.random() * 10, vx: 0, vy: -20, life: .5, s: 1, c: [0xffffff, 0xffe08a, 0xff9a3c], raw: true });
-        blitZ(MONKEY[Math.floor(t * 8) % 2], mx, my, ma, flip, fuseOffer > t ? Math.abs(Math.sin(t * 9)) * 3 : 0, mv[2] * R + 5, 1.1 * Math.min(2.4, 1 + .5 * Math.log10(1 + S.partner / 10)));   // bubbles bulks up with every level, slowly: ×1.15 at 10, ×1.5 at 100, ×2 at 1000
+        blitZ(MONKEY[Math.floor(t * 8) % 2], mx, my, ma, flip, fuseOffer > t ? Math.abs(Math.sin(t * 9)) * 3 : 0, mv[2] * R + 5, 1.1 * Math.min(2.6, 1 + .16 * Math.sqrt(S.partner)));   // bubbles bulks up with every level: ×1.5 at lv 10, ×1.8 at 25, ×2.1 at 50, maxing out around lv 100
       } else monkeyAt = null;
       if (seen && fuseUntil > t && Math.random() < .6) { const q = handPos(); fx.add({ x: q.x + (Math.random() - .5) * 20, y: q.y + (Math.random() - .5) * 20, vx: 0, vy: -26, life: .5, s: 1, grow: 1, c: [0xffffff, 0xffe08a, 0xff9a3c, 0x6fb0ff], raw: true }); }
       if (charging > 0 && seen) {
