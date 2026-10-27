@@ -289,12 +289,14 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .char canvas { width: 64px; height: auto; image-rendering: pixelated; }
 .char span { color: var(--muted); font-size: 10px; text-transform: lowercase; text-align: center; line-height: 1.3; }
 .menu-body.tree { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-@media (max-width: 560px) { .menu-body.tree { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .menu-body.tree .node { padding: 8px; } .menu-body.tree .node span { font-size: 10px; } }
 .tree-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px; color: var(--muted); text-transform: uppercase; }
 .tree-head b { color: var(--gold); font-weight: inherit; }
 .tree-head button { font: inherit; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
 .node { font: inherit; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px; text-align: left; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
 .node:disabled { cursor: default; opacity: .55; }
+.node.locked { opacity: .3; }
+.node.cap { border-width: 2px; }
 .node.on { opacity: 1; }
 .node.can { border-color: var(--gold); }
 .node i { font-style: normal; font-size: 10px; text-transform: uppercase; color: var(--muted); }
@@ -562,14 +564,16 @@ __PLANET__
       return;
     }
     if (menuTab === 'tree') {   // ki seeds from ascending buy levels here; reset hands them all back
-      const head = document.createElement('p'); head.className = 'tree-head'; head.innerHTML = `<span><b>${m.seeds}</b> ki seeds${m.seeds || m.spent ? '' : ' — ascend to earn some'}</span>`;
+      const head = document.createElement('p'); head.className = 'tree-head'; head.innerHTML = `<span><b>${m.seeds}</b> ki seeds${m.seeds || m.spent ? ` · ×${m.boost} on everything` : ' — ascend to earn some'}</span>`;
       if (m.spent) { const rs = document.createElement('button'); rs.type = 'button'; rs.textContent = 'reset'; rs.addEventListener('click', () => { game.respec(); renderMenu(); }); head.append(rs); }
       body.append(head);
-      for (const n of m.tree) {
-        const b = document.createElement('button'); b.type = 'button'; b.className = 'node' + (n.can ? ' can' : '') + (n.lvl ? ' on' : ''); b.disabled = !n.can;
-        b.innerHTML = `<i>${n.branch}</i><b>${n.name}</b><span>${n.what}</span><em>${n.max > 99 ? 'lv ' + n.lvl : n.lvl + '/' + n.max}${n.lvl < n.max ? ' · ' + n.cost + ' seed' + (n.cost > 1 ? 's' : '') : ''}</em>`;
+      m.branches.forEach((br, col) => m.tree.filter(x => x.branch === br.name).forEach((n, row) => {   // a column per branch, tiers top to bottom
+        const tier = n.tier;
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'node' + (n.can ? ' can' : '') + (n.lvl ? ' on' : '') + (n.open ? '' : ' locked') + (tier === 3 ? ' cap' : ''); b.disabled = !n.can;
+        b.innerHTML = `<i>${row ? '' : br.name + ' · ' + br.pts + ' pts'}</i><b>${n.name}</b><span>${n.what}</span><em>${!n.open ? `needs ${n.need} in ${n.branch}` : n.lvl + '/' + n.max + (n.lvl < n.max ? ' · ' + n.cost + ' seed' + (n.cost > 1 ? 's' : '') : '')}</em>`;
+        b.style.gridColumn = col + 1; b.style.gridRow = row + 2;
         b.addEventListener('click', () => { game.learn(n.id); renderMenu(); }); body.append(b);
-      }
+      }));
       return;
     }
     for (const c of m.chars) {
