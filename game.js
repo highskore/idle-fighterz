@@ -518,17 +518,6 @@ const roshiHead = (G, x, y, ring) => {
   G.ell(x, y, 3.2, 3.4, 's'); G.set(x - 2, y - 3, 'w'); G.rect(x - 3, y - 1, 6, 2, 'k');                              // small head, shine, shades
   G.poly([[x - 3, y + 1.5], [x + 3, y + 1.5], [x + 2, y + 6], [x, y + 8], [x - 2, y + 6]], 'w');                      // beard
 };
-// roshi max B: side-on single biceps, one arm curled up, the other fist planted on his hip
-const ROSHI_MAX = shapeSprite(28, 30, G => {
-  G.poly([[2, 15], [7, 9], [21, 9], [26, 15], [22, 22], [6, 22]], 's');                                                 // traps and chest
-  for (const pts of [[[4, 14], [2.5, 19], [7, 23.5], [12, 23]], [[24, 14], [25.5, 19], [21, 23.5], [16, 23]]]) { G.line(pts, 6.4, 5.4, 'o'); G.line(pts, 5, 4, 's'); }   // arms crunched in
-  G.ell(14, 23, 2.6, 2, 'o'); G.ell(14, 23, 1.8, 1.4, 's');                                                             // fists together
-  G.rect(9, 16, 4, 1, 'S'); G.rect(15, 16, 4, 1, 'S'); G.set(3, 18, 'v'); G.set(25, 18, 'v'); G.set(4, 20, 'v'); G.set(24, 20, 'v');   // pecs, veins
-  G.poly([[3, 14], [8, 9], [8, 14]], 'r'); G.poly([[25, 14], [20, 9], [20, 14]], 'r');                                  // shoulder rags
-  roshiHead(G, 14, 7, true);
-  G.rect(8, 25, 12, 1, 'r'); G.rect(8, 26, 12, 1, 'p'); G.line([[11, 26], [9, 29]], 3.4, 3, 'p'); G.line([[17, 26], [19, 29]], 3.4, 3, 'p');   // shirt hem, trousers
-}, MP, { w: 'W', s: 'S', p: 'P', r: 'R' });
-// roshi max D: lat spread, a huge V from shoulder to a tiny waist, fists on hips, shell still strapped on behind
 // beerus' favourite: a wobbling custard pudding with a caramel top, on a little plate
 const PUDDING = shapeSprite(12, 10, G => { G.ell(6, 8.6, 5.6, 1.4, 'w'); G.poly([[2.5, 8], [9.5, 8], [8.5, 3], [3.5, 3]], 'y'); G.ell(6, 3, 2.6, 1.2, 'c'); G.set(4, 5, 'l'); }, { o: 0x3a2410, w: 0xf6f4ee, W: 0xc8c4b8, y: 0xf8d468, Y: 0xd8a83a, c: 0x8a4a1a, l: 0xfff4c0 }, { y: 'Y', w: 'W' });
 // the android arc and west city: 17, 18, 16 and his birds, 19, dr. gero, bulma and her capsules
@@ -1241,6 +1230,224 @@ const FUTUREGOHAN = futureGohan({ arms: (G, X, Y) => fgArm(G, X, Y, [[6, 1.6], [
 // B: a one-handed masenko, palm thrust out, golden blast
 return { gogeta: GOGETA, gotenks: GOTENKS, gohanVidel: GOHANVIDEL, fat: [FATGOGETA_A, FATGOGETA_B, FATGOGETA_C, FATGOGETA_D], skinny: SKINNYGOGETA, satan: SATANFUSION, futureGohan: FUTUREGOHAN };
 })();
+// whis, chi-chi, umigame and oolong (picked takes), each standing on their own world
+const NPCS = (() => {
+// friends, round 3: whis, chi-chi, umigame and oolong — four takes each, chibi gba-era proportions
+// an arm stroke with its own outline so it separates from the torso behind it
+const limb = (G, pts, w0, w1, c) => { G.line(pts, w0 + 1.4, w1 + 1.4, 'o'); G.line(pts, w0, w1, c); };
+const shift = (G, dx, dy) => { const m = p => p.map(([x, y]) => [x + dx, y + dy]); return { ell: (x, y, a, b, c) => G.ell(x + dx, y + dy, a, b, c), rect: (x, y, w, h, c) => G.rect(x + dx, y + dy, w, h, c), poly: (p, c) => G.poly(m(p), c), line: (p, a, b, c) => G.line(m(p), a, b, c), set: (x, y, c) => G.set(x + dx, y + dy, c) }; };
+
+/* ---------- whis ---------- */
+const WP = { o: 0x16121e, h: 0xf4f4fa, H: 0xbcc0d4, s: 0xb4c8ec, S: 0x8298c8, k: 0x1a1428, v: 0x8a4ab8, r: 0x8e2a52, R: 0x5c1634, a: 0x22202c, w: 0xf6f6f2, W: 0xc8c8d0, y: 0xf08a2a, Y: 0xb85a14, c: 0x7ae0f4, C: 0x3a9ac4, n: 0x4a4658, b: 0x26305e, q: 0x8ab0ff, m: 0xe0485a, p: 0xf2a0b8, K: 0x2a2434 };
+const WS = { h: 'H', s: 'S', r: 'R', y: 'Y', c: 'C' };
+function whisHead(G, x, y, face = 'calm', tilt = 1) {        // head centred on x, crest top at y
+  G.poly([[x - 3.6, y + 7.4], [x - 3, y + 4.6], [x - 1.8 + tilt, y + 2.2], [x - .6 + tilt * 1.6, y], [x + 1 + tilt * 1.6, y + .2], [x + 1.6 + tilt, y + 2.6], [x + 2.8, y + 4.6], [x + 3.6, y + 7.4]], 'h');   // the tall swept crest, tapering to a point
+  G.line([[x + tilt, y + 1.6], [x + 1.4, y + 5.4]], 1, 1, 'H');
+  G.ell(x, y + 9.4, 3.8, 3.5, 's');
+  G.rect(x - 3, y + 6, 6, 1, 'h');                                                                            // hairline
+  const e = (i, j, c) => G.set(Math.floor(x + i), Math.floor(y + j), c);
+  if (face === 'shut' || face === 'laugh' || face === 'eat') { e(-3, 9, 'k'); e(-2, 8, 'k'); e(-1, 9, 'k'); e(1, 9, 'k'); e(2, 8, 'k'); e(3, 9, 'k'); }   // ^ ^
+  else if (face === 'wink') { e(-3, 8, 'v'); e(-2, 8, 'v'); e(-2, 9, 'k'); e(-3, 9, 'w'); e(1, 9, 'k'); e(2, 9, 'k'); e(3, 8, 'k'); }
+  else { e(-3, 8, 'v'); e(-2, 8, 'v'); e(1, 8, 'v'); e(2, 8, 'v'); e(-2, 9, 'k'); e(1, 9, 'k'); e(-3, 9, 'w'); e(2, 9, 'w'); }                                           // calm eyes under purple lids
+  if (face === 'eat') { e(-1, 11, 'm'); e(0, 11, 'm'); e(-3, 10, 'p'); e(2, 10, 'p'); }
+  else if (face === 'laugh') { e(-3, 10, 'p'); e(2, 10, 'p'); }
+  else { e(-1, 11, 'v'); e(0, 11, 'v'); }
+}
+function whisBody(G, x) {
+  G.poly([[x - 4, 14], [x + 4, 14], [x + 5.5, 27], [x - 5.5, 27]], 'r');                                       // maroon robe to the ankles
+  G.poly([[x - 3, 14.5], [x + 3, 14.5], [x + 2.6, 19.5], [x - 2.6, 19.5]], 'a');                                 // black cuirass
+  G.line([[x - 2, 15.4], [x, 17.6], [x + 2, 15.4]], 1, 1, 'w'); G.set(x, 19, 'w');
+  G.rect(x - 4, 20, 8, 2, 'y'); G.poly([[x + 1, 21.5], [x + 3, 21.5], [x + 3.4, 25.5], [x + 1.6, 24.6]], 'y');   // orange sash and its tail
+  G.line([[x - 1, 22], [x - 1.6, 26.4]], 1, 1, 'R');
+  G.rect(x - 4, 27, 3, 2, 'K'); G.rect(x + 1, 27, 3, 2, 'K');                                                     // shoes
+}
+const whisRing = (G, x) => { G.ell(x, 13.6, 5.2, 1.6, 'c'); G.rect(x - 2, 13, 4, 1, 'C'); };                    // the blue ring round his neck
+const whisStaff = (G, x0, y0, x1, y1) => { G.line([[x0, y0], [x1, y1]], 1.2, 1.2, 'n'); };
+const whisOrb = (G, x, y) => { G.ell(x, y, 1.9, 1.9, 'b'); G.set(Math.floor(x) - 1, Math.floor(y) - 1, 'q'); };
+// A: a slice of strawberry cake on a plate, a bite in his mouth, eyes shut in bliss
+const WHIS = shapeSprite(20, 30, G => {
+  whisStaff(G, 17, 7, 17, 28.6); whisOrb(G, 17, 3.4);
+  whisBody(G, 10);
+  limb(G, [[13.6, 16], [16, 20], [16.4, 21]], 2.4, 2.2, 'r'); G.ell(16.6, 21.6, 1.2, 1.2, 's');
+  whisRing(G, 10); whisHead(G, 10, 0, 'laugh');
+  limb(G, [[6.4, 16], [5, 14.4], [8, 11.6]], 2.4, 2.2, 'r'); G.rect(8, 10, 3, 2, 's'); G.set(11, 11, 's');       // hand over his mouth
+  G.set(2, 6, 'c'); G.set(1, 8, 'c'); G.set(3, 9, 'q');
+}, WP, WS);
+
+/* ---------- chi-chi ---------- */
+const CP = { o: 0x140e16, h: 0x1c1822, H: 0x0e0c12, j: 0x4a4466, s: 0xf8d2b0, S: 0xcc9c7c, k: 0x18121a, w: 0xffffff, W: 0xc4c4cc, p: 0x8a52c8, P: 0x5a2e8e, r: 0xf27aaa, R: 0xb84a78, e: 0xd8302a, m: 0xb8343a, n: 0x7a4a26, g: 0x4a4a54, G: 0x2a2a32, q: 0xd8dce4, b: 0x2a62c8, B: 0x1a3e88, c: 0x9fdcff };
+const CS = { h: 'H', p: 'P', r: 'R', b: 'B', g: 'G' };
+function chiHead(G, x, face = 'smile') {      // bun on top, black hair framing the face, centre between pixels x-1 and x
+  G.ell(x, 2.6, 2.6, 2.4, 'h'); G.set(x - 2, 1, 'j'); G.set(x - 1, 1, 'j');
+  G.ell(x, 7.4, 4.6, 4.4, 'h');
+  G.ell(x, 8.6, 3.5, 3.4, 's');
+  G.poly([[x - 4.4, 6.6], [x - 3, 4.4], [x, 3.8], [x + 3, 4.4], [x + 4.4, 6.6], [x + 2, 6.4], [x, 5.2], [x - 2, 6.4]], 'h');   // parted fringe
+  G.rect(x - 5, 7, 1, 5, 'h'); G.rect(x + 4, 7, 1, 5, 'h');                                                       // side locks
+  const e = (i, j, c) => G.set(x + i, j, c);
+  if (face === 'shut') { e(-3, 9, 'k'); e(-2, 9, 'k'); e(1, 9, 'k'); e(2, 9, 'k'); e(-3, 7, 'k'); e(-2, 8, 'S'); e(2, 7, 'k'); e(1, 8, 'S'); }
+  else if (face === 'happy') { e(-3, 9, 'k'); e(-2, 8, 'k'); e(-1, 9, 'k'); e(1, 9, 'k'); e(2, 8, 'k'); e(3, 9, 'k'); }
+  else { e(-2, 8, 'k'); e(-2, 9, 'k'); e(1, 8, 'k'); e(1, 9, 'k'); e(-3, 9, 'w'); e(2, 9, 'w'); }
+  if (face === 'yell' || face === 'stern') { e(-3, 7, 'k'); e(-2, 7, 'S'); e(2, 7, 'k'); e(1, 7, 'S'); e(-1, 7, 's'); e(0, 7, 's'); }   // brows pulled down at the middle
+  if (face === 'yell') { G.rect(x - 1, 10, 2, 2, 'm'); G.set(x + 3, 4, 'e'); G.set(x + 4, 3, 'e'); G.set(x + 4, 5, 'e'); }   // shouting, anger mark
+  else if (face === 'stern') { G.rect(x - 1, 11, 2, 1, 'm'); }
+  else if (face === 'shut') { G.rect(x - 1, 11, 2, 1, 'm'); e(-3, 10, 'r'); e(2, 10, 'r'); }
+  else { G.rect(x - 1, 11, 2, 1, 'm'); e(-2, 10, 'm'); e(1, 10, 'm'); e(-3, 10, 'r'); e(2, 10, 'r'); }
+}
+function chiBody(G, x) {
+  G.poly([[x - 3.6, 13], [x + 3.6, 13], [x + 4.6, 22], [x - 4.6, 22]], 'p');                                     // purple qipao
+  G.rect(x - 2, 12, 4, 1, 'p'); G.line([[x - 1, 13], [x + 2, 15]], 1, 1, 'P');                                   // mandarin collar, wrap-over
+  G.rect(x - 4, 17, 8, 1, 'r'); G.poly([[x - 3, 17.5], [x - 1.6, 17.5], [x - 2, 21], [x - 3.4, 21]], 'r');         // pink sash, tail
+  G.rect(x - 3, 22, 2, 1, 's'); G.rect(x + 1, 22, 2, 1, 's');
+  G.rect(x - 4, 23, 3, 2, 'e'); G.rect(x + 1, 23, 3, 2, 'e');                                                     // red slippers
+}
+// A: scolding with the frying pan raised high, other fist on her hip
+const CHICHI = shapeSprite(20, 26, G => {
+  chiBody(G, 9);
+  limb(G, [[12.4, 14], [15, 11], [15.6, 8.6]], 2.2, 2, 'p'); G.ell(15.6, 8.2, 1.3, 1.3, 's');
+  G.line([[15.6, 7.6], [16.4, 4.6]], 1.2, 1.2, 'n'); G.ell(16.6, 2.6, 3, 2, 'g'); G.set(15, 2, 'q'); G.set(16, 1, 'q');   // pan
+  limb(G, [[5.6, 14], [3.4, 16.4], [5.4, 18]], 2.2, 2, 'p'); G.set(5, 18, 's');
+  chiHead(G, 9, 'yell');
+}, CP, CS);
+// B: "study, gohan!" — an open book held up, a finger stabbing at the page
+const TP = { o: 0x14180c, g: 0x8ab858, G: 0x5a8a36, L: 0xb8dc84, b: 0x9a6634, B: 0x64401c, l: 0xc89050, y: 0xece0a8, Y: 0xbcaa6a, k: 0x141010, w: 0xffffff, m: 0x3a5a22, c: 0x8ad0f4, C: 0x3a8ac8, z: 0xdcecff };
+const TS = { g: 'G', b: 'B', y: 'Y', l: 'b' };
+const arc = (cx, cy, rx, ry) => Array.from({ length: 19 }, (_, i) => [cx - rx * Math.cos(i * Math.PI / 18), cy - ry * Math.sin(i * Math.PI / 18)]);
+function shell(G, x, y) {                          // dome with its centre-bottom at (x, y)
+  G.poly(arc(x, y, 8.8, 7.6), 'b');
+  for (const [i, j] of [[-5, -3], [-1, -5], [3, -5], [6, -2], [1, -2], [-3, -1]]) { G.ell(x + i, y + j, 1.6, 1.2, 'l'); }   // scutes
+  G.line([[x - 7, y - 1.6], [x - 4, y - 2], [x - 2, y - 3.6], [x + 2, y - 3.6], [x + 4, y - 2], [x + 7.4, y - 1.4]], 1, 1, 'B');
+  G.line([[x - 1, y - 7], [x - 2, y - 3.6]], 1, 1, 'B'); G.line([[x + 3, y - 7], [x + 2, y - 3.6]], 1, 1, 'B');
+  G.line([[x - 8.6, y + .2], [x + 8.6, y + .2]], 1.8, 1.8, 'y');                                                 // cream rim
+}
+function turtleHead(G, x, y, face = 'chill') {      // head centred at (x, y), facing left
+  G.ell(x, y, 3.4, 2.7, 'g'); G.ell(x - 2.4, y + .6, 1.6, 1.8, 'g');
+  const e = (i, j, c) => G.set(Math.floor(x + i), Math.floor(y + j), c);
+  if (face === 'sleep') { e(-1, -1, 'G'); e(0, -1, 'm'); e(1, -1, 'G'); }
+  else { e(-1, -2, 'G'); e(0, -2, 'G'); e(1, -2, 'G'); e(-1, -1, 'w'); e(0, -1, 'k'); }                        // half-lidded eye
+  if (face === 'talk') { e(-4, 1, 'm'); e(-3, 1, 'm'); e(-2, 2, 'm'); e(-3, 2, 'k'); }
+  else { e(-4, 1, 'm'); e(-3, 2, 'm'); e(-2, 2, 'm'); e(-1, 1, 'm'); }                                           // easy smile
+  e(-5, 0, 'G');
+}
+// A: plodding along the beach, head out, easy smile
+const TURTLE = shapeSprite(26, 17, G => {
+  G.line([[23, 13], [25, 14.4]], 1.6, 1, 'g');
+  G.line([[1.6, 14.4], [9, 14]], 2.4, 2.6, 'g');                                                                  // front flipper laid out flat
+  G.line([[8, 12], [5, 11.6]], 3, 3, 'g'); turtleHead(G, 4, 11.4, 'sleep');
+  shell(G, 15, 13);
+  G.line([[19, 14.4], [23, 14.6]], 2, 2, 'g');
+  G.rect(3, 2, 3, 1, 'z'); G.set(4, 3, 'z'); G.rect(3, 4, 3, 1, 'z'); G.set(7, 0, 'z'); G.set(8, 0, 'z'); G.set(7, 1, 'z'); G.set(8, 1, 'z');   // Z z
+}, TP, TS);
+// C: swimming, flippers stretched out, a wave line under him and bubbles
+const OP = { o: 0x1e0e12, p: 0xf6a8bc, P: 0xd07890, n: 0xf28aa4, N: 0xc85a78, k: 0x1a1014, w: 0xffffff, m: 0x8a2a3a, t: 0xe85a6a, g: 0x4e8a3e, G: 0x2e5e26, L: 0x7ab468, y: 0xf2c84a, K: 0x2a2226, c: 0x8ad0f4, z: 0xf4f2f6, Z: 0xc4c2d0 };
+const OS = { p: 'P', g: 'G', n: 'N', z: 'Z' };
+function oolHead(G, x, face = 'smug') {            // centre between pixels x-1 and x
+  G.poly([[x - 5.6, 5], [x - 6.4, .4], [x - 1.6, 2.6]], 'p'); G.poly([[x + 5.6, 5], [x + 6.4, .4], [x + 1.6, 2.6]], 'p');   // big ears flaring out
+  G.set(x - 5, 2, 'n'); G.set(x - 5, 3, 'n'); G.set(x + 4, 2, 'n'); G.set(x + 4, 3, 'n');
+  G.ell(x, 6.6, 5.6, 4.3, 'p');
+  G.ell(x, 8.1, 2.5, 1.6, 'n'); G.set(x - 2, 8, 'N'); G.set(x + 1, 8, 'N');                                      // big snout, nostrils
+  const e = (i, j, c) => G.set(x + i, j, c);
+  if (face === 'razz') { e(-3, 5, 'k'); e(-2, 5, 'k'); e(-3, 6, 'k'); e(-2, 6, 'w'); e(1, 6, 'k'); e(2, 5, 'k'); e(3, 6, 'k'); }   // one eye pulled, one squeezed
+  else if (face === 'panic') { e(-3, 5, 'w'); e(-3, 6, 'w'); e(-2, 5, 'w'); e(-2, 6, 'k'); e(1, 5, 'w'); e(1, 6, 'k'); e(2, 5, 'w'); e(2, 6, 'w'); }
+  else { e(-3, 5, 'P'); e(-2, 5, 'P'); e(1, 5, 'P'); e(2, 5, 'P'); e(-2, 6, 'k'); e(1, 6, 'k'); }                 // half-lidded, scheming
+  if (face === 'razz') { e(-1, 10, 'm'); e(0, 10, 'm'); e(-1, 11, 't'); e(0, 11, 't'); }
+  else if (face === 'panic') { G.rect(x - 1, 10, 2, 1, 'm'); e(-2, 10, 'k'); e(1, 10, 'k'); }
+  else { e(-2, 10, 'm'); e(-1, 10, 'm'); e(0, 10, 'm'); e(1, 9, 'm'); }                                          // lopsided grin
+}
+function oolBody(G, x, legs = 'stand') {
+  G.line([[x + 4.6, 14], [x + 6, 13.4], [x + 5.6, 12.4]], 1, 1, 'p');                                           // curly tail
+  if (legs === 'run') { G.line([[x - 1.6, 16], [x - 4, 17.4]], 2.4, 2.4, 'g'); G.line([[x + 1.6, 16], [x + 3, 18.4]], 2.4, 2.4, 'g'); G.rect(x - 7, 17, 3, 2, 'K'); G.rect(x + 2, 18, 3, 2, 'K'); }
+  else { G.rect(x - 3, 16, 2, 2, 'g'); G.rect(x + 1, 16, 2, 2, 'g'); G.rect(x - 4, 18, 3, 2, 'K'); G.rect(x + 1, 18, 3, 2, 'K'); }
+  G.poly([[x - 3.8, 10.6], [x + 3.8, 10.6], [x + 4.2, 16.4], [x - 4.2, 16.4]], 'g');                             // army jacket
+  G.rect(x - 2, 11, 4, 1, 'L'); G.line([[x - 1, 12], [x - 1, 16]], 1, 1, 'G'); G.set(x, 12, 'y'); G.set(x, 14, 'y');   // collar, placket, buttons
+  G.rect(x - 4, 15, 8, 1, 'G');                                                                                  // belt
+}
+// A: hands on hips, smug and scheming
+const OOLONG = shapeSprite(18, 21, G => {
+  oolBody(G, 9);
+  limb(G, [[5.4, 12], [3.6, 14], [5, 15.4]], 2, 2, 'g'); G.set(5, 15, 'p');
+  limb(G, [[12.6, 12], [14.4, 14], [13, 15.4]], 2, 2, 'g'); G.set(12, 15, 'p');
+  oolHead(G, 9, 'smug');
+}, OP, OS);
+// B: "nyah!" — tugging an eyelid down, tongue out
+return { whis: WHIS, chichi: CHICHI, turtle: TURTLE, oolong: OOLONG };
+})();
+// roshi's kamehameha, three frames: ki ball at the hip, arms thrust out, the blast at his palms (picked take D: low stance, big shell)
+const ROSHI_KAME = (() => {
+// roshi at max power doing the kamehameha, facing right: ka-me-ha-me (charge at the hip), ha (thrust), HAAA (flare at the palms)
+// every frame of a version shares one canvas so the feet never move; the beam itself is drawn by the game
+const limb = (G, pts, w0, w1, c) => { G.line(pts, w0 + 1.4, w1 + 1.4, 'o'); G.line(pts, w0, w1, c); };
+const shift = (G, dx, dy) => { const m = p => p.map(([x, y]) => [x + dx, y + dy]); return { ell: (x, y, a, b, c) => G.ell(x + dx, y + dy, a, b, c), rect: (x, y, w, h, c) => G.rect(Math.round(x + dx), Math.round(y + dy), w, h, c), poly: (p, c) => G.poly(m(p), c), line: (p, a, b, c) => G.line(m(p), a, b, c), set: (x, y, c) => G.set(Math.round(x + dx), Math.round(y + dy), c) }; };
+const KP = { o: 0x1a1210, s: 0xf2c8a0, S: 0xc89a76, k: 0x111111, w: 0xffffff, W: 0xd8d8e0, r: 0xf08a24, R: 0xc0641a, p: 0x6a5a48, P: 0x4a3e30, g: 0x4a9a3a, G: 0x2e6a26, v: 0xd89a7a, n: 0x7a4a2a, q: 0xffffff, c: 0x9fdcff, C: 0x3a8ae8, b: 0x2f5ad0 };
+const KS = { w: 'W', s: 'S', p: 'P', r: 'R', g: 'G' };
+
+// one frame. o: { cx, head (scale), buff, veins, glint, shell, stance, crouch[3], lean[3], rags }
+function kame(G0, f, o) {
+  const cx = o.cx, dx = o.lean[f], dy = o.crouch[f], B = o.buff, T = shift(G0, cx + dx, dy), G = G0;
+  const hs = o.head;
+  // shell strapped on behind
+  const sr = o.shell;
+  T.ell(-6 - B * .5, 15, 3.6 * sr, 6 * sr, 'G'); T.ell(-6 - B * .5, 15, 2.6 * sr, 4.8 * sr, 'g');
+  for (const [x, y] of [[-6, 12], [-7, 15], [-6, 18], [-5, 15]]) T.set(x - B * .5, y, 'G');
+  // legs: hips ride with the torso, feet stay planted
+  const st = o.stance, fb = [cx - st[0], 28], ff = [cx + st[1], 28];
+  limb(G, [[cx + dx - 3, 21 + dy], [fb[0] + 1, 24.5 + dy * .5], fb], 3.4, 3, 'p');
+  limb(G, [[cx + dx + 1, 21 + dy], [ff[0] + 1, 23.5 + dy], ff], 3.4, 3, 'p');
+  G.rect(fb[0] - 1, 28, 3, 2, 'n'); G.rect(ff[0] - 1, 28, 4, 2, 'n');
+  // far arm, behind the torso
+  if (f === 0) limb(G0, [[cx + dx - 1, 11 + dy], [cx + dx - 3 - B * .5, 16 + dy], [cx + dx - 5, 18 + dy]], 3.4 + B, 3, 'S');
+  else limb(G0, [[cx + dx - 1, 11 + dy], [cx + 12 + f, 12.6 + (o.armDy || 0)]], 3.6 + B, 3, 'S');
+  // the barrel chest
+  T.poly([[-5 - B, 15], [-3 - B, 9], [2, 7.5], [6 + B, 10], [7 + B, 14], [5 + B * .5, 19], [2, 22], [-4, 22], [-5 - B, 19]], 's');
+  T.rect(-4, 21, 7, 1, 'r'); T.rect(-4, 22, 7, 1, 'P');                                                              // torn gi hem, belt line
+  T.line([[1, 12], [5 + B, 13]], 1, 1, 'S'); T.set(2, 16, 'S'); T.set(4, 16, 'S'); T.set(2, 18, 'S'); T.set(4, 18, 'S');   // pec, abs
+  T.ell(3 + B * .5, 10.5, 2.6 + B * .4, 2.2 + B * .3, 'S'); T.ell(3 + B * .5, 10.3, 2.2 + B * .4, 1.8 + B * .3, 's');    // front delt
+  if (o.rags) { T.poly([[-4 - B, 13], [-2 - B, 8.5], [1, 8.5], [-1, 12]], 'r'); T.set(-3 - B, 13, 'R'); }        // shoulder rag over the back
+  if (o.veins) for (const [x, y] of o.veins) T.set(x, y, 'v');
+  // head: small and sunk into the traps, shades and beard aimed forward; the beard hangs over the arms
+  const drawHead = () => {
+  const hx = 2 + o.headDx, hy = 5.6 - (hs - 1) * 2.4;
+  T.ell(hx, hy, 4.2 * hs, 4.4 * hs, 'o');
+  T.poly([[hx - 2, hy + 1.5], [hx + 4.4 * hs, hy + 1.5], [hx + 3.6 * hs, hy + 6 * hs], [hx + 2.2 * hs, hy + 9 * hs], [hx - 1, hy + 6]], 'o');
+  T.ell(hx, hy, 3.2 * hs, 3.4 * hs, 's'); T.set(hx - 2 * hs, hy - 2.6 * hs, 'w');
+  T.rect(hx - 1, hy - 1, Math.round(4 * hs), Math.round(2 * hs - .4), 'k'); T.set(hx - 2, hy - 1, 'k');               // shades
+  if (o.glint) { T.set(hx + 1, hy - 1, 'w'); T.set(hx + 2, hy - 1, 'W'); }
+  T.poly([[hx - 1.6, hy + 1.5], [hx + 3.6 * hs, hy + 1.5], [hx + 3 * hs, hy + 5 * hs], [hx + 2 * hs, hy + 8 * hs], [hx - .4, hy + 5]], 'w');   // beard
+  T.rect(hx, hy + 1.5, Math.round(3.4 * hs), 1, 'W');                                                                 // moustache
+  };
+  // near arm, hands and ki
+  if (f === 0) {
+    const bx = cx + dx - 5, by = 19 + dy;
+    G0.ell(cx + dx, 13 + dy, 2.6 + B * .5, 2.2 + B * .4, 'o');
+    limb(G0, [[cx + dx + 2, 11 + dy], [cx + dx - 1.5, 15.5 + dy], [bx + 1.5, by + .5]], 4 + B, 3.2, 's');                // elbow drawn back past the ribs
+    G0.ell(cx + dx, 13 + dy, 1.8 + B * .5, 1.5 + B * .4, 's'); G0.set(cx + dx - 1, 14 + dy, 'S');                 // bicep bunched up
+    if (o.veins) G0.set(cx + dx, 12 + dy, 'v');
+    for (const s of [-1, 1]) { G0.ell(bx + .5, by + s * 2.8, 2.8, 1.8, 'o'); G0.ell(bx + .5, by + s * 2.8, 2.1, 1.1, 's'); }   // cupped palms, one over and one under
+    G0.ell(bx, by, 2.4, 2.2, 'o'); G0.ell(bx, by, 2, 1.8, 'C'); G0.ell(bx, by, 1.4, 1.2, 'c'); G0.set(bx - 1, by - 1, 'q');
+    G0.rect(Math.round(bx), Math.round(by) - 2, 2, 1, 'S'); G0.rect(Math.round(bx), Math.round(by) + 2, 2, 1, 'S');   // fingertips curled round the ball
+    G0.set(bx - 3, by - 3, 'c'); G0.set(bx + 3, by - 4, 'c'); G0.set(bx - 4, by + 1, 'c');
+  } else {
+    const ex = cx + 12 + f, ay = 14 + (o.armDy || 0);
+    const mx = (cx + dx + 3 + ex) / 2 - 2, my = (12 + dy + ay) / 2 - 1;
+    G0.ell(mx, my, 2.8 + B * .5, 2 + B * .4, 'o');
+    limb(G0, [[cx + dx + 3, 12 + dy], [ex, ay]], 4 + B, 3.2, 's');
+    G0.ell(mx, my, 2 + B * .5, 1.3 + B * .4, 's');                                                                       // bicep bulging on top
+    if (o.veins) { G0.set(cx + dx + 6, 12 + dy, 'v'); G0.set(cx + dx + 8, ay - 1, 'v'); }
+    G0.ell(ex + .5, ay - .5, 1.8, 3.4, 'o'); G0.rect(ex, ay - 3, 2, 5, 's'); G0.set(ex + 1, ay - 1, 'S');                        // palms open, heels together
+    if (f === 1) { G0.set(ex + 3, ay - 1, 'c'); G0.set(ex + 3, ay, 'C'); G0.set(ex + 4, ay - 2, 'c'); }
+    else {
+      const fx = ex + 5.5, fy = ay - .5;
+      for (const [a, b] of [[4, -5], [4, 5], [6, -2], [6, 2], [1, -6], [1, 6]]) G0.line([[fx, fy], [fx + a, fy + b]], 1.4, .4, 'c');
+      G0.ell(fx, fy, 3.4, 4.4, 'C'); G0.ell(fx, fy, 2.4, 3.4, 'c'); G0.ell(fx + .3, fy, 1.4, 2.2, 'q');
+    }
+  }
+  drawHead();
+}
+const seq = (o, w = 46, h = 30) => [0, 1, 2].map(f => shapeSprite(w, h, G => kame(G, f, o), KP, KS));
+
+// A: the classic anime pose: torn gi rags, steady side stance, a clean push forward
+const kameD = seq({ cx: 19, head: 1, headDx: 0, buff: .6, shell: 1.25, stance: [9, 6], crouch: [4, 3, 2], lean: [-3, 1, 2], rags: false });
+return kameD;
+})();
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
   return [
@@ -1589,7 +1796,7 @@ GAMES.push({
     const chamberLen = () => 10 + 5 * S.chamber + 5 * lvl('chamber');
     const ECON = .35;   // every gain runs through mult(); an active player reaches super saiyan god in about half an hour
     const mult = () => {   // permanent boosts multiply; temporary ones add their bonuses, so a pile of buffs can't explode
-      const T = st.t, b = 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * 2 + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (fused && fused.until > T ? fused.x - 1 : 0) + (laughUntil > T) * .25 + (chamberUntil > T) * 1 + (rageUntil > T) * (rage - 1) + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
+      const T = st.t, b = 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * 2 + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (fused && fused.until > T ? fused.x - 1 : 0) + (laughUntil > T) * .25 + (chamberUntil > T) * 1 + (rageUntil > T) * (rage - 1) + (chiUntil > T) * .5 + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
       return Math.pow(1.15, S.gravity) * Math.pow(1.25 + .05 * lvl('wish'), S.wishes) * seedBoost() * FORMS[S.form].x * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1) * ECON;
     };
     const lapValue = () => 30 * (1 + S.boots * ms('boots'));
@@ -1597,7 +1804,7 @@ GAMES.push({
     let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, car = null, nextCar = 140, carUntil = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
     let gadgets = [], nextGadget = 2, robotUntil = 0, robotAcc = 0, autoAcc = 0, gadgetUntil = 0, bikeUntil = 0, calmUntil = 0, nextAndro = 340, date = null, nextDate = 300, gero = null, nextGero = 230, a16 = null, nextA16 = 180;
     let bz = null, pud = null;   // beerus asleep on his planet, and the pudding that calms him
-    let dance = null, fused = null, nextDance = 300, cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
+    let whisUntil = 0, whisReady = 0, chiUntil = 0, chiReady = 0, kameReady = 0, dance = null, fused = null, nextDance = 300, cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
@@ -1752,6 +1959,8 @@ GAMES.push({
     S.ach = S.ach || {}; if (S.ach.greg5) S.spirit = 1;   // the spirit bomb is king kai's reward for catching gregory, not something you buy
     if (!HEROES[S.hero] || !heroOpen(S.hero)) S.hero = 'vegeta';
     function heroOpen(id) { const c = CHARS.find(x => x.id === id); return !!c && (!c.need || !!S.ach[c.need]); }
+    const standAng = v => Math.atan2(v[0], v[1]) * Math.min(1, (v[0] * v[0] + v[1] * v[1]) * 1.6);
+    const WHIS_AT = capPt(.5, 3.3), CHI_AT = capPt(.45, 3.2), TURTLE_AT = capPt(.5, 5.2), OOLONG_AT = capPt(.62, 4.1);   // whis by beerus, chi-chi by the house, umigame and oolong on roshi's island
     const DANCE = { vegeta: ['goku', 'gogeta'], goku: ['vegeta', 'gogeta'], gohan: ['videl', 'gohanVidel'], trunks: ['goten', 'gotenks'] };
     function HERO() { return HEROES[S.hero] || HEROES.vegeta; }
     function ach(id) {
@@ -1781,6 +1990,10 @@ GAMES.push({
       if (!playing) return;
       if (S.world === 3 && snk) { snakeTap(px, py); return; }
       if (dance && !dance.done) { const b = dance.beats[dance.i]; if (b !== undefined && dance.spoil !== dance.i) { if (Math.abs(st.t - b) < .32) { dance.hits++; dance.ok = st.t; dance.i++; } else if (st.t > b - .8) dance.spoil = dance.i; } return; }   // the dance takes every tap; tapping just before a beat spoils it, so mashing fails
+      const npcHit = (c, r = 12) => { const v = M3.ap(M, c); return v[2] > .05 && Math.hypot(px - (cx + v[0] * R), py - (cy - v[1] * R + st.bob - 10)) < r; };
+      if (bz && st.t > whisReady && npcHit(WHIS_AT)) { whisReady = st.t + 45; whisUntil = st.t + 20; ui.event('whis: "ohohoho — a little training?" laps ×2 for 20s, but every tap is twice as loud'); ui.sfx && ui.sfx('buy'); return; }
+      if (S.world === 7 && st.t > chiReady && npcHit(CHI_AT)) { chiReady = st.t + 40; chiUntil = st.t + 15; shake = .4; ui.event('chi-chi: "stop slacking and TRAIN!" — a frying pan to the head: ×1.5 for 15s'); ui.sfx && ui.sfx('hit'); return; }
+      if (S.world === 6 && st.t > kameReady && (npcHit(TURTLE_AT, 14) || npcHit(OOLONG_AT))) { kameReady = st.t + 30; const turtle = npcHit(TURTLE_AT, 14), g = Math.max(200, rate() * (turtle ? 15 : 30)); gain(g, px, py - 10, true); ui.event(turtle ? `umigame wakes up, yawns, and goes back to sleep. +${fmtShort(Math.round(g))}` : `oolong turns into a ${['bag of gold', 'giant cake', 'bicycle', 'very convincing roshi'][Math.random() * 4 | 0]} — +${fmtShort(Math.round(g))}`); return; }
       if (cling) { const k = kidScreen(12); if (Math.hypot(px - k.x, py - k.y) < 16) { burst(k.x, k.y, [0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a]); gain(Math.max(60, rate() * 20), k.x, k.y - 16, true); ui.event('shook the saibaman off — it pops harmlessly'); cling = null; return; } }
       if (struggle) { struggle.p += .055; ui.sfx && ui.sfx('tap'); shake = Math.max(shake, .08); return; }   // a beam struggle takes every tap
       if (spiritReady && !spiritShot) { const b = spiritPos(); if (Math.hypot(px - b.x, py - b.y) < b.r + 8) { throwSpirit(); return; } }
@@ -1821,7 +2034,7 @@ GAMES.push({
       // train: rhythm builds a combo up to ×2; the scouter adds crits
       combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; if (combo >= 2) goal('combo');
       sprint = Math.min(1.2, sprint + .5);
-      if (bz && !bz.awake) bz.noise += .04;
+      if (bz && !bz.awake) bz.noise += whisUntil > st.t ? .08 : .04;
       if (jumpH <= 0) jumpV = 120;
       const crit = Math.random() < S.scouter * .1 + lvl('crit') * .08, k = kidScreen(14);
       gain((1 + S.boots * ms('boots')) * mult() * combo * (crit ? 2 + lvl('critx') : 1) * (1 + .5 * lvl('fist')), k.x, k.y - 10, crit); ui.sfx && ui.sfx('tap');
@@ -2295,7 +2508,7 @@ GAMES.push({
       sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);
       const pace = (.42 + sprint * .9) * (riding > 0 ? 1.6 : 1) * (poseUntil > t || struggle ? 0 : 1);   // he stops to pose, and to hold a beam struggle
       phi += pace * dt;
-      if (phi - lastLap > 6.283) { lastLap += 6.283; if (playing) { laps++; S.lapsTotal = (S.lapsTotal || 0) + 1; ach('lap1'); if (S.lapsTotal >= 100) ach('laps100'); goal('laps'); ui.fx && ui.fx('lap'); const k = kidScreen(20); gain(lapValue() * 4 * mult() * (1 + .5 * lvl('legs')) * (bz ? 3 : 1), k.x, k.y - 14, true); } }
+      if (phi - lastLap > 6.283) { lastLap += 6.283; if (playing) { laps++; S.lapsTotal = (S.lapsTotal || 0) + 1; ach('lap1'); if (S.lapsTotal >= 100) ach('laps100'); goal('laps'); ui.fx && ui.fx('lap'); const k = kidScreen(20); gain(lapValue() * 4 * mult() * (1 + .5 * lvl('legs')) * (bz ? 3 : 1) * (whisUntil > t ? 2 : 1), k.x, k.y - 14, true); } }
       if (jumpH > 0 || jumpV > 0) { jumpV -= 520 * dt; jumpH = Math.max(0, jumpH + jumpV * dt); if (jumpH === 0) jumpV = 0; }
       if (playing) {
       // income: lap steps + passive, once a second
@@ -2477,6 +2690,8 @@ GAMES.push({
       if (laughUntil > t) fxs.push(`laughing ×1.25 ${Math.ceil(laughUntil - t)}s`);
       if (ginyu && !ginyu.done) fxs.push(`ginyu force ${Math.ceil(ginyu.until - t)}s`);
       if (fuseUntil > t) fxs.push(`fusion ×2 ${Math.ceil(fuseUntil - t)}s`);
+      if (whisUntil > t) fxs.push(`whis' training: laps ×2, taps ×2 noise ${Math.ceil(whisUntil - t)}s`);
+      if (chiUntil > t) fxs.push(`chi-chi ×1.5 ${Math.ceil(chiUntil - t)}s`);
       if (preview) fxs.push(`${FORMS[S.form].name} (wish) ${Math.ceil(preview.until - t)}s`);
       if (dailyUntil > t) fxs.push(`daily ×1.25 ${Math.ceil((dailyUntil - t) / 60)}m`);
       if (tour) fxs.push(`tournament ${Math.ceil(tour.until - t)}s · ${tour.ko} KO`);
@@ -2561,9 +2776,13 @@ GAMES.push({
         for (const b of a16.birds) { const fly = b.free ? (t - b.free) * 60 : 0, bx = x + (b.i - 1) * 9 + fly * .6, by = y - 24 - (b.i % 2) * 6 - fly; b.sx = b.free ? undefined : bx; b.sy = by; if (by > -10) st.blit(BIRDS[b.kind], bx - 3, by - 3 + (b.free ? 0 : Math.abs(Math.sin(t * 3 + b.i)) * 1), b.i % 2 === 1, true); }
       } else for (const b of a16.birds) b.sx = undefined; }
       for (const g of gadgets) { const v = M3.ap(M, g.c), up = Math.min(1, (t - g.t0) / .3); if (v[2] > .05) { g.sx = cx + v[0] * R; g.sy = cy - v[1] * R + st.bob; blitZ(GADGETS[g.kind], g.sx, g.sy, Math.atan2(v[0], v[1]), false, (1 - up) * 30 + Math.abs(Math.sin(t * 3 + g.t0)) * 2, v[2] * R + 6, 1); } else g.sx = undefined; }
-      if (S.world === 6 && kh) { const v = M3.ap(M, kh.house), r = M3.ap(M, kh.roshi); if (v[2] > .05) blitZ(KAMEHOUSE, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), false, 0, v[2] * R + 6, 1); if (r[2] > .05) blitZ(ROSHI, cx + r[0] * R, cy - r[1] * R + st.bob, Math.atan2(r[0], r[1]), Math.floor(t / 3) % 2 === 0, 0, r[2] * R + 6, .95); }   // roshi stays home by his door
+      const npc = (spr, c, flip = false, k = 1) => { const v = M3.ap(M, c); if (v[2] > .05) blitZ(spr, cx + v[0] * R, cy - v[1] * R + st.bob, standAng(v), flip, 0, v[2] * R + 6, k); };   // standing up on the face of the planet, tipping out only near the rim
+      if (S.world === 6 && kh) { const v = M3.ap(M, kh.house); if (v[2] > .05) blitZ(KAMEHOUSE, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), false, 0, v[2] * R + 6, 1); npc(ROSHI, kh.roshi, Math.floor(t / 3) % 2 === 0, .95); }   // roshi stays home by his door
       if (S.world === 5) { const v = M3.ap(M, capPt(.55, 3.2)); if (v[2] > .05) blitZ(BULMA, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), Math.floor(t / 2) % 2 === 0, 0, v[2] * R + 6, 1); }
       if (S.world === 7) drawPaozu(t);
+      if (bz) npc(NPCS.whis, WHIS_AT, Math.floor(t / 3) % 2 === 0);
+      if (S.world === 7) npc(NPCS.chichi, CHI_AT, true);
+      if (S.world === 6) { npc(NPCS.turtle, TURTLE_AT); npc(NPCS.oolong, OOLONG_AT, Math.floor(t / 2.5) % 2 === 0); }
       if (bz) { const v = M3.ap(M, bz.c); if (v[2] > .05) { const x = cx + v[0] * R, y = cy - v[1] * R + st.bob, ang = Math.atan2(v[0], v[1]);
         if (bz.awake) { blitZ(BEERUS, x + (Math.random() - .5) * 2, y, ang, false, 0, v[2] * R + 6, .9); if (Math.random() < .5) fx.add({ x: x + (Math.random() - .5) * 16, y: y - 10 - Math.random() * 20, vx: 0, vy: -30, life: .5, s: 1, grow: 1, c: [0xffffff, 0xd9c8ff, 0x7a4ae0], raw: true }); }
         else { blitZ(BEERUS, x, y, ang + 1.45, false, -12, v[2] * R + 6, .9); const z = (t * .8) % 1; st.text(z < .33 ? 'z' : z < .66 ? 'zz' : 'zzz', x + 6, y - 22 - z * 6, 0x5e44a0); }
@@ -2573,8 +2792,10 @@ GAMES.push({
       if (roshi) { const v = M3.ap(M, roshi.c), up = Math.min(1, (t - roshi.t0) / .4) * Math.min(1, (roshi.until - t) / .4); if (v[2] > .05) {
         const ang = Math.atan2(v[0], v[1]), big = roshi.max && (!roshi.fired || t - roshi.fired < .7), down = roshi.fired && t - roshi.fired >= .7;
         roshi.sx = cx + v[0] * R; roshi.sy = cy - v[1] * R + st.bob;
-        blitZ(big ? ROSHI_MAX : ROSHI, roshi.sx + (big && !roshi.fired ? (Math.random() - .5) * 2 : 0), roshi.sy, ang + (down ? 1.45 : 0), false, (up - 1) * 18, v[2] * R + 6, .95);
-        if (roshi.fired && t - roshi.fired < .6) { const ux = Math.sin(ang), uy = -Math.cos(ang), L = st.W + st.H; for (let d = 26; d < L; d += .5) for (let w = -3; w <= 3; w++) st.px(roshi.sx + ux * d + uy * -w, roshi.sy + uy * d + ux * w, Math.abs(w) < 2 ? 0xffffff : 0x6fc8ff); }   // the kamehameha, up from his hands along his own up, so it never cuts across the planet
+        const kf = roshi.max && (!roshi.fired || t - roshi.fired < .7) ? (roshi.fired ? 2 : t - roshi.max < .55 ? 0 : 1) : -1, rx = Math.cos(ang), ry = Math.sin(ang);
+        if (kf >= 0) blitZ(ROSHI_KAME[kf], roshi.sx + rx * 4, roshi.sy + ry * 4, ang, false, (up - 1) * 18, v[2] * R + 6, .95);   // shifted so his feet stay put
+        else blitZ(ROSHI, roshi.sx, roshi.sy, ang + (down ? 1.45 : 0), false, (up - 1) * 18, v[2] * R + 6, .95);
+        if (roshi.fired && t - roshi.fired < .6) { const ux = Math.sin(ang), uy = -Math.cos(ang), bx = roshi.sx + rx * 24 + ux * 12, by = roshi.sy + ry * 24 + uy * 12, L = st.W + st.H; for (let d = 0; d < L; d += .5) for (let w = -3; w <= 3; w++) st.px(bx + rx * d + ux * w, by + ry * d + uy * w, Math.abs(w) < 2 ? 0xffffff : 0x6fc8ff); }   // the kamehameha, straight out of his palms
       } else roshi.sx = undefined; }
       if (kril && !kril.dead) { const v = M3.ap(M, kril.c), up = Math.min(1, (t - kril.t0) / .4); if (v[2] > .05) {
         kril.sx = cx + v[0] * R; kril.sy = cy - v[1] * R + st.bob; blitZ(KRILLIN, kril.sx, kril.sy, Math.atan2(v[0], v[1]), false, (up - 1) * 18 + Math.abs(Math.sin(t * 6)) * 2, v[2] * R + 6, 1);
