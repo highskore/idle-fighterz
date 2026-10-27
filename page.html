@@ -425,7 +425,7 @@ __PLANET__
       box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { box.hidden = true; $('game').classList.remove('wishing'); done(options[+b.dataset.i].key); }));
       box.querySelector('button').focus({ preventScroll: true });
     },
-    world(w) { root.style.setProperty('--sea', ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#3a7ad0'][w] || '#e2a93a'); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); },
+    world(w) { root.style.setProperty('--sea', ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#9fb4cc'][w] || '#e2a93a'); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); },
     fx(kind, arg) { if (titleFx) titleFx(kind, arg); },
     bump() { const n = $('pl'); n.classList.add('bump'); clearTimeout(ui._b); ui._b = setTimeout(() => n.classList.remove('bump'), 110); },
   };
