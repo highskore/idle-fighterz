@@ -92,7 +92,7 @@ const ACH = [
   ['o9k', "it's over 9000", 'pass 9,000 power'], ['villains10', 'villain slayer', 'beat 10 villains'], ['frieza', 'emperor down', 'beat frieza'], ['cell', 'perfect no more', 'beat cell'],
   ['beerus', 'god of destruction', 'beat beerus'], ['all4', 'clean sweep', 'beat frieza, cell, kid buu and beerus'], ['ginyu', 'ginyu force', 'defeat the ginyu force'], ['fleet', "frieza's fleet", "drop every soldier from frieza's ship"],
   ['greg5', 'faster than gregory', 'win 5 gregory races · learn the spirit bomb'], ['yamcha', 'yamcha!', 'help yamcha out of his crater'], ['stars25', 'pod catcher', 'catch 25 space pods'], ['storm20', 'meteor buster', 'bust 20 meteors in one storm'],
-  ['spirit', 'spirit bomb', 'throw a spirit bomb'], ['struggle', 'beam struggle', 'win a beam struggle'], ['ape', 'great ape', 'look at the full moon'], ['fusion', 'fusion ha!', 'fuse with bubbles'],
+  ['spirit', 'spirit bomb', 'throw a spirit bomb'], ['struggle', 'beam struggle', 'win a beam struggle'], ['ape', 'great ape', 'look at the full moon'], ['fusion', 'fusion ha!', 'fuse with bubbles'], ['dance', 'fu · sion · ha!', 'do the fusion dance'],
   ['kaioken', 'kaioken', 'use the kaioken'], ['shenron', 'eternal dragon', 'summon shenron'], ['porunga', 'namekian dragon', 'summon porunga'], ['chamber', 'a year in a day', 'enter the time chamber'],
   ['tournament', 'tournament of power', 'finish a tournament'], ['ascend', 'ascended', 'ascend for the first time'],
   ['vegeta', 'homeworld', 'visit planet vegeta'], ['nappa', 'bald and beaten', 'beat nappa on planet vegeta'],
@@ -954,6 +954,293 @@ function gasSpr(o = {}) {
 }
 
 const HIT = hitSpr({ pose: 'pockets' }), GOKU_BLACK = blackSpr({ pose: 'fold' }), JIREN = jirenSpr({ pose: 'fold' }), MORO = moroSpr({ pose: 'laugh', mouth: 'laugh' }), GAS = gasSpr({ pose: 'fold' });
+// fusion dance results (picked takes): gogeta, gotenks, gohan + videl, the botched fat (4 frames) and skinny ones, mr. satan's, and future gohan
+const FUSED = (() => {
+// fusion-dance results (gogeta, gotenks, gohan+videl, the two botched gogetas, the mr. satan gag) and future gohan — four takes each
+const oline = (G, pts, w0, w1, c) => { G.line(pts, w0 + 2, w1 + 2, 'o'); G.line(pts, w0, w1, c); };
+// tapering hair spikes, [base, tip] pairs, with a highlight streak down each
+const spikes = (G, list, hi = 'j', b = 3.4, t = .8) => { for (const [p, q] of list) { G.line([p, q], b, t, 'h'); G.line([[p[0] + (q[0] - p[0]) * .3 - .4, p[1] + (q[1] - p[1]) * .3], [p[0] + (q[0] - p[0]) * .62 - .4, p[1] + (q[1] - p[1]) * .62]], 1, 1, hi); } };
+// eyes on row Y for a face centred on the pixel boundary X
+function eyes(G, X, Y, kind = 'angry', e = 'e') {
+  const L = X - 3, R = X + 2, pr = (a, b, c) => { G.set(a, b, c); G.set(2 * X - 1 - a, b, c); };
+  if (kind === 'angry') { pr(X - 4, Y - 2, 'k'); pr(X - 3, Y - 2, 'k'); pr(X - 3, Y - 1, 'k'); pr(X - 2, Y - 1, 'k'); G.set(L, Y, 'w'); G.set(L + 1, Y, e); G.set(R - 1, Y, e); G.set(R, Y, 'w'); }
+  if (kind === 'smug') { pr(X - 4, Y - 1, 'k'); pr(X - 3, Y - 1, 'k'); pr(X - 2, Y - 1, 'k'); G.set(L, Y, 'k'); G.set(L + 1, Y, 'k'); G.set(R - 1, Y, e); G.set(R, Y, 'w'); G.set(X + 1, Y - 2, 'k'); G.set(X + 2, Y - 2, 'k'); G.set(X + 1, Y - 1, 's'); G.set(X + 2, Y - 1, 'k'); }
+  if (kind === 'wink') { pr(X - 4, Y - 2, 'k'); pr(X - 3, Y - 2, 'k'); G.set(L - 1, Y, 'k'); G.set(L, Y - 1, 'k'); G.set(L + 1, Y, 'k'); G.set(R - 1, Y, e); G.set(R, Y, 'w'); G.set(R - 1, Y - 1, e); G.set(R, Y - 1, 'w'); }
+  if (kind === 'shut') { pr(X - 4, Y, 'k'); pr(X - 3, Y - 1, 'k'); pr(X - 2, Y, 'k'); }
+  if (kind === 'wide') { pr(X - 4, Y - 2, 'k'); pr(X - 3, Y - 2, 'k'); for (const y of [Y - 1, Y]) { G.set(L, y, 'w'); G.set(L + 1, y, e); G.set(R - 1, y, e); G.set(R, y, 'w'); } }
+  if (kind === 'big') { pr(X - 4, Y - 3, 'k'); pr(X - 3, Y - 3, 'k'); for (const y of [Y - 1, Y]) { G.set(L, y, e); G.set(L + 1, y, e); G.set(R - 1, y, e); G.set(R, y, e); } G.set(L, Y - 1, 'w'); G.set(R - 1, Y - 1, 'w'); pr(X - 4, Y - 1, 'k'); }
+  if (kind === 'droop') { pr(X - 4, Y - 1, 'k'); pr(X - 3, Y - 2, 'k'); pr(X - 2, Y - 2, 'k'); G.set(L, Y, 'k'); G.set(L + 1, Y, e); G.set(R - 1, Y, e); G.set(R, Y, 'k'); pr(X - 3, Y + 1, 'S'); }
+  if (kind === 'dot') { pr(X - 3, Y - 2, 'k'); pr(X - 2, Y - 2, 'k'); pr(X - 3, Y, e); }
+}
+function mouth(G, X, Y, kind = 'smirk') {
+  if (kind === 'smirk') { G.set(X - 2, Y, 'k'); G.set(X - 1, Y, 'k'); G.set(X, Y, 'k'); G.set(X + 1, Y - 1, 'k'); }
+  if (kind === 'flat') { G.set(X - 1, Y, 'k'); G.set(X, Y, 'k'); }
+  if (kind === 'grin') { G.rect(X - 2, Y, 4, 1, 'w'); G.set(X - 3, Y - 1, 'k'); G.set(X + 2, Y - 1, 'k'); G.rect(X - 2, Y + 1, 4, 1, 'k'); }
+  if (kind === 'yell') { G.rect(X - 2, Y, 4, 2, 'm'); G.rect(X - 2, Y, 4, 1, 'w'); }
+  if (kind === 'o') { G.rect(X - 1, Y, 2, 2, 'm'); }
+  if (kind === 'tongue') { G.rect(X - 2, Y, 4, 1, 'k'); G.set(X - 3, Y - 1, 'k'); G.set(X + 2, Y - 1, 'k'); G.rect(X, Y + 1, 2, 1, 'r'); }
+  if (kind === 'wobble') { G.set(X - 2, Y + 1, 'k'); G.set(X - 1, Y, 'k'); G.set(X, Y + 1, 'k'); G.set(X + 1, Y, 'k'); }
+}
+// an arm from a shoulder, mirrored by side (-1 viewer's left, +1 right) about the pixel boundary X
+const arm = (G, X, Y, side, pts, hand, c = 's', w = 2.6, hc = c) => { const m = ([a, b]) => [X + side * a, Y + b]; oline(G, pts.map(m), w, w - .3, c); if (hand) { const [hx, hy] = m(hand); G.ell(hx, hy, 1.6, 1.6, hc); } };
+const ARM = {
+  hang: [[[6, 1.6], [7, 5], [7, 8.4]], [7, 9.4]],
+  hip: [[[6, 1.6], [8.6, 4.6], [5.8, 7.2]], [5.6, 7.6]],
+  up: [[[6, 1.6], [8.4, -1.6], [8.6, -5]], [8.6, -6]],
+  flex: [[[6, 1.4], [9.8, 1.8], [10.4, -2.4]], [10.4, -3.4]],
+  punch: [[[6, 1.8], [9.6, 2.6], [13.4, 2.4]], [14.2, 2.4]],
+};
+const ball = (G, x, y, r, a = 'x', b = 'X') => { G.ell(x, y, r, r, a); G.ell(x - r * .15, y - r * .15, r * .55, r * .55, b); };
+// paints dy rows lower, so overhead poses get headroom without moving every coordinate
+const dn = (G, dy) => { const m = p => p.map(([x, y]) => [x, y + dy]); return { ell: (x, y, a, b, c) => G.ell(x, y + dy, a, b, c), rect: (x, y, w, h, c) => G.rect(x, y + dy, w, h, c), poly: (p, c) => G.poly(m(p), c), line: (p, a, b, c) => G.line(m(p), a, b, c), set: (x, y, c) => G.set(x, y + dy, c) }; };
+// arms folded: the lower forearm in shade, the upper one rimmed so the two bars read apart
+const fold = (G, X, Y, sh = 6, w = 2.4) => { oline(G, [[X + sh, Y + 2], [X + sh - .8, Y + 6.2], [X - 3, Y + 6.2]], w, w, 'S'); oline(G, [[X - sh, Y + 2], [X - sh + .6, Y + 3.4], [X + 3, Y + 3.2]], w, w, 's'); };
+
+/* ---------- the metamoran fusion vest, shared by every fusion ---------- */
+// Y = top row of the torso; stance 'stand' | 'wide'
+function vestBody(G, X, Y, o = {}) {
+  const wd = o.wide ? 1.4 : 0;
+  G.poly([[X - 5.4, Y + 8], [X + 5.4, Y + 8], [X + 6.6 + wd, Y + 13], [X + 5.2 + wd, Y + 15], [X + 1.2 + wd * .5, Y + 15], [X, Y + 11.6], [X - 1.2 - wd * .5, Y + 15], [X - 5.2 - wd, Y + 15], [X - 6.6 - wd, Y + 13]], 'p');
+  G.line([[X - 3, Y + 10], [X - 3.6 - wd, Y + 14]], 1, 1, 'P'); G.line([[X + 3, Y + 10], [X + 3.6 + wd, Y + 14]], 1, 1, 'P');
+  for (const x of [X - 5.6 - wd, X + 1.6 + wd]) { G.poly([[x, Y + 14.6], [x + 4, Y + 14.6], [x + 4.2, Y + 17.6], [x - .2, Y + 17.6]], 'b'); G.rect(Math.round(x + .6), Y + 15, 3, 1, 'B'); }
+  G.poly([[X - 5.6, Y], [X + 5.6, Y], [X + 5, Y + 8], [X - 5, Y + 8]], 'v');
+  G.poly([[X - 2.4, Y - .4], [X + 2.4, Y - .4], [X, Y + 3.6]], 's');
+  G.rect(X - 5, Y + 7, 10, 2, 'c'); G.poly([[X + 1.6, Y + 8], [X + 4.2, Y + 8], [X + 4, Y + 12.6], [X + 2.4, Y + 11.6]], 'c');
+  G.rect(X - 2, Y - 1, 4, 2, 's');
+}
+// shoulder pads and padded collar go on after the arms so bare arms come out from under them
+function vestPads(G, X, Y) {
+  G.line([[X - 3, Y - .4], [X, Y + 3.6], [X + 3, Y - .4]], 1, 1, 'y');
+  for (const s of [-1, 1]) { G.ell(X + s * 5.6, Y + 1, 2.3, 1.5, 'y'); G.set(X + s * 5.6 - (s < 0 ? 1 : 0), Y + 1, 'Y'); }
+}
+
+/* ---------- gogeta ---------- */
+const GOG = { o: 0x0c0a18, h: 0x1c1a28, H: 0x0f0e18, j: 0x3e3e62, s: 0xf6c8a0, S: 0xc48c66, k: 0x120c18, w: 0xffffff, W: 0xc8ccd8, e: 0x120c18, m: 0x9a2a2a, r: 0xe0505a, v: 0x283a7a, V: 0x18244e, y: 0xf4a832, Y: 0xb87418, p: 0xf6f4ee, P: 0xc4c2cc, c: 0x58d0ec, C: 0x2a88b0, b: 0x1c1c24, B: 0x3a3a48, x: 0x6ac8ff, X: 0xeefaff };
+const GOG_SSJ = { ...GOG, h: 0xf8d43a, H: 0xc8961a, j: 0xfff4a8, e: 0x1fa088, o: 0x1a1008 };
+const GOG_SH = { h: 'H', v: 'V', y: 'Y', p: 'P', c: 'C' };
+function gogHead(G, X, T, o = {}) {
+  G.poly([[X - 5.4, T + 14], [X - 5.8, T + 8], [X - 4, T + 4.4], [X, T + 3.4], [X + 4, T + 4.4], [X + 5.8, T + 8], [X + 5.4, T + 14]], 'h');
+  spikes(G, [[[X - 1, T + 6], [X - 2.6, T]], [[X + 1.6, T + 6], [X + 3.2, T + .2]], [[X - 3, T + 7], [X - 7.6, T + 1.6]], [[X + 3.6, T + 7], [X + 8.2, T + 2.2]], [[X - 4, T + 9], [X - 9.8, T + 6.6]], [[X + 4.2, T + 9], [X + 10, T + 7.6]], [[X - 4.6, T + 11], [X - 8.6, T + 12.8]]]);
+  G.ell(X, T + 10.4, 4.3, 4.3, 's'); G.poly([[X - 4.4, T + 10], [X + 4.4, T + 10], [X + 4.2, T + 13.4], [X + 2.4, T + 15.2], [X - 2.4, T + 15.2], [X - 4.2, T + 13.4]], 's');
+  G.poly([[X - 5, T + 4.5], [X + 5, T + 4.5], [X + 5, T + 10], [X + 3.8, T + 7.4], [X + 1.6, T + 8.2], [X + .2, T + 6.8], [X - 1.8, T + 8.4], [X - 3.8, T + 7.4], [X - 5, T + 10]], 'h');
+  G.line([[X - .6, T + 7], [X - 1.4, T + 10]], 1.6, .8, 'h');                                  // the single loose bang
+  eyes(G, X, T + 11, o.eyes || 'angry'); G.set(X, T + 12, 'S'); mouth(G, X, T + 13, o.mouth || 'smirk');
+}
+function gogeta(o) {
+  const W = o.w || 26, X = o.x || 13;
+  return shapeSprite(W, 34, G => {
+    if (o.pre) o.pre(G, X);
+    vestBody(G, X, 15, o);
+    o.arms(G, X, 15);
+    vestPads(G, X, 15);
+    gogHead(G, X, 0, o);
+    if (o.post) o.post(G, X);
+  }, o.ssj ? GOG_SSJ : GOG, GOG_SH);
+}
+// A: base form, fists on hips, confident smirk
+const GOGETA = gogeta({ arms: (G, X, Y) => { arm(G, X, Y, -1, ...ARM.hip); arm(G, X, Y, 1, ...ARM.hip); } });
+// B: base form, straight punch out to the side, teeth bared
+const GTK = { ...GOG, h: 0x3e2468, H: 0x281646, j: 0x7a5ab8, l: 0xbca6ee, L: 0x8a72c4, g: 0xf4f4ff, G: 0xb8b8d8, n: 0xf2d24a, N: 0xc89a1a };
+const GTK_SH = { ...GOG_SH, l: 'L', g: 'G', n: 'N' };
+function gtkHead(G, X, T, o = {}) {
+  G.poly([[X - 5, T + 12], [X - 5.4, T + 7], [X - 3.6, T + 4], [X, T + 3.2], [X + 3.6, T + 4], [X + 5.4, T + 7], [X + 5, T + 12]], 'h');
+  spikes(G, [[[X - .6, T + 6], [X - 1.4, T]], [[X + 1.8, T + 6], [X + 3.6, T + .6]], [[X - 2.8, T + 7], [X - 6.4, T + 1.8]], [[X + 3.6, T + 7], [X + 7.6, T + 2.8]], [[X - 4, T + 9], [X - 8.4, T + 6.6]], [[X + 4.2, T + 9], [X + 8.6, T + 7.4]]]);
+  G.ell(X, T + 9.6, 4.1, 4, 's'); G.poly([[X - 4.2, T + 9], [X + 4.2, T + 9], [X + 3.8, T + 12.4], [X + 2, T + 13.8], [X - 2, T + 13.8], [X - 3.8, T + 12.4]], 's');
+  // lavender trunks-style fringe, parted, over the dark spikes
+  G.poly([[X - 4.6, T + 4.4], [X + 4.6, T + 4.4], [X + 4.8, T + 9.6], [X + 3.4, T + 7], [X + 1.4, T + 8], [X, T + 6.4], [X - 1.6, T + 8], [X - 3.4, T + 7], [X - 4.8, T + 9.6]], 'l');
+  G.set(X - 2, T + 5, 'L'); G.set(X + 2, T + 6, 'L');
+  eyes(G, X, T + 10, o.eyes || 'angry'); mouth(G, X, T + 12, o.mouth || 'smirk');
+}
+// kid-sized vest body, Y = top of the torso
+function gtkBody(G, X, Y) {
+  G.poly([[X - 4.4, Y + 6], [X + 4.4, Y + 6], [X + 5.4, Y + 9.4], [X + .8, Y + 9.4], [X, Y + 8], [X - .8, Y + 9.4], [X - 5.4, Y + 9.4]], 'p');
+  for (const x of [X - 5.2, X + 1.4]) { G.poly([[x, Y + 9.2], [x + 3.8, Y + 9.2], [x + 4, Y + 11.6], [x - .2, Y + 11.6]], 'b'); }
+  G.poly([[X - 4.4, Y], [X + 4.4, Y], [X + 4, Y + 6.4], [X - 4, Y + 6.4]], 'v');
+  G.poly([[X - 2, Y - .4], [X + 2, Y - .4], [X, Y + 2.6]], 's');
+  G.rect(X - 4, Y + 5, 8, 2, 'c'); G.poly([[X + 1.4, Y + 6], [X + 3.6, Y + 6], [X + 3.4, Y + 9.4], [X + 2, Y + 8.6]], 'c');
+}
+const gtkPads = (G, X, Y) => { G.line([[X - 2.6, Y - .2], [X, Y + 2.8], [X + 2.6, Y - .2]], 1.2, 1.2, 'y'); for (const s of [-1, 1]) G.ell(X + s * 4.6, Y + 1, 2, 1.6, 'y'); };
+const KA = {   // kid arms, from the shoulder at (4.8, 1.2)
+  hip: [[[4.8, 1.4], [6.8, 3.6], [4.6, 5.4]], [4.4, 5.6]],
+  up: [[[4.8, 1.2], [6.6, -1.4], [6.8, -4.4]], [6.8, -5.2]],
+  fwd: [[[4.8, 1.4], [7.6, 2.4], [9.8, 2]], [10.6, 2]],
+};
+const karm = (G, X, Y, s, [p, h]) => arm(G, X, Y, s, p, h, 's', 2.2);
+function gotenks(o) {
+  const W = o.w || 22, X = o.x || 11, H = 28 + (o.dy || 0);
+  return shapeSprite(W, H, G0 => {
+    const G = dn(G0, o.dy || 0);
+    if (o.pre) o.pre(G, X);
+    gtkBody(G, X, 14); o.arms(G, X, 14); gtkPads(G, X, 14); gtkHead(G, X, 0, o);
+    if (o.post) o.post(G, X);
+  }, GTK, GTK_SH);
+}
+// A: smug, hands laced behind his head, elbows out
+const GOTENKS = gotenks({ eyes: 'smug', arms: (G, X, Y) => { for (const s of [-1, 1]) arm(G, X, Y, s, [[4.8, 1.2], [7.6, -3], [4.4, -6]], null, 's', 2.2); } });
+// B: victory: fist punched to the sky, other on his hip, tongue out
+const GV = { ...GOG, e: 0x2a5ad0, n: 0xe0404a, N: 0x9a2028, q: 0xf4a0a0 };
+function gvHead(G, X, T, o = {}) {
+  // videl's pigtails: two short black tails from behind the ears, red ties
+  for (const s of [-1, 1]) { const sw = o.swing || 0; G.line([[X + s * 4.6, T + 11], [X + s * 6.8 + sw, T + 14.4], [X + s * 6.6 + sw * 1.6, T + 19]], 3, 1.2, 'h'); G.rect(X + (s < 0 ? -7 : 6) + Math.round(s * sw), T + 14, 2, 1, 'n'); }
+  G.poly([[X - 5.2, T + 12], [X - 5.6, T + 7], [X - 3.8, T + 4.2], [X, T + 3.6], [X + 3.8, T + 4.2], [X + 5.6, T + 7], [X + 5.2, T + 12]], 'h');
+  // gohan's short buu-saga cut: a few short spikes and one forelock
+  spikes(G, [[[X - 1.2, T + 6], [X - 2.4, T + 1.2]], [[X + 1.4, T + 6], [X + 3.2, T + 1.6]], [[X - 3.4, T + 7], [X - 7, T + 3.6]], [[X + 3.6, T + 7], [X + 7.4, T + 4.2]]]);
+  G.ell(X, T + 10.4, 4.2, 4.3, 's'); G.poly([[X - 4.3, T + 10], [X + 4.3, T + 10], [X + 4, T + 13.2], [X + 2.2, T + 15], [X - 2.2, T + 15], [X - 4, T + 13.2]], 's');
+  G.poly([[X - 4.8, T + 4.6], [X + 4.8, T + 4.6], [X + 4.8, T + 9.6], [X + 3, T + 7.6], [X + .6, T + 8], [X - 1.4, T + 7.2], [X - 3.2, T + 8], [X - 4.8, T + 9.6]], 'h');
+  G.line([[X + .4, T + 7.4], [X + 1, T + 9.6]], 1.4, .8, 'h');
+  eyes(G, X, T + 11, o.eyes || 'big'); G.set(X - 4, T + 13, 'q'); G.set(X + 3, T + 13, 'q'); mouth(G, X, T + 13, o.mouth || 'smirk');
+}
+function gohanVidel(o) {
+  const W = o.w || 26, X = o.x || 13;
+  return shapeSprite(W, 34 + (o.dy || 0), G0 => {
+    const G = dn(G0, o.dy || 0);
+    if (o.pre) o.pre(G, X);
+    vestBody(G, X, 15, o); o.arms(G, X, 15); vestPads(G, X, 15); gvHead(G, X, 0, o);
+    if (o.post) o.post(G, X);
+  }, GV, GOG_SH);
+}
+// A: videl's pose: hand on hip, peace sign up by the face, pigtails swinging
+const GOHANVIDEL = gohanVidel({ eyes: 'wink', mouth: 'grin', swing: .8, arms: (G, X, Y) => { arm(G, X, Y, -1, ...ARM.hip); arm(G, X, Y, 1, [[6, 1.6], [8.6, -1], [9, -4]], [9, -4.6]); G.rect(X + 8, Y - 9, 1, 3, 's'); G.rect(X + 10, Y - 9, 1, 3, 's'); } });
+// B: masenko: both palms stacked over the head, golden ki crackling above
+const VK = { ...GOG, z: 0x9ac850, Z: 0x6a9a30, d: 0x9fdcff };
+const VK_SH = { ...GOG_SH, z: 'Z' };
+function vekuHead(G, X, T, o = {}) {
+  G.poly([[X - 5, T + 10], [X - 5.2, T + 6], [X - 3.4, T + 3.6], [X, T + 3], [X + 3.4, T + 3.6], [X + 5.2, T + 6], [X + 5, T + 10]], 'h');
+  spikes(G, [[[X - 1, T + 5], [X - 2, T + .4]], [[X + 1.6, T + 5], [X + 3, T + .8]], [[X - 3, T + 6], [X - 6.6, T + 2.4]], [[X + 3.4, T + 6], [X + 7, T + 3]]], 'j', 3, .8);
+  G.ell(X, T + 10.4, 5.6, 4.8, 's');                                                         // round face, jowls
+  G.poly([[X - 4.6, T + 4.6], [X + 4.6, T + 4.6], [X + 4.6, T + 8.6], [X + 2.8, T + 7], [X, T + 7.8], [X - 2.8, T + 7], [X - 4.6, T + 8.6]], 'h');
+  G.set(X - 5, T + 12, 'r'); G.set(X + 4, T + 12, 'r');                                    // flushed cheeks
+  eyes(G, X, T + 10, o.eyes || 'dot'); G.set(X, T + 11, 'S'); mouth(G, X, T + 13, o.mouth || 'grin');
+}
+// a round belly squeezed into the vest; Y = top of torso
+function vekuBody(G, X, Y) {
+  G.poly([[X - 6, Y + 9], [X + 6, Y + 9], [X + 6.6, Y + 11.4], [X + .8, Y + 11.4], [X, Y + 10.4], [X - .8, Y + 11.4], [X - 6.6, Y + 11.4]], 'p');
+  for (const x of [X - 6.6, X + 1.6]) G.poly([[x, Y + 11.2], [x + 5, Y + 11.2], [x + 5, Y + 13.6], [x, Y + 13.6]], 'b');
+  G.ell(X, Y + 5, 10.4, 6.4, 'v');
+  G.ell(X, Y + 6.6, 5.8, 3.8, 's'); G.set(X, Y + 7, 'S'); G.line([[X - 4, Y + 4.2], [X - 1, Y + 3.4]], 1, 1, 'S');   // belly bursting out the front, navel
+  G.rect(X - 6, Y + 9, 12, 2, 'c'); G.poly([[X + 2.6, Y + 10], [X + 5, Y + 10], [X + 4.6, Y + 13], [X + 3, Y + 12.4]], 'c');
+  G.rect(X - 2, Y - 1, 4, 2, 's');
+}
+const vekuPads = (G, X, Y) => { for (const s of [-1, 1]) G.ell(X + s * 7.4, Y + .8, 2.6, 1.8, 'y'); G.line([[X - 3.4, Y - .4], [X, Y + 1.4], [X + 3.4, Y - .4]], 1.2, 1.2, 'y'); };
+function veku(o) {
+  const W = o.w || 30, X = o.x || 15;
+  return shapeSprite(W, 30, G => {
+    if (o.pre) o.pre(G, X);
+    vekuBody(G, X, 15); o.arms(G, X, 15); vekuPads(G, X, 15); vekuHead(G, X, 0, o);
+    if (o.post) o.post(G, X);
+  }, VK, VK_SH);
+}
+const stub = (G, X, Y, s, pts, hand) => arm(G, X, Y, s, pts, hand, 's', 3.2);
+// A: a wobbly double-biceps flex that makes no muscle at all
+const FATGOGETA_A = veku({ eyes: 'shut', mouth: 'grin', arms: (G, X, Y) => { for (const s of [-1, 1]) stub(G, X, Y, s, [[8, 1.4], [11, .6], [11.6, -2.6]], [11.6, -3.2]); } });
+// B: attacking: a stubby punch, cheeks puffed, sweat flying
+const FATGOGETA_B = veku({ w: 34, x: 14, eyes: 'angry', mouth: 'o', arms: (G, X, Y) => { stub(G, X, Y, -1, [[8, 1.6], [10.4, 4.4]], [10.4, 5.4]); stub(G, X, Y, 1, [[8, 2], [12, 2.6], [15.4, 2]], [16.2, 2]); }, post: (G, X) => { G.rect(X - 8, 3, 1, 2, 'd'); G.set(X - 9, 5, 'd'); G.set(X + 18, -1 + 15, 'W'); G.set(X + 18, 3 + 15, 'W'); } });
+// C: smug, patting his belly, eyes shut, pleased with himself
+const FATGOGETA_C = veku({ eyes: 'smug', mouth: 'smirk', arms: (G, X, Y) => { stub(G, X, Y, -1, [[8, 1.6], [8, 5], [4, 6.6]], [3.4, 6.6]); stub(G, X, Y, 1, [[8, 1.6], [9.6, 4.6], [7.6, 7.4]], [7, 7.6]); } });
+// D: his one technique: a green cloud of gas, hands on knees, blushing
+const FATGOGETA_D = veku({ w: 36, x: 20, eyes: 'shut', mouth: 'wobble', pre: (G, X) => { for (const [x, y, r] of [[-11, 21, 3.6], [-14, 17, 3], [-15.6, 23, 3.2], [-12, 26, 2.4], [-17.4, 19, 2]]) G.ell(X + x, y, r, r * .9, 'z'); G.set(X - 14, 20, 'Z'); G.set(X - 12, 24, 'Z'); }, arms: (G, X, Y) => { stub(G, X, Y, -1, ...[[[8, 1.6], [9.6, 6], [7.6, 10]], [7.4, 10.4]]); stub(G, X, Y, 1, [[8, 1.6], [9.6, 6], [7.6, 10]], [7.4, 10.4]); }, post: (G, X) => { G.rect(X + 6, 2, 1, 2, 'd'); G.set(X + 7, 4, 'd'); } });
+
+/* ---------- the skinny, old-looking botched gogeta ---------- */
+const SK = { ...GOG, h: 0x3a3844, H: 0x24222c, j: 0xa8a8b6, s: 0xe8bc96, S: 0xb08462, d: 0x9fdcff };
+function skHead(G, X, T, o = {}) {
+  // thin, wiry gogeta spikes gone grey at the streaks
+  G.poly([[X - 4.2, T + 10], [X - 4.6, T + 6], [X - 3.2, T + 3.6], [X, T + 3], [X + 3.2, T + 3.6], [X + 4.6, T + 6], [X + 4.2, T + 10]], 'h');
+  spikes(G, [[[X - .8, T + 5], [X - 2, T]], [[X + 1.4, T + 5], [X + 3, T + .4]], [[X - 3, T + 6], [X - 7, T + 2.6]], [[X + 3.4, T + 6], [X + 7.4, T + 3.2]], [[X - 3.8, T + 8], [X - 7.6, T + 7.4]], [[X + 3.8, T + 8], [X + 7.4, T + 8.6]]], 'j', 2.6, .6);
+  G.ell(X, T + 10.4, 4.2, 4.2, 's'); G.poly([[X - 4, T + 10], [X + 4, T + 10], [X + 2.8, T + 14.6], [X + 1, T + 15.8], [X - 1, T + 15.8], [X - 2.8, T + 14.6]], 's');   // long face, pointed chin
+  G.poly([[X - 4.2, T + 4.6], [X + 4.2, T + 4.6], [X + 4, T + 8.4], [X + 2, T + 7], [X, T + 7.6], [X - 2, T + 7], [X - 4, T + 8.4]], 'h');
+  G.set(X - 3, T + 13, 'S'); G.set(X + 2, T + 13, 'S'); G.set(X - 2, T + 14, 'S'); G.set(X + 1, T + 14, 'S');   // hollow cheeks
+  eyes(G, X, T + 11, o.eyes || 'droop'); mouth(G, X, T + 14, o.mouth || 'wobble');
+}
+function skinny(o) {
+  const W = o.w || 20, X = o.x || 10;
+  return shapeSprite(W, 34, G => {
+    const Y = 16;
+    if (o.pre) o.pre(G, X);
+    // baggy trousers hanging off stick legs, big boots
+    G.poly([[X - 3.4, Y + 7], [X + 3.4, Y + 7], [X + 5, Y + 13], [X + 3.6, Y + 14.6], [X + .8, Y + 14.6], [X, Y + 11], [X - .8, Y + 14.6], [X - 3.6, Y + 14.6], [X - 5, Y + 13]], 'p');
+    G.line([[X - 2.4, Y + 9], [X - 3, Y + 13]], 1, 1, 'P'); G.line([[X + 2.4, Y + 9], [X + 3, Y + 13]], 1, 1, 'P');
+    for (const x of [X - 5, X + 1]) G.poly([[x, Y + 14.4], [x + 4, Y + 14.4], [x + 4.2, Y + 16.6], [x - .2, Y + 16.6]], 'b');
+    // a vest hanging loose off a bony chest: ribs show in the V
+    G.poly([[X - 4, Y], [X + 4, Y], [X + 3.4, Y + 7.6], [X - 3.4, Y + 7.6]], 'v');
+    G.poly([[X - 2.2, Y - .4], [X + 2.2, Y - .4], [X, Y + 4.6]], 's'); G.set(X - 1, Y + 1, 'S'); G.set(X, Y + 1, 'S'); G.set(X - 1, Y + 3, 'S');
+    G.rect(X - 4, Y + 6, 8, 2, 'c'); G.poly([[X + 1, Y + 7], [X + 3, Y + 7], [X + 2.4, Y + 12.4], [X + 1.4, Y + 11.4]], 'c');
+    G.rect(X - 1, Y - 1, 2, 2, 's');
+    o.arms(G, X, Y);
+    G.line([[X - 2.4, Y - .4], [X, Y + 4.6], [X + 2.4, Y - .4]], 1, 1, 'y');
+    for (const s of [-1, 1]) G.ell(X + s * 4.4, Y + 1.6, 1.7, 1.2, 'y');                   // pads slipping down sloped shoulders
+    skHead(G, X, 0, o);
+    if (o.post) o.post(G, X);
+  }, SK, GOG_SH);
+}
+const thin = (G, X, Y, s, pts, hand) => arm(G, X, Y, s, pts, hand, 's', 1.4);
+// A: trying to flex, a trembling twig of an arm and a nervous wobbly smile
+const SKINNYGOGETA = skinny({ eyes: 'shut', mouth: 'o', arms: (G, X, Y) => { for (const s of [-1, 1]) thin(G, X, Y, s, [[4.8, 2], [6.4, 7], [4.6, 11]], [4.4, 11.6]); }, post: (G, X) => { G.rect(X - 8, 3, 1, 2, 'd'); G.set(X - 9, 5, 'd'); G.rect(X + 7, 2, 1, 2, 'd'); G.set(X + 8, 4, 'd'); } });
+
+/* ---------- mr. satan fusion (gag) ---------- */
+const SF = { ...GOG, h: 0x15141e, H: 0x0c0b12, a: 0x3a2414, A: 0x1a0e06, s: 0xdca868, S: 0xa87436, u: 0x5e3e24, t: 0xffffff, n: 0xf2c440, N: 0xb8861a, R: 0xc8241e };
+const SF_SH = { ...GOG_SH, a: 'A', n: 'N' };
+function sfHead(G, X, o = {}) {
+  // satan's afro with two gogeta spikes bursting out of the top
+  G.ell(X, 7, 7, 4.8, 'a');
+  for (const [i, j] of [[-7, 9], [-7.4, 6], [-5.6, 3.4], [-2.6, 2.4], [2.6, 2.4], [5.6, 3.4], [7.4, 6], [7, 9], [-6, 11], [6, 11]]) G.ell(X + i, j, 2, 1.8, 'a');
+  for (const [i, j] of [[-6, 5], [-3, 3], [3, 4], [5, 7], [-5, 8], [6, 10], [-7, 10]]) { G.set(X + i, j, 'u'); G.set(X + i + 1, j - 1, 'u'); }
+  for (const pts of [[[X - 1.6, 4], [X - 3.4, -1.8]], [[X + 1.8, 4], [X + 4.6, -1.4]], [[X - 4.6, 4.6], [X - 9, 0]]]) { G.line(pts, 3.6, .8, 'o'); G.line(pts, 2.4, .6, 'a'); G.line([pts[0], [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2]], 1, 1, 'u'); }   // gogeta spikes bursting out the top
+  G.ell(X, 11, 3.8, 3.6, 's');
+  eyes(G, X, 10, o.eyes || 'angry'); G.set(X, 11, 'S');
+  G.rect(X - 3, 12, 6, 1, 'k'); G.set(X - 4, 13, 'k'); G.set(X + 3, 13, 'k');                    // the moustache
+  if (o.mouth === 'laugh') { G.rect(X - 2, 13, 4, 2, 'm'); G.rect(X - 2, 13, 4, 1, 't'); }
+  else { G.rect(X - 2, 13, 4, 1, 't'); }
+  G.rect(X - 2, 14 + (o.mouth === 'laugh' ? 1 : 0), 4, 1, 'a');                                  // chin tuft
+}
+function satanFusion(o) {
+  const W = o.w || 26, X = o.x || 13;
+  return shapeSprite(W, 37, G0 => {
+    const G = dn(G0, 2);
+    if (o.pre) o.pre(G, X);
+    vestBody(G, X, 16, o); G.rect(X - 1, 23, 2, 2, 'n'); o.arms(G, X, 16); vestPads(G, X, 16); sfHead(G, X, o);
+    if (o.post) o.post(G, X);
+  }, SF, SF_SH);
+}
+// A: champion's double biceps, roaring laugh
+const SATANFUSION = satanFusion({ w: 30, x: 15, mouth: 'laugh', eyes: 'shut', arms: (G, X, Y) => { for (const s of [-1, 1]) { arm(G, X, Y, s, ...ARM.flex); G.ell(X + s * 8.6, Y + .8, 1.8, 1.4, 's'); } } });
+// B: attacking: "dynamite kick" turned punch, fist thrown out, teeth gritted
+const FG = { o: 0x120a06, h: 0x1c1a28, H: 0x0f0e18, j: 0x3e3e62, s: 0xf2c49c, S: 0xbc8862, k: 0x120c18, w: 0xffffff, W: 0xc8ccd8, e: 0x120c18, m: 0x9a2a2a, q: 0xc86a5a, g: 0xf08a24, G: 0xc0641a, u: 0x2b4fc8, U: 0x1c3584, b: 0x1c2a5a, B: 0x101a3a, y: 0xf2c84a, x: 0xfff27a, X: 0xffffff };
+const FG_SSJ = { ...FG, h: 0xf8d43a, H: 0xc8961a, j: 0xfff4a8, e: 0x1fa088 };
+const FG_SH = { h: 'H', g: 'G', u: 'U', b: 'B' };
+function fgHead(G, X, T, o = {}) {
+  G.poly([[X - 5.2, T + 13], [X - 5.6, T + 7], [X - 3.8, T + 4], [X, T + 3.2], [X + 3.8, T + 4], [X + 5.6, T + 7], [X + 5.2, T + 13]], 'h');
+  const tall = o.ssj ? -1.6 : 0;
+  spikes(G, [[[X - 1, T + 6], [X - 1.8, T + .4 + tall]], [[X + 1.6, T + 6], [X + 3.6, T + .6 + tall]], [[X - 3, T + 7], [X - 7, T + 2.4 + tall]], [[X + 3.6, T + 7], [X + 7.6, T + 3 + tall]], [[X - 4, T + 9], [X - 8.6, T + 8.4]], [[X + 4.2, T + 9], [X + 8.6, T + 9.6]]]);
+  G.ell(X, T + 10.4, 4.2, 4.4, 's'); G.poly([[X - 4.3, T + 10], [X + 4.3, T + 10], [X + 4.2, T + 13.6], [X + 2.4, T + 15.4], [X - 2.4, T + 15.4], [X - 4.2, T + 13.6]], 's');
+  G.poly([[X - 5, T + 4.5], [X + 5, T + 4.5], [X + 5, T + 9.4], [X + 3.4, T + 7.6], [X + 1.4, T + 8.6], [X - .4, T + 7], [X - 2.4, T + 8.4], [X - 4, T + 7.4], [X - 5, T + 9.6]], 'h');
+  eyes(G, X, T + 11, o.eyes || 'angry'); G.set(X, T + 12, 'S'); mouth(G, X, T + 13, o.mouth || 'flat');
+  G.line([[X + 3, T + 8.4], [X + 1.4, T + 13.6]], 1, 1, 'q');                                 // the scar down over his left eye
+}
+function futureGohan(o) {
+  const W = o.w || 24, X = o.x || 12, Y = 15;
+  return shapeSprite(W, 34, G => {
+    if (o.pre) o.pre(G, X);
+    // orange gi trousers, navy boots with gold trim
+    G.poly([[X - 5, Y + 8], [X + 5, Y + 8], [X + 6.2, Y + 13], [X + 5, Y + 15], [X + 1.2, Y + 15], [X, Y + 11.6], [X - 1.2, Y + 15], [X - 5, Y + 15], [X - 6.2, Y + 13]], 'g');
+    for (const x of [X - 5.4, X + 1.4]) { G.poly([[x, Y + 14.6], [x + 4, Y + 14.6], [x + 4.2, Y + 17.6], [x - .2, Y + 17.6]], 'b'); G.rect(Math.round(x), Y + 15, 4, 1, 'y'); }
+    G.poly([[X - 5.6, Y], [X + 5.6, Y], [X + 5, Y + 8.4], [X - 5, Y + 8.4]], 'g');
+    G.poly([[X - 2.8, Y - .4], [X + 2.8, Y - .4], [X, Y + 3.6]], 'u'); G.rect(X - 1, Y - 1, 2, 2, 's');   // blue undershirt in the V
+    G.line([[X - 3, Y - .2], [X - .2, Y + 4.6]], 1, 1, 'G');
+    G.rect(X - 5, Y + 7, 10, 2, 'u'); G.poly([[X - 3.4, Y + 8], [X - 1.4, Y + 8], [X - 1.8, Y + 11.6], [X - 3.4, Y + 11]], 'u');   // blue belt, knot tails
+    // the empty left sleeve: a short stump, pinned flat
+    G.ell(X + 6.2, Y + 2.2, 2.4, 2.6, 'g'); G.line([[X + 6.6, Y + 3], [X + 6, Y + 5.6]], 1.8, 1.4, 'G');
+    o.arms(G, X, Y);
+    fgHead(G, X, 0, o);
+    if (o.post) o.post(G, X);
+  }, o.ssj ? FG_SSJ : FG, FG_SH);
+}
+// his one arm: long orange sleeve, blue wristband, bare hand
+const fgArm = (G, X, Y, pts, hand) => { const P = pts.map(([a, b]) => [X - a, Y + b]); oline(G, P, 2.8, 2.6, 'g'); const n = P.length, [ax, ay] = P[n - 1], [bx, by] = P[n - 2]; const t = 1.6 / Math.hypot(ax - bx, ay - by); G.line([[ax - (ax - bx) * t, ay - (ay - by) * t], [ax, ay]], 2.8, 2.8, 'u'); G.ell(X - hand[0], Y + hand[1], 1.7, 1.7, 's'); };
+// A: standing guard, fist clenched at his side, stern
+const FUTUREGOHAN = futureGohan({ arms: (G, X, Y) => fgArm(G, X, Y, [[6, 1.6], [7.2, 5], [7.2, 8.4]], [7.2, 9.4]) });
+// B: a one-handed masenko, palm thrust out, golden blast
+return { gogeta: GOGETA, gotenks: GOTENKS, gohanVidel: GOHANVIDEL, fat: [FATGOGETA_A, FATGOGETA_B, FATGOGETA_C, FATGOGETA_D], skinny: SKINNYGOGETA, satan: SATANFUSION, futureGohan: FUTUREGOHAN };
+})();
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
   return [
@@ -1119,7 +1406,7 @@ GAMES.push({
     const chamberLen = () => 10 + 5 * S.chamber + 5 * lvl('chamber');
     const ECON = .35;   // every gain runs through mult(); an active player reaches super saiyan god in about half an hour
     const mult = () => {   // permanent boosts multiply; temporary ones add their bonuses, so a pile of buffs can't explode
-      const T = st.t, b = 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * 2 + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (laughUntil > T) * .25 + (chamberUntil > T) * 1 + (rageUntil > T) * (rage - 1) + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
+      const T = st.t, b = 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * 2 + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (fused && fused.until > T ? fused.x - 1 : 0) + (laughUntil > T) * .25 + (chamberUntil > T) * 1 + (rageUntil > T) * (rage - 1) + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
       return Math.pow(1.15, S.gravity) * Math.pow(1.25 + .05 * lvl('wish'), S.wishes) * seedBoost() * FORMS[S.form].x * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1) * ECON;
     };
     const lapValue = () => 30 * (1 + S.boots * ms('boots'));
@@ -1127,7 +1414,7 @@ GAMES.push({
     let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, car = null, nextCar = 140, carUntil = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
     let gadgets = [], nextGadget = 2, robotUntil = 0, robotAcc = 0, autoAcc = 0, gadgetUntil = 0, bikeUntil = 0, calmUntil = 0, nextAndro = 340, date = null, nextDate = 300, gero = null, nextGero = 230, a16 = null, nextA16 = 180;
     let bz = null, pud = null;   // beerus asleep on his planet, and the pudding that calms him
-    let cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
+    let dance = null, fused = null, nextDance = 300, cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
@@ -1195,6 +1482,7 @@ GAMES.push({
     S.ach = S.ach || {}; if (S.ach.greg5) S.spirit = 1;   // the spirit bomb is king kai's reward for catching gregory, not something you buy
     if (!HEROES[S.hero] || !heroOpen(S.hero)) S.hero = 'vegeta';
     function heroOpen(id) { const c = CHARS.find(x => x.id === id); return !!c && (!c.need || !!S.ach[c.need]); }
+    const DANCE = { vegeta: ['goku', 'gogeta'], goku: ['vegeta', 'gogeta'], gohan: ['videl', 'gohanVidel'], trunks: ['goten', 'gotenks'] };
     function HERO() { return HEROES[S.hero] || HEROES.vegeta; }
     function ach(id) {
       if (S.ach[id] || !playing) return; const a = ACH.find(x => x.id === id); if (!a) return;
@@ -1222,6 +1510,7 @@ GAMES.push({
     function onClick(px, py) {
       if (!playing) return;
       if (S.world === 3 && snk) { snakeTap(px, py); return; }
+      if (dance && !dance.done) { const b = dance.beats[dance.i]; if (b !== undefined && dance.spoil !== dance.i) { if (Math.abs(st.t - b) < .32) { dance.hits++; dance.ok = st.t; dance.i++; } else if (st.t > b - .8) dance.spoil = dance.i; } return; }   // the dance takes every tap; tapping just before a beat spoils it, so mashing fails
       if (cling) { const k = kidScreen(12); if (Math.hypot(px - k.x, py - k.y) < 16) { burst(k.x, k.y, [0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a]); gain(Math.max(60, rate() * 20), k.x, k.y - 16, true); ui.event('shook the saibaman off — it pops harmlessly'); cling = null; return; } }
       if (struggle) { struggle.p += .055; ui.sfx && ui.sfx('tap'); shake = Math.max(shake, .08); return; }   // a beam struggle takes every tap
       if (spiritReady && !spiritShot) { const b = spiritPos(); if (Math.hypot(px - b.x, py - b.y) < b.r + 8) { throwSpirit(); return; } }
@@ -1768,6 +2057,13 @@ GAMES.push({
       if (!yam && session > 100 && !shen && (nextYam -= dt) < 0) { yam = { c: capPt(.3 + Math.random() * .6, Math.random() * 6.28), boom: t + 2.4, until: t + 16 }; ui.event('a saibaman jumps on yamcha…'); nextYam = 200 + Math.random() * 80; }
       if (yam && yam.boom && t > yam.boom) { yam.boom = 0; shake = .6; if (yam.sx !== undefined) burst(yam.sx, yam.sy - 6, [0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160); ui.sfx && ui.sfx('boom'); ui.event('BOOM. yamcha got wrecked again — tap him'); }
       if (yam && t > yam.until) yam = null;
+      // the fusion dance: fu · sion · ha! three taps on the beat. all three makes the real fusion, fewer a botched one
+      if (!dance && !(fused && fused.until > t) && session > 200 && S.best >= 2e5 && !shen && !boss && !tour && !S.world && !cling && (nextDance -= dt) < 0) { const satanTurn = Math.random() < .2, [who, res] = satanTurn ? ['mr. satan', 'satan'] : DANCE[S.hero] || DANCE.vegeta; dance = { who, res, t0: t, beats: [t + 2, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9 }; ui.event(`${who} wants to do the fusion dance! tap on the beat: fu · sion · ha!`, 3500); nextDance = 300 + Math.random() * 120; }
+      if (dance) { while (dance.i < dance.beats.length && t > dance.beats[dance.i] + .32) dance.i++;
+        if (!dance.done && t > dance.beats[2] + .4) { dance.done = t; const ok = dance.hits === 3, sat = dance.res === 'satan', spr = sat ? FUSED.satan : ok ? FUSED[dance.res] : dance.hits ? FUSED.fat : FUSED.skinny;
+          fused = { spr, x: sat ? 1.5 : ok ? 3 : .75, until: t + (ok || sat ? 25 : 15), fat: !sat && !ok && dance.hits > 0 }; flashT = 1; shake = .6; ui.sfx && ui.sfx('form'); ach('dance');
+          ui.event(sat ? 'fusion ha! …mr. satan takes all the credit. ×1.5 for 25s' : ok ? `fusion ha! ${dance.res === 'gohanVidel' ? 'gohan and videl' : dance.res} — ×3 for 25s` : dance.hits ? 'fusion ha… you got the fat one. ×0.75 for 15s' : 'fusion ha… you got the skinny one. ×0.75 for 15s', 4000); }
+        if (dance.done && t - dance.done > 1) dance = null; }
       // a saibaman clings to you now and then: tap it off before it blows
       if (!cling && session > 150 && !shen && !boss && !tour && !S.world && (nextCling -= dt) < 0) { cling = { boom: t + 3.5 }; ui.event('a saibaman is hugging you — tap it off!'); nextCling = 240 + Math.random() * 120; }
       if (cling && t > cling.boom) { const k = kidScreen(10); burst(k.x, k.y, [0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160); shake = .8; flashT = .6; tiredUntil = Math.max(tiredUntil, t + 6); ui.sfx && ui.sfx('boom'); ui.event('BOOM — you got yamcha\'d. tired ×0.75 for 6s'); cling = null; }
@@ -1938,7 +2234,9 @@ GAMES.push({
         // giant ape stomps: a little hop each step and a screen shake on landing
         const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for (let k = 0; k < 8; k++) fx.add({ x: kd.x + (Math.random() - .5) * 30, y: kd.y, vx: (Math.random() - .5) * 60, vy: -20 - Math.random() * 30, drag: 2, life: .5, s: 2, c: [0xffffff, 0xe7e2d4], raw: true }); }
         blitZ(APE[step % 2], kd.x, kd.y, kd.ang, flip, lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
-      } else blitZ(spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+      } else if (fused && fused.until > t) blitZ(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+      else blitZ(spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+      if (dance && !dance.done && seen) { const b = dance.beats[dance.i]; if (b !== undefined) { const r = 6 + Math.max(0, b - t) * 26, hx = kd.x + Math.sin(kd.ang) * 14, hy = kd.y - Math.cos(kd.ang) * 14; for (let a = 0; a < 6.28; a += .12) st.px(hx + Math.cos(a) * r, hy + Math.sin(a) * r, Math.abs(b - t) < .32 ? 0xfff27a : 0xffffff); st.text(['fu', 'sion', 'ha!'][dance.i], hx, hy - r - 8, t - dance.ok < .3 ? 0xfff27a : 0xffffff); } }   // the beat ring
       if (cling) blitZ(SAIBA, kd.x - Math.cos(kd.ang) * 5, kd.y - Math.sin(kd.ang) * 5, kd.ang, !flip, lift + 6 + (cling.boom - t < 1 && Math.floor(t * 16) % 2 ? 1 : 0), depth + 1, .9);   // hugging his back, shaking before it blows
       // piccolo meditates above the planet; king kai and gregory stand on it
       if (S.piccolo > 0) { const c = capPt(.6, .9), v = M3.ap(M, V.mul(c, 1.28)); piccoloAt = v[2] > -.2 ? { x: cx + v[0] * R, y: cy - v[1] * R + st.bob + Math.sin(t * 1.6) * 2 } : null; if (piccoloAt) blitZ(PICCOLO, piccoloAt.x, piccoloAt.y, 0, false, 0, v[2] * R + 8, .95); } else piccoloAt = null;
@@ -2132,6 +2430,7 @@ GAMES.push({
     if (/frieza/.test(HASH)) { session = 151; nextShip = 0; }   // preview hook: #frieza (his ship lands)
     if (/yamcha/.test(HASH)) { session = 101; nextYam = 0; }   // preview hook: #yamcha
     if (/cling/.test(HASH)) { session = 151; nextCling = 0; }   // preview hook: #cling (a saibaman hugs you)
+    if (/dance/.test(HASH)) { session = 201; nextDance = 0; S.best = Math.max(S.best, 2e5); }   // preview hook: #dance (the fusion dance)
     if (/gregory/.test(HASH)) { session = 61; nextGreg = 0; }   // preview hook: #gregory (the race)
     if (/tournament/.test(HASH)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
     if (/shenron/.test(HASH)) setTimeout(() => summon(+(HASH.match(/shenron(\d)/) || [0, 1])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
