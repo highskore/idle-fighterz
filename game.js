@@ -1589,8 +1589,8 @@ GAMES.push({
       kis = kis.filter(kb => !kb.done);
       }
       // super mode: a 25s golden-hair burst (×2) each time power level passes the next milestone
-      // transform when this run's best power reaches the next form (spending doesn't hold it back)
-      if (S.form < FORMS.length - 1 && S.runBest >= FORMS[S.form + 1].at) transform();
+      // transform once you're holding the next form's power: spend now or save up for it. a form you reach stays for the run
+      if (S.form < FORMS.length - 1 && S.pl >= FORMS[S.form + 1].at) transform();
       if (star) { star.x += star.vx * dt; star.y += Math.sin(t * 3) * .3; if (Math.random() < .9) fx.add({ x: star.x - 7, y: star.y + (Math.random() - .5) * 4, vx: -30, vy: 0, life: .45, s: 2, c: [0xffffff, 0xffd84a, 0xff8a3a], raw: true }); if (star.x > st.W + 12) star = null; }
       for (const m of meteors) { if (m.delay > 0) { m.delay -= dt; continue; } m.x += m.vx * dt; m.y += m.vy * dt; if (!m.dead && Math.random() < .9) fx.add({ x: m.x + 2, y: m.y - 2, vx: -m.vx * .1, vy: -m.vy * .1, life: .5, s: 2, grow: 1, c: [0xfff1c0, 0xffb35a, 0xe0473e, 0x8a8f98], raw: true }); }
       meteors = meteors.filter(m => !m.dead && m.y < st.H + 10);
@@ -1624,7 +1624,7 @@ GAMES.push({
       const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.wishes ? `dragon balls ${S.orbs7}/7` : '', S.wishes ? `wishes ${S.wishes}` : '', S.saga || session > 110 ? `saga ${S.saga % VILLAINS.length + 1}/${VILLAINS.length}` : '', S.seeds ? `ki seeds ${S.seeds}` : '', lvl('all') ? `zenkai ×${(1 + .1 * lvl('all')).toFixed(1)}` : ''].filter(Boolean).join(' · ');
       const nf = FORMS[S.form + 1], cf = FORMS[S.form];
       const G = GOALS.find(g => g.id === S.goal.id);
-      ui.update({ goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, Math.max(0, (S.runBest - (cf.at || 0)) / (nf.at - (cf.at || 0)))) : 1 }, balls: S.orbs7, wishes: S.wishes, ascend: lvl('all') ? (1 + .1 * lvl('all')).toFixed(1) : '' });
+      ui.update({ goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, S.pl / nf.at) : 1 }, balls: S.orbs7, wishes: S.wishes, ascend: lvl('all') ? (1 + .1 * lvl('all')).toFixed(1) : '' });
       syncShop();
       }
 
