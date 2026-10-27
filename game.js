@@ -1723,6 +1723,7 @@ const FUTURE = Object.assign({}, KAI, {
 });
 // puddles mirror the grey sky; a few windows, fires and craters still glow
 const FUT = { sky: [0x4e5866, 0x6a7480, 0x8a929c, 0xc4ccd4], lit: [0xe8a050, 0x9aaab8], fire: [0x5a1a0e, 0xa03a14, 0xe0702a, 0xffb050], fleck: [0xc4d0dc, 0x8a96a2] };
+const TRIP_WAIT = 120;   // seconds at home before a trip happens anyway, so slower players still see every world
 const PLANET_EVERY = 1e6;   // the first trip to another world at 1M best power, then at 4x your best each time: namek, planet vegeta, snake way, beerus' planet, west city, kame house, mount paozu, the future, in turn
 const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }, { name: "beerus' planet", tones: BEERUSP, sea: [0x4a2a7a, 0x6a3ea0, 0x9a6ad0, 0xd8c0f0] }, { name: 'west city', tones: EARTH, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'kame house', tones: KAMEP, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'mount paozu', tones: PAOZU, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }];
 function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
@@ -1820,11 +1821,11 @@ GAMES.push({
       return Math.pow(1.15, S.gravity) * Math.pow(1.25 + .05 * lvl('wish'), S.wishes) * seedBoost() * FORMS[S.form].x * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1) * ECON;
     };
     const lapValue = () => 30 * (1 + S.boots * ms('boots'));
-    const passive = () => (S.partner * 4 * ms('partner') + S.house * 40 * ms('house') + S.piccolo * 60 * ms('piccolo')) * (1 + .5 * lvl('idle')) * (lvl('eternal') ? 3 : 1) * (S.krillinAlly ? 1.5 : 1);
+    const passive = () => (S.partner * 4 * ms('partner') + S.house * 40 * ms('house') + S.piccolo * 60 * ms('piccolo')) * (1 + .5 * lvl('idle')) * (wished('idle') ? 3 : 1) * (lvl('eternal') ? 3 : 1) * (S.krillinAlly ? 1.5 : 1);
     let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, car = null, nextCar = 140, carUntil = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
     let gadgets = [], nextGadget = 2, robotUntil = 0, robotAcc = 0, autoAcc = 0, gadgetUntil = 0, bikeUntil = 0, calmUntil = 0, nextAndro = 340, date = null, nextDate = 300, gero = null, nextGero = 230, a16 = null, nextA16 = 180;
     let bz = null, pud = null;   // beerus asleep on his planet, and the pudding that calms him
-    let bangReady = 0, whisUntil = 0, whisReady = 0, chiUntil = 0, chiReady = 0, kameReady = 0, dance = null, fused = null, nextDance = 300, cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
+    let wishBuff = {}, homeSince = 0, bangReady = 0, whisUntil = 0, whisReady = 0, chiUntil = 0, chiReady = 0, kameReady = 0, dance = null, fused = null, nextDance = 300, cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
@@ -2084,12 +2085,12 @@ GAMES.push({
       if (boss && !boss.dead && Math.abs(px - boss.x) < (boss.spr.w / 2 + 3) * boss.k && py > boss.y - (boss.spr.h + 2) * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; hitBoss(tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist')) * (1 + .5 * lvl('brawl')), px, py); return; }
       if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - (bean.sy - 6)) < 13) { senzuUntil = st.t + 15 + 5 * lvl('senzu'); ui.event(`senzu bean — ×1.5 for ${15 + 5 * lvl('senzu')}s`); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
       // train: rhythm builds a combo up to ×2; the scouter adds crits
-      combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; if (combo >= 2) goal('combo');
+      combo = wished('combo') ? comboCap() : st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; if (combo >= 2) goal('combo');
       sprint = Math.min(1.2, sprint + .5);
       if (bz && !bz.awake) bz.noise += whisUntil > st.t ? .08 : .04;
       if (jumpH <= 0) jumpV = 120;
-      const crit = Math.random() < S.scouter * .1 + lvl('crit') * .08, k = kidScreen(14);
-      gain((1 + S.boots * ms('boots')) * mult() * combo * (crit ? 2 + lvl('critx') : 1) * (1 + .5 * lvl('fist')), k.x, k.y - 10, crit); ui.sfx && ui.sfx('tap');
+      const crit = wished('crit') || Math.random() < S.scouter * .1 + lvl('crit') * .08, k = kidScreen(14);
+      gain((1 + S.boots * ms('boots')) * mult() * combo * (crit ? 2 + lvl('critx') : 1) * (1 + .5 * lvl('fist')) * (wished('taps') ? 3 : 1), k.x, k.y - 10, crit); ui.sfx && ui.sfx('tap');
       if (crit) for (let i = 0; i < 10; i++) fx.add({ x: k.x, y: k.y - 14, vx: (Math.random() - .5) * 90, vy: -20 - Math.random() * 60, drag: 2, life: .5, c: [0xffffff, 0x9cf0b8, 0x34d873], raw: true });
       ui.bump();
     }
@@ -2254,21 +2255,39 @@ GAMES.push({
       shen = { t0: st.t, phase: 'rise', look: shenLook, wishes: S.world === 1 ? 3 : 1, porunga: S.world === 1 }; ach(S.world === 1 ? 'porunga' : 'shenron'); document.body.classList.add('shen'); ui.sfx && ui.sfx('dragon'); ui.event(S.world ? 'porunga awakens — three wishes…' : 'the eternal dragon awakens…');
     }
     const wishSeeds = () => Math.max(3, Math.ceil(seedsNow() / 5));
+    const wished = k => (wishBuff[k] || 0) > st.t;
+    const buff = (k, secs, msg) => { wishBuff[k] = st.t + secs; ui.event(`your wish is granted — ${msg}`); };
+    // twenty wishes; the dragon offers three you can use right now (plus krillin whenever he's dead)
+    const WISHES = [
+      { key: 'power', label: 'eternal power', what: () => '×1.25 to everything, forever, even after ascending', grant: () => { S.wishes++; ui.event('your wish is granted — ×1.25 forever'); } },
+      { key: 'form', label: () => 'a taste of ' + FORMS[S.form + 1].name, what: () => `×${FORMS[S.form + 1].x} for 60 seconds`, ok: () => S.form < FORMS.length - 1, grant: () => { preview = { from: preview ? preview.from : S.form, until: st.t + 60 }; transform(true); } },   // a second taste still falls back to where you started
+      { key: 'seeds', label: 'the seeds of power', what: () => `+${wishSeeds()} ki seeds, kept forever`, grant: () => { const g = wishSeeds(); S.seeds += g; S.ascend += g; ui.event(`your wish is granted — +${g} ki seeds (×${seedBoost().toFixed(1)} on everything)`); } },
+      { key: 'fortune', label: 'a fortune in power', what: () => '+10 minutes of income', grant: () => { gain(wrate() * 600); ui.event('your wish is granted — +' + fmtShort(wrate() * 600)); } },
+      { key: 'skills', label: 'mastery', what: () => 'every skill you\'ve learned +1 rank', ok: () => TREE.some(n => lvl(n.id) && lvl(n.id) < nodeMax(n)), grant: () => { for (const n of TREE) if (lvl(n.id) && lvl(n.id) < nodeMax(n)) S.tree[n.id]++; ui.event('your wish is granted — every skill +1 rank'); } },
+      { key: 'gear', label: 'capsule corp delivery', what: () => 'every upgrade you own +1 level', ok: () => RESETS.some(r => S[r] > 0), grant: () => { for (const r of RESETS) if (S[r] > 0) S[r]++; ui.event('your wish is granted — every upgrade +1 level'); } },
+      { key: 'fast', label: 'flying nimbus legs', what: () => 'run 50% faster for 3 minutes', grant: () => buff('fast', 180, 'running 50% faster for 3 minutes') },
+      { key: 'taps', label: 'golden fists', what: () => 'taps ×3 for 3 minutes', grant: () => buff('taps', 180, 'taps ×3 for 3 minutes') },
+      { key: 'idle', label: 'a hundred clones', what: () => 'idle income ×3 for 3 minutes', ok: () => passive() > 0, grant: () => buff('idle', 180, 'idle income ×3 for 3 minutes') },
+      { key: 'laps', label: 'road of the gods', what: () => 'laps pay ×3 for 3 minutes', grant: () => buff('laps', 180, 'laps pay ×3 for 3 minutes') },
+      { key: 'crit', label: 'scouter-proof', what: () => 'every tap crits for 1 minute', grant: () => buff('crit', 60, 'every tap crits for 1 minute') },
+      { key: 'combo', label: 'perfect rhythm', what: () => 'max combo for 2 minutes', grant: () => buff('combo', 120, 'max combo for 2 minutes') },
+      { key: 'senzu', label: 'a bag of senzu', what: () => 'senzu ×1.5 for 2 minutes', grant: () => { senzuUntil = Math.max(senzuUntil, st.t + 120); ui.event('your wish is granted — senzu ×1.5 for 2 minutes'); } },
+      { key: 'fuse', label: 'fusion ha!', what: () => 'fuse with bubbles right now: ×2 for 30s', ok: () => S.partner > 0, grant: () => { fuseUntil = st.t + 30; ach('fusion'); ui.event('your wish is granted — fusion ha! ×2 for 30s'); } },
+      { key: 'kaio', label: 'king kai\'s blessing', what: () => `kaioken ×${KAIO()} now, no tiredness after`, ok: () => S.kaio > 0, grant: () => { kaioUntil = st.t + 15; kaioReady = st.t + 15; ui.event(`your wish is granted — kaioken ×${KAIO()}, and you won't get tired`); } },
+      { key: 'bubbles', label: 'a bigger monkey', what: () => 'bubbles +5 levels', ok: () => S.partner > 0, grant: () => { S.partner += 5; ui.event('your wish is granted — bubbles +5 levels'); } },
+      { key: 'trip', label: 'a space pod', what: () => 'fly to the next world as soon as the dragon leaves', ok: () => !S.world, grant: () => { homeSince = -1e9; ui.event('your wish is granted — a space pod is on its way'); } },
+      { key: 'radar', label: 'dragon radar', what: () => '+3 dragon balls toward the next summon', grant: () => { S.orbs7 = Math.min(6, S.orbs7 + 3); ui.event(`your wish is granted — ${S.orbs7}/7 dragon balls already`); } },
+      { key: 'again', label: 'one more wish', what: () => 'the dragon grants an extra wish', grant: () => { shen.wishes++; ui.event('your wish is granted — one more wish!'); } },
+      { key: 'satan', label: 'mr. satan\'s autograph', what: () => '"the world champion\'s signature!" (a little power)', grant: () => { gain(wrate() * 30); ui.event('mr. satan signs it with a flourish — +' + fmtShort(wrate() * 30) + '. it\'s worthless.'); } },
+    ];
+    const KRILLIN_WISH = { key: 'krillin', label: 'bring krillin back', what: () => `he trains with you: idle ×1.5 and destructo discs. next death: rage ×${3 + (S.krillinRevives || 0)}`, grant: () => { S.krillinDead = 0; S.krillinAlly = 1; S.krillinRevives = (S.krillinRevives || 0) + 1; nextKril = 240; ui.event('krillin is back! "did i miss anything?" — he trains with you: idle ×1.5 and destructo discs'); } };
+    const val = v => typeof v === 'function' ? v() : v;
     function openWish() {
         shen.phase = 'wish';
-        const next = S.form < FORMS.length - 1 ? FORMS[S.form + 1] : null;
-        ui.wish([
-          { key: 'power', label: 'eternal power', what: '×1.25 to everything, forever, even after ascending' },
-          next ? { key: 'form', label: 'a taste of ' + next.name, what: `×${next.x} for 60 seconds` } : { key: 'seeds', label: 'the seeds of power', what: `+${wishSeeds()} ki seeds, kept forever` },   // at the top form: something other than more income
-          { key: 'fortune', label: 'a fortune in power', what: '+10 minutes of income' },
-          ...(S.krillinDead ? [{ key: 'krillin', label: 'bring krillin back', what: `he trains with you: idle ×1.5 and destructo discs. next death: rage ×${3 + (S.krillinRevives || 0)}` }] : []),
-        ], k => {
+        const pool = WISHES.filter(w => !w.ok || w.ok()).sort(() => Math.random() - .5).slice(0, 3), offer = S.krillinDead ? [...pool, KRILLIN_WISH] : pool;
+        ui.wish(offer.map(w => ({ key: w.key, label: val(w.label), what: val(w.what) })), k => {
           if (!shen || shen.phase !== 'wish') return; shen.phase = 'granting';   // a wish is granted once, however often the box fires
-          if (k === 'krillin') { S.krillinDead = 0; S.krillinAlly = 1; S.krillinRevives = (S.krillinRevives || 0) + 1; nextKril = 240; ui.event('krillin is back! "did i miss anything?" — he trains with you: idle ×1.5 and destructo discs'); }
-          if (k === 'power') { S.wishes++; ui.event('your wish is granted — ×1.25 forever'); }
-          if (k === 'form' && next) { preview = { from: preview ? preview.from : S.form, until: st.t + 60 }; transform(true); }   // a second taste still falls back to where you started
-          if (k === 'seeds') { const g = wishSeeds(); S.seeds += g; S.ascend += g; ui.event(`your wish is granted — +${g} ki seeds (×${seedBoost().toFixed(1)} on everything)`); }
-          if (k === 'fortune') { gain(wrate() * 600); ui.event('your wish is granted — +' + fmtShort(wrate() * 600)); }
+          const w = offer.find(w => w.key === k); if (w) w.grant();
           ui.fx && ui.fx('super'); save();
           if (--shen.wishes > 0) { setTimeout(() => { if (shen) { ui.event(`${shen.wishes} wish${shen.wishes > 1 ? 'es' : ''} left`); openWish(); } }, 1400); return; }
           shen.phase = 'leave'; shen.t1 = st.t;
@@ -2722,9 +2741,9 @@ GAMES.push({
       }
       // running: sprint decays; riding the golden cloud triples everything
       sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);
-      const pace = (.42 + sprint * .9) * (1 + .1 * lvl('stride')) * (riding > 0 ? 1.6 : 1) * (poseUntil > t || struggle ? 0 : 1);   // he stops to pose, and to hold a beam struggle
+      const pace = (.42 + sprint * .9) * (1 + .1 * lvl('stride')) * (wished('fast') ? 1.5 : 1) * (riding > 0 ? 1.6 : 1) * (poseUntil > t || struggle ? 0 : 1);   // he stops to pose, and to hold a beam struggle
       phi += pace * dt;
-      if (phi - lastLap > 6.283) { lastLap += 6.283; if (playing) { laps++; S.lapsTotal = (S.lapsTotal || 0) + 1; ach('lap1'); if (S.lapsTotal >= 100) ach('laps100'); goal('laps'); ui.fx && ui.fx('lap'); const k = kidScreen(20); gain(lapValue() * 4 * mult() * (1 + .5 * lvl('legs')) * (bz ? 3 : 1) * (whisUntil > t ? 2 : 1), k.x, k.y - 14, true); } }
+      if (phi - lastLap > 6.283) { lastLap += 6.283; if (playing) { laps++; S.lapsTotal = (S.lapsTotal || 0) + 1; ach('lap1'); if (S.lapsTotal >= 100) ach('laps100'); goal('laps'); ui.fx && ui.fx('lap'); const k = kidScreen(20); gain(lapValue() * 4 * mult() * (1 + .5 * lvl('legs')) * (wished('laps') ? 3 : 1) * (bz ? 3 : 1) * (whisUntil > t ? 2 : 1), k.x, k.y - 14, true); } }
       if (jumpH > 0 || jumpV > 0) { jumpV -= 520 * dt; jumpH = Math.max(0, jumpH + jumpV * dt); if (jumpH === 0) jumpV = 0; }
       if (playing) {
       // income: lap steps + passive, once a second
@@ -2829,9 +2848,10 @@ GAMES.push({
       // the tournament of power: 60s of saibamen waves and a villain halfway; your KO count is the score to beat
       }
       // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the eight worlds strictly in turn
-      if (!S.world && S.runBest >= (S.namekAt || PLANET_EVERY) && !tour && !shen && !boss) { S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8][(S.trips - 1) % 8]); namekUntil = t + (S.world === 3 ? 75 : 45); }
+      // a trip at the next power mark, or after two minutes at home, whichever comes first
+      if (!S.world && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT) && !tour && !shen && !boss) { S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8][(S.trips - 1) % 8]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
-      if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen && (S.world !== 3 || snk?.done)) { travel(0); namekUntil = 0; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
+      if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); if (S.namekLeft <= 0 && !shen && (S.world !== 3 || snk?.done)) { travel(0); namekUntil = 0; homeSince = session; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
       if (S.world !== 3) {
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
@@ -2908,6 +2928,7 @@ GAMES.push({
       if (fuseUntil > t) fxs.push(`fusion ×2 ${Math.ceil(fuseUntil - t)}s`);
       if (whisUntil > t) fxs.push(`whis' training: laps ×2, taps ×2 noise ${Math.ceil(whisUntil - t)}s`);
       if (chiUntil > t) fxs.push(`chi-chi ×1.5 ${Math.ceil(chiUntil - t)}s`);
+      for (const [k, name] of [['fast', 'nimbus legs'], ['taps', 'golden fists ×3'], ['idle', 'clones ×3 idle'], ['laps', 'laps ×3'], ['crit', 'all crits'], ['combo', 'max combo']]) if (wished(k)) fxs.push(`${name} ${Math.ceil(wishBuff[k] - t)}s`);   // wishes still running
       if (preview) fxs.push(`${FORMS[S.form].name} (wish) ${Math.ceil(preview.until - t)}s`);
       if (dailyUntil > t) fxs.push(`daily ×1.25 ${Math.ceil((dailyUntil - t) / 60)}m`);
       if (tour) fxs.push(`tournament ${Math.ceil(tour.until - t)}s · ${tour.ko} KO`);
