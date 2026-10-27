@@ -36,7 +36,7 @@ const head = `<!doctype html>
 <meta property="og:image" content="https://highskore.com/static/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="highskore — a pixel planet with Vegeta running laps over a sea of golden clouds">
+<meta property="og:image:alt" content="highskore">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://highskore.com/static/og.png">
 <meta name="twitter:site" content="@0xhighskore">
