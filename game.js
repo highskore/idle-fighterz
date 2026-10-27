@@ -2043,7 +2043,7 @@ GAMES.push({
       if (cling) { const k = kidScreen(12); if (Math.hypot(px - k.x, py - k.y) < 16) { burst(k.x, k.y, [0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a]); gain(Math.max(60, rate() * 20), k.x, k.y - 16, true); ui.event('shook the saibaman off — it pops harmlessly'); cling = null; return; } }
       if (struggle) { struggle.p += .055; ui.sfx && ui.sfx('tap'); shake = Math.max(shake, .08); return; }   // a beam struggle takes every tap
       if (spiritReady && !spiritShot) { const b = spiritPos(); if (Math.hypot(px - b.x, py - b.y) < b.r + 8) { throwSpirit(); return; } }
-      if (fuseOffer > st.t && monkeyAt && Math.hypot(px - monkeyAt.x, py - (monkeyAt.y - 5)) < 12) {
+      if (fuseOffer > st.t && monkeyAt && Math.hypot(px - monkeyAt.x, py - (monkeyAt.y - 5 * monkeyAt.k)) < 12 * monkeyAt.k) {   // his tap target grows with him
         fuseOffer = 0; fuseUntil = st.t + 30; ach('fusion'); flashT = 1; shake = .6; ui.event('fusion ha! vegebubs — ×2 for 30s'); ui.fx && ui.fx('super');
         burst(monkeyAt.x, monkeyAt.y - 6, [0xffffff, 0xffe08a, 0xff9a3c, 0x6fb0ff], 50, 200); return;
       }
@@ -2245,19 +2245,20 @@ GAMES.push({
       if (look !== undefined) shenLook = look;
       shen = { t0: st.t, phase: 'rise', look: shenLook, wishes: S.world === 1 ? 3 : 1, porunga: S.world === 1 }; ach(S.world === 1 ? 'porunga' : 'shenron'); document.body.classList.add('shen'); ui.sfx && ui.sfx('dragon'); ui.event(S.world ? 'porunga awakens — three wishes…' : 'the eternal dragon awakens…');
     }
+    const wishSeeds = () => Math.max(3, Math.ceil(seedsNow() / 5));
     function openWish() {
         shen.phase = 'wish';
         const next = S.form < FORMS.length - 1 ? FORMS[S.form + 1] : null;
         ui.wish([
           { key: 'power', label: 'eternal power', what: '×1.25 to everything, forever, even after ascending' },
-          next ? { key: 'form', label: 'a taste of ' + next.name, what: `×${next.x} for 60 seconds` } : { key: 'mountain', label: 'a mountain of power', what: '+20 minutes of income' },
+          next ? { key: 'form', label: 'a taste of ' + next.name, what: `×${next.x} for 60 seconds` } : { key: 'seeds', label: 'the seeds of power', what: `+${wishSeeds()} ki seeds, kept forever` },   // at the top form: something other than more income
           { key: 'fortune', label: 'a fortune in power', what: '+10 minutes of income' },
           ...(S.krillinDead ? [{ key: 'krillin', label: 'bring krillin back', what: `he trains with you: idle ×1.5 and destructo discs. next death: rage ×${3 + (S.krillinRevives || 0)}` }] : []),
         ], k => {
           if (k === 'krillin') { S.krillinDead = 0; S.krillinAlly = 1; S.krillinRevives = (S.krillinRevives || 0) + 1; nextKril = 240; ui.event('krillin is back! "did i miss anything?" — he trains with you: idle ×1.5 and destructo discs'); }
           if (k === 'power') { S.wishes++; ui.event('your wish is granted — ×1.25 forever'); }
           if (k === 'form' && next) { preview = { from: S.form, until: st.t + 60 }; transform(true); }
-          if (k === 'mountain') { gain(rate() * 1200); ui.event('your wish is granted — +' + fmtShort(rate() * 1200)); }
+          if (k === 'seeds') { const g = wishSeeds(); S.seeds += g; S.ascend += g; ui.event(`your wish is granted — +${g} ki seeds (×${seedBoost().toFixed(1)} on everything)`); }
           if (k === 'fortune') { gain(rate() * 600); ui.event('your wish is granted — +' + fmtShort(rate() * 600)); }
           ui.fx && ui.fx('super'); save();
           if (--shen.wishes > 0) { setTimeout(() => { if (shen) { ui.event(`${shen.wishes} wish${shen.wishes > 1 ? 'es' : ''} left`); openWish(); } }, 1400); return; }
@@ -2576,7 +2577,7 @@ GAMES.push({
     }
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
-      const rdt = dt; if (chamberUntil > t) dt *= .3;
+      const rdt = dt; if (chamberUntil > t && S.world !== 3) dt *= .3;   // no slow-mo on snake way: jumps run on real time and couldn't clear a gap
       if (playing) session += dt; st.bob = Math.round(Math.sin(t * .7) * 2) + (shake > 0 && !st.calm ? Math.round((Math.random() - .5) * 5 * shake) : 0); shake = Math.max(0, shake - dt);
       idleT += dt;
       if (!drag) {
@@ -2893,7 +2894,7 @@ GAMES.push({
       if (S.krillinAlly && !kril && !(date && date.kr)) { const kv = M3.ap(M, roadPt(phi - .5)); { const kx = cx + kv[0] * R, ky = cy - kv[1] * R + st.bob, ka = M3.ap(M, roadPt(phi - .45)); blitZ(KRILLIN, kx, ky, Math.atan2(kv[0], kv[1]), cx + ka[0] * R < kx, Math.abs(Math.sin(t * 9)) * 2, kv[2] * R + 5, 1); } }
       if (S.partner > 0 && fuseUntil <= t) {
         const mv = M3.ap(M, roadPt(phi - .32)), mx = cx + mv[0] * R, my = cy - mv[1] * R + st.bob, ma = Math.atan2(mv[0], mv[1]);
-        monkeyAt = mv[2] > 0 ? { x: mx, y: my } : null;
+        monkeyAt = mv[2] > 0 ? { x: mx, y: my, k: Math.min(2.6, 1 + .16 * Math.sqrt(S.partner)) } : null;
         if (fuseOffer > t && Math.random() < .7) fx.add({ x: mx + (Math.random() - .5) * 12, y: my - 4 - Math.random() * 10, vx: 0, vy: -20, life: .5, s: 1, c: [0xffffff, 0xffe08a, 0xff9a3c], raw: true });
         blitZ(MONKEY[Math.floor(t * 8) % 2], mx, my, ma, flip, fuseOffer > t ? Math.abs(Math.sin(t * 9)) * 3 : 0, mv[2] * R + 5, 1.1 * Math.min(2.6, 1 + .16 * Math.sqrt(S.partner)));   // bubbles bulks up with every level: ×1.5 at lv 10, ×1.8 at 25, ×2.1 at 50, maxing out around lv 100
       } else monkeyAt = null;
