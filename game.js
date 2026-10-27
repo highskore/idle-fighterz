@@ -1730,6 +1730,7 @@ function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TON
 // preview hooks (#raid, #snake, ...) jump straight to things for testing; on the live site they're ignored so nobody can cheat with them
 const HASH = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost|.*-git-.*\.vercel\.app)$/.test(location.hostname) ? location.hash : '';   // preview hooks only on dev hosts and branch previews, never on a live copy of the site
 WORLDS[8] = { name: 'the future', tones: FUTURE, sea: [0x1e242c, 0x323a44, 0x4e5864, 0x7a8692] };
+let SNV = 1;   // snake way's view: 1 behind the hero down the snake's back, 2 side-on once the road twists halfway
 GAMES.push({
   id: 'planet',
   mount(st, ui) {
@@ -2090,7 +2091,7 @@ GAMES.push({
       if (crit) for (let i = 0; i < 10; i++) fx.add({ x: k.x, y: k.y - 14, vx: (Math.random() - .5) * 90, vy: -20 - Math.random() * 60, drag: 2, life: .5, c: [0xffffff, 0x9cf0b8, 0x34d873], raw: true });
       ui.bump();
     }
-    st.cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); if (playing && S.world === 3 && snk) { snakeTap(bx, by); return; }   // snake way acts on the press: no drag, beam charge or double-tap to swallow it
+    st.cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); if (playing && S.world === 3 && snk) { snakeDown(bx, by); return; }   // snake way acts on the press: no drag, beam charge or double-tap to swallow it
       drag = { x: e.clientX, y: e.clientY, moved: 0, t: st.t, ax: bx, ay: by }; try { st.cv.setPointerCapture(e.pointerId); } catch (_) {} });
     st.cv.addEventListener('pointermove', e => {
       if (!drag) return;
@@ -2098,7 +2099,8 @@ GAMES.push({
       if (charging > 0) { const [px, py] = st.toBuf(e); drag.ax = px; drag.ay = py; return; }
       if (drag.moved > 6) { st.cv.style.cursor = 'grabbing'; const k = 1.1 / (R * st.scale); vry = dx * k * 30; vrx = dy * k * 30; M = M3.ortho(M3.mul(M3.mul(M3.rx(dy * k), M3.ry(dx * k)), M)); idleT = 0; }
     });
-    st.cv.addEventListener('pointerup', e => { if (drag && charging > .15) fireBeam(charging, drag.ax, drag.ay); else if (drag && drag.moved <= 6) { const [px, py] = st.toBuf(e); tap(px, py); } charging = 0; drag = null; st.cv.style.cursor = 'grab'; });
+    st.cv.addEventListener('pointerup', e => { if (playing && S.world === 3 && snk && snk.ptr) { const [px, py] = st.toBuf(e); snakeUp(px, py); return; }
+      if (drag && charging > .15) fireBeam(charging, drag.ax, drag.ay); else if (drag && drag.moved <= 6) { const [px, py] = st.toBuf(e); tap(px, py); } charging = 0; drag = null; st.cv.style.cursor = 'grab'; });
     st.cv.addEventListener('pointercancel', () => { drag = null; charging = 0; });
     function fireBeam(c, tx, ty) {
       if (S.world === 3) return;
@@ -2206,7 +2208,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai! tap left / right (or ← →) to switch lanes, middle (or space) to jump, tap a ghost to blast it', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', SNAKE_HELP, 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) startSnake(); else snk = null;
       bz = w === 4 ? { c: capPt(.3, 4.4), noise: 0, awake: 0 } : null; pud = null; gadgets = []; nextGadget = 2;
@@ -2414,96 +2416,161 @@ GAMES.push({
       blitZ(DINOS.d, px, py, 0, pn[0] * 1.6 * R + cx < px, 0, pv[2] * R + 4, .42);
     }
 
-    // ── snake way: a pseudo-3D run along the snake's back to king kai's planet
+    // ── snake way: the first half seen from behind down the snake's back, then the road twists and the camera swings side-on
     let snk = null;
-    const SNAKE_LEN = 420, SNAKE_SPEED = 7.5, LANE = .52, HELL_T = 3.2;
+    const LANE = .52, SNL = [0, 420, 380, 400, 470][SNV];
     const SN = { edge: 0x3a1e0c, rim: 0x8a4a18, ridge: 0xf2c060, ridgeHi: 0xfff0b0, road: 0xf2c84a, scale: 0xc87a28, scaleHi: 0xffe28a, spine: 0xd89a34 };
     const bendAt = s => 1.25 * Math.sin(s * .045) + .6 * Math.sin(s * .017 + 1);   // the road winds left and right
+    const roadH = s => .9 * Math.sin(s * .11) + .55 * Math.sin(s * .037 + 2);   // v2: the snake's back rolls up and down
+    const mixC = (a, b, k) => { k = Math.max(0, Math.min(1, k)); const c = sh => Math.round(((a >> sh) & 255) + (((b >> sh) & 255) - ((a >> sh) & 255)) * k); return (c(16) << 16) | (c(8) << 8) | c(0); };
+    const sblit = (spr, x, y, k = 1, flip = false, a = 1) => { x = Math.round(x); y = Math.round(y); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const c = spr.col[j * spr.w + (flip ? spr.w - 1 - i : i)]; if (c < 0) continue; for (let p = 0; p < k; p++) for (let q = 0; q < k; q++) st.px(x + i * k + p, y + j * k + q, c, a); } };
+    const pay = m => lapValue() * mult() * m;
+    const sayAt = (s, x, y, kind) => floats.push({ x, y, s, life: 1.1, [kind || 'n']: true });
+    const SNAKE_HELP = 'knocked into other world — run snake way back to king kai! ← → (or tap the sides) to switch lanes, ↑ / space (or tap the middle) to jump: a jump also blasts the ghost ahead — halfway the road twists side-on: then swipe up (or ↑ / space) to jump, → dash, ← brake'
+    const HFIL_HOW = 'he floats back up on his own — tap to hurry';
     function startSnake() {
-      const gaps = [], orbsS = [];
-      const spikes = []; let set = 0;
-      for (let s = 30; s < SNAKE_LEN - 20; set++) {
-        const next = s + 26 + Math.random() * 18; gaps.push([s, s + 2.2]);
-        const lane = [-1, 0, 1][(Math.random() * 3) | 0]; for (let k = 0; k < 4; k++) orbsS.push({ s: s + 6 + k * 2.4, u: lane * LANE, set });
-        // spines on the snake's back past the orbs, never in the orb lane: change lanes or jump them
-        for (let q = s + 18; q < next - 5; q += 7 + Math.random() * 5) { const l = [-1, 0, 1].filter(v => v !== lane || q > s + 15)[(Math.random() * 2.99) | 0]; spikes.push({ s: q, u: (l ?? 0) * LANE }); }
+      SNV = 1; const R = Math.random, gaps = [], orbs = [], spikes = [], ghosts = [], nimbi = [], split = SNL * .5, end = SNL - 24;
+      for (let s = 30, set = 0; s < end; set++) {
+        const v = s < split ? 1 : 2, next = s + (v === 2 ? 22 : 26) + R() * 16;
+        const w = v === 1 ? 2.8 : R() < .3 ? 5.4 : 3; gaps.push([s, s + w]);
+        const lane = [-1, 0, 1][(R() * 3) | 0];
+        if (v === 2) { for (let k = 0; k < 5; k++) orbs.push({ s: s - 1.2 + k * (w + 2.4) / 4, h: 1.2 + Math.sin(k / 4 * Math.PI) * (w > 4 ? 2.6 : 1.8), set }); for (let k = 0; k < 4; k++) orbs.push({ s: s + w + 4 + k * 1.4, h: .9, set: set + .5 }); }   // an arc of orbs over each gap, a run on the far side
+        else for (let k = 0; k < 4; k++) orbs.push({ s: s + 6 + k * 2.4, u: lane * LANE, set });
+        // spines past the orbs, never in the orb lane: change lanes or jump them
+        for (let q = s + (v === 2 ? w + 10 : 18); q < next - 5; q += 7 + R() * 5) { const l = [-1, 0, 1].filter(x => x !== lane || q > s + 15)[(R() * 2.99) | 0]; spikes.push({ s: q, u: (l ?? 0) * LANE }); }
         s = next;
       }
-      // lost souls drifting over the road (tap to blast), and two flying nimbus clouds just past a gap
-      const ghosts = []; for (let q = 22; q < SNAKE_LEN - 15; q += 11 + Math.random() * 9) ghosts.push({ s: q, u: (Math.random() * 2 - 1) * LANE * 1.2, h: 1.6 + Math.random() * 1.6, ph: Math.random() * 6 });
-      const nimbi = [gaps[Math.floor(gaps.length * .3)], gaps[Math.floor(gaps.length * .7)]].filter(Boolean).map(g => ({ s: g[1] + 3, u: [-1, 0, 1][(Math.random() * 3) | 0] * LANE }));
-      snk = { dist: 0, len: SNAKE_LEN, lane: 0, x: 0, jumpT: -9, fall: 0, stun: -9, nimbus: /nimbus/.test(HASH) ? st.t + 30 : 0, gaps, orbs: orbsS, spikes, ghosts, nimbi, shots: [], sets: {}, done: 0, got: 0, blasted: 0 };
+      for (let q = 22; q < end + 8; q += 12 + R() * 8) { const v = q < split ? 1 : 2; if (v === 2 && gaps.some(g => q > g[0] - 4 && q < g[1] + 3)) continue; ghosts.push({ s: q, u: (R() * 2 - 1) * LANE * 1.2, h: v === 2 ? 1.7 + R() * .9 : 1.6 + R() * 1.6, ph: R() * 6 }); }
+      nimbi.push(...[gaps[Math.floor(gaps.length * .15)], gaps[Math.floor(gaps.length * .35)]].filter(Boolean).map(g => ({ s: g[1] + 3, u: [-1, 0, 1][(R() * 3) | 0] * LANE })));   // the clouds only fly the behind-view half
+      snk = { split, dist: 0, len: SNL, lane: 0, x: 0, jumpT: -9, jq: 0, edge: 0, fall: 0, hf: null, stun: -9, nimbus: /nimbus/.test(HASH) ? st.t + 30 : 0, gaps, orbs, spikes, ghosts, nimbi, shots: [], sets: {}, done: 0, got: 0, blasted: 0,
+        yy: 0, vy: 0, hold: 0, ground: 0, dashT: 0, brakeT: 0, ptr: null, t0: st.t };
+    }
+    function snakeFall(t, frac, msg) {
+      const loss = Math.round(S.pl * frac); S.pl -= loss; snk.fall = t; snk.loss = loss; snk.hf = { t0: t, up: 0, m: 0 }; snk.edge = 0; snk.leap = null; snk.vy = 0;
+      shake = .6; ui.hell && ui.hell(true); ach('hfil'); ui.sfx && ui.sfx('boom');
+      ui.event((msg || 'fell into HFIL') + (loss > 0 ? ` — lost ${fmtShort(loss)} power (${Math.round(frac * 100)}%)` : '') + '. ' + HFIL_HOW); save();
+    }
+    function snakeRise(t, back) {   // out of HFIL and back on the road just past the gap he fell through
+      snk.fall = 0; snk.hf = null; ui.hell && ui.hell(false); snk.stun = -9; snk.jumpT = -9; snk.yy = 0; snk.vy = 0;
+      if (back > 0) { S.pl += back; sayAt('+' + fmtShort(back), st.W / 2, st.H * .45, 'gold'); }
+      const off = SNV === 1 ? 1.6 : 0, here = snk.dist + off, g = snk.gaps.find(g => here >= g[0] - 1.5 && here <= g[1] + 1);
+      if (g) snk.dist = g[1] + .4 - off;
+    }
+    function blastGhost(g, x, y) {
+      g.dead = true; snk.blasted++; x = x ?? g.sx ?? st.W / 2; y = y ?? g.sy ?? st.H / 3; snk.shots.push({ x, y, t0: st.t }); burst(x, y, [0xffffff, 0xdff4ff, 0xfff3a0], 18, 120);
+      gain(pay(3), x, y - 8, true); ui.sfx && ui.sfx('beam');
+    }
+    function snakeWin(t) { snk.done = t; ach('snakeway'); snk.nimbus = 0; const g = Math.max(rate() * 120, pay(80)); gain(g, st.W / 2, st.H * .4, true); ui.event(`made it to king kai's planet at ${(t - snk.t0).toFixed(0)}s! +${fmtShort(Math.round(g))}`); victory(); }
+    // ── input
+    function snakeDown(px, py) { if (SNV === 2) { snk.ptr = { x: px, y: py, t: st.t }; return; } snakeTap(px, py); }
+    function snakeUp(px, py) {   // v2: a swipe steers, a short tap blasts
+      const p = snk.ptr; snk.ptr = null; if (!p || snk.done) return;
+      if (snk.fall) { snakeTap(px, py); return; }
+      const dx = px - p.x, dy = py - p.y, len = Math.hypot(dx, dy), sw = Math.max(8, st.W * .035);
+      if (len < sw) { snakeTap(px, py); return; }
+      if (-dy > Math.abs(dx)) snakeJump2(Math.min(1.3, 1 + (len - sw) / (st.H * .6)));
+      else if (dy > Math.abs(dx)) snk.vy = Math.min(snk.vy, -22);
+      else if (dx > 0) { snk.dashT = st.t + 1; snk.brakeT = 0; } else { snk.brakeT = st.t + .8; snk.dashT = 0; }
     }
     function snakeTap(px, py) {
-      // a ghost under the finger takes a ki blast instead of a lane change
-      const g = !snk.fall && snk.ghosts.filter(g => !g.dead && g.sx !== undefined && Math.hypot(px - g.sx, py - g.sy) < g.r + 12).sort((a, b) => a.s - b.s)[0];
-      if (g) {
-        g.dead = true; snk.blasted++; snk.shots.push({ x: g.sx, y: g.sy, t0: st.t }); burst(g.sx, g.sy, [0xffffff, 0xdff4ff, 0xfff3a0], 18, 120);
-        gain(lapValue() * mult() * 3, g.sx, g.sy - g.r - 4, true); ui.sfx && ui.sfx('beam'); return;
-      }
-      const third = px / st.W;
+      const t = st.t, W = st.W;
+      if (snk.done) return;
+      if (snk.fall) { const h = snk.hf; if (h && !h.up) h.m += .5; return; }   // in hfil every tap hurries him back up
+      if (SNV === 2) {   // a tap blasts the ghost under the finger, or failing that the nearest one on screen
+        const live = snk.ghosts.filter(g => !g.dead && g.sx !== undefined && g.sx > 0 && g.sx < W), g = live.filter(g => Math.hypot(px - g.sx, py - g.sy) < g.r + 14)[0] || live.sort((a, b) => a.s - b.s)[0];
+        if (g) blastGhost(g); return; }
+      const third = px / W;
       if (third < .33) snakeMove(-1); else if (third > .67) snakeMove(1); else snakeJump();
     }
-    const snakeMove = d => { if (!snk.fall && !snk.done) snk.lane = Math.max(-1, Math.min(1, snk.lane + d)); };
-    const snakeJump = () => { if (!snk.fall && !snk.done && st.t - snk.jumpT > .6) { snk.jumpT = st.t; ui.sfx && ui.sfx('tap'); } };
+    const snakeMove = d => { if (snk.fall) return; if (!snk.done) snk.lane = Math.max(-1, Math.min(1, snk.lane + d)); };
+    function snakeJump() {
+      const t = st.t; if (snk.done) return;
+      if (snk.fall) { snakeTap(st.W / 2, st.H / 2); return; }
+      if (SNV === 2) { snakeJump2(1); snk.hold = 1; return; }
+      if (t - snk.jumpT < .6) { snk.jq = t; return; }   // pressed just before landing: he jumps the moment he lands
+      snk.jumpT = t; snk.jq = 0; ui.sfx && ui.sfx('tap');
+      if (SNV === 1) { const g = snk.ghosts.filter(g => !g.dead && g.s > snk.dist + 1.6 && g.s - snk.dist < 18).sort((a, b) => a.s - b.s)[0]; if (g) blastGhost(g); }   // the jump's ki burst takes the ghost ahead: no tap has to aim
+    }
+    function snakeJump2(str) { const t = st.t; if (snk.fall || snk.done) return; if (snk.yy > -.3 && (snk.yy <= .01 || t - snk.ground < .12) && t - snk.jumpT > .15) { snk.vy = 13 * str; snk.jumpT = t; snk.yy = Math.max(0, snk.yy) + .01; ui.sfx && ui.sfx('tap'); } else snk.jq = t; }
     addEventListener('keydown', e => {
       if (!playing || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, [contenteditable]')) return;
       const k = e.key.toLowerCase();
-      if (S.world === 3 && snk) { if (k === 'arrowleft' || k === 'a') snakeMove(-1); else if (k === 'arrowright' || k === 'd') snakeMove(1); else if (k === 'arrowup' || k === 'w' || k === ' ') snakeJump(); else return; }
+      if (S.world === 3 && snk) {
+        if (SNV === 2 && !snk.fall) { if (k === 'arrowleft' || k === 'a') { snk.brakeT = st.t + .8; snk.dashT = 0; } else if (k === 'arrowright' || k === 'd') { snk.dashT = st.t + 1; snk.brakeT = 0; } else if (k === 'arrowdown' || k === 's') snk.vy = Math.min(snk.vy, -22); else if (k === 'arrowup' || k === 'w' || k === ' ') snakeJump(); else return; }
+        else if (k === 'arrowleft' || k === 'a') snakeMove(-1); else if (k === 'arrowright' || k === 'd') snakeMove(1); else if (k === 'arrowup' || k === 'w' || k === ' ') snakeJump(); else return; }
       else if (k === ' ') { e.target.blur?.(); const q = kidScreen(14); onClick(q.x + 999, q.y + 999); }   // space trains and hops like a click; held space doesn't repeat
       else return;
       e.preventDefault();
     });
+    addEventListener('keyup', e => { if (snk && (e.key === ' ' || e.key.toLowerCase() === 'arrowup' || e.key.toLowerCase() === 'w')) snk.hold = 0; });   // v2: let go to cut the jump short
+    // ── update
     const airborne = t => t - snk.jumpT < .6 || t < snk.nimbus;
     function updateSnake(t, dt) {
       if (!snk) startSnake();
       if (snk.done) { if (t - snk.done > 2.5) namekUntil = t; return; }
-      if (snk.fall) { if (t - snk.fall > HELL_T) { snk.fall = 0; ui.hell && ui.hell(false); const g = snk.gaps.find(g => snk.dist + 1.6 >= g[0] - .5 && snk.dist + 1.6 <= g[1] + .5); if (g) snk.dist = g[1] + .2; } return; }
-      snk.x += (snk.lane * LANE - snk.x) * Math.min(1, dt * 10);
-      if (t - snk.stun > .7) snk.dist += SNAKE_SPEED * (1 + Math.min(1, snk.dist / snk.len) * .5) * (t < snk.nimbus ? 1.3 : 1) * dt * (1 + sprint * .4);   // faster the closer king kai gets
-      const here = snk.dist + 1.6;
-      if (!airborne(t) && snk.gaps.some(g => here > g[0] && here < g[1])) {
-        // hell takes all of your power (upgrades and your best stay)
-        const loss = Math.round(S.pl); S.pl -= loss; snk.fall = t; snk.loss = loss; shake = .6; ui.hell && ui.hell(true); ach('hfil'); ui.sfx && ui.sfx('boom');
-        ui.event(loss > 0 ? `fell into HFIL — lost all ${fmtShort(loss)} power` : 'fell into HFIL — climbing back up…'); save();
-      }
-      for (const sp of snk.spikes) if (!sp.hit && !airborne(t) && Math.abs(sp.s - here) < .6 && Math.abs(sp.u - snk.x) < .3) {
+      if (snk.fall) { updHfil(t, dt); return; }
+      if (SNV === 1 && snk.dist >= snk.split && !airborne(t)) { SNV = 2; snk.yy = 0; snk.vy = 0; snk.lane = 0; snk.x = 0; snk.nimbus = 0; shake = .3; sayAt('THE ROAD TWISTS', st.W / 2, st.H * .35, 'gold'); ui.event('the road twists — side view now: swipe up (or ↑ / space) to jump, hold for higher; swipe → to dash, ← to brake; tap ghosts to blast them', 5000); }   // halfway, the camera swings round to the side
+      if (SNV === 2) upd2(t, dt); else upd3D(t, dt);
+      if (!snk.fall && !snk.done && snk.dist >= snk.len) snakeWin(t);
+    }
+    function grabOrb(o, t) {
+      o.got = true; snk.got++; gain(pay(2), st.W / 2, st.H * .7, true); ui.sfx && ui.sfx('coin');   // every orb buys distance from the ghosts
+      if ((snk.sets[o.set] = (snk.sets[o.set] || 0) + 1) === (SNV === 2 && o.set % 1 === 0 ? 5 : 4)) { gain(pay(8), st.W / 2, st.H * .55, true); sayAt('PERFECT', st.W / 2, st.H * .5, 'gold'); ui.fx && ui.fx('star'); }
+    }
+    function upd3D(t, dt) {   // the run along the back, seen from behind
+      snk.x += (snk.lane * LANE - snk.x) * Math.min(1, dt * 14);
+      if (snk.jq && t - snk.jumpT >= .6) { const q = snk.jq; snk.jq = 0; if (t - q < .2) snakeJump(); }
+      if (t - snk.stun > .45) snk.dist += 10.5 * (1 + Math.min(1, snk.dist / snk.len) * .5) * (t < snk.nimbus ? 1.3 : 1) * dt * (1 + sprint * .4);   // faster the closer king kai gets
+      const here = snk.dist + 1.6, air = airborne(t);
+      // coyote time: a few frames over the edge before he drops, so a late jump still clears it
+      if (!air && snk.gaps.some(g => here > g[0] && here < g[1])) { snk.edge = snk.edge || t; if (t - snk.edge > .14) { snakeFall(t, .2); snk.loss0 = snk.loss; return; } } else snk.edge = 0;
+      for (const sp of snk.spikes) if (!sp.hit && !air && Math.abs(sp.s - here) < .6 && Math.abs(sp.u - snk.x) < .3) {
         sp.hit = true; snk.stun = t; shake = .4; ui.sfx && ui.sfx('boom'); for (const o of snk.orbs) if (o.s > here - 12 && o.s < here) snk.sets[o.set] = -9;   // tripping breaks the streak
-        floats.push({ x: st.W / 2, y: st.H * .6, s: 'OUCH', life: 1, red: true });
+        sayAt('OUCH', st.W / 2, st.H * .6, 'red');
       }
       for (const nb of snk.nimbi) if (!nb.got && Math.abs(nb.s - here) < .7 && Math.abs(nb.u - snk.x) < .35) { nb.got = true; snk.nimbus = t + 6; ui.event('flying nimbus! — over every gap for 6s'); ui.sfx && ui.sfx('coin'); ui.fx && ui.fx('star'); }
-      for (const g of snk.ghosts) if (!g.dead && !g.passed && g.s < here) { g.passed = true; if (!airborne(t) && Math.abs(g.u + Math.sin(t + g.ph) * .15 - snk.x) < .45) { snk.stun = t; shake = .3; floats.push({ x: st.W / 2, y: st.H * .6, s: 'BOO', life: 1, red: true }); } }
-      for (const o of snk.orbs) if (!o.got && Math.abs(o.s - here) < .7 && (t < snk.nimbus || Math.abs(o.u - snk.x) < .3)) {
-        o.got = true; snk.got++; gain(lapValue() * mult() * 2, st.W / 2, st.H * .7, true); ui.sfx && ui.sfx('coin');
-        if ((snk.sets[o.set] = (snk.sets[o.set] || 0) + 1) === 4) { const g = lapValue() * mult() * 8; gain(g, st.W / 2, st.H * .55, true); floats.push({ x: st.W / 2, y: st.H * .5, s: 'PERFECT', life: 1.2, gold: true }); ui.fx && ui.fx('star'); }
-      }
-      if (snk.dist >= snk.len) { snk.done = t; ach('snakeway'); snk.nimbus = 0; const g = Math.max(wrate() * 120, lapValue() * mult() * 80); gain(g, st.W / 2, st.H * .4, true); ui.event(`made it to king kai's planet! +${fmtShort(Math.round(g))}`); victory(); }
+      for (const g of snk.ghosts) if (!g.dead && !g.passed && g.s < here) { g.passed = true; if (!air && Math.abs(g.u + Math.sin(t + g.ph) * .15 - snk.x) < .45) { snk.stun = t; shake = .3; sayAt('BOO', st.W / 2, st.H * .6, 'red'); } }
+      for (const o of snk.orbs) if (!o.got && Math.abs(o.s - here) < .7 && (t < snk.nimbus || Math.abs(o.u - snk.x) < .3)) grabOrb(o, t);
     }
-    // HFIL: you drop past the sign onto a ledge over the lava, lose your power, and fly back up to the road
-    function drawHell(t, f, k) {
-      const W = st.W, H = st.H, px = (x, y, c) => st.px(x, y, c), lava = Math.round(H * .8);
-      for (let y = 0; y < lava; y++) for (let x = 0; x < W; x++) { const q = y / lava + (bayer(x, y) - .5) * .18; px(x, y, q < .35 ? 0x1e0404 : q < .6 ? 0x3a0808 : q < .82 ? 0x5e0e0a : 0x8a1c0c); }
-      // jagged rock spires against the glow
-      for (let x = 0; x < W; x++) { const h = H * (.22 + .12 * Math.sin(x * .05) + .08 * Math.sin(x * .13 + 2) + .05 * Math.abs(Math.sin(x * .41))); for (let y = Math.round(lava - h); y < lava; y++) px(x, y, (x + y) % 5 ? 0x160303 : 0x240606); }
-      // the lava sea, rolling
-      for (let y = lava; y < H; y++) for (let x = 0; x < W; x++) { const w = Math.sin(x * .09 + t * 3 + y * .4) + Math.sin(x * .031 - t * 2), d = (y - lava) / (H - lava); px(x, y, w > 1.1 ? 0xfff0a0 : w > .3 - d ? 0xffa12a : w > -.6 ? 0xe85a14 : 0xb0300c); }
-      // rising embers
-      for (let i = 0; i < 40; i++) { const sd = i * 97.31, ex = (sd * 13.7) % W + Math.sin(t * 2 + i) * 4, ey = H - ((t * (20 + i % 7 * 6) + sd) % H); px(ex, ey, i % 3 ? 0xffa12a : 0xffe08a); }
-      // the ledge he lands on
-      const lx = Math.round(W / 2), ly = Math.round(H * .66), lw = Math.round(Math.min(W * .22, 30 * k));
-      for (let y = 0; y < lava - ly + 4; y++) { const half = lw * (1 - y / (lava - ly + 4) * .55); for (let x = -half; x <= half; x++) px(lx + x, ly + y, y < 2 ? 0xc0441a : y < 4 ? 0x7a2a12 : x > half * .4 ? 0x120202 : 0x3a0e0a); }
-      // the HFIL sign on its posts, left of the ledge
-      const sk = Math.max(2, k), sw = 19 * sk, sh = 9 * sk, sx = Math.round(lx - lw - sw * .6), sy = Math.round(ly - sh - 10 * sk);
-      for (const pxo of [3 * sk, sw - 4 * sk]) for (let y = sy + sh; y < ly + 6 * sk; y++) for (let x = 0; x < sk; x++) px(sx + pxo + x, y, 0x3a1e0c);
-      for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) px(sx + x, sy + y, x < sk || y < sk || x >= sw - sk || y >= sh - sk ? 0x2a1406 : (y % (3 * sk)) < sk / 2 ? 0x7a4a1e : 0x9a6028);
-      const tw = (4 * 4 - 1) * sk; for (let j = 0; j < 5; j++) for (let i = 0; i < 15; i++) { if (HFIL_GLYPH[j][i] === '1') for (let a = 0; a < sk; a++) for (let b = 0; b < sk; b++) px(sx + Math.round((sw - tw) / 2) + i * sk + a, sy + 2 * sk + j * sk + b, 0xffd23a); }
-      // him: falling, landing, then flying back up
-      const set = HERO().forms[S.form], fall = Math.min(1, (f - .12) / .3), up = Math.max(0, (f - .72) / .28), spr = up > 0 ? set.pose : set.idle;
-      const y0 = -spr.h * k, y1 = ly - spr.h * k + k, oy = Math.round(y0 + (y1 - y0) * (1 - (1 - fall) ** 2) - up * up * H * 1.2), ox = Math.round(lx - spr.w * k / 2);
-      if (fall >= 1 && up === 0 && f < .5) shake = Math.max(shake, .25);
-      if (up > 0) for (let y = oy + spr.h * k; y < ly; y++) for (let x = -3 * k; x <= 3 * k; x++) if (bayer(ox + spr.w * k / 2 + x, y) < .6 - Math.abs(x) / (4 * k)) px(ox + spr.w * k / 2 + x, y, 0xfff3c0);   // ki trail
-      for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const c = spr.col[j * spr.w + i]; if (c < 0) continue; for (let a = 0; a < k; a++) for (let b = 0; b < k; b++) px(ox + i * k + a, oy + j * k + b, c); }
-      if (snk.loss && f > .42 && f < .45) floats.push({ x: lx, y: ly - spr.h * k - 10, s: '-' + fmtShort(snk.loss), life: 1.4, red: true }), snk.loss = 0;
+    function upd2(t, dt) {   // v2: side-on, a real jump arc
+      const gapAt = s => snk.gaps.find(g => s > g[0] + .15 && s < g[1] - .15), sunk = snk.yy < -.35 && gapAt(snk.dist);
+      const v = 8.5 * (1 + Math.min(1, snk.dist / snk.len) * .35) * (t < snk.dashT ? 1.6 : t < snk.brakeT ? .5 : 1) * (t - snk.stun < .5 ? .25 : 1) * (1 + sprint * .3);
+      if (!sunk) snk.dist += v * dt;   // once he's dropped into a gap he falls straight down
+      snk.vy -= (snk.hold && snk.vy > 0 && t - snk.jumpT < .4 ? 17 : 42) * dt; snk.yy += snk.vy * dt;
+      if (snk.yy <= 0 && !gapAt(snk.dist) && snk.yy > -.6) { snk.yy = 0; snk.vy = 0; snk.ground = t; if (snk.jq && t - snk.jq < .18) { snk.jq = 0; snakeJump2(1); } }
+      if (snk.yy < -3.2) { snakeFall(t, .15); snk.loss0 = snk.loss; return; }
+      const hy = snk.yy + 1;
+      for (const sp of snk.spikes) if (!sp.hit && Math.abs(sp.s - snk.dist) < .45 && snk.yy < .75 && snk.yy > -.3) { sp.hit = true; snk.stun = t; shake = .4; ui.sfx && ui.sfx('boom'); sayAt('OUCH', st.W * .3, st.H * .4, 'red'); }
+      for (const g of snk.ghosts) if (!g.dead && !g.hitMe && Math.abs(g.s - snk.dist) < .5 && Math.abs(g.h + Math.sin(t * 2 + g.ph) * .3 - hy) < 1) { g.hitMe = true; snk.stun = t; shake = .3; sayAt('BOO', st.W * .3, st.H * .4, 'red'); }
+      for (const o of snk.orbs) if (!o.got && Math.abs(o.s - snk.dist) < .6 && Math.abs(o.h - hy) < 1.1) grabOrb(o, t);
+    }
+    function updHfil(t, dt) {
+      const h = snk.hf;
+      if (h.up) { if (t - h.up > .9) snakeRise(t, h.back || 0); return; }
+      h.m += dt; if (h.m >= 4) h.up = t;   // he floats back up on his own; taps hurry him
+    }
+    // ── drawing helpers
+    function kaiPlanet(kx, ky, kr, glow = true) {   // king kai's tiny planet: a green ball, a road round it, the red-roofed house
+      const px = (x, y, c) => st.px(x, y, c);
+      if (glow) for (let y = -kr - 8; y <= kr + 8; y++) for (let x = -kr - 8; x <= kr + 8; x++) { const d = Math.hypot(x, y); if (d > kr && d < kr + 8 && bayer(kx + x, ky + y) < (1 - (d - kr) / 8) * .55) px(kx + x, ky + y, 0xfff6d8); }
+      const G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e];
+      for (let y = -kr; y <= kr; y++) for (let x = -kr; x <= kr; x++) { const d = Math.hypot(x, y); if (d > kr + .3) continue; if (d > kr - .7) { px(kx + x, ky + y, 0x1f3a1a); continue; }
+        const nz = Math.sqrt(Math.max(0, 1 - (d / kr) ** 2)), l = (-x * .55 - y * .7) / kr * .8 + nz * .5 + (bayer(kx + x, ky + y) - .5) * .35, band = Math.abs((y + x * .35) - kr * .25) < Math.max(1, kr * .09);
+        px(kx + x, ky + y, band ? (l > .3 ? 0xfdfaf2 : 0xd8d2c4) : G5[Math.max(0, Math.min(5, Math.round(1 + l * 3.4)))]); }
+      if (kr > 9) { const hr = Math.max(2, kr * .28); for (let y = -hr; y <= 0; y++) for (let x = -hr; x <= hr; x++) if (x * x + y * y <= hr * hr) px(kx - kr * .35 + x, ky - kr * .4 + y, x + y < 0 ? 0xf6985a : 0xc04e26); }
+    }
+    function puffRow(off, y0, r, pal, sd, cel, deep) {   // a band of cloud puffs, lit from the upper left; off scrolls it
+      const W = st.W, step = r * 1.4, j0 = Math.floor(off / step) - 2;
+      for (let j = j0; j < j0 + W / step + 4; j++) { const cx = j * step - off, cy = y0 + Math.sin(j * 1.9 + sd) * r * .35, rr = r * (.75 + .4 * hash(j * 3.1 + sd)), yb = deep ? st.H : Math.min(st.H, cy + rr * 1.6);   // only the nearest row needs to reach the bottom
+        if (cx + rr < 0 || cx - rr > W) continue;
+        for (let y = Math.floor(cy - rr); y < yb; y++) for (let x = Math.floor(cx - rr); x <= cx + rr; x++) { const dx = x - cx, dy = y - cy; if (dy < 0 ? dx * dx + dy * dy > rr * rr : Math.abs(dx) > rr) continue;
+          const l = dy < 0 ? -(dx * .5 + dy * .9) / rr : -.5 - dy / (st.H - cy + 1), v = l + (cel ? .1 : bayer(x, y) * .3);
+          st.px(x, y, cel && dy < 0 && dx * dx + dy * dy > (rr - 1.2) ** 2 ? pal[0] : pal[v > .65 ? 3 : v > .2 ? 2 : v > -.4 || cel ? 1 : 0]); } }
+    }
+    function drawGhost(ox, gy, R, ph, t, a = 1, mean = false) {   // a lost soul: a white wisp with a curling tail and two dark eyes
+      for (let yy = -R; yy <= R * 2.2; yy++) for (let xx = -R - 2; xx <= R + 2; xx++) { const tail = yy > 0 ? R * (1 - yy / (R * 2.2)) : R, off = yy > 0 ? Math.sin(yy / R * 2 + t * 5 + ph) * R * .35 : 0, d = yy > 0 ? Math.abs(xx - off) / Math.max(.6, tail) : Math.hypot(xx, yy) / R;
+        if (d <= 1) st.px(ox + xx, gy + yy, d > .8 ? 0xb8c8dc : yy < -R * .3 && xx < 0 ? 0xffffff : 0xeef3fa, a); }
+      if (R >= 3) for (const ex of [-.35, .35]) for (let p = 0; p < Math.max(1, R / 4); p++) for (let q = 0; q < Math.max(1, R / 3); q++) st.px(ox + ex * R + p, gy - R * .15 + q + (mean && q === 0 && (ex < 0 ? p === 0 : p > 0) ? 1 : 0), mean ? 0x8a0a14 : 0x2a2440, a);
     }
     // kinto'un: a puffy yellow cloud centred on (x, y), w wide
     function drawNimbus(x, y, w) {
@@ -2513,48 +2580,54 @@ GAMES.push({
         for (let yy = -R - 1; yy <= R + 1; yy++) for (let xx = -R - 1; xx <= R + 1; xx++) { const d = Math.hypot(xx, yy) / Math.max(1, R); if (d > 1) continue; st.px(cx0 + xx, cy0 + yy, !pass ? 0x7a3e06 : yy < -R * .35 && d < .65 ? 0xfffbe0 : yy > R * .35 ? 0xeea21e : 0xffe36a); } }
     }
     const HFIL_GLYPH = ['101011101110100', '101010000100100', '111011000100100', '101010000100100', '101010001110111'];
+    function heroBack(t, x, y, k) { const set = HERO().backs[S.form] || HERO().backs[0], spr = set[Math.floor(t * 8) % 2]; sblit(spr, x - spr.w * k / 2, y - spr.h * k, k); return spr; }
+    function heroSide(t, x, y, k, still) { const run = HERO().forms[S.form].run, spr = still ? HERO().forms[S.form].pose : run[Math.floor(t * 10) % run.length]; sblit(spr, x - spr.w * k / 2, y - spr.h * k, k); return spr; }
+    function hud(t, dt, prog, col) {
+      const W = st.W, H = st.H, bw = W - 40; for (let x = 0; x < bw; x++) for (let y = 0; y < 2; y++) st.px(20 + x, H - 3 + y, x < bw * prog ? col[0] : col[1]);
+      fx.step(st, dt);
+      if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); }
+      for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(f.s, x + ox, y + oy, 0xffffff); st.text(f.s, x, y, f.red ? 0xd8241e : f.gold ? 0xb07a10 : 0x1d1030); }
+      for (let i = floats.length - 1; i >= 0; i--) if (floats[i].life <= 0) floats.splice(i, 1);
+    }
+    const label = (s, x, y, c = 0x1d1030, o = 0xffffff) => { x = Math.round(x - st.textWidth(s) / 2); y = Math.round(y); for (const [a, b] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(s, x + a, y + b, o); st.text(s, x, y, c); };
+    function shotsDraw(t, x0, y0) {   // ki blasts: a bright streak from his hands to the ghost
+      for (const sh of snk.shots) { const a = (t - sh.t0) / .18; if (a > 1) continue; for (let i = 0; i <= 1; i += 1 / Math.max(20, Math.hypot(sh.x - x0, sh.y - y0))) if (i > a - .5 && i < a + .05) for (let w = -1; w <= 1; w++) st.px(x0 + (sh.x - x0) * i + w, y0 + (sh.y - y0) * i, w ? 0xfff3a0 : 0xffffff); }
+      snk.shots = snk.shots.filter(sh => t - sh.t0 < .2);
+    }
     function drawSnake(t, dt) {
-      const W = st.W, H = st.H, hz = Math.round(H * (W / H < .8 ? .4 : .36)), RW = W * (W / H < .8 ? .6 : .42), mix = (a, b, k) => { k = Math.max(0, Math.min(1, k)); const c = sh => Math.round(((a >> sh) & 255) + (((b >> sh) & 255) - ((a >> sh) & 255)) * k); return (c(16) << 16) | (c(8) << 8) | c(0); };
-      const dist = snk.dist, prog = Math.min(1, dist / snk.len), px = (x, y, c) => st.px(x, y, c);
-      // other world's sky
-      for (let y = 0; y < hz + 4; y++) for (let x = 0; x < W; x++) px(x, y, mix(0xffe9c8, 0xf6b86a, y / hz + (bayer(x, y) - .5) * .1));
-      // king kai's planet at the end of the road, growing as you close in
-      const kr = Math.round(5 + prog * Math.min(W, H) * .16), kx = Math.round(W / 2 + (bendAt(dist + 60) - bendAt(dist) - snk.x) * RW * .08), ky = Math.round(hz - kr * .7 - 4);
-      for (let y = -kr - 8; y <= kr + 8; y++) for (let x = -kr - 8; x <= kr + 8; x++) { const d = Math.hypot(x, y); if (d > kr && d < kr + 8 && bayer(kx + x, ky + y) < (1 - (d - kr) / 8) * .55) px(kx + x, ky + y, 0xfff6d8); }
-      const G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e];
-      for (let y = -kr; y <= kr; y++) for (let x = -kr; x <= kr; x++) { const d = Math.hypot(x, y); if (d > kr + .3) continue; if (d > kr - .7) { px(kx + x, ky + y, 0x1f3a1a); continue; }
-        const nz = Math.sqrt(Math.max(0, 1 - (d / kr) ** 2)), l = (-x * .55 - y * .7) / kr * .8 + nz * .5 + (bayer(kx + x, ky + y) - .5) * .35, band = Math.abs((y + x * .35) - kr * .25) < Math.max(1, kr * .09);
-        px(kx + x, ky + y, band ? (l > .3 ? 0xfdfaf2 : 0xd8d2c4) : G5[Math.max(0, Math.min(5, Math.round(1 + l * 3.4)))]); }
-      if (kr > 9) { const hr = Math.max(2, kr * .28); for (let y = -hr; y <= 0; y++) for (let x = -hr; x <= hr; x++) if (x * x + y * y <= hr * hr) px(kx - kr * .35 + x, ky - kr * .4 + y, x + y < 0 ? 0xf6985a : 0xc04e26); }
-      // the clouds of other world, below and beyond the road
-      for (let y = hz + 3; y < H; y++) for (let x = 0; x < W; x++) px(x, y, mix(0xe8923a, 0xb0521e, (y - hz) / (H - hz) + (bayer(x, y) - .5) * .12));
-      drawSea(t, false);
-      // the road: the snake's yellow back in perspective, crescent scales and a raised border down both sides
-      const rows = [];
+      const h = snk.hf, fadeIn = snk.fall && t - h.t0 < .35;
+      if (!snk.fall || fadeIn) (SNV === 2 ? draw2 : draw1)(t, dt);
+      if (fadeIn) { const f = (t - h.t0) / .35; for (let y = 0; y < st.H; y++) for (let x = 0; x < st.W; x++) if (bayer(x, y) < f) st.px(x, y, 0x3a0606); }
+      else if (snk.fall) hfil3(t, h);
+      hud(t, dt, Math.min(1, snk.dist / snk.len), [0xd4a017, 0xf2e2c0]);
+      st.flush();
+    }
+    // ── the first half: behind the hero, down the snake's back
+    function road3D(t, P) {
+      const W = st.W, H = st.H, hz = P.hz, RW = P.RW, dist = snk.dist, prog = Math.min(1, dist / snk.len), px = (x, y, c) => st.px(x, y, c);
+      for (let y = 0; y < hz + 4; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.sky[0], P.sky[1], y / hz + (bayer(x, y) - .5) * .1));
+      const kr = Math.round(4 + prog * Math.min(W, H) * .16), kx = Math.round(W / 2 + (bendAt(dist + 60) - bendAt(dist) - snk.x) * RW * .08), ky = Math.round(hz - kr * .7 - 3);
+      kaiPlanet(kx, ky, kr);
+      for (let y = hz + 3; y < H; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.floor[0], P.floor[1], (y - hz) / (H - hz) + (bayer(x, y) - .5) * .12));
+      const fo = dist * 6 + t * 3;
+      puffRow(fo * .3, hz + 3, Math.max(4, W * .03), P.puff, 1); puffRow(fo * .6, hz + (H - hz) * .3, Math.max(6, W * .055), P.puff, 2); puffRow(fo, hz + (H - hz) * .7, Math.max(9, W * .09), P.puff, 3, false, true);
+      // the road: the snake's back in perspective, crescent scales and a raised border down both sides
       for (let y = H - 1; y > hz + 1; y--) {
-        const p = (y - hz) / (H - hz), z = 1.6 / p, sAt = dist + z, w = RW * p, cxr = W / 2 + (bendAt(sAt) - bendAt(dist) - snk.x) * w;
-        rows.push({ y, z, s: sAt, w, cx: cxr });
-        if (snk.gaps.some(g => sAt > g[0] && sAt < g[1])) { for (let o = -w; o <= w; o++) if ((Math.round(o) + y) % 3 === 0) px(cxr + o, y, 0x7a1a10); continue; }   // a gap: hell glows below
-        const v = sAt * 3.2;
+        const p = (y - hz) / (H - hz), z = 1.6 / p, sAt = dist + z, w = RW * p, cxr = W / 2 + (bendAt(sAt) - bendAt(dist) - snk.x) * w, v = sAt * 3.2;
+        if (snk.gaps.some(g => sAt > g[0] && sAt < g[1])) { for (let o = -w; o <= w; o++) { const q = bayer(cxr + o, y), fl = Math.sin(o * .3 + t * 9 + y) > .6; px(cxr + o, y, fl ? 0xffa12a : q < .5 ? 0x8a1408 : 0x3a0404); } continue; }   // a gap: HFIL glows red below
         for (let o = -w - 2; o <= w + 2; o++) { const u = o / w, au = Math.abs(u); let col;
-          if (au > 1) col = au < 1 + 2.5 / w ? SN.edge : null;
-          else if (au > .93) col = SN.rim;
-          else if (au > .82) col = Math.floor(v * 2) % 2 ? SN.ridge : SN.ridgeHi;
-          else if (au > .79) col = SN.rim;
-          else { const row = Math.floor(v), fv = v - row, su = u * 4.2 + (row % 2) * .5, fu = su - Math.floor(su), arc = Math.pow((fu - .5) * 2, 2) * .55; col = fv < arc + .12 && fv > arc ? SN.scale : fv < arc + .2 && fv > arc + .12 ? SN.scaleHi : au < .03 ? SN.spine : SN.road; }
-          if (col) px(cxr + o, y, mix(col, 0xf6b86a, Math.max(0, .55 - p) * .9)); } }
-      // ki orbs and spines over the road, far to near
+          if (au > 1) col = au < 1 + 2.5 / w ? P.edge : null;
+          else if (au > .93) col = P.rim;
+          else if (au > .82) col = Math.floor(v * 2) % 2 ? P.ridge : P.ridgeHi;
+          else if (au > .79) col = P.rim;
+          else { const row = Math.floor(v), fv = v - row, su = u * 4.2 + (row % 2) * .5, fu = su - Math.floor(su), arc = Math.pow((fu - .5) * 2, 2) * .55; col = fv < arc + .12 && fv > arc ? P.scale : fv < arc + .2 && fv > arc + .12 ? P.scaleHi : au < .03 ? P.spine : P.road; }
+          if (col) px(cxr + o, y, mixC(col, P.sky[1], Math.max(0, .55 - p) * .9)); } }
+      // orbs, spines, clouds and ghosts, far to near
       for (const g of snk.ghosts) g.sx = undefined;
-      const things = snk.orbs.filter(o => !o.got).concat(snk.spikes.map(sp => ({ ...sp, spike: true })), snk.nimbi.filter(nb => !nb.got).map(nb => ({ ...nb, cloud: true })), snk.ghosts.filter(g => !g.dead).map(g => ({ s: g.s, u: g.u + Math.sin(t + g.ph) * .15, ghost: g }))).filter(o => o.s - dist > 1.2 && o.s - dist < 40).sort((a, b) => b.s - a.s);
+      const things = snk.orbs.filter(o => !o.got).concat(snk.spikes.map(sp => ({ ...sp, spike: true })), snk.nimbi.filter(nb => !nb.got).map(nb => ({ ...nb, cloud: true })), snk.ghosts.filter(g => !g.dead).map(g => ({ s: g.s, u: g.u + Math.sin(t + g.ph) * .15, ghost: g })), SNV === 4 ? [{ s: snk.palS, u: -1.75, palace: true }] : []).filter(o => o.s - dist > 1.2 && o.s - dist < (o.palace ? 90 : 40)).sort((a, b) => b.s - a.s);
       for (const o of things) { const z = o.s - dist, p = 1.6 / z, y = hz + p * (H - hz), w = RW * p, cxr = W / 2 + (bendAt(o.s) - bendAt(dist) - snk.x) * w, r = Math.max(1.5, 7 * p * (RW / 130)), ox = cxr + o.u * w;
-        if (o.ghost) {   // a lost soul: a white wisp with a curling tail and two dark eyes
-          const g = o.ghost, R = Math.max(2, r * 1.5), gy = y - r * g.h * 2.4 + Math.sin(t * 3 + g.ph) * r * .4; g.sx = ox; g.sy = gy; g.r = R;
-          for (let yy = -R; yy <= R * 2.2; yy++) for (let xx = -R - 2; xx <= R + 2; xx++) { const tail = yy > 0 ? R * (1 - yy / (R * 2.2)) : R, off = yy > 0 ? Math.sin(yy / R * 2 + t * 5 + g.ph) * R * .35 : 0, d = yy > 0 ? Math.abs(xx - off) / Math.max(.6, tail) : Math.hypot(xx, yy) / R;
-            if (d <= 1) px(ox + xx, gy + yy, d > .8 ? 0xb8c8dc : yy < -R * .3 && xx < 0 ? 0xffffff : 0xeef3fa); }
-          if (R >= 3) for (const ex of [-.35, .35]) for (let a = 0; a < Math.max(1, R / 4); a++) for (let b = 0; b < Math.max(1, R / 3); b++) px(ox + ex * R + a, gy - R * .15 + b, 0x2a2440);
-          continue; }
-        if (o.cloud) {   // the flying nimbus, bobbing over its lane
-          drawNimbus(ox, y - r * 3 + Math.sin(t * 3) * r * .3, r * 2.2); continue; }
+        if (o.ghost) { const g = o.ghost, R = Math.max(2, r * 1.5), gy = y - r * g.h * 2.4 + Math.sin(t * 3 + g.ph) * r * .4; g.sx = ox; g.sy = gy; g.r = R; drawGhost(ox, gy, R, g.ph, t); continue; }
+        if (o.cloud) { drawNimbus(ox, y - r * 3 + Math.sin(t * 3) * r * .3, r * 2.2); continue; }
         if (o.spike) {   // a cluster of three spines, shaded on the right
           for (const [dx, hk, wk] of [[-.9, 1.6, .55], [.9, 1.6, .55], [0, 2.6, .7]]) { const hh = r * hk * 1.3, bw = r * wk * 1.3, bx = ox + dx * r;
             for (let yy = 0; yy <= hh; yy++) { const half = bw * (1 - yy / hh); for (let xx = -half; xx <= half; xx++) px(bx + xx, y - yy, Math.abs(xx) > half - 1 ? SN.edge : xx > 0 ? 0xa84a18 : yy > hh * .6 ? 0xffe0a0 : 0xe07a2a); } }
@@ -2562,23 +2635,79 @@ GAMES.push({
         const oy = y - r * 2.2;
         for (let yy = -r; yy <= r; yy++) for (let xx = -r; xx <= r; xx++) { const q = Math.hypot(xx, yy) / r; if (q <= 1) px(ox + xx, oy + yy, q < .45 ? 0xffffff : q < .8 ? 0xffe08a : 0xff9a2a); } }
       // speed streaks
-      for (let i = 0; i < 10; i++) { const k = (t * 1.8 + i * .37) % 1, side = i % 2 ? -1 : 1, x0 = W / 2 + side * W * (.38 + k * .2), y0 = hz + (H - hz) * (.2 + ((i * .29) % .7)); for (let j = 0; j < 6 + k * 8; j++) px(x0 + side * j * .5, y0 + j, 0xfff3d0); }
+      for (let i = 0; i < 10; i++) { const k = (t * 1.8 + i * .37) % 1, side = i % 2 ? -1 : 1, x0 = W / 2 + side * W * (.38 + k * .2), y0 = hz + (H - hz) * (.2 + ((i * .29) % .7)); for (let j = 0; j < 6 + k * 8; j++) px(x0 + side * j * .5, y0 + j, P.streak); }
       // him, from behind
-      const k = Math.max(1, Math.round(Math.min(W, H) / 110)), set = HERO().backs[S.form] || HERO().backs[0], onNimbus = t < snk.nimbus, spr = set[onNimbus ? 0 : Math.floor(t * 8) % 2], jump = onNimbus ? (16 + Math.sin(t * 4) * 1.5) * k : t - snk.jumpT < .6 ? Math.sin((t - snk.jumpT) / .6 * Math.PI) * 18 * k : 0;
-      if (onNimbus && !snk.fall && (snk.nimbus - t > 1.5 || Math.floor(t * 8) % 2)) { for (let yy = -2 * k; yy <= 2 * k; yy++) for (let xx = -spr.w * k; xx <= spr.w * k; xx++) if ((xx / (spr.w * k)) ** 2 + (yy / (2 * k)) ** 2 <= 1 && bayer(W / 2 + xx, H - 6 + yy) < .5) px(W / 2 + xx, H - 6 + yy, 0x9a5a14);   // its shadow on the road
-        drawNimbus(W / 2, H - 4 - jump + 2 * k, spr.w * k * 2.1); }   // blinks as it runs out
-      // ki blasts: a bright streak from his hands to the ghost
-      for (const sh of snk.shots) { const a = (t - sh.t0) / .18; if (a > 1) continue; const x0 = W / 2, y0 = H - spr.h * k * .7 - jump; for (let i = 0; i <= 1; i += 1 / Math.max(20, Math.hypot(sh.x - x0, sh.y - y0))) if (i > a - .5 && i < a + .05) for (let w = -1; w <= 1; w++) px(x0 + (sh.x - x0) * i + w, y0 + (sh.y - y0) * i, w ? 0xfff3a0 : 0xffffff); }
-      snk.shots = snk.shots.filter(sh => t - sh.t0 < .2);
-      if (snk.fall) { const f = (t - snk.fall) / HELL_T; if (f < .12) { for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (bayer(x, y) < f / .12) px(x, y, 0x3a0606); } else drawHell(t, f, k); }
-      else if (t - snk.stun > .7 || Math.floor(t * 12) % 2) { const ox = Math.round(W / 2 - spr.w * k / 2), oy = Math.round(H - spr.h * k - 4 - jump); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const c = spr.col[j * spr.w + i]; if (c < 0) continue; for (let a = 0; a < k; a++) for (let b = 0; b < k; b++) px(ox + i * k + a, oy + j * k + b, c); } }
-      // distance to king kai
-      const bw = W - 40; for (let x = 0; x < bw; x++) for (let y = 0; y < 2; y++) px(20 + x, H - 3 + y, x < bw * prog ? 0xd4a017 : 0xf2e2c0);
-      fx.step(st, dt);
-      if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); }
-      for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(f.s, x + ox, y + oy, 0xffffff); st.text(f.s, x, y, f.red ? 0xd8241e : f.gold ? 0xb07a10 : 0x1d1030); }
-      for (let i = floats.length - 1; i >= 0; i--) if (floats[i].life <= 0) floats.splice(i, 1);
-      st.flush();
+      const k = Math.max(1, Math.round(Math.min(W, H) / 110)), onNimbus = t < snk.nimbus, jump = onNimbus ? (16 + Math.sin(t * 4) * 1.5) * k : t - snk.jumpT < .6 ? Math.sin((t - snk.jumpT) / .6 * Math.PI) * 18 * k : 0, base = H - 4 - (P.cel ? Math.round(H * .08) : 0);
+      if (onNimbus && (snk.nimbus - t > 1.5 || Math.floor(t * 8) % 2)) drawNimbus(W / 2, base - jump + 2 * k, 14 * k * 2.1);   // blinks as it runs out
+      if (jump > 0) for (let yy = -2 * k; yy <= 2 * k; yy++) for (let xx = -8 * k; xx <= 8 * k; xx++) if ((xx / (8 * k)) ** 2 + (yy / (2 * k)) ** 2 <= 1 && bayer(W / 2 + xx, base - 2 + yy) < .5) px(W / 2 + xx, base - 2 + yy, P.shadow);   // his shadow on the road
+      if (t - snk.stun > .45 || Math.floor(t * 12) % 2) heroBack(t, W / 2, base - jump, k);
+      shotsDraw(t, W / 2, base - 14 * k - jump);
+      return { k, base, hz };
+    }
+    const P1 = { hz: 0, RW: 0, sky: [0xfffbe2, 0xffd468], floor: [0xffe48a, 0xe0a030], puff: [0xd99a2a, 0xf4c84a, 0xffe58a, 0xfffbe0], road: 0xffd84a, scale: 0xd8901e, scaleHi: 0xfff0a0, spine: 0xe8a830, rim: 0x9a5a14, ridge: 0xffc84a, ridgeHi: 0xfff6c0, edge: 0x4a2a0a, streak: 0xfffbe0, shadow: 0xb07a1a };
+    function draw1(t, dt) {
+      const W = st.W, H = st.H; P1.hz = Math.round(H * (W / H < .8 ? .4 : .36)); P1.RW = W * (W / H < .8 ? .6 : .42);
+      road3D(t, P1);
+      if (t - snk.t0 < 6) label('LEFT RIGHT  LANES     UP OR MIDDLE  JUMP + BLAST', W / 2, 6, 0x6a3a08);
+    }
+    // ── v2: side-on, parallax layers, the road rolling across the screen
+    function draw2(t, dt) {
+      const W = st.W, H = st.H, U = W / 22, cam = snk.dist - 6, base = H * .56, yTop = s => base - roadH(s) * U, prog = Math.min(1, snk.dist / snk.len), px = (x, y, c) => st.px(x, y, c);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) px(x, y, mixC(0xfff6d2, 0xffc860, y / H * 1.3 + (bayer(x, y) - .5) * .1));
+      kaiPlanet(Math.round(W * .84), Math.round(H * .2), Math.round(4 + prog * H * .13));
+      // far off, snake way winds away into the haze
+      for (let x = 0; x < W; x++) { const s = x + cam * U * .1, y = H * .38 + Math.sin(s * .03) * H * .05 + Math.sin(s * .011 + 1) * H * .03; for (let j = 0; j < 3; j++) px(x, y + j, j ? 0xe0a83a : 0xfff0a0); }
+      // HFIL glimpsed red, deep below the clouds
+      for (let y = Math.round(H * .58); y < H; y++) for (let x = 0; x < W; x++) { const q = (y - H * .58) / (H * .42) + (bayer(x, y) - .5) * .2; px(x, y, q < .3 ? 0xf2b04a : q < .55 ? 0xe07a30 : q < .8 ? 0xa8301a : 0x5a0a08); }   // the haze deepens into HFIL red far below
+      puffRow(cam * U * .25, H * .5, Math.max(5, W * .04), [0xe2a43a, 0xf6cc5a, 0xffe490, 0xfffbe0], 4);
+      puffRow(cam * U * .55, H * .92, Math.max(6, W * .045), [0xd88a2a, 0xf2c04a, 0xffdc80, 0xfff6d0], 5);
+      // the road: the snake seen side-on, golden scaled back over a pale banded belly
+      const T = U * 1.7, gapAt = s => snk.gaps.find(g => s > g[0] && s < g[1]);
+      for (let x = 0; x < W; x++) { const s = cam + x / U; if (gapAt(s)) continue; const top = yTop(s);
+        for (let y = Math.floor(top); y < top + T; y++) { const v = (y - top) / T; let col;
+          if (y < top + 1 || y >= Math.floor(top + T) - 1) col = 0x3a1e0c;
+          else if (v < .45) { const row = Math.floor(v * 5), fu = (s * 2.2 + row * .5) % 1, arc = (fu - .5) ** 2 * 1.8; col = Math.abs(v * 5 - row - arc - .2) < .14 ? 0xc87a1e : v < .1 ? 0xfff0a0 : 0xffd23a; }
+          else if (v < .52) col = 0x9a5a14;
+          else col = (s * 2.6) % 1 < .12 ? 0xd8b070 : 0xfff0c0;
+          px(x, y, col); } }
+      for (const g of snk.gaps) for (const e of [g[0], g[1]]) { const x = (e - cam) * U; if (x < -4 || x > W + 4) continue; for (let y = yTop(e); y < yTop(e) + T; y++) px(x + (e === g[0] ? -1 : 0) + Math.round(Math.sin(y * 1.7) * 1.2), y, 0x3a1e0c); }   // ragged ends where the road breaks
+      const sx = s => (s - cam) * U;
+      for (const o of snk.orbs) { if (o.got) continue; const x = sx(o.s), y = yTop(o.s) - o.h * U, r = Math.max(2, U * .3); if (x < -r || x > W + r) continue; for (let yy = -r; yy <= r; yy++) for (let xx = -r; xx <= r; xx++) { const q = Math.hypot(xx, yy) / r; if (q <= 1) px(x + xx, y + yy, q < .45 ? 0xffffff : q < .8 ? 0xffe08a : 0xff9a2a); } }
+      for (const sp of snk.spikes) { const x = sx(sp.s), y = yTop(sp.s); if (x < -U || x > W + U) continue; for (const [dx, hk] of [[-.3, .55], [.3, .55], [0, .9]]) { const hh = U * hk, bw = U * .22; for (let yy = 0; yy <= hh; yy++) { const half = bw * (1 - yy / hh); for (let xx = -half; xx <= half; xx++) px(x + dx * U + xx, y - yy, Math.abs(xx) > half - 1 ? 0x3a1e0c : xx > 0 ? 0xa84a18 : 0xe07a2a); } } }
+      for (const g of snk.ghosts) { g.sx = undefined; if (g.dead) continue; const x = sx(g.s), y = yTop(g.s) - (g.h + Math.sin(t * 2 + g.ph) * .3) * U, R = Math.max(3, U * .45); if (x < -R * 2 || x > W + R * 2) continue; g.sx = x; g.sy = y; g.r = R; drawGhost(x, y, R, g.ph, t); }
+      // him, side-on
+      const k = Math.max(1, Math.round(Math.min(W, H) / 110)), hx = sx(snk.dist), hy = yTop(snk.dist) - snk.yy * U;
+      if (snk.yy > .05 && !gapAt(snk.dist)) for (let xx = -5 * k; xx <= 5 * k; xx++) if (bayer(hx + xx, 0) < .6) px(hx + xx, yTop(snk.dist), 0x9a5a14);
+      if (t < snk.dashT) for (let i = 0; i < 8; i++) { const yy = hy - 4 - i * 2.5 * k; for (let j = 0; j < 6 + (i * 7 + Math.floor(t * 30)) % 9; j++) px(hx - 8 * k - j, yy, 0xfffbe0); }   // dash streaks
+      if (t - snk.stun > .5 || Math.floor(t * 12) % 2) heroSide(t, hx, hy + 1, k, false);
+      shotsDraw(t, hx + 4 * k, hy - 12 * k);
+      if (t - snk.t0 < 6) label('SWIPE UP JUMP  RIGHT DASH  LEFT BRAKE  TAP GHOSTS', W / 2, 6, 0x6a3a08);
+    }
+    // ── v3: high above, the road coiling up the screen like a board game
+    const bend3 = s => Math.sin(s * .06) + .45 * Math.sin(s * .021 + 1);
+    // ── HFIL, one per version
+    function hfilScene(t, f, k) {   // the shared backdrop: rock spires against the glow, the lava sea, rising embers
+      const W = st.W, H = st.H, px = (x, y, c) => st.px(x, y, c), lava = Math.round(H * .8);
+      for (let y = 0; y < lava; y++) for (let x = 0; x < W; x++) { const q = y / lava + (bayer(x, y) - .5) * .18; px(x, y, q < .35 ? 0x1e0404 : q < .6 ? 0x3a0808 : q < .82 ? 0x5e0e0a : 0x8a1c0c); }
+      for (let x = 0; x < W; x++) { const h = H * (.22 + .12 * Math.sin(x * .05) + .08 * Math.sin(x * .13 + 2) + .05 * Math.abs(Math.sin(x * .41))); for (let y = Math.round(lava - h); y < lava; y++) px(x, y, (x + y) % 5 ? 0x160303 : 0x240606); }
+      for (let y = lava; y < H; y++) for (let x = 0; x < W; x++) { const w = Math.sin(x * .09 + t * 3 + y * .4) + Math.sin(x * .031 - t * 2), d = (y - lava) / (H - lava); px(x, y, w > 1.1 ? 0xfff0a0 : w > .3 - d ? 0xffa12a : w > -.6 ? 0xe85a14 : 0xb0300c); }
+      for (let i = 0; i < 40; i++) { const sd = i * 97.31, ex = (sd * 13.7) % W + Math.sin(t * 2 + i) * 4, ey = H - ((t * (20 + i % 7 * 6) + sd) % H); px(ex, ey, i % 3 ? 0xffa12a : 0xffe08a); }
+      return lava;
+    }
+    function heroFall(t, k, lx, ly, el, up) {   // drop in from the top, land, then fly back up with a ki trail
+      const set = HERO().forms[S.form], spr = up ? set.pose : set.idle, fall = Math.min(1, el / .7), ox = Math.round(lx - spr.w * k / 2), y1 = ly - spr.h * k + k, oy = Math.round(-spr.h * k + (y1 + spr.h * k) * (1 - (1 - fall) ** 2) - up * up * st.H * 1.3);
+      if (up > 0) for (let y = oy + spr.h * k; y < ly; y++) for (let x = -3 * k; x <= 3 * k; x++) if (bayer(lx + x, y) < .6 - Math.abs(x) / (4 * k)) st.px(lx + x, y, 0xfff3c0);
+      sblit(spr, ox, oy, k); if (snk.loss && el > .7) { sayAt('-' + fmtShort(snk.loss), lx, ly - spr.h * k - 10, 'red'); snk.loss = 0; }
+    }
+    function hfil3(t, h) {   // v3: HFIL from above, gently: needle mountains, blood pools, frieza's ghost sulking; he floats back up
+      const W = st.W, H = st.H, px = (x, y, c) => st.px(x, y, c), k = Math.max(1, Math.round(Math.min(W, H) / 140)), up = h.up ? Math.min(1, (t - h.up) / .9) : 0;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const n = Math.sin(x * .05 + y * .03) + Math.sin(x * .021 - y * .07); px(x, y, n > 1.3 ? 0x9a0a1a : n > 1.1 ? 0xc8102a : bayer(x, y) < .5 ? 0xd0502a : 0xb8401e); }   // red ground, blood pools
+      for (let i = 0; i < 22; i++) { const cx = hash(i) * W, cy = (i + hash(i + 50)) / 22 * H * 1.15, nh = 14 + hash(i + 7) * 22, nw = 2 + hash(i + 3) * 3; for (let xx = -nw * 2; xx <= nw * 2; xx++) px(cx + xx + 2, cy + 1, 0x5a0a08); for (let yy = 0; yy < nh; yy++) { const half = nw * (1 - yy / nh); for (let xx = -half; xx <= half; xx++) px(cx + xx, cy - yy, xx > half * .2 ? 0x5a0e0e : xx < -half * .5 ? 0xe8703a : 0xa8301e); } }   // needle mountains, seen at a slant
+      const fx0 = W * .28 + Math.sin(t * .8) * 10, fy0 = H * .3 + Math.cos(t * .6) * 5; sblit(FRIEZA, fx0 - FRIEZA.w * k / 2, fy0, k, false, .6); for (let a = -4; a <= 4; a++) px(fx0 + a, fy0 - 2, 0xfff3a0);
+      label('FRIEZA - HMPH.', fx0, fy0 + FRIEZA.h * k + 4, 0x3a0a3a, 0xf0d0ff);
+      const hy = H * .62 - up * up * H * 1.2; heroBack(t, W / 2, hy, k * 2);
+      for (let a = 0; a < 6.28; a += .04) if (a / 6.28 < h.m / 4) px(W / 2 + Math.sin(a) * 18 * k, hy - 16 * k - Math.cos(a) * 18 * k, 0xfff3a0);
+      if (!h.up) { label('FLOATING BACK UP... TAP TO HURRY', W / 2, H * .1, 0xffffff, 0x5a0a08); if (snk.loss) { sayAt('-' + fmtShort(snk.loss), W / 2, H * .3, 'red'); snk.loss = 0; } }
     }
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
