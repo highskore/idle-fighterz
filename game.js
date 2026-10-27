@@ -1788,12 +1788,14 @@ GAMES.push({
       { id: 'fist', branch: 'body', tier: 0, name: 'iron fist', what: 'taps +50% a rank', max: Infinity },
       { id: 'crit', branch: 'body', tier: 0, name: 'eagle eye', what: '+8% crit chance a rank', max: 5 },
       { id: 'legs', branch: 'body', tier: 1, name: 'road work', what: 'lap bonus +50% a rank', max: Infinity },
+      { id: 'stride', branch: 'body', tier: 1, name: 'long stride', what: 'he runs 10% faster a rank: more laps', max: 5 },
       { id: 'brawl', branch: 'body', tier: 1, name: 'brawler', what: 'villain taps +50% a rank', max: Infinity },
       { id: 'critx', branch: 'body', tier: 2, name: 'pressure point', what: 'crits hit ×1 harder a rank', max: Infinity },
       { id: 'pride', branch: 'body', tier: 3, name: 'saiyan pride', what: 'combo goes to ×4', max: 1 },
       { id: 'idle', branch: 'spirit', tier: 0, name: 'meditation', what: 'idle income +50% a rank', max: Infinity },
       { id: 'beam', branch: 'spirit', tier: 0, name: 'ki control', what: 'beams +50% a rank', max: Infinity },
       { id: 'chamber', branch: 'spirit', tier: 1, name: 'patience', what: 'time chamber +5s a rank', max: Infinity },
+      { id: 'senzu', branch: 'spirit', tier: 1, name: 'senzu farmer', what: 'senzu beans last 5s longer a rank', max: Infinity },
       { id: 'seedx', branch: 'spirit', tier: 1, name: 'zenkai', what: 'each ki seed +2% more a rank', max: Infinity },
       { id: 'auto', branch: 'spirit', tier: 2, name: 'instinct', what: 'an auto tap every second a rank', max: Infinity },
       { id: 'eternal', branch: 'spirit', tier: 3, name: 'eternal ki', what: 'idle income ×3', max: 1 },
@@ -2030,7 +2032,7 @@ GAMES.push({
     function openCapsule() {
       const c = capsule; capsule = null; const roll = Math.random();
       burst(c.x, c.y, [0xffffff, 0xe4e6ea, 0xe0332b], 22, 140); flashT = .3;
-      if (roll < .3) { senzuUntil = st.t + 15; ui.event('capsule: senzu beans — ×1.5 for 15s'); }
+      if (roll < .3) { senzuUntil = st.t + 15 + 5 * lvl('senzu'); ui.event(`capsule: senzu beans — ×1.5 for ${15 + 5 * lvl('senzu')}s`); }
       else if (roll < .6) { const g = wrate() * 150; gain(g, c.x, c.y - 8, true); ui.event('capsule: +' + fmtShort(Math.round(g))); }
       else if (roll < .82) { S.orbs7++; if (S.orbs7 >= 7) { S.orbs7 = 0; summon(); } else ui.event(`capsule: a dragon ball! ${S.orbs7}/7`); goal('ball'); }
       else { S.aura = 1 + (((S.aura || 0) + (Math.random() * 3 | 0)) % AURAS.length); ui.event('capsule: a new aura colour'); }
@@ -2080,7 +2082,7 @@ GAMES.push({
       // senzu bean on the planet
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(px - sb.sx, py - (sb.sy - 6)) < 9) { killSaiba(sb); return; }
       if (boss && !boss.dead && Math.abs(px - boss.x) < (boss.spr.w / 2 + 3) * boss.k && py > boss.y - (boss.spr.h + 2) * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; hitBoss(tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist')) * (1 + .5 * lvl('brawl')), px, py); return; }
-      if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - (bean.sy - 6)) < 13) { senzuUntil = st.t + 15; ui.event('senzu bean — ×1.5 for 15s'); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
+      if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - (bean.sy - 6)) < 13) { senzuUntil = st.t + 15 + 5 * lvl('senzu'); ui.event(`senzu bean — ×1.5 for ${15 + 5 * lvl('senzu')}s`); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
       // train: rhythm builds a combo up to ×2; the scouter adds crits
       combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; if (combo >= 2) goal('combo');
       sprint = Math.min(1.2, sprint + .5);
@@ -2720,7 +2722,7 @@ GAMES.push({
       }
       // running: sprint decays; riding the golden cloud triples everything
       sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);
-      const pace = (.42 + sprint * .9) * (riding > 0 ? 1.6 : 1) * (poseUntil > t || struggle ? 0 : 1);   // he stops to pose, and to hold a beam struggle
+      const pace = (.42 + sprint * .9) * (1 + .1 * lvl('stride')) * (riding > 0 ? 1.6 : 1) * (poseUntil > t || struggle ? 0 : 1);   // he stops to pose, and to hold a beam struggle
       phi += pace * dt;
       if (phi - lastLap > 6.283) { lastLap += 6.283; if (playing) { laps++; S.lapsTotal = (S.lapsTotal || 0) + 1; ach('lap1'); if (S.lapsTotal >= 100) ach('laps100'); goal('laps'); ui.fx && ui.fx('lap'); const k = kidScreen(20); gain(lapValue() * 4 * mult() * (1 + .5 * lvl('legs')) * (bz ? 3 : 1) * (whisUntil > t ? 2 : 1), k.x, k.y - 14, true); } }
       if (jumpH > 0 || jumpV > 0) { jumpV -= 520 * dt; jumpH = Math.max(0, jumpH + jumpV * dt); if (jumpH === 0) jumpV = 0; }
