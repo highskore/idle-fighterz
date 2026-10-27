@@ -82,6 +82,10 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .wish button:hover, .wish button:focus-visible { border-color: var(--gold); transform: translateY(-1px); outline: none; }
 .wish b { font-weight: 400; text-transform: uppercase; }
 .wish span { color: var(--muted); }
+.wish i { font-style: normal; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.wish .rare { border-color: #8ab4f8; } .wish .rare i { color: #2f6fd6; }
+.wish .epic { border-color: #c79af2; background: #fbf6ff; } .wish .epic i { color: #8a3fd1; }
+.wish .legendary { border: 2px solid #f0b43a; background: #fffaf0; box-shadow: 0 0 14px rgba(240, 180, 58, .45); } .wish .legendary i { color: #c98a10; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 .shop { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: min(96%, 900px); z-index: 2; }
 .shop button { font: inherit; display: flex; flex-direction: column; align-items: start; gap: 0; text-align: left; color: var(--ink); background: #ffffff; box-shadow: 0 1px 0 rgba(0,0,0,.06); border: 1px solid var(--line); border-radius: 12px; padding: 6px 12px; cursor: pointer; min-width: 128px; transition: border-color .15s, transform .12s, opacity .2s; }
@@ -435,7 +439,7 @@ __PLANET__
     sfx(kind) { sfx(kind); },
     wish(options, done) {
       const box = $('wish');
-      box.innerHTML = '<p>state your wish</p>' + options.map((o, i) => `<button type="button" data-i="${i}"><b>${o.label}</b><span>${o.what}</span></button>`).join('');
+      box.innerHTML = '<p>state your wish</p>' + options.map((o, i) => `<button type="button" class="${o.tier || 'common'}" data-i="${i}"><i>${o.tier || 'common'}</i><b>${o.label}</b><span>${o.what}</span></button>`).join('');
       box.hidden = false; $('game').classList.add('wishing');
       box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { box.hidden = true; $('game').classList.remove('wishing'); done(options[+b.dataset.i].key); }));
       box.querySelector('button').focus({ preventScroll: true });
