@@ -3470,7 +3470,7 @@ GAMES.push({
     function travel(w) {
       ui.hell && ui.hell(false);
       if (!playing) return;
-      S.world = w; spinA = 0; useWorld(w); layout(); scenery(); ui.world && ui.world(w);
+      S.world = w; spinA = 0; useWorld(w); layout(); scenery(); ui.world && ui.world(w);/*widget*/ if (w) ui.notify('trip', WORLDS[w].name);/*/widget*/
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
       ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', 'back in the null realm — the tournament of power goes on', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
@@ -3624,7 +3624,7 @@ GAMES.push({
       if (shen) return;
       if (look !== undefined) shenLook = look;
       if (S.world === 3) { summonLater = true; return; }
-      shen = { t0: st.t, phase: 'rise', phaseT: st.t, look: shenLook, wishes: S.world === 1 ? 3 : 1, porunga: S.world === 1 }; ach(S.world === 1 ? 'porunga' : 'shenron'); document.body.classList.add('shen'); ui.sfx && ui.sfx('dragon'); ui.event(S.world === 1 ? 'porunga awakens — three wishes…' : 'the eternal dragon awakens…');
+      shen = { t0: st.t, phase: 'rise', phaseT: st.t, look: shenLook, wishes: S.world === 1 ? 3 : 1, porunga: S.world === 1 }; ach(S.world === 1 ? 'porunga' : 'shenron'); document.body.classList.add('shen'); ui.sfx && ui.sfx('dragon'); ui.event(S.world === 1 ? 'porunga awakens — three wishes…' : 'the eternal dragon awakens…');/*widget*/ ui.notify('shenron', S.world === 1 ? 'porunga' : 'shenron');/*/widget*/
     }
     const wishSeeds = () => Math.max(3, Math.ceil(seedsNow() / 5));
     const wished = k => (wishBuff[k] || 0) > st.t;
@@ -3851,8 +3851,8 @@ GAMES.push({
     function drawVoid(t) {
       const Lk = TOP_LOOK;
       if (!voidBake || voidBake.W !== st.W || voidBake.H !== st.H) bakeVoid();
-      st.buf.set(voidBake.B);
-      for (let k = 0; k < 140; k++) {
+      /*widget*/if (!WIDGET) /*/widget*/st.buf.set(voidBake.B);
+      /*widget*/if (!WIDGET) /*/widget*/for (let k = 0; k < 140; k++) {
         const x = Math.floor(hash(k * 3.1 + 1) * st.W), y = Math.floor(hash(k * 7.7 + 2) * st.H), big = hash(k * 1.3) > .9, tw = .35 + .65 * Math.max(0, Math.sin(t * (.6 + hash(k) * 2) + k));
         st.px(x, y, Lk.star[k % 2], tw * (big ? 1 : .55));
         if (big && tw > .75) for (const [a, b] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.px(x + a, y + b, Lk.star[1], .45);
@@ -4022,22 +4022,23 @@ GAMES.push({
       if (can < 1) return can > .86 ? 0x173f16 : u < .45 && v > .62 ? 0x8ad65a : u > .62 || v < .45 ? 0x2f7a26 : 0x4f9e36;
       return u > .43 && u < .57 && v < .5 ? (u > .51 ? 0x4a2a12 : 0x7a4a24) : -1; };
     function kingKaiPlanet(kx, ky, kr, t, spin, beat) {   // beat: seconds since he landed, when king kai waves and bubbles jumps about
-      const W = st.W, H = st.H, tilt = .42, ct = Math.cos(tilt), sn = Math.sin(tilt), k = kr / 70, G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e], at = {};
-      const hr = kr * 1.45 + 8; for (let y = Math.max(0, ky - hr); y < Math.min(H, ky + hr); y++) for (let x = Math.max(0, kx - hr); x < Math.min(W, kx + hr); x++) { const d = Math.hypot(x - kx, y - ky); if (d >= kr && d <= hr) st.px(x, y, 0xfff4cc, ((1 - (d - kr) / (hr - kr)) ** 2) * .6); }   // a soft gold halo
+      const W = st.W, H = st.H, tilt = .42, ct = Math.cos(tilt), sn = Math.sin(tilt), k = kr / 42, G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e], at = {};
+      const hr = kr * 1.45 + 8; /*widget*/if (!WIDGET) /*/widget*/for (let y = Math.max(0, ky - hr); y < Math.min(H, ky + hr); y++) for (let x = Math.max(0, kx - hr); x < Math.min(W, kx + hr); x++) { const d = Math.hypot(x - kx, y - ky); if (d >= kr && d <= hr) st.px(x, y, 0xfff4cc, ((1 - (d - kr) / (hr - kr)) ** 2) * .6); }   // a soft gold halo
       // the globe, lit from the upper left; its pole is tipped toward us so the cap with the house shows, and the grass turns with it
       for (let y = -kr; y <= kr; y++) { const Y = ky + y; if (Y < 0 || Y >= H) continue; for (let x = -kr; x <= kr; x++) { const X = kx + x; if (X < 0 || X >= W) continue; const d = Math.hypot(x, y); if (d > kr + .3) continue;
         if (d > kr - .7) { st.px(X, Y, 0x1f3a1a); continue; }
         const nx = x / kr, ny = -y / kr, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny)), oy = ny * ct + nz * sn, oz = -ny * sn + nz * ct, ox = nx * Math.cos(spin) - oz * Math.sin(spin), oz2 = nx * Math.sin(spin) + oz * Math.cos(spin);
         const l = nx * -.5 + ny * .62 + nz * .6, q = l * .8 + .45 + (bayer(X, Y) - .5) * .35 - (vnoise(ox * 5 + 9, oz2 * 5 + oy * 3) > .66 ? .25 : 0);
-        st.px(X, Y, Math.abs(oy - .62) < .045 ? (q > .5 ? 0xfdfaf2 : 0xd8d2c4) : G5[Math.max(0, Math.min(5, Math.round(q * 4.2)))]); } }
+        const rd = Math.abs(oy - .62), tuft = h2(Math.floor((ox + 2) * kr * .55), Math.floor((oz2 + 2) * kr * .55) + Math.floor(oy * kr * .3) * 57);   // the road ring with its kerbs, then grass with darker tufts and the odd flower
+        st.px(X, Y, rd < .05 ? (rd > .04 ? 0xa8a090 : q > .5 ? 0xfdfaf2 : 0xd8d2c4) : kr > 30 && tuft > .985 ? (tuft > .993 ? 0xfff27a : 0xffffff) : G5[Math.max(0, Math.min(5, Math.round(q * 4.2) - (kr > 20 && tuft > .91 ? 1 : 0)))]); } }
       if (kr < 6) return at;
       // who lives there, placed on the cap and carried round as it spins, far side hidden; the car drives the road ring faster than the spin
-      const folk = [{ a: -.52, tree: 1 }, { a: -.1, house: 1 }, { a: .2, spr: KINGKAI, s: .5, kk: 1 }, { a: .4, spr: MONKEY[Math.floor(t * 6) % 2], s: .85, h: 9, bub: 1 }, { a: .53, spr: GREGORY, s: .85, h: 13 }, { a: .74, spr: KAICAR, s: .65, car: 1 }];
-      const pts = folk.map((f, i) => { const lon = f.a * 2.6 + spin * (f.car ? 2.2 : 1) + (f.car ? t * .5 : 0), lat = f.car ? .78 : 1.02 + (i % 2) * .1, p = [Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon)];
+      const folk = [{ a: -.5, tree: 1 }, { a: -.16, house: 1 }, { a: .14, spr: KINGKAI, s: .62, kk: 1 }, { a: .34, spr: MONKEY[Math.floor(t * 6) % 2], s: .8, h: 9, bub: 1 }, { a: .5, spr: GREGORY, s: .9, h: 13 }, { a: .74, spr: KAICAR, s: .55, car: 1 }];
+      const pts = folk.map((f, i) => { const lon = f.a * 2.6 + spin * (f.car ? 2.2 : 1) + (f.car ? t * .5 : 0), lat = f.car ? .67 : .9 + (i % 2) * .08, p = [Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon)];
         return { f, x: p[0], y: p[1] * ct - p[2] * sn, z: p[1] * sn + p[2] * ct }; }).filter(p => p.z > .05).sort((a, b) => a.z - b.z);
       for (const { f, x, y, z } of pts) { const bx = kx + x * kr, by = ky - y * kr, ang = Math.atan2(x, y) * .8, sz = .7 + .3 * z;
-        if (f.tree) stamp(bx, by, ang, kr * .36 * sz, kr * .5 * sz, kaiTreeShape);
-        else if (f.house) stamp(bx, by, ang, kr * .4 * sz, kr * .34 * sz, kaiHouseShape);
+        if (f.tree) stamp(bx, by, ang, kr * .4 * sz, kr * .58 * sz, kaiTreeShape);
+        else if (f.house) stamp(bx, by, ang, kr * .5 * sz, kr * .42 * sz, kaiHouseShape);
         else if (k * sz >= .32) { const wave = beat > .5 && f.kk, cheer = beat > .3 && f.bub, lift = wave ? Math.abs(Math.sin(beat * 7)) * 4 * k : cheer ? Math.abs(Math.sin(beat * 14)) * 7 * k : f.h ? Math.abs(Math.sin(t * f.h + f.a)) * 3 * k : 0;   // king kai bounces and turns to and fro waving, bubbles leaps about
           blitZ(f.spr, bx, by, ang, wave ? Math.floor(beat * 4) % 2 === 0 : f.a > .3, lift, 1e9, k * f.s * sz); if (f.kk) at.kk = { x: bx, y: by - f.spr.h * k * f.s * sz - lift }; if (f.bub) at.bub = { x: bx, y: by - f.spr.h * k * f.s * sz - lift }; } }   // bubbles and gregory hop
       return at;
@@ -4089,6 +4090,7 @@ GAMES.push({
     function tear(gi, g, sAt, u, o, y, t) {   // a torn break in his body: ragged scales, a cut face on the far side, the cloud sea parting on HFIL's glow below; -1 where the road is whole
       const ju = Math.round(u * 9), a = g[0] + .55 * h2(ju + gi * 31, 7), b = g[1] - .55 * h2(ju + gi * 31, 11);
       if (sAt < a || sAt > b) return -1;
+      /*widget*/if (WIDGET && sAt <= b - .5) return -2;/*/widget*/
       if (sAt > b - .5) { const f = (b - sAt) / .5; return f < .22 ? 0xd8901e : f < .55 ? (bayer(o, y) < .5 ? 0x9a5a14 : 0x7a4010) : 0x4a2008; }   // the cut face: scales, flesh, then the dark underside
       const d = Math.min(1, Math.min(sAt - a, b - .5 - sAt) / ((b - .5 - a) / 2), (1 - Math.abs(u)) * 2.2), q = d + Math.sin(o * .35 + t * 7 + y * .9) * .08 + (bayer(o, y) - .5) * .25;
       return q < .1 ? 0x2a0804 : q < .24 ? (bayer(o, y) < .55 ? 0xf0b060 : 0x7a2a10) : q < .45 ? 0x8a1a10 : q < .66 ? 0xd0481e : q < .86 ? 0xff8a30 : 0xffd070;
@@ -4098,10 +4100,10 @@ GAMES.push({
       const lag = tb >= 0 ? 5 - 2.6 * ease(tb / 1.8) : 5 * ease((p - .93) / .07), cam = (tb >= 0 ? END : sH) - lag, zH = 1.6 + lag;   // near the end the camera falls back and he runs on ahead; once he's landed it pushes in
       const hz = Math.round(H * ((ph ? .4 : .36) + ((ph ? .5 : .52) - (ph ? .4 : .36)) * ease((p - .82) / .18))), RW = P.RW, px = (x, y, c) => st.px(x, y, c), base = ph ? Math.round(H * .74) : H - 4;   // the camera tips up toward the planet; portrait phones: clear of the power level card
       const yAt = z => hz + 1.6 / z * (H - hz), xAt = (s, z) => W / 2 + (bendS(s) - bendS(cam) - snk.x) * RW * 1.6 / z;
-      for (let y = 0; y < hz + 4; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.sky[0], P.sky[1], y / hz + (bayer(x, y) - .5) * .1));
-      for (let y = hz + 3; y < H; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.floor[0], P.floor[1], (y - hz) / (H - hz) + (bayer(x, y) - .5) * .12));
+      /*widget*/if (!WIDGET) /*/widget*/for (let y = 0; y < hz + 4; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.sky[0], P.sky[1], y / hz + (bayer(x, y) - .5) * .1));
+      /*widget*/if (!WIDGET) /*/widget*/for (let y = hz + 3; y < H; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.floor[0], P.floor[1], (y - hz) / (H - hz) + (bayer(x, y) - .5) * .12));
       const fo = cam * 6 + t * 3;
-      puffRow(fo * .3, hz + 3, Math.max(4, W * .03), P.puff, 1); puffRow(fo * .6, hz + (H - hz) * .3, Math.max(6, W * .055), P.puff, 2); puffRow(fo, hz + (H - hz) * .7, Math.max(9, W * .09), P.puff, 3, false, true);
+      /*widget*/if (!WIDGET) {/*/widget*/puffRow(fo * .3, hz + 3, Math.max(4, W * .03), P.puff, 1); puffRow(fo * .6, hz + (H - hz) * .3, Math.max(6, W * .055), P.puff, 2); puffRow(fo, hz + (H - hz) * .7, Math.max(9, W * .09), P.puff, 3, false, true);/*widget*/}/*/widget*/
       // king kai's planet sits where the road ends: a speck at first, filling the sky by the end, never cut off by the frame
       const zE = END - cam, yE = yAt(Math.max(.5, zE)), yP = ph ? Math.min(yE, H * .64) : yE, m = Math.min(W, H * 1.2);   // on a phone the planet stays up clear of the power level card and the road climbs to it
       const kr = Math.round(Math.max(2, Math.min((yP - 5) / 2.25, W * .44, Math.max(3 + m * (.04 * p + .2 * p ** 3), (H - hz) * 2.2 / zE)))), kx = Math.round(Math.max(kr + 2, Math.min(W - kr - 2, xAt(END, Math.max(.5, zE))))), ky = Math.round(yP - kr * .9);
@@ -4114,7 +4116,7 @@ GAMES.push({
         const q = (y - hz) / (H - hz), z = 1.6 / q, sAt = cam + z, w = RW * q, cxr = xAt(sAt, z), v = sAt * 3.2, gi = snk.gaps.findIndex(g => sAt > g[0] - .6 && sAt < g[1] + .6);
         if (sAt > END) break;
         for (let o = -w - 2; o <= w + 2; o++) { const u = o / w; if (Math.abs(u) > 1 + 2.5 / w) continue;
-          const c = gi >= 0 ? tear(gi, snk.gaps[gi], sAt, u, cxr + o, y, t) : -1; if (c >= 0) { if (Math.abs(u) > 1) continue; px(cxr + o, y, c); const g = seen[gi] = seen[gi] || { x: cxr, y0: y, y1: y, w }; g.y0 = Math.min(g.y0, y); continue; }
+          const c = gi >= 0 ? tear(gi, snk.gaps[gi], sAt, u, cxr + o, y, t) : -1; if (c !== -1) { if (Math.abs(u) > 1) continue; if (c >= 0) px(cxr + o, y, c); const g = seen[gi] = seen[gi] || { x: cxr, y0: y, y1: y, w }; g.y0 = Math.min(g.y0, y); continue; }
           px(cxr + o, y, mixC(SNC(Math.abs(u) > 1 ? 2 : u, v), P.sky[1], Math.max(0, .55 - q) * .9)); } }
       seen.forEach((g, gi) => { if (!g) return; const span = g.y1 - g.y0 + 1 + g.w * .5;   // embers rising out of HFIL, and chunks of scale breaking off the near edge and tumbling in
         for (let i = 0; i < 12; i++) { const k = (t * (.5 + hash(i + gi * 9) * .5) + hash(i * 3.7 + gi)) % 1, ex = g.x + (hash(i * 1.3 + gi) - .5) * g.w * 1.6 + Math.sin(t * 3 + i) * 2, ey = g.y1 - k * span; px(ex, ey, k > .7 ? 0xffe08a : i % 2 ? 0xff8a30 : 0xffc040); if (g.w > 40) px(ex, ey - 1, 0xffd070); }
@@ -4154,7 +4156,7 @@ GAMES.push({
       if (tb < .5) { const r = tb / .5 * 40; for (let a = 0; a < 6.28; a += .08) st.px(hx + Math.cos(a) * r, feet - 4 + Math.sin(a) * r * .35, 0xfffbe0, 1 - tb / .5); }   // a ring kicked up where he lands
       if (folk.kk && tb > .6 && tb < BEAT - .5 && (tb < 1.7 || tb > 2.4)) label(tb < 1.7 ? 'YOU MADE IT!' : 'NOW, A JOKE...', Math.max(40, Math.min(st.W - 40, folk.kk.x)), Math.max(6, folk.kk.y - 12), 0x1d1030);
       if (folk.bub && tb > 1.7 && tb < 2.4) label('OOK OOK!', Math.max(30, Math.min(st.W - 30, folk.bub.x)), Math.max(6, folk.bub.y - 10), 0x7a4a24);
-      const f = (tb - (BEAT - .7)) / .7; if (f > 0) for (let y = 0; y < st.H; y++) for (let x = 0; x < st.W; x++) if (bayer(x, y) < f * .85) st.px(x, y, 0xffffff);   // the visit's own flash picks up from this white
+      const f = (tb - (BEAT - .7)) / .7; if (f > 0) for (let y = 0; y < st.H; y++) for (let x = 0; x < st.W; x++) if (/*widget*/(!WIDGET || st.buf[y * st.W + x] >>> 24) && /*/widget*/bayer(x, y) < f * .85) st.px(x, y, 0xffffff);   // the visit's own flash picks up from this white
     }
     const P1 = { hz: 0, RW: 0, sky: [0xfffbe2, 0xffd468], floor: [0xffe48a, 0xe0a030], puff: [0xd99a2a, 0xf4c84a, 0xffe58a, 0xfffbe0], streak: 0xfffbe0, shadow: 0xb07a1a };
     addEventListener('keydown', e => {
@@ -4196,7 +4198,7 @@ GAMES.push({
       // ── timeline: the longer you stay, the more happens (all of it waits while you're on snake way)
       if (S.world === 3) updateSnake(t, dt); else {
       // the space pod: on phones the title covers the top of the sky, so there it flies just above the planet
-      if (session > 12) { if (!star && (nextStar -= dt) < 0) { once('stars', 'a saiyan space pod — tap it'); star = { x: -8, y: st.W / st.H < .8 ? cy - R * (1.12 + Math.random() * .16) : st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = (18 + Math.random() * 14) * (1 - .12 * lvl('pods')); } }
+      if (session > 12) { if (!star && (nextStar -= dt) < 0) { once('stars', 'a saiyan space pod — tap it');/*widget*/ ui.notify('pod');/*/widget*/ star = { x: -8, y: st.W / st.H < .8 ? cy - R * (1.12 + Math.random() * .16) : st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = (18 + Math.random() * 14) * (1 - .12 * lvl('pods')); } }
       if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < (S.world === 1 ? .4 : .2) + .05 * lvl('balls') }); }
       if (session > 50) { if ((nextShower -= dt) < 0) { once('meteors', 'meteor shower — bust them'); for (let i = 0; i < 6; i++) meteors.push({ x: st.W * (.15 + Math.random() * .9), y: -10 - i * 18, vx: -st.W * .12, vy: st.H * .22, delay: i * .5 }); nextShower = 45 + Math.random() * 20; } }
       if (session > 75 || S.cloud > 0) { if (!cloudFly && riding <= 0 && (nextCloud -= dt * (1 + S.cloud * .6)) < 0) { once('cloud', 'flying nimbus is here'); cloudFly = { x: -30, y: st.H * .3 }; nextCloud = 60 + Math.random() * 25; } }
@@ -4326,7 +4328,7 @@ GAMES.push({
       if (!tour && session > 110 && !boss && !shen && !S.multi && (nextBoss -= dt) < 0) {
         // the next saga in story order; then the multiverse
         const n = VILLAINS.length, V0 = VILLAINS[S.saga % n], hp = Math.max(600, wrate() * 40) * (1 + .15 * S.saga), me = V0.name === 'vegeta' && S.hero === 'vegeta', twin = V0.name === 'goku black' && S.hero === 'goku';
-        boss = { name: me ? 'past vegeta' : V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 40, x: 0, y: 0, k: 1, flash: 0, nextKi: 1, saga: true };
+        boss = { name: me ? 'past vegeta' : V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 40, x: 0, y: 0, k: 1, flash: 0, nextKi: 1, saga: true };/*widget*/ ui.notify('raid', boss.name);/*/widget*/
         ui.event(`saga ${S.saga % n + 1}/${n}: ` + (me ? 'your younger self shows up, scouter and all — "that\'s MY hair!" tap him' : twin ? 'goku black is attacking — "hey, that\'s MY face!" tap him' : `${V0.name} is attacking — tap him!`), 4000); nextBoss = (160 + Math.random() * 60) / (S.zeno ? 4 : 1); krillinHit(V0.name);
       }
       // meteor storm: a 12s downpour; every bust counts and pays out at the end
@@ -4418,7 +4420,7 @@ GAMES.push({
       // ── draw
       st.clear(); zb.fill(-1e9); ib.fill(0);
       if (S.world === 3 && snk) { drawSnake(t, dt); return; }
-      if (S.world === 9) drawVoid(t); else drawSea(t, false);
+      if (S.world === 9) drawVoid(t); else /*widget*/if (!WIDGET) /*/widget*/drawSea(t, false);
       if (moon) {
         const { x, y, r } = moon, a = moon.a;
         for (let yy = -r - 6; yy <= r + 6; yy++) for (let xx = -r - 6; xx <= r + 6; xx++) {
@@ -4625,8 +4627,8 @@ GAMES.push({
       fx.step(st, dt);
       if (star) st.blit(POD, star.x - 7, star.y - 7, false, true);   // in front of the planet
       if (gero) { const h = handPos(); if (t - gero.t0 > 1.2) for (let i = 0; i <= 1; i += .02) if ((i * 50 + t * 20) % 4 < 2) st.px(h.x + (gero.x - h.x) * i, h.y + (gero.y - gero.spr.h * .55 - h.y) * i, 0xe0473e); st.blit(gero.spr, gero.x - gero.spr.w / 2, gero.y - gero.spr.h + Math.sin(t * 3) * 2, true, true); }
-      if (S.world !== 9) drawSea(t, true);
-      if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
+      /*widget*/if (!WIDGET) /*/widget*/if (S.world !== 9) drawSea(t, true);
+      if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (/*widget*/(!WIDGET || st.buf[k] >>> 24) && /*/widget*/bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
       for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y), a = Math.min(1, f.life * 2); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(f.s, x + ox, y + oy, 0xffffff, a); st.text(f.s, x, y, f.gold ? 0xd99a1c : 0x111111, a); }
       for (let k = floats.length - 1; k >= 0; k--) if (floats[k].life <= 0) floats.splice(k, 1);
       st.flush();

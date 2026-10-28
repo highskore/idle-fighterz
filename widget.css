@@ -1,0 +1,104 @@
+/* desktop widget (html.widget, built by pnpm build:desktop): only the planet over the wallpaper, and the hud in one
+   of four layouts (html[data-layout]: 1, 2, 3, 6) that shows while the pointer is about, or always (html.pin) */
+html.widget, html.widget body { background: transparent !important; overflow: hidden; }
+.widget .brand, .widget .foot, .widget .cue, .widget .rule, .widget .tabbar, .widget .menu-btn, .widget .mbtn, .widget .hint, .widget .intro, .widget .edge, .widget .hud, .widget .pair { display: none !important; }
+.widget .scroller { height: auto; }
+.widget .page { position: fixed; inset: 0; height: auto; min-height: 0; padding: 0; gap: 0; background: transparent !important; }
+.widget #game { position: absolute; inset: 0; width: auto; height: auto; min-height: 0; max-height: none; border: 0; border-radius: 0; background: transparent !important; transform: none !important; font-size: clamp(9px, 3.4vmin, 12px); }
+.widget { --chip: rgba(255,255,255,.94); --edge: rgba(0,0,0,.08); --shadow: 0 2px 10px rgba(0,0,0,.18); --b: clamp(22px, 8.6vmin, 30px); --tb: 10px; }
+
+/* pieces every layout arranges */
+.w { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.w > *, .w-btns { pointer-events: auto; }
+.w-pl { display: flex; align-items: baseline; gap: .5em; white-space: nowrap; color: var(--ink); }
+.w-n { font-family: var(--serif); font-size: 2em; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums lining-nums; font-weight: 400; }
+.w-n small { font-size: .55em; color: var(--gold); margin-left: .05em; }
+.w-rate { color: var(--muted); text-transform: uppercase; font-size: .9em; }
+.w-btns { display: flex; gap: 4px; }
+.w button { position: relative; display: grid; place-items: center; width: var(--b); height: var(--b); padding: 0; font: inherit; color: var(--ink); background: var(--chip); border: 1px solid var(--edge); border-radius: 50%; box-shadow: var(--shadow); cursor: pointer; transition: transform .12s, background .15s; }
+.w button:hover { transform: translateY(-1px); background: #fff; }
+.w button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.w button svg { width: 58%; height: 58%; }
+.w button[hidden] { display: none; }
+.w button i { position: absolute; right: -4px; top: -4px; min-width: 15px; height: 15px; padding: 0 4px; font-style: normal; font-size: 9px; line-height: 15px; text-align: center; color: #fff; background: var(--gold); border-radius: 999px; }
+.w button i:empty { display: none; }
+.w [data-w="kaio"] { color: #fff; background: #e0332b; border-color: #e0332b; }
+.w [data-w="kaio"]:disabled { background: #f1b9b4; border-color: #f1b9b4; cursor: default; }
+.w [data-w="snd"][aria-pressed="true"] .off, .w [data-w="snd"][aria-pressed="false"] .on { display: none; }
+.w [data-w="snd"][aria-pressed="false"] { color: #9a9a9a; }
+.w [data-w="close"] { color: #6a6a6a; }
+.w-bar { display: block; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.w-bar b { display: block; height: 100%; width: 0; background: var(--gold); transition: width .4s; }
+.w-ring { display: none; }
+
+/* idle: just the planet. awake (pointer about) or pinned: the hud */
+.w > * { transition: opacity .35s, visibility .35s, transform .35s; }
+html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-ring { opacity: 0; visibility: hidden; }
+.w-ring { transition: opacity .35s, visibility .35s; }
+
+/* the upgrades list: a panel over the planet */
+.widget .shop.open { position: absolute; display: flex; flex-direction: column; gap: 3px; left: 8px; right: 8px; top: auto; bottom: var(--pb, 8px); width: auto; max-height: var(--ph, 66%); overflow: auto; padding: 6px; background: rgba(255,255,255,.96); border: 1px solid var(--edge); border-radius: 12px; box-shadow: var(--shadow); transform: none; z-index: 5; }
+.widget .shop button { width: 100%; min-width: 0; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 6px; padding: 3px 8px; border-radius: 8px; box-shadow: none; }
+.widget .shop button span { display: none; }
+.widget .shop b { font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.widget .goal { padding: 2px 4px 4px; }
+.widget .toast { top: auto; bottom: var(--tb); max-width: calc(100% - 16px); font-size: 1.05em; transform: translate(-50%, 0) scale(.5); }
+.widget .toast.on { transform: translate(-50%, 0) scale(1); }
+.widget .wish { right: auto; left: 50%; top: auto; bottom: 6px; transform: translateX(-50%); gap: 4px; width: calc(100% - 16px); }
+.widget .wish p { font-size: 1.6em; } .widget .wish button { padding: 4px 10px; }
+.widget .menu { padding: 6px; }
+
+/* 1 ring: a thin ring behind the planet fills as the next form nears; the power level rides its top, the
+   buttons sit on it (placed by script) */
+[data-layout="1"] .w-ring { display: block; position: absolute; left: 50%; top: 55%; width: 64vmin; height: 64vmin; transform: translate(-50%, -50%); pointer-events: none; overflow: visible; }
+[data-layout="1"] .w-ring circle { fill: none; stroke-width: 2.2; vector-effect: non-scaling-stroke; }
+[data-layout="1"] .w-ring .track { stroke: rgba(255,255,255,.75); }
+[data-layout="1"] .w-ring .fill { stroke: var(--gold); stroke-linecap: round; transition: stroke-dashoffset .4s; }
+[data-layout="1"] .w-pl { position: absolute; left: 50%; top: calc(55% - 32vmin); transform: translate(-50%, -50%); padding: 3px 10px; background: var(--chip); border: 1px solid var(--edge); border-radius: 999px; box-shadow: var(--shadow); }
+[data-layout="1"] .w-pl .w-n { font-size: 1.6em; }
+[data-layout="1"] .w-bar { display: none; }
+[data-layout="1"] .w-btns { display: contents; }
+[data-layout="1"] .w-btns button { position: absolute; transform: translate(-50%, -50%); }
+[data-layout="1"] .w-btns button:hover { transform: translate(-50%, calc(-50% - 1px)); }
+[data-layout="1"] { --tb: 22%; --pb: 8px; }
+
+/* 2 pill bar: one white pill along the bottom, power left, buttons right */
+[data-layout="2"] .w-bottom { position: absolute; left: 6px; right: 6px; bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 3px 3px 3px 12px; background: var(--chip); border: 1px solid var(--edge); border-radius: 999px; box-shadow: var(--shadow); }
+[data-layout="2"] .w-bottom .w-pl { flex-direction: column; gap: 0; align-items: start; min-width: 0; }
+[data-layout="2"] .w-n { font-size: 1.55em; } [data-layout="2"] .w-rate { font-size: .8em; }
+[data-layout="2"] .w-btns { gap: 2px; } [data-layout="2"] .w-btns button { box-shadow: none; border-color: transparent; background: transparent; --b: clamp(20px, 7.6vmin, 28px); }
+[data-layout="2"] .w-btns button:hover { background: #f2f2f0; }
+[data-layout="2"] .w-btns [data-w="kaio"] { background: #e0332b; }
+[data-layout="2"] .w-bar { position: absolute; left: 18px; right: 18px; bottom: 0; height: 2px; }
+[data-layout="2"] { --tb: calc(34px + var(--b)); --pb: calc(14px + var(--b)); }   /* popups float well clear of the pill */
+
+/* 3 corner chips: power top left, settings and close top right, upgrades bottom left, the rest bottom right */
+[data-layout="3"] .w-pl { position: absolute; left: 6px; top: 6px; flex-direction: column; gap: 2px; align-items: start; padding: 4px 10px 6px; background: var(--chip); border: 1px solid var(--edge); border-radius: 12px; box-shadow: var(--shadow); }
+[data-layout="3"] .w-n { font-size: 1.7em; }
+[data-layout="3"] .w-bar { width: 100%; }
+[data-layout="3"] .w-btns { display: contents; }
+[data-layout="3"] [data-w] { position: absolute; }
+[data-layout="3"] [data-w="close"] { right: 6px; top: 6px; } [data-layout="3"] [data-w="gear"] { right: calc(10px + var(--b)); top: 6px; }
+[data-layout="3"] [data-w="up"] { left: 6px; bottom: 6px; }
+[data-layout="3"] [data-w="snd"] { right: 6px; bottom: 6px; } [data-layout="3"] [data-w="share"] { right: calc(10px + var(--b)); bottom: 6px; } [data-layout="3"] [data-w="kaio"] { right: calc(14px + 2 * var(--b)); bottom: 6px; }
+[data-layout="3"] { --tb: calc(14px + var(--b)); --pb: calc(14px + var(--b)); }
+
+/* 6 top strip: one slim bar across the top, power left, buttons right */
+[data-layout="6"] .w-top { position: absolute; left: 6px; right: 6px; top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 2px 2px 10px; background: var(--chip); border: 1px solid var(--edge); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; }
+[data-layout="6"] .w-n { font-size: 1.35em; }
+[data-layout="6"] .w-rate { font-size: .8em; }
+[data-layout="6"] .w-btns { gap: 1px; } [data-layout="6"] .w-btns button { --b: clamp(19px, 7vmin, 26px); box-shadow: none; border-color: transparent; background: transparent; border-radius: 7px; }
+[data-layout="6"] .w-btns button:hover { background: #f2f2f0; }
+[data-layout="6"] .w-btns [data-w="kaio"] { background: #e0332b; }
+[data-layout="6"] .w-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 0; }
+[data-layout="6"] .shop.open { top: calc(14px + var(--b)); bottom: auto; }
+[data-layout="6"] { --tb: 10px; }
+
+/* nothing on the canvas may end in a hard line at the window edge (snake way's road, rain, smoke): it feathers out over
+   the outer 12% on every side, a rounded-rect falloff the compositor applies. the planet and the hero sit well inside it */
+.widget .stage canvas {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent), linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent), linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
+  mask-composite: intersect;
+}
