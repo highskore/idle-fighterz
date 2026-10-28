@@ -786,3 +786,243 @@ impl Game {
         }
     }
 }
+
+impl Game {
+    /// game.js's preview hooks (`#raid`, `#namek`, `#form12`, `#hero-goku`, ...), applied as `mount()` applies them,
+    /// after the world is set up and before `start()`. The five that wait on a `setTimeout` (`#flight`, `#chamber`,
+    /// `#buffs`, `#cvlink`, `#shenron`) aren't ported.
+    pub fn preview(&mut self, hash: &str) {
+        use crate::data::{Hero, Upg, LADDER, MUI_FORM, VILLAINS};
+        let has = |k: &str| hash.contains(k);
+        let num = |k: &str| -> Option<usize> {
+            let i = hash.find(k)? + k.len();
+            let d: String = hash[i..].chars().take_while(|c| c.is_ascii_digit()).collect();
+            d.parse().ok()
+        };
+        let best = |g: &mut Game, b: f64| g.s.best = g.s.best.max(b);
+        let lv = |g: &mut Game, u: Upg, n: u32| g.s.levels[u as usize] = g.s.levels[u as usize].max(n);
+        let trip = |g: &mut Game, b: f64, trips: u32| {
+            g.s.best = g.s.best.max(b);
+            g.s.namek_at = b;
+            g.s.trips = trips;
+        };
+        let sagas = VILLAINS.len() as u32;
+        if has("ape") {
+            self.session = 41.0;
+            self.tl.next_moon = 0.0;
+        }
+        if has("ozaru") {
+            self.session = 41.0;
+            self.tl.next_moon = 0.0;
+            self.s.ach.insert("ape");
+            best(self, 5e4);
+            lv(self, Upg::Tail, 3);
+            if has("giant") {
+                self.s.big_ape = true;
+            }
+        }
+        if has("ginyu") {
+            self.session = 151.0;
+            best(self, 5e4);
+            self.tl.next_ginyu = 0.0;
+        }
+        if has("visitors") {
+            self.session = 61.0;
+            self.tl.next_greg = 0.0;
+            self.tl.next_kai = 0.0;
+        }
+        if has("raid") {
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+            self.tl.next_saiba = 0.0;
+        }
+        if let Some(n) = num("saga") {
+            self.s.saga = (n as i64 - 1).max(0) as u32;
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+        }
+        if has("roshi") {
+            self.session = 91.0;
+            self.tl.next_roshi = 0.0;
+        }
+        for (k, b, trips) in [("paozu", 7e6, 6), ("westcity", 5e6, 4), ("kame", 6e6, 5), ("lookout", 5e6, 8), ("kaiworld", 5e6, 9), ("yardrat", 5e6, 10), ("future", 5e6, 7)] {
+            if has(k) {
+                trip(self, b, trips);
+            }
+        }
+        if has("androids") {
+            self.session = 201.0;
+            best(self, 2e5);
+            self.tl.next_andro = 0.0;
+        }
+        if has("date") {
+            self.session = 161.0;
+            self.tl.next_date = 0.0;
+        }
+        if has("gero") {
+            self.session = 141.0;
+            self.tl.next_gero = 0.0;
+        }
+        if has("sixteen") {
+            self.session = 101.0;
+            self.tl.next_a16 = 0.0;
+        }
+        if has("beerus") {
+            trip(self, 4e6, 3);
+        }
+        if has("krillin") {
+            self.session = 131.0;
+            self.tl.next_kril = 0.0;
+        }
+        if has("seeds") {
+            self.s.seeds = 40.0;
+        }
+        if has("galick") {
+            lv(self, Upg::Galick, if has("galick5") { 5 } else { 1 });
+        }
+        if let Some(n) = num("universe") {
+            self.s.saga = sagas;
+            self.s.multi = true;
+            self.s.uni = LADDER.iter().position(|l| l.0 as usize == n).unwrap_or(0) as u32;
+            self.s.uni_stage = 2;
+            self.s.ustars = self.s.uni;
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+        }
+        if has("mui") {
+            self.s.pl = 2.1e14;
+            self.s.best = 2.1e14;
+            self.s.form = MUI_FORM - 1;
+        }
+        if let Some(n) = num("form") {
+            let i = n.min(self.forms.len() - 1);
+            self.s.pl = self.forms[i].at * 1.05;
+            self.s.best = self.s.pl;
+            self.s.form = i.max(1) - 1;
+        }
+        if has("godki") {
+            self.s.pl = 2.1e15;
+            self.s.best = 2.1e15;
+            self.s.form = MUI_FORM;
+            self.s.godki = 6;
+            self.s.god_total = 3;
+            self.s.gods = 1;
+            self.s.multi = true;
+            self.s.saga = sagas;
+            self.s.uni = 2;
+            self.s.ustars = 2;
+        }
+        if has("zeno") {
+            self.s.gods = 2;
+            self.s.saga = sagas;
+            self.s.multi = true;
+            self.session = 111.0;
+        }
+        if has("fusion") {
+            lv(self, Upg::Partner, 3);
+            best(self, 5e4);
+            self.tl.next_fuse = 2.0;
+        }
+        if has("namek") || has("porunga") {
+            trip(self, 1e6, 0);
+        }
+        if has("foes") {
+            self.s.foes = ["raditz", "cell", "broly", "goku black"].map(String::from).to_vec();
+        }
+        if has("kaio") {
+            lv(self, Upg::Kaio, 1);
+        }
+        if has("vegeta") {
+            trip(self, 2e6, 1);
+        }
+        if let Some(i) = hash.find("hero-") {
+            let id: String = hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect();
+            if let Some(h) = [("vegeta", Hero::Vegeta), ("goku", Hero::Goku), ("gohan", Hero::Gohan), ("trunks", Hero::Trunks)].iter().find(|h| h.0 == id) {
+                self.s.hero = h.1;
+            }
+        }
+        if has("snake") {
+            trip(self, 3e6, 2);
+        }
+        if has("door") {
+            lv(self, Upg::Chamber, 1);
+            self.tl.next_door = 0.0;
+        }
+        if has("car") {
+            self.session = 71.0;
+            self.tl.next_car = 0.0;
+        }
+        if has("pod") {
+            self.session = 13.0;
+            self.tl.next_star = 0.0;
+        }
+        if has("storm") {
+            self.session = 121.0;
+            self.tl.next_storm = 0.0;
+        }
+        if has("spirit") {
+            self.s.spirit = self.s.spirit.max(1);
+            self.tl.spirit = 0.97;
+        }
+        if has("struggle") {
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+            lv(self, Upg::Galick, 1);
+        }
+        if has("frieza") {
+            self.session = 151.0;
+            self.tl.next_ship = 0.0;
+        }
+        if let Some(m) = ["cooler", "janemba", "bojack"].into_iter().find(|m| has(m)) {
+            self.tl.movie_force = m;
+            self.session = 241.0;
+            self.tl.home_since = self.session;
+            best(self, 3e5);
+            self.tl.next_movie = 0.0;
+        }
+        if has("yamcha") {
+            self.session = 101.0;
+            self.tl.next_yam = 0.0;
+        }
+        if has("cling") {
+            self.session = 151.0;
+            self.tl.next_cling = 0.0;
+        }
+        if has("dance") {
+            self.session = 201.0;
+            self.tl.next_dance = 0.0;
+            best(self, 2e5);
+        }
+        if has("gregory") {
+            self.session = 61.0;
+            self.tl.next_greg = 0.0;
+        }
+        if has("#top") {
+            self.s.world = 9;
+            self.cam.layout(9);
+            self.tl.namek_until = 1e9;
+        }
+        if has("tournament") {
+            self.session = 76.0;
+            best(self, 3000.0);
+            self.tl.next_tour = 0.0;
+        }
+        self.forms = ladder_of(self.s.hero);
+        self.s.form = self.s.form.min(self.forms.len() - 1);
+        if self.s.multi && self.s.world == 0 {
+            self.s.world = 9;
+            self.cam.layout(9);
+        }
+        self.s.run_best = self.s.run_best.max(self.s.best);
+    }
+}
+
+impl Game {
+    /// The canvas the game draws on, in its big pixels (`st.W`×`st.H`), and whether it's the desktop widget.
+    pub fn set_view(&mut self, w: f64, h: f64, widget: bool) {
+        self.cam.w = w;
+        self.cam.h = h;
+        self.cam.widget = widget;
+        self.cam.layout(self.s.world);
+    }
+}

@@ -7,6 +7,7 @@ pub mod geom;
 pub mod jsmath;
 pub mod num;
 pub mod rng;
+pub mod sprite;
 pub mod state;
 pub mod timeline;
 

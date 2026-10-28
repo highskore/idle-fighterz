@@ -345,3 +345,18 @@ mod tests {
         assert_eq!(hypot(&[3.0, 4.0]), 5.0);
     }
 }
+
+/// `Math.pow` as node on arm64 computes it: the platform's `pow`, except that ±1 ** ±Infinity is NaN and V8 takes
+/// y = 2 and y = 0.5 itself (x * x and the square root). Matches node over 300k random arguments.
+pub fn pow(x: f64, y: f64) -> f64 {
+    if y.is_nan() || (y.is_infinite() && (x == 1.0 || x == -1.0)) {
+        return f64::NAN;
+    }
+    if y == 2.0 {
+        return x * x;
+    }
+    if y == 0.5 && x.is_sign_positive() && !x.is_nan() {
+        return x.sqrt();
+    }
+    x.powf(y)
+}

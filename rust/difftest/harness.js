@@ -6,7 +6,7 @@ const ROOT = path.join(__dirname, '..', '..')
 
 function patch(src, from, to) { if (!src.includes(from)) throw new Error('harness anchor missing: ' + from.slice(0, 60)); return src.replace(from, to) }
 
-function mount({ seed = 1, W = 600, H = 400, traceRng = false } = {}) {
+function mount({ seed = 1, W = 600, H = 400, traceRng = false, hash = '', widget = false, px = false } = {}) {
   let rs = seed >>> 0 || 1, draws = 0
   const sites = new Map()
   const rnd = () => {
@@ -24,9 +24,13 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false } = {}) {
   const body = { classList: { toggle: noop, add: noop, remove: noop, contains: () => false } }
   const doc = { querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, createElement: () => ({ getContext: () => ctx2d, style: {} }), addEventListener: noop, body }
   let T = 0
-  const ctx = { WIDGET: false, document: doc, addEventListener: (k, f) => { win[k] = f }, location: { hash: '', hostname: 'localhost', protocol: 'http:' }, localStorage: { getItem: () => null, setItem: noop, removeItem: noop }, setTimeout: (f, ms = 0) => pending.push([T + ms / 1000, f]), clearTimeout: noop, console, Math: M, Date, JSON, performance: { now: () => T * 1000 } }
+  const ctx = { WIDGET: widget, BARE: widget, document: doc, addEventListener: (k, f) => { win[k] = f }, location: { hash, hostname: 'localhost', protocol: 'http:' }, localStorage: { getItem: () => null, setItem: noop, removeItem: noop }, setTimeout: (f, ms = 0) => pending.push([T + ms / 1000, f]), clearTimeout: noop, console, Math: M, Date, JSON, performance: { now: () => T * 1000 } }
+  if (px) { ctx.atob = atob; ctx.ImageData = function (data, w, h) { this.data = data; this.width = w; this.height = h } }
   ctx.window = ctx; vm.createContext(ctx)
   let src = ['world.js', 'shenron.js', 'game.js'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
+  // the site build drops widget-only code (build.mjs's fence); px: inline px.wasm the way build.mjs does, so world.js loads it
+  if (!widget) src = src.replace(/\/\*widget\*\/([\s\S]*?)\/\*\/widget\*\//g, '')
+  if (px) src = patch(src, "atob('__PX__')", "atob('" + fs.readFileSync(path.join(ROOT, 'wasm', 'px.wasm')).toString('base64') + "')")
   src = patch(src, '    return { menu, learn, respec,', '    globalThis.__ev = s => eval(s);\n    return { menu, learn, respec,')
   src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) return; st.clear(); zb.fill(-1e9); ib.fill(0);')
   ctx.__skip = true
@@ -37,6 +41,6 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false } = {}) {
   const ev = s => ctx.__ev(s)
   const runPending = () => { pending.sort((a, b) => a[0] - b[0]); while (pending.length && pending[0][0] <= T) { const [, f] = pending.shift(); f() } }
   const step = (dt = 1 / 30) => { T += dt; st.t = T; game.frame(T, dt); runPending() }
-  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), events, errors, sites, get draws() { return draws }, get T() { return T } }
+  return { ctx, game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), events, errors, sites, get draws() { return draws }, get T() { return T } }
 }
 module.exports = mount

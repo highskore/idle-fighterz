@@ -39,6 +39,8 @@ pub struct Meteor {
     pub vy: f64,
     pub delay: f64,
     pub dead: bool,
+    /// its spin seed, drawn by the renderer the first time it draws the meteor
+    pub sd: Option<f64>,
 }
 
 #[derive(Clone, Debug)]
@@ -539,6 +541,9 @@ pub struct Tl {
     pub chi_ready: f64,
     pub kame_ready: f64,
     /// piccolo and bubbles where the renderer last drew them: (x, y) and (x, y, scale)
+    /// the full moon's night, and how far the sea has faded to it
+    pub night: bool,
+    pub night_k: f64,
     pub piccolo_at: Option<(f64, f64)>,
     pub monkey_at: Option<(f64, f64, f64)>,
     /// `once()` texts already shown
@@ -636,6 +641,8 @@ impl Default for Tl {
             whis_ready: 0.0,
             chi_ready: 0.0,
             kame_ready: 0.0,
+            night: false,
+            night_k: 0.0,
             piccolo_at: None,
             monkey_at: None,
             seen: Vec::new(),
@@ -798,7 +805,7 @@ impl Game {
             self.once("meteors", "meteor shower — bust them");
             for i in 0..6 {
                 let x = w * (0.15 + self.r() * 0.9);
-                self.tl.meteors.push(Meteor { x, y: -10.0 - i as f64 * 18.0, vx: -w * 0.12, vy: h * 0.22, delay: i as f64 * 0.5, dead: false });
+                self.tl.meteors.push(Meteor { x, y: -10.0 - i as f64 * 18.0, vx: -w * 0.12, vy: h * 0.22, delay: i as f64 * 0.5, dead: false, sd: None });
             }
             self.tl.next_shower = 45.0 + self.r() * 20.0;
         }
@@ -1501,7 +1508,7 @@ impl Game {
                 let x = w * (0.1 + self.r() * 1.1);
                 let vx = -w * (0.1 + self.r() * 0.08);
                 let vy = h * (0.25 + self.r() * 0.15);
-                self.tl.meteors.push(Meteor { x, y: -10.0, vx, vy, delay: 0.0, dead: false });
+                self.tl.meteors.push(Meteor { x, y: -10.0, vx, vy, delay: 0.0, dead: false, sd: None });
             }
             if t > s.until + 2.0 {
                 let hit = self.tl.storm.as_ref().unwrap().hit;
@@ -1742,6 +1749,12 @@ impl Game {
             let r = 9f64.max(js_round(w.min(h) * 0.07));
             self.tl.moon = Some(Moon { x: w * 0.2, y: h * 0.22, r, a: 0.0, born: t, leaving: false });
             self.once("moon", "a full moon is rising… click it to transform");
+        }
+        {
+            // the full moon brings the night (the renderer fades the sea to it)
+            let n = self.tl.moon.as_ref().is_some_and(|m| !m.leaving) || self.b.ape_until > t;
+            self.tl.night = n;
+            self.tl.night_k = 0f64.max(1f64.min(self.tl.night_k + (if n { dt } else { -dt }) / 0.8));
         }
         if let Some(m) = self.tl.moon.clone() {
             if (self.s.lv(Upg::Tail) > 0 || self.s.big_ape) && m.a > 0.3 && !m.leaving && t - m.born > 6.0 && self.b.ape_until < t {
