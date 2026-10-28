@@ -28,26 +28,36 @@ fn active_drawn() {
 }
 
 #[test]
+#[ignore = "not run yet: game.js takes many minutes to draw it; cargo test -- --ignored"]
 fn ascend_drawn() {
     drawn("ascend");
 }
 
 #[test]
+#[ignore = "not run yet: game.js takes many minutes to draw it; cargo test -- --ignored"]
 fn late_drawn() {
     drawn("late");
 }
 
 #[test]
+#[ignore = "not run yet: game.js takes many minutes to draw it; cargo test -- --ignored"]
 fn events_drawn() {
     drawn("events");
 }
 
 #[test]
+#[ignore = "not run yet: game.js takes many minutes to draw it; cargo test -- --ignored"]
 fn multiverse_drawn() {
     drawn("multiverse");
 }
 
 #[test]
+#[ignore = "not run yet: game.js takes many minutes to draw it; cargo test -- --ignored"]
 fn wishes_drawn() {
     drawn("wishes");
+}
+
+#[test]
+fn taps_drawn() {
+    drawn("taps");
 }

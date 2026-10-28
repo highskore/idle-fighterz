@@ -30,7 +30,7 @@ Dependencies only point downward: `web` and `native` depend on `render`, and `re
 - `jsmath`: V8's `Math.sin`, `cos`, `atan2` (fdlibm) and `hypot` (Kahan), bit for bit. V8 for arm64 is built with clang's FP contraction, so the fdlibm port fuses multiply-adds in the same places; it matches node on arm64 over 400k random arguments. On an x86-64 node the geometry may come out one ulp off (the samples log it as inexact).
 - `geom`: the view matrix with its auto spin, the road and cap points, `layout()`, and where the hero lands on screen (`kidScreen`, `handPos`).
 - `num`: JS `Math.round`, `toFixed`, `toExponential` and `toLocaleString`, plus `fmtShort` and page.html's `fmt` and `short`. They are exact, including round-half-up ties.
-- `data`: tables (shop, forms and hero ladders, the training tree, angels, goals) and tuning constants. Stage 1 adds the sprite DSL data (`makeHero`, `shapeSprite` and the palettes) here as plain data, so `planet-render` only rasterises.
+- `data`: tables (shop, forms and hero ladders, the training tree, angels, goals) and tuning constants. The sprites are in `sprite` (stage 1), as plain data, so `planet-render` only rasterises.
 - Outputs to the UI are data, not callbacks: `Game::events` (`ui.event` text) and the timeline's state in `Game::tl` (the dragon's offer in `tl.shen`, what's in the sky, the boss). Stage 4 adds a `HudState` snapshot (what `ui.update` builds today) and the shop rows (`syncShop`).
 
 ### planet-render
@@ -75,13 +75,25 @@ Estimates are in focused working days for one person or agent, assuming the perf
 
 | Stage | Scope | Estimate |
 |---|---|---|
-| 1. Renderer and world | Sprite DSL data (`makeSprite`, `shapeSprite`, palettes, heroes and villains) into core. Scene building per world (`scenery`, the 13 worlds' props). Sea, clouds, planet shading. Framebuffer diff harness. The kernels come from the perf crate through `Raster`. | 4–6 days (7–9 if the perf crate doesn't land) |
+| 1. Renderer and world | **Mostly done** (below). Still to do: snake way's view, the beam charge, the beam, the big bang and its blasts (with stage 4's inputs), the floating gain numbers, the time chamber's afterimage, the rest of the timeline's bursts as real particles. | 2–3 days remaining |
 | 2. Hero, laps and economy | **Done** (below). Still to do: the save/load JSON (serde, `hs-power` shape) and the daily bonus. (The wish-preview form path landed with stage 3.) | 1 day remaining |
-| 3. Events and bosses | **Done** (below). Still to do: the beam and big bang inputs (`fireBeam`, `throwBang`/`explode`, double-tap detection), and diffing the renderer-placed taps once stage 1 writes the screen spots back. | 1 day remaining |
+| 3. Events and bosses | **Done**. Still to do: the beam and big bang inputs (`fireBeam`, `throwBang`/`explode`, double-tap detection). The renderer-placed taps are diffed now (planet-render's drawn difftest). | 0.5 day remaining |
 | 4. HUD bridge and menus | wasm-bindgen exports, the page.html shim for `ui.*`, the shop, tree, angels and confirm boxes, saves, input (taps, drag, beam charge, double-tap). A flag in `build.mjs` to ship the wasm build behind a query param, then cut over. | 3–4 days |
-| 5. Native wgpu widget | `planet-native` on wgpu (softbuffer fallback) in Powerrr, the overlay web view for the HUD, the widget rim pass and menubar power. Pixel-diff it against the web build. | 3–5 days |
+| 5. Native wgpu widget | `planet-native` on wgpu (softbuffer fallback) in Powerrr, the overlay web view for the HUD and menubar power. The widget's drawing (no backdrop, its five cloud shapes and amount, the rim) is in planet-render and diffed already. Pixel-diff the native build against the web one. | 2–4 days |
 
-That's about 18–26 days in all. Stages 1 and 3 can run in parallel once the core API has settled (it has now).
+That leaves about 8–12 days. Stages 1 and 3 can run in parallel once the core API has settled (it has now).
+
+## Stage 1: what's ported
+
+- **Sprites.** `makeSprite`, the `shapeSprite` DSL (shenron.js's `kit.grid`: `set`, `rect`, `ell`, `poly`, `line`, `mirror`, the shading and outline pass) and `makeHero` are ported; `makeHero` builds all four heroes' 472 sprites (every form, fused, from behind) and a test checks each against game.js. The other 184 sprites (villains, NPCs, ToP fighters, movie villains, dinos, residents, shenron's heads, porunga) are baked from game.js by `difftest/sprites.js` into `planet-core/data/sprites.bin` (190 KB, palette-indexed, with aliases like `VILLAINS.0.spr`); their paint programs stay in game.js, and six are repainted in Rust as a DSL test. `sprites.js --check` says if the bake is stale.
+- **Worlds.** Every `WORLDS` entry's tones and `scenery()`: king kai's planet, namek, beerus' planet, west city (capsule corp lettering, towers, palms, hover cars, painted streets), kame house (sea, surf, the wake), paozu (karst pillars, forest, river, dinos, the pterodactyl), the future (slabs with window grids and rebar, puddles, smouldering craters, smoke, rain), planet vegeta, the lookout (korin's tower), the kais' world, yardrat (blinking folk), and the tournament of power (the void, nebula, pillars, the stands emptying as universes are erased, the broken floor, zeno's box). The planet uses px.wasm's kernel where game.js does.
+- **Sky.** The cloud sea, front and back, the night fade under the full moon, the moon; on the widget no backdrop and its five cloud shapes with the amount slider, then the rim.
+- **Characters.** The hero (run cycle, pose, every form, fused, flight with its streak, kaioken's aura, the great ape), his aura and sparks, bubbles, piccolo, krillin, king kai and his car, gregory, roshi and his kamehameha, saibamen, the dance, 16 and his birds, 18's date, gadgets, beerus and whis, the pudding, zeno, satan, frieza's ship, yamcha's crater, dr. gero, the boss (bar, name, universe badge), the ginyu force and androids, movie henchmen and their tricks, shenron's four looks and porunga, the spirit bomb, the beam struggle, the capsule, ki blasts, meteors, the pod, the nimbus, particles, the flash.
+- **Write-backs.** `liftNow`/`flipNow`, `piccoloAt`, `monkeyAt`, every visitor's `sx`/`sy`, the boss's and the ginyu force's `x`/`y`/`k`, henchmen, `ape.k`, the meteor's spin seed, the capsule's fall, hit flashes.
+
+Drawn difftest: `idle` (9 minutes), `active` (9 minutes) and a new `taps` scenario (8 minutes, 182 taps on pods, king kai, saibamen, the boss and more, all hit-tested on renderer-placed spots) match bit for bit with drawing on, up to the first trip to snake way. `ascend`, `late`, `events`, `multiverse` and `wishes` drawn are `#[ignore]`d for now: game.js takes 10–40 minutes to draw each.
+
+Framebuffer diff results: see the PR. In short, every world, every hero and form, the visitors, raids, sagas, the ginyu force, androids, movies, shenron's looks, the arena and the widget variants match byte for byte at desktop and phone sizes; snake way does not (not ported), and `#struggle` doesn't yet.
 
 ## Stage 2: what's ported
 
@@ -108,6 +120,6 @@ All of `frame()`'s timeline, in game.js order and with its short-circuits (a cou
 
 ## Next
 
-1. Recheck the perf crate. Agree on `Raster` with its author, or fold it into `planet-render`.
-2. Stage 1: sprite data, then scenery and planet shading, with the framebuffer diff. Have the scene builder write the screen spots back (see Testing), then diff taps on the renderer-placed npcs.
-3. The beam and big bang inputs, with stage 4's input layer.
+1. Snake way's view (`drawSnake`: the road in 3D, the cloud rows, ghosts, the arrival at king kai's), then run the drawn difftest through every scenario (it stops at the first trip to snake way for now).
+2. The beam, its charge and the big bang with stage 4's input layer; the floating gain numbers (planet-core has to keep where each gain lands); the time chamber's afterimage; the remaining bursts as real particles.
+3. Stage 4.

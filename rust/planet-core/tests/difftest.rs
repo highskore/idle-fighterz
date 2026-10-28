@@ -57,3 +57,8 @@ fn number_formatting() {
     eprintln!("fmt: {} numbers, {} mismatches", cases.as_array().unwrap().len(), bad.len());
     assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
+
+#[test]
+fn taps() {
+    scenario("taps");
+}

@@ -47,6 +47,16 @@ const SCENARIOS = {
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
     },
   },
+  // eight minutes that tap whatever is up: drawn, that's the visitors, saibamen, the boss and the ginyu force too
+  taps: {
+    seed: 13, minutes: 8,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 3e4], ['best', 3e4], ['partner', 4], ['piccolo', 1], ['galick', 1]]) act({ a: 'set', k, v })
+      if (f % 6 === 0 && f % 300 < 150) act({ a: 'train' })
+      if (f % 3 === 0) clickTargets(g, act)
+      if (f % 30 === 0) buyAll(g, act)
+    },
+  },
   idle: { seed: 1, minutes: 20, script(g, f, act) { if (f % 30 === 0) buyAll(g, act) } },
   active: {
     seed: 7, minutes: 20,
