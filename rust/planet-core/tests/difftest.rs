@@ -60,6 +60,7 @@ fn scenario(name: &str) {
     let samples = tr["samples"].as_array().unwrap();
 
     let mut g = Game::new(seed);
+    g.off = tr["off"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
     g.start();
     let (mut t, mut ii, mut si) = (0.0f64, 0usize, 0usize);
     let mut rep = Report::default();

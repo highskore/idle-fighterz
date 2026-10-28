@@ -3,9 +3,12 @@
 
 pub mod data;
 pub mod game;
+pub mod geom;
+pub mod jsmath;
 pub mod num;
 pub mod rng;
 pub mod state;
+pub mod timeline;
 
 pub use game::Game;
 

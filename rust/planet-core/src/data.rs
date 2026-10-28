@@ -261,3 +261,267 @@ pub const LAP: f64 = 6.283;
 pub const RNG_TRANSFORM: u32 = 180;
 pub const RNG_CRIT: u32 = 20;
 pub const RNG_KAIOKEN: u32 = 80;
+
+pub const N_BRAWL: usize = 4;
+pub const N_BEAM: usize = 8;
+pub const N_CHAMBER: usize = 9;
+pub const N_SENZU: usize = 10;
+pub const N_PODS: usize = 14;
+pub const N_BALLS: usize = 15;
+pub const N_BOUNTY: usize = 16;
+pub const N_SAGA: usize = 20;
+pub const A_STAFF: usize = 2;
+pub const A_SKIP: usize = 5;
+
+// ── the timeline (stage 3)
+
+/// Seconds at home before a trip happens anyway, and the best power of the first trip.
+pub const TRIP_WAIT: f64 = 120.0;
+pub const PLANET_EVERY: f64 = 1e6;
+/// The trip rotation: namek, planet vegeta, snake way, beerus, west city, kame house, paozu, the future, the lookout, kai world, yardrat.
+pub const TRIPS: [u32; 11] = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12];
+/// Worlds that sit the planet bigger or higher (`W2L`): (world, zoom, dy).
+pub const W2L: [(u32, f64, f64); 4] = [(2, 1.22, 0.0), (10, 0.82, -0.07), (11, 1.0, 0.0), (12, 1.0, 0.0)];
+pub const WORLD_NAMES: [&str; 13] =
+    ["", "namek", "vegeta", "snake way", "beerus", "west city", "kame house", "paozu", "the future", "the arena", "lookout", "kai world", "yardrat"];
+pub const WORLD_ACH: [(u32, &str); 7] = [(1, "namek"), (6, "kame"), (7, "paozu"), (8, "future"), (10, "lookout"), (11, "kaiworld"), (12, "yardrat")];
+
+/// A sprite's size: the timeline aims at and hit-tests sprites by their width and height.
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
+pub struct Dim {
+    pub w: f64,
+    pub h: f64,
+}
+
+const fn dim(w: u32, h: u32) -> Dim {
+    Dim { w: w as f64, h: h as f64 }
+}
+
+/// The sagas in story order (`VILLAINS`), with their sprite sizes.
+pub const VILLAINS: [(&str, Dim); 13] = [
+    ("raditz", dim(26, 34)),
+    ("nappa", dim(28, 34)),
+    ("vegeta", dim(24, 34)),
+    ("frieza", dim(26, 34)),
+    ("cell", dim(33, 43)),
+    ("kid buu", dim(29, 34)),
+    ("broly", dim(30, 38)),
+    ("beerus", dim(26, 34)),
+    ("hit", dim(26, 36)),
+    ("goku black", dim(26, 36)),
+    ("jiren", dim(28, 36)),
+    ("moro", dim(26, 36)),
+    ("gas", dim(28, 38)),
+];
+pub const NAPPA: Dim = dim(28, 34);
+pub const GINYU: [(&str, Dim); 5] = [("ginyu", dim(16, 22)), ("jeice", dim(16, 22)), ("burter", dim(16, 22)), ("recoome", dim(16, 22)), ("guldo", dim(16, 22))];
+pub const A17: Dim = dim(20, 25);
+pub const A18: Dim = dim(16, 24);
+pub const A19: Dim = dim(18, 24);
+pub const A20: Dim = dim(18, 26);
+pub const APE0: Dim = dim(22, 25);
+
+/// The movie villains and their henchmen.
+pub const MOVIE: [(&str, Dim); 10] = [
+    ("cooler", dim(28, 38)),
+    ("janemba", dim(32, 40)),
+    ("bojack", dim(28, 38)),
+    ("salza", dim(18, 26)),
+    ("dore", dim(18, 26)),
+    ("neiz", dim(18, 26)),
+    ("zangya", dim(18, 26)),
+    ("bujin", dim(18, 26)),
+    ("bido", dim(18, 26)),
+    ("kogu", dim(18, 26)),
+];
+
+pub fn movie_dim(name: &str) -> Dim {
+    MOVIE.iter().find(|m| m.0 == name).map(|m| m.1).unwrap()
+}
+
+#[derive(Debug)]
+pub struct MovieDef {
+    pub who: &'static str,
+    pub hp: [f64; 2],
+    pub minions: &'static [&'static str],
+    pub nova: f64,
+    pub jelly: bool,
+    pub split: bool,
+    pub flip: bool,
+    pub earth: bool,
+    pub web: bool,
+    pub intro: &'static str,
+    pub win: &'static str,
+    pub ach: &'static str,
+}
+
+/// `MV`, in the order a random pick sees them.
+pub const MOVIES: [MovieDef; 3] = [
+    MovieDef {
+        who: "cooler",
+        hp: [16.0, 34.0],
+        minions: &["salza", "dore", "neiz"],
+        nova: 14.0,
+        jelly: false,
+        split: false,
+        flip: false,
+        earth: false,
+        web: false,
+        intro: "cooler's armoured squadron drops in — beat salza, dore and neiz, then stop his supernova",
+        win: "cooler: \"impossible… not again\"",
+        ach: "coolerdown",
+    },
+    MovieDef {
+        who: "janemba",
+        hp: [70.0, 0.0],
+        minions: &[],
+        nova: 0.0,
+        jelly: true,
+        split: true,
+        flip: true,
+        earth: false,
+        web: false,
+        intro: "reality turns to jelly — janemba! he splits in two and space flips as he does",
+        win: "janemba bursts like a bubble — the world sets back to normal",
+        ach: "unwarped",
+    },
+    MovieDef {
+        who: "bojack",
+        hp: [55.0, 20.0],
+        minions: &["zangya", "bujin", "bido", "kogu"],
+        nova: 0.0,
+        jelly: false,
+        split: false,
+        flip: false,
+        earth: true,
+        web: true,
+        intro: "bojack's gang drags the fight to earth — and bujin's psychic web is up: tap him or fire a beam",
+        win: "bojack and his gang are sealed away again",
+        ach: "sealed",
+    },
+];
+
+/// The universe ladder: (number, name, colour, its three fighters).
+pub const LADDER: [(u32, &str, u32, [&str; 3]); 7] = [
+    (9, "universe 9", 0xc84a4a, ["bergamo", "lavender", "basil"]),
+    (10, "universe 10", 0x58b848, ["obuni", "murichim", "rubalt"]),
+    (4, "universe 4", 0x8a6ad0, ["ganos", "caway", "dercori"]),
+    (3, "universe 3", 0x9aa6b8, ["anilaza", "paparoni", "koitsukai"]),
+    (2, "universe 2", 0xf08ac0, ["ribrianne", "rozie", "kakunsa"]),
+    (6, "universe 6", 0x48d0a8, ["kefla", "caulifla", "kale"]),
+    (11, "universe 11", 0xe0473e, ["dyspo", "toppo", "jiren"]),
+];
+pub const UNI_HP: f64 = 6e14;
+pub const UNI_STEP: f64 = 20.0;
+pub const UNI_STAGES: [f64; 3] = [0.2, 0.45, 1.0];
+
+/// Each tournament fighter's takes (idle, two attacking, powered up); jiren has one.
+pub fn fighter_takes(name: &str) -> Vec<Dim> {
+    let one = |d: Dim| vec![d; 4];
+    match name {
+        "bergamo" => vec![dim(32, 42), dim(32, 42), dim(32, 42), dim(36, 46)],
+        "lavender" | "kakunsa" | "kefla" | "caulifla" | "obuni" | "dercori" => one(dim(30, 38)),
+        "basil" => one(dim(30, 40)),
+        "murichim" => one(dim(34, 42)),
+        "rubalt" => one(dim(32, 40)),
+        "ganos" => one(dim(40, 48)),
+        "caway" | "paparoni" | "rozie" => one(dim(28, 38)),
+        "anilaza" => one(dim(48, 56)),
+        "koitsukai" => one(dim(26, 30)),
+        "ribrianne" => one(dim(38, 42)),
+        "kale" => one(dim(38, 44)),
+        "dyspo" => one(dim(24, 32)),
+        "toppo" => one(dim(36, 42)),
+        "jiren" => vec![dim(28, 36)],
+        _ => unreachable!("no fighter {name}"),
+    }
+}
+
+pub const POWER_UP: [(&str, &str); 20] = [
+    ("bergamo", "bergamo soaked up every hit — he's grown huge!"),
+    ("lavender", "lavender goes blind with rage and lunges!"),
+    ("basil", "basil powers up: bulkier, pink fur, a red aura!"),
+    ("obuni", "obuni shouts and fires a blue ki blast!"),
+    ("murichim", "murichim's eyes glow — an orange aura!"),
+    ("rubalt", "rubalt winds up a gold-aura punch!"),
+    ("ganos", "ganos sheds his vest: max power!"),
+    ("caway", "caway throws up both hands — energy bolts!"),
+    ("dercori", "the lights go out — dercori looms in the dark!"),
+    ("anilaza", "anilaza gathers a destruction burst!"),
+    ("paparoni", "paparoni cackles and waves his cane!"),
+    ("koitsukai", "koitsukai's eye turns red!"),
+    ("ribrianne", "super ribrianne! butterfly wings and a love blast!"),
+    ("rozie", "rozie throws up both arms — love hearts everywhere!"),
+    ("kakunsa", "kakunsa rears up on her hind legs!"),
+    ("kefla", "kefla goes super saiyan 2!"),
+    ("caulifla", "caulifla charges a crush cannon!"),
+    ("kale", "kale lunges to grab you!"),
+    ("dyspo", "dyspo hits super maximum light speed mode!"),
+    ("toppo", "toppo unleashes hakai!"),
+];
+
+pub const PUNS: [&str; 6] = [
+    "why did the saiyan bring a ladder? to reach the next level!",
+    "what's a namekian's favourite drink? green tea!",
+    "what do you call a villain with no heat? frieza!",
+    "why was the cricket so good at training? he always hopped to it!",
+    "how does vegeta stay so sharp? he's always on point!",
+    "what do saiyans eat at the beach? sand-wiches — then the whole buffet!",
+];
+
+/// Wish rarity: how often each makes the dragon's three (`TIERS`), in `RANK` order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Tier {
+    Common,
+    Rare,
+    Epic,
+    Legendary,
+}
+
+impl Tier {
+    pub fn odds(self) -> f64 {
+        match self {
+            Tier::Common => 1.0,
+            Tier::Rare => 0.5,
+            Tier::Epic => 0.25,
+            Tier::Legendary => 0.08,
+        }
+    }
+}
+
+/// The dragon's wishes in `WISHES` order (krillin last: he's offered on top of the three while he's dead).
+pub const WISHES: [(&str, Tier); 23] = [
+    ("power", Tier::Epic),
+    ("form", Tier::Rare),
+    ("seeds", Tier::Rare),
+    ("bigape", Tier::Rare),
+    ("fortune", Tier::Common),
+    ("skills", Tier::Legendary),
+    ("gear", Tier::Epic),
+    ("fly", Tier::Rare),
+    ("fast", Tier::Common),
+    ("taps", Tier::Common),
+    ("idle", Tier::Rare),
+    ("laps", Tier::Common),
+    ("crit", Tier::Rare),
+    ("combo", Tier::Common),
+    ("senzu", Tier::Common),
+    ("fuse", Tier::Rare),
+    ("kaio", Tier::Rare),
+    ("bubbles", Tier::Common),
+    ("trip", Tier::Common),
+    ("radar", Tier::Common),
+    ("again", Tier::Epic),
+    ("satan", Tier::Common),
+    ("krillin", Tier::Common),
+];
+pub const KRILLIN_WISH: usize = 22;
+
+/// Achievements for reaching the late forms.
+pub const LATE_ACH: [(&str, &str); 5] = [
+    ("mastered ultra instinct", "f_mui"),
+    ("super saiyan blue evolved", "f_ssbe"),
+    ("beast", "f_beast"),
+    ("true ultra ego", "f_tue"),
+    ("super saiyan rage", "f_rage"),
+];

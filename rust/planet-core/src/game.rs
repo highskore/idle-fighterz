@@ -2,11 +2,13 @@
 //! ascending), with the economy as methods. Expressions keep game.js's operand order so floats round the same way.
 
 use crate::data::*;
+use crate::geom::{Cam, Frame};
 use crate::num::js_round;
 use crate::rng::Lcg;
 use crate::state::Save;
+use crate::timeline::Tl;
 
-/// Timed buffs `mult()` reads. Each is the `st.t` it runs out at; stage 3's events set most of them.
+/// Timed buffs. Each is the `st.t` it runs out at.
 #[derive(Clone, Debug, Default)]
 pub struct Buffs {
     pub car_until: f64,
@@ -29,6 +31,9 @@ pub struct Buffs {
     pub gadget_until: f64,
     pub whis_until: f64,
     pub pose_until: f64,
+    /// west city gadgets: a robot that taps, a hover bike that sprints
+    pub robot_until: f64,
+    pub bike_until: f64,
 }
 
 /// Shenron's timed wish buffs (`wishBuff`), by key.
@@ -63,13 +68,18 @@ pub struct Game {
     pub combo: f64,
     pub last_click: f64,
     pub shake: f64,
-    pub ape_giant: bool,
-    /// beerus' planet: Some(awake) while there (stage 3)
-    pub beerus: Option<bool>,
-    /// the dragon is due: seven balls gathered (stage 3 summons him)
-    pub summon_due: bool,
     /// ui.event text, oldest first; the HUD bridge drains it
     pub events: Vec<String>,
+    pub cam: Cam,
+    pub frame3: Frame,
+    /// the timeline: visitors, raids, trips, the dragon
+    pub tl: Tl,
+    /// how high the hero is drawn off the road and whether he faces left: the renderer sets these
+    pub lift_now: f64,
+    pub flip_now: bool,
+    /// difftest only: timeline systems switched off, mirroring the JS harness's gates while the port is partial
+    #[doc(hidden)]
+    pub off: Vec<String>,
 }
 
 impl Game {
@@ -95,10 +105,13 @@ impl Game {
             combo: 1.0,
             last_click: -9.0,
             shake: 0.0,
-            ape_giant: false,
-            beerus: None,
-            summon_due: false,
             events: Vec::new(),
+            cam: Cam::new(200.0, 134.0),
+            frame3: Frame::new(),
+            tl: Tl::default(),
+            lift_now: 0.0,
+            flip_now: false,
+            off: Vec::new(),
         }
     }
 
@@ -207,7 +220,7 @@ impl Game {
     }
 
     pub fn ape_x(&self) -> f64 {
-        2.0 + 0.25 * self.tail_lv() + if self.ape_giant { 1.0 } else { 0.0 }
+        2.0 + 0.25 * self.tail_lv() + if self.tl.ape.giant { 1.0 } else { 0.0 }
     }
 
     pub fn kaio_x(&self) -> f64 {
@@ -244,7 +257,7 @@ impl Game {
                 + on(b.gadget_until, 0.5)
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
-        let awake = if self.beerus == Some(true) { 0.25 } else { 1.0 };
+        let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
         self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
     }
 
@@ -310,11 +323,11 @@ impl Game {
 
     // ── state changes
 
-    fn event(&mut self, s: impl Into<String>) {
+    pub(crate) fn event(&mut self, s: impl Into<String>) {
         self.events.push(s.into());
     }
 
-    fn ach(&mut self, id: &'static str) {
+    pub(crate) fn ach(&mut self, id: &'static str) {
         if self.playing {
             self.s.ach.insert(id);
         }
@@ -353,6 +366,11 @@ impl Game {
 
     /// Training goals: progress, and a prize (and every fifth, a dragon ball) when one is done.
     pub fn goal(&mut self, id: &str, amount: f64, set: bool) {
+        if id == "meteor" {
+            if let Some(s) = self.tl.storm.as_mut() {
+                s.hit += 1;
+            }
+        }
         if !self.playing || self.s.goal != id {
             return;
         }
@@ -368,7 +386,7 @@ impl Game {
                 msg += " and a dragon ball";
                 if self.s.orbs7 >= 7 {
                     self.s.orbs7 = 0;
-                    self.summon_due = true;
+                    self.after(1.5, crate::timeline::Later::Summon);
                 }
             }
             self.event(msg);
@@ -376,11 +394,11 @@ impl Game {
         }
     }
 
-    fn victory(&mut self) {
+    pub(crate) fn victory(&mut self) {
         self.b.pose_until = self.t + 1.6;
     }
 
-    fn transform(&mut self, preview: bool) {
+    pub(crate) fn transform(&mut self, preview: bool) {
         self.s.form += 1;
         self.victory();
         if !preview {
@@ -394,22 +412,28 @@ impl Game {
             if f >= MUI_FORM {
                 self.ach("mui");
             }
+            if let Some(&(_, a)) = LATE_ACH.iter().find(|l| l.0 == self.forms[f].name) {
+                self.ach(a);
+            }
             if f > self.s.form_top {
                 self.s.form_top = f;
                 self.s.form_top_name = self.forms[f].name;
             }
         }
         let f = &self.forms[self.s.form];
-        let msg = format!("{}!  ×{}", f.name, f.x);
+        let msg = format!("{}!  ×{}{}", f.name, f.x, if preview { " — a taste, for 60s" } else { "" });
         self.event(msg);
         self.rng.skip(RNG_TRANSFORM);
     }
 
-    /// A training tap anywhere on the planet (game.js `train()` / the fall-through of `onClick`).
+    /// game.js `train()`: a tap just off the hero, so nothing on the planet takes it and it trains.
     pub fn train(&mut self) {
-        if !self.playing {
-            return;
-        }
+        let k = self.kid_screen(14.0);
+        self.click(k.x + 999.0, k.y + 999.0);
+    }
+
+    /// The fall-through of `onClick`: a training tap.
+    pub(crate) fn train_tap(&mut self) {
         let t = self.t;
         let cap = self.combo_cap();
         self.combo = if self.wished(WishBuff::Combo) {
@@ -424,6 +448,13 @@ impl Game {
             self.goal("combo", 1.0, false);
         }
         self.sprint = (self.sprint + 0.5).min(1.2);
+        let whis = self.b.whis_until > t;
+        if let Some(bz) = self.tl.bz.as_mut().filter(|b| b.awake == 0.0) {
+            bz.noise += if whis { 0.08 } else { 0.04 };
+        }
+        if self.tl.jump_h <= 0.0 {
+            self.tl.jump_v = 120.0;
+        }
         let crit = self.wished(WishBuff::Crit) || self.rng.random() < self.s.lvf(Upg::Scouter) * 0.1 + self.lvl(N_CRIT) * 0.08;
         let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots))
             * self.mult(false)
@@ -532,11 +563,13 @@ impl Game {
         self.s.pl = keep;
         self.s.run_best = keep;
         self.s.namek_at = 0.0;
+        self.s.foes.clear();
         let notes = self.ang(A_NOTES);
         for l in self.s.levels.iter_mut() {
             *l = if notes { (*l as f64 * 0.1).floor() as u32 } else { 0 };
         }
         self.s.form = if self.ang(A_GOLDEN) { 1 } else { 0 };
+        self.tl.preview = None;
         let msg = format!(
             "ascended — +{gain} ki seed{} (×{} on everything), back to {}",
             if gain > 1.0 { "s" } else { "" },
@@ -568,12 +601,24 @@ impl Game {
         s.uni = 0;
         s.uni_stage = 0;
         s.ustars = 0;
+        s.foes.clear();
+        self.tl.preview = None;
+        if let Some(b) = self.tl.boss.as_mut().filter(|b| b.uni && !b.dead) {
+            b.dead = true;
+            b.fled = true;
+            b.t1 = self.t;
+        }
     }
 
     /// The zeno button: everything but his favour (and achievements) is erased.
     pub fn zeno_erase(&mut self) {
         if !self.zeno_ready() {
             return;
+        }
+        if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead) {
+            b.dead = true;
+            b.fled = true;
+            b.t1 = self.t;
         }
         let s = &mut self.s;
         s.levels = [0; 14];
@@ -582,13 +627,23 @@ impl Game {
         (s.uni, s.uni_stage, s.ustars, s.mastery, s.godki, s.god_total, s.gods, s.auto_at, s.orbs7, s.namek_at) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0);
         s.tree = [0; TREE.len()];
         s.angel = [false; ANGELS.len()];
+        s.trips = 0;
+        s.foes.clear();
         s.zeno += 1;
+        self.tl.zen = None;
+        self.tl.preview = None;
+        self.tl.next_boss = 60.0;
         self.ach("zeno");
+        if self.s.world != 0 {
+            self.travel(0);
+            self.tl.namek_until = 0.0;
+        }
+        self.shake = 1.0;
     }
 
     // ── the fixed step
 
-    /// One frame of game.js `frame(t, dt)`: `t` is the new time, `dt` the step. Stage-3 timeline events are not here yet.
+    /// One frame of game.js `frame(t, dt)`: `t` is the new time, `dt` the step.
     pub fn frame(&mut self, t: f64, dt: f64) {
         self.t = t;
         let rdt = dt;
@@ -596,10 +651,9 @@ impl Game {
         if self.playing {
             self.session += dt;
         }
-        if self.shake > 0.0 {
-            self.rng.random(); // the screen shake's jitter
-        }
+        self.cam.bob = if self.shake > 0.0 { js_round((self.rng.random() - 0.5) * 5.0 * self.shake) } else { 0.0 };
         self.shake = (self.shake - dt).max(0.0);
+        self.cam.spin(dt);
 
         // running: sprint decays; laps pay
         self.sprint = (self.sprint - dt * 0.8).max(0.0);
@@ -610,7 +664,7 @@ impl Game {
             * if self.wished(WishBuff::Fast) { 1.5 } else { 1.0 }
             * if self.riding > 0.0 { 1.6 } else { 1.0 }
             * if self.wished(WishBuff::Fly) && !snake { 1.8 } else { 1.0 }
-            * if self.b.pose_until > t { 0.0 } else { 1.0 };
+            * if self.b.pose_until > t || self.tl.struggle.is_some() { 0.0 } else { 1.0 };
         self.phi += pace * dt;
         if self.phi - self.last_lap > LAP {
             self.last_lap += LAP;
@@ -627,45 +681,79 @@ impl Game {
                     * self.mult(false)
                     * (1.0 + 0.5 * self.lvl(N_LEGS))
                     * if self.wished(WishBuff::Laps) { 3.0 } else { 1.0 }
-                    * if self.beerus.is_some() { 3.0 } else { 1.0 }
+                    * if self.tl.bz.is_some() { 3.0 } else { 1.0 }
                     * if self.b.whis_until > t { 2.0 } else { 1.0 };
                 self.gain(n);
             }
         }
-        if !self.playing {
-            return;
-        }
-        // income: lap steps + passive, once a second
-        self.acc += rdt;
-        if self.acc >= 1.0 {
-            self.acc -= 1.0;
-            let n = (self.lap_value() / 7.0 + self.passive()) * self.mult(false);
-            self.gain(n);
-        }
-        if self.lvl(N_AUTO) > 0.0 {
-            self.auto_acc += dt * self.lvl(N_AUTO);
-            while self.auto_acc > 1.0 {
-                self.auto_acc -= 1.0;
-                let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots)) * self.mult(false) * (1.0 + 0.5 * self.lvl(N_FIST));
-                self.gain(n);
+        if self.tl.jump_h > 0.0 || self.tl.jump_v > 0.0 {
+            self.tl.jump_v -= 520.0 * dt;
+            self.tl.jump_h = (self.tl.jump_h + self.tl.jump_v * dt).max(0.0);
+            if self.tl.jump_h == 0.0 {
+                self.tl.jump_v = 0.0;
             }
         }
-        // a form you hold the power for comes one a frame and stays for the run
-        if self.s.form < self.forms.len() - 1 && self.s.pl >= self.forms[self.s.form + 1].at {
-            self.transform(false);
+        if self.playing {
+            // income: lap steps + passive, once a second
+            self.acc += rdt;
+            if self.acc >= 1.0 {
+                self.acc -= 1.0;
+                let n = (self.lap_value() / 7.0 + self.passive()) * self.mult(false);
+                self.gain(n);
+            }
+            // the timeline: all of it waits while you're on snake way
+            if self.s.world == 3 {
+                self.update_snake(t, dt);
+            } else {
+                self.timeline_home(t, dt);
+            }
+            self.timeline_trips(t);
+            if self.s.world != 3 {
+                self.timeline_fights(t, dt);
+            }
+            // a wished form wears off: back to the best form your held power earns
+            if let Some((from, until)) = self.tl.preview.filter(|p| t > p.1) {
+                let _ = until;
+                let mut f = from;
+                while f < self.forms.len() - 1 && self.s.pl >= self.forms[f + 1].at {
+                    f += 1;
+                }
+                if f < self.s.form {
+                    self.s.form = f;
+                    let msg = format!("the wish wears off — back to {}", self.forms[f].name);
+                    self.event(msg);
+                } else {
+                    let msg = format!("the wish wears off — but you're holding enough power: {} stays", self.forms[self.s.form].name);
+                    self.event(msg);
+                }
+                self.tl.preview = None;
+            }
+            // a form you hold the power for comes one a frame and stays for the run
+            if self.s.form < self.forms.len() - 1 && self.s.pl >= self.forms[self.s.form + 1].at {
+                self.transform(self.tl.preview.is_some());
+            }
+            let last = self.forms.len() - 1;
+            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0) {
+                self.s.mastery += 1;
+                self.ach("mastery");
+            }
+            if self.ang(A_AUTO)
+                && self.s.auto_at > 0
+                && self.s.pl >= AUTO_AT[self.s.auto_at]
+                && self.tl.boss.is_none()
+                && self.tl.shen.is_none()
+                && self.s.world == self.home()
+            {
+                self.ascend();
+            }
+            self.timeline_after(t, dt);
+            if t - self.last_click > 0.9 {
+                self.combo = 1.0;
+            }
+            self.timeline_moon(t, dt);
         }
-        let last = self.forms.len() - 1;
-        if self.s.form == last && self.s.pl >= self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0) {
-            self.s.mastery += 1;
-            self.ach("mastery");
-        }
-        let home = if self.s.multi { 9 } else { 0 };
-        if self.ang(A_AUTO) && self.s.auto_at > 0 && self.s.pl >= AUTO_AT[self.s.auto_at] && self.s.world == home {
-            self.ascend();
-        }
-        if t - self.last_click > 0.9 {
-            self.combo = 1.0;
-        }
+        self.shen_step(t);
+        self.run_later();
     }
 
     /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S`.

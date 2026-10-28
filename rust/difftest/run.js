@@ -4,6 +4,10 @@
 const fs = require('fs'), path = require('path')
 const mount = require('./harness')
 
+// timeline systems planet-core has: the harness switches the rest off at their spawn points (planet-core mirrors the gates)
+const PORTED = []
+const OFF = mount.SYSTEMS.filter(s => !PORTED.includes(s))
+
 const DT = 1 / 30
 const POLICY = ['boots', 'partner', 'gravity', 'scouter', 'house', 'piccolo', 'cloud', 'armor', 'kaio', 'galick', 'senzu', 'chamber', 'bigbang']
 const LEVELS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber', 'tail']
@@ -66,7 +70,7 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
 
 function run(name) {
   const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)
-  const g = mount({ seed: sc.seed })
+  const g = mount({ seed: sc.seed, off: OFF })
   const frames = Math.round(sc.minutes * 60 / DT), inputs = [], samples = []
   for (let f = 0; f < frames; f++) {
     sc.script(g, f, i => { inputs.push({ f, ...i }); apply(g, i) })
@@ -74,7 +78,7 @@ function run(name) {
     if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE) })
   }
   if (g.errors.length) throw new Error(g.errors.join('\n'))
-  return { name, seed: sc.seed, dt: DT, frames, inputs, samples }
+  return { name, seed: sc.seed, dt: DT, frames, off: OFF, inputs, samples }
 }
 
 // number formatting: the game's fmtShort, and the HUD's big/short from page.html
