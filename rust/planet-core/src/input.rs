@@ -349,7 +349,8 @@ impl Game {
             let s = b.spr();
             if on_line(b.x, b.y - s.h / 2.0 * b.k, s.w / 2.0 * b.k) {
                 let d = self.wall_cap(dmg * 4.0, pts * 4.0);
-                self.hit_boss(d);
+                let (bx, by) = (b.x, b.y - s.h / 2.0 * b.k);
+                self.hit_boss(d, bx, by);
             }
         }
         self.gain(pts);
@@ -462,7 +463,7 @@ impl Game {
             let s = b.spr();
             if hypot(&[b.x - x, b.y - s.h / 2.0 * b.k - y]) < r + s.w / 2.0 * b.k {
                 let dmg = self.wall_cap(hit(self) * 12.0 * bb, self.rate().max(self.lap_value() * self.mult(false)) * 12.0 * bb);
-                self.hit_boss(dmg);
+                self.hit_boss(dmg, x, y);
             }
         }
         if let Some(s) = self.tl.star.as_ref() {
@@ -471,7 +472,7 @@ impl Game {
                 self.click(sx, sy);
             }
         }
-        self.burst(36);
+        self.burst_at(x, y, &[0xffffff, 0xbfe9ff, 0x6fb0ff, 0x2f6ae0], 36, 220.0);
     }
 
     /// The idle turn and a drag's inertia, both paused while a press is down.

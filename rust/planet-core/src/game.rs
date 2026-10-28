@@ -2,6 +2,7 @@
 //! ascending), with the economy as methods. Expressions keep game.js's operand order so floats round the same way.
 
 use crate::data::*;
+use crate::fx::Particle;
 use crate::geom::{Cam, Frame};
 use crate::hud::{Cue, Hud};
 use crate::input::Input;
@@ -490,7 +491,13 @@ impl Game {
         let msg = format!("{}!  ×{}{}", f.name, f.x, if preview { " — a taste, for 60s" } else { "" });
         self.event(msg);
         self.cue(Cue::Form(self.s.form));
-        self.rng.skip(RNG_TRANSFORM);
+        let fi = ALL_FORMS.iter().position(|f| f.0 == self.forms[self.s.form].name).unwrap_or(0);
+        let q = self.kid_screen(10.0);
+        for _ in 0..90 {
+            let vx = (self.rng.random() - 0.5) * 200.0;
+            let vy = (self.rng.random() - 0.5) * 200.0;
+            self.fx.push(Particle::new(q.x, q.y, &FORM_AURA[fi]).v(vx, vy).drag(2.0).life(1.1));
+        }
     }
 
     /// game.js `train()`: a tap just off the hero, so nothing on the planet takes it and it trains.
@@ -532,7 +539,12 @@ impl Game {
         self.gain(n);
         self.cue(Cue::Sfx("tap"));
         if crit {
-            self.rng.skip(RNG_CRIT);
+            let k = self.kid_screen(14.0);
+            for _ in 0..10 {
+                let vx = (self.rng.random() - 0.5) * 90.0;
+                let vy = -20.0 - self.rng.random() * 60.0;
+                self.fx.push(Particle::new(k.x, k.y - 14.0, &[0xffffff, 0x9cf0b8, 0x34d873]).v(vx, vy).drag(2.0).life(0.5));
+            }
         }
         self.cue(Cue::Bump);
     }
@@ -669,7 +681,8 @@ impl Game {
         self.flash_t = 0.4;
         let msg = format!("kaioken! ×{}", self.kaio_x());
         self.event(msg);
-        self.rng.skip(RNG_KAIOKEN);
+        let (x, y) = self.hand_pos();
+        self.burst_at(x, y, &[0xffffff, 0xff9a8a, 0xe0332b], 40, 200.0);
     }
 
     fn branch_pts(&self, b: Branch) -> u32 {

@@ -716,17 +716,26 @@ impl Game {
         self.rng.random()
     }
 
-    /// `burst()` where the particles' spot isn't tracked yet: n particles, two draws each.
-    pub(crate) fn burst(&mut self, n: u32) {
-        self.rng.skip(2 * n);
+    /// n particles flying apart from (x, y) at up to `sp`: two draws each.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn spray(&mut self, x: f64, y: f64, c: &[u32], n: u32, sp: f64, drag: f64, life: f64) {
+        for _ in 0..n {
+            let vx = (self.rng.random() - 0.5) * sp;
+            let vy = (self.rng.random() - 0.5) * sp;
+            self.fx.push(Particle::new(x, y, c).v(vx, vy).drag(drag).life(life));
+        }
     }
 
     /// `burst(x, y, c, n, sp)`: n particles flying apart from (x, y).
     pub(crate) fn burst_at(&mut self, x: f64, y: f64, c: &[u32], n: u32, sp: f64) {
-        for _ in 0..n {
-            let vx = (self.rng.random() - 0.5) * sp;
-            let vy = (self.rng.random() - 0.5) * sp;
-            self.fx.push(Particle::new(x, y, c).v(vx, vy).drag(2.5).life(0.6));
+        self.spray(x, y, c, n, sp, 2.5, 0.6);
+    }
+
+    /// `burst` at a spot only the drawing places: unplaced (headless) it spends the draws on particles nothing sees.
+    pub(crate) fn burst_seen(&mut self, at: Option<(f64, f64)>, c: &[u32], n: u32, sp: f64) {
+        match at {
+            Some((x, y)) => self.burst_at(x, y, c, n, sp),
+            None => self.rng.skip(2 * n),
         }
     }
 
@@ -983,10 +992,11 @@ impl Game {
                 self.cue(Cue::Sfx("boom"));
                 let msg = format!("KRILLIN!!! — rage ×{} for 20s", self.b.rage);
                 self.event_ms(msg, 4000.0);
-                if k.sx.is_some() {
+                if let Some((sx, sy)) = k.sx {
                     for _ in 0..4 {
-                        self.rng.skip(2);
-                        self.burst(24);
+                        let x = sx + (self.r() - 0.5) * 14.0;
+                        let y = sy - 8.0 + (self.r() - 0.5) * 14.0;
+                        self.burst_at(x, y, &[0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 24, 200.0);
                     }
                 }
             }
@@ -1253,7 +1263,8 @@ impl Game {
             self.tl.next_cling = 240.0 + self.r() * 120.0;
         }
         if self.tl.cling.is_some_and(|boom| t > boom) {
-            self.burst(30);
+            let k = self.kid_screen(10.0);
+            self.burst_at(k.x, k.y, &[0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160.0);
             self.flash_t = 0.6;
             self.shake = 0.8;
             self.b.tired_until = self.b.tired_until.max(t + 6.0);
@@ -1339,7 +1350,8 @@ impl Game {
             self.shake = 0.6;
             self.event("it's over 9000!!  ×2 for 20s");
             self.cue(Cue::Fx("star"));
-            self.burst(30);
+            let (x, y) = self.hand_pos();
+            self.burst_at(x, y - 6.0, &[0xffffff, 0x9cf0b8, 0x34d873, 0xe0473e], 30, 160.0);
         }
         // saibamen
         if self.tl.tour.is_none() && session > 80.0 && tick(&mut self.tl.next_saiba, dt) {
@@ -1629,7 +1641,7 @@ impl Game {
         }
         if let Some(s) = self.tl.spirit_shot.clone() {
             if t - s.t0 > 0.7 {
-                self.spirit_blast();
+                self.spirit_blast(s.x1, s.y1);
                 self.tl.spirit_shot = None;
             }
         }
@@ -1652,7 +1664,9 @@ impl Game {
             } else if p >= 1.0 {
                 self.tl.struggle = None;
                 let f = self.finisher();
-                self.hit_boss(f);
+                let b = self.tl.boss.as_ref().unwrap();
+                let (x, y) = (b.x, b.y - b.spr().h / 2.0 * b.k);
+                self.hit_boss(f, x, y);
                 self.ach("struggle");
                 self.event("you won the beam struggle!");
             } else if p <= 0.0 || t > until {
@@ -1757,7 +1771,7 @@ impl Game {
                     self.ginyu_hit(mi, dmg);
                 } else {
                     let dmg = 1f64.max(self.rate() * if kb.disc { 2.0 } else { 0.2 });
-                    self.hit_boss(dmg);
+                    self.hit_boss(dmg, tx, ty);
                 }
                 continue;
             }
@@ -1834,7 +1848,8 @@ impl Game {
                             self.event(msg);
                         }
                     }
-                    self.rng.skip(24);
+                    let k = self.kid_screen(16.0);
+                    self.spray(k.x, k.y - 10.0, &[0xffffff, 0xffd84a, 0xff9a3c], 12, 90.0, 3.0, 0.6);
                 }
             }
         }
@@ -1914,7 +1929,8 @@ impl Game {
         self.tl.saibas[i].dead = true;
         let n = 40f64.max(self.rate() * 3.0) * (1.0 + 0.5 * self.s.lvf(Upg::Armor));
         self.gain(n);
-        self.burst(16);
+        let at = self.tl.saibas[i].sx.map(|(x, y)| (x, y - 5.0));
+        self.burst_seen(at, &[0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a], 16, 110.0);
     }
 
     pub(crate) fn ginyu_hit(&mut self, mi: usize, dmg: f64) {
@@ -1926,10 +1942,11 @@ impl Game {
         }
         m.hp -= dmg * arm;
         m.flash = 0.12;
-        self.rng.skip(10);
-        if m.hp <= 0.0 {
-            m.dead = true;
-            self.rng.skip(32);
+        let (x, y, down) = (m.x, m.y, m.hp <= 0.0);
+        self.burst_at(x, y - 12.0, &[0xffffff, 0xffe08a, 0xff9a3c], 5, 60.0);
+        if down {
+            self.tl.ginyu.as_mut().unwrap().members[mi].dead = true;
+            self.burst_at(x, y - 10.0, &[0xffffff, 0xffe08a, 0xe0473e], 16, 140.0);
             if let Some(tr) = self.tl.tour.as_mut() {
                 tr.ko += 2;
             }
@@ -1951,8 +1968,8 @@ impl Game {
     }
 
     /// `hitBoss(dmg, x, y)`: the boss takes a hit; at zero he's down, and pays.
-    pub(crate) fn hit_boss(&mut self, dmg: f64) {
-        if self.tl.boss.as_ref().unwrap().movie && self.movie_guard(dmg) {
+    pub(crate) fn hit_boss(&mut self, dmg: f64, x: f64, y: f64) {
+        if self.tl.boss.as_ref().unwrap().movie && self.movie_guard(dmg, x, y) {
             return;
         }
         let t = self.t;
@@ -1962,7 +1979,7 @@ impl Game {
         b.flash = 0.12;
         b.hit_t = Some(t);
         self.cue(Cue::Sfx("hit"));
-        self.burst(6);
+        self.burst_at(x, y, &[0xffffff, 0xffe08a, 0xff9a3c], 6, 70.0);
         let b = self.tl.boss.clone().unwrap();
         if b.hp <= 0.0 && !b.dead {
             {
@@ -2047,9 +2064,11 @@ impl Game {
             self.flash_t = 0.8;
             self.cue(Cue::Fx("star"));
             self.shake = 0.7;
+            let (bx, by) = (b.x, b.y - b.spr().h / 2.0 * b.k);
             for _ in 0..4 {
-                self.rng.skip(2);
-                self.burst(20);
+                let x = bx + (self.r() - 0.5) * 20.0;
+                let y = by + (self.r() - 0.5) * 20.0;
+                self.burst_at(x, y, &[0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 20, 180.0);
             }
         }
     }
@@ -2077,7 +2096,7 @@ impl Game {
         self.cue(Cue::Sfx("beam"));
     }
 
-    fn spirit_blast(&mut self) {
+    fn spirit_blast(&mut self, x: f64, y: f64) {
         self.flash_t = 1.0;
         self.cue(Cue::Sfx("boom"));
         self.shake = 1.0;
@@ -2106,24 +2125,25 @@ impl Game {
         }
         if self.boss_up() {
             let f = self.finisher();
-            self.hit_boss(f);
+            self.hit_boss(f, x, y);
         }
         let g = (self.wrate() * 120.0).max(self.lap_value() * self.mult(false) * 60.0) * (1.0 + 0.5 * (self.s.spirit as f64 - 1.0));
         self.gain(g);
         self.event(format!("spirit bomb! +{}", fmt_short(js_round(g))));
         self.victory();
         for _ in 0..5 {
-            self.rng.skip(2);
-            self.burst(30);
+            let bx = x + (self.r() - 0.5) * 40.0;
+            let by = y + (self.r() - 0.5) * 40.0;
+            self.burst_at(bx, by, &[0xffffff, 0xd8f0ff, 0x8fd8ff, 0x2f6ae0], 30, 260.0);
         }
     }
 
     /// The capsule pops open (the renderer calls it 8s after it lands, as game.js's drawing does).
     pub fn open_capsule(&mut self) {
-        self.tl.capsule = None;
+        let c = self.tl.capsule.take().unwrap();
         self.flash_t = 0.3;
         let roll = self.r();
-        self.burst(22);
+        self.burst_at(c.x, c.y, &[0xffffff, 0xe4e6ea, 0xe0332b], 22, 140.0);
         let t = self.t;
         if roll < 0.3 {
             self.b.senzu_until = t + 15.0 + 5.0 * self.lvl(N_SENZU);
@@ -2150,9 +2170,9 @@ impl Game {
         }
     }
 
-    fn open_gadget(&mut self) {
+    fn open_gadget(&mut self, x: f64, y: f64) {
         self.ach("westcity");
-        self.burst(18);
+        self.burst_at(x, y - 5.0, &[0xffffff, 0xf2c84a, 0x4a8ad0], 18, 120.0);
         self.cue(Cue::Sfx("coin"));
         let roll = self.r();
         let t = self.t;
@@ -2184,7 +2204,8 @@ impl Game {
         self.inp.w2_pole = w == 10; // game.js's scenery() rebuild: korin's tower only under the lookout
         self.flash_t = 1.0;
         self.shake = 0.5;
-        self.burst(40);
+        let (x, y) = self.hand_pos();
+        self.burst_at(x, y, &[0xffffff, 0xdfe6e8, 0x9adada], 40, 220.0);
         self.event_ms(TRAVEL[w as usize], if w >= 3 { 6000.0 } else { 2600.0 });
         if w != 0 {
             self.cue(crate::hud::Cue::Notify("trip", crate::hud::WORLD_FULL[w as usize].into()));
@@ -2278,7 +2299,8 @@ impl Game {
         if self.s.souls >= 10 {
             self.ach("souls10");
         }
-        self.burst(18);
+        let at = self.tl.snk.as_ref().unwrap().ghosts[gi].sx;
+        self.burst_seen(at, &[0xffffff, 0xdff4ff, 0xfff3a0], 18, 120.0);
         let n = 90f64.max(self.wrate() * 12.0);
         self.gain(n);
         self.cue(Cue::Sfx("beam"));
@@ -2388,7 +2410,9 @@ impl Game {
             self.event(format!("made it to king kai's planet at {}s! +{}", to_fixed(t - t0, 0), fmt_short(js_round(g))));
             self.victory();
             self.cue(Cue::Sfx("form"));
-            self.burst(36);
+            let snk = self.tl.snk.as_ref().unwrap();
+            let (x, y) = (snk.hx, snk.hy);
+            self.burst_at(x, y, &[0xffffff, 0xfff3a0, 0xffd23a, 0x8ad65a], 36, 160.0);
         }
     }
 
@@ -2686,7 +2710,7 @@ impl Game {
     }
 
     /// True when a hit on the movie villain is turned away.
-    fn movie_guard(&mut self, dmg: f64) -> bool {
+    fn movie_guard(&mut self, dmg: f64, x: f64, y: f64) -> bool {
         let id = self.tl.boss.as_ref().unwrap().id;
         let Some(m) = self.tl.movie.as_ref().filter(|m| m.boss == id) else { return false };
         if !m.o.minions.is_empty() && m.minions.iter().any(|h| !h.dead) {
@@ -2695,7 +2719,7 @@ impl Game {
             } else {
                 "bojack just laughs behind his gang — beat them first"
             };
-            self.burst(5);
+            self.burst_at(x, y, &[0xffffff, 0xd8c8ff, 0x8a6ad8], 5, 60.0);
             self.say(s);
             return true;
         }
@@ -2705,7 +2729,7 @@ impl Game {
         if twin_up && b.hp - dmg * arm <= 0.0 {
             b.hp = 1.0;
             b.flash = 0.12;
-            self.burst(5);
+            self.burst_at(x, y, &[0xffffff, 0xd8c8ff, 0x8a6ad8], 5, 60.0);
             self.say("his other half holds him together — beat the double first");
             return true;
         }
@@ -2720,14 +2744,15 @@ impl Game {
         }
         h.hp -= dmg * arm;
         h.flash = 0.12;
-        self.burst(5);
+        let at = h.x.map(|x| (x, h.y - 10.0));
+        self.burst_seen(at, &[0xffffff, 0xffe08a, 0xff9a3c], 5, 60.0);
         let h = &mut self.tl.movie.as_mut().unwrap().minions[i];
         if h.hp > 0.0 {
             return;
         }
         h.dead = true;
         let (name, twin) = (h.name, h.twin);
-        self.burst(16);
+        self.burst_seen(at, &[0xffffff, 0xffe08a, 0xe0473e], 16, 140.0);
         if name == "bujin" {
             self.tl.movie.as_mut().unwrap().web = None;
         }
@@ -2747,7 +2772,8 @@ impl Game {
         m.web = None;
         m.next_web = self.t + 9.0;
         self.event(s);
-        self.burst(14);
+        let (x, y) = self.hand_pos();
+        self.burst_at(x, y, &[0xffffff, 0xff9af0, 0x9ae84a], 14, 120.0);
     }
 
     fn movie_tap(&mut self, px: f64, py: f64) -> bool {
@@ -2757,7 +2783,7 @@ impl Game {
             return false;
         }
         if m.flip_until > t {
-            self.burst(5);
+            self.burst_at(px, py, &[0xf0d0ff, 0xa66ae0], 5, 40.0);
         }
         let m = self.tl.movie.as_ref().unwrap();
         let hit = m
@@ -2944,7 +2970,7 @@ impl Game {
         if self.tl.cling.is_some() {
             let k = self.kid_screen(12.0);
             if hypot(&[px - k.x, py - k.y]) < 16.0 {
-                self.burst(16);
+                self.burst_at(k.x, k.y, &[0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a], 16, 110.0);
                 let g = 60f64.max(self.wrate() * 20.0);
                 self.gain(g);
                 self.event("shook the saibaman off — it pops harmlessly");
@@ -2974,7 +3000,7 @@ impl Game {
                 self.shake = 0.6;
                 self.event("fusion ha! vegebubs — ×2 for 30s");
                 self.cue(Cue::Fx("super"));
-                self.burst(50);
+                self.burst_at(mx, my - 6.0, &[0xffffff, 0xffe08a, 0xff9a3c, 0x6fb0ff], 50, 200.0);
                 return;
             }
         }
@@ -2983,7 +3009,7 @@ impl Game {
                 self.b.car_until = t + 15.0;
                 self.event("riding with king kai — ×1.5 for 15s");
                 self.cue(Cue::Sfx("coin"));
-                self.burst(16);
+                self.burst_at(x, y - 6.0, &[0xffffff, 0xd8241e, 0xdfe3ea], 16, 110.0);
                 self.tl.car = None;
                 return;
             }
@@ -3015,7 +3041,7 @@ impl Game {
                 let msg = format!("you caught gregory! +{} — race {} won", fmt_short(js_round(g)), self.s.greg_wins);
                 self.event(msg);
                 self.cue(Cue::Sfx("coin"));
-                self.burst(18);
+                self.burst_at(x, y - 4.0, &[0xffffff, 0xd8a868, 0xa8743a], 18, 120.0);
                 self.tl.greg = None;
                 return;
             }
@@ -3026,7 +3052,7 @@ impl Game {
                 self.b.laugh_until = t + 10.0;
                 self.event("ha! ha! ha! — ×1.25 for 10s");
                 self.cue(Cue::Sfx("coin"));
-                self.burst(14);
+                self.burst_at(x, y - 14.0, &[0xffffff, 0xbfe9ff, 0x3a7ad8], 14, 90.0);
                 return;
             }
         }
@@ -3036,7 +3062,7 @@ impl Game {
                 self.gain(n);
                 self.ach("gero");
                 self.event(format!("{} lets go — you take it all back, twice over: +{}", g.name, fmt_short(js_round(n))));
-                self.burst(20);
+                self.burst_at(g.x, g.y - 10.0, &[0xffffff, 0xffe08a, 0xe0473e], 20, 160.0);
                 self.cue(Cue::Sfx("hit"));
                 self.tl.gero = None;
                 return;
@@ -3065,8 +3091,8 @@ impl Game {
             }
         }
         if let Some(i) = self.tl.gadgets.iter().position(|g| g.sx.is_some_and(|(x, y)| hypot(&[px - x, py - (y - 5.0)]) < 10.0)) {
-            self.tl.gadgets.remove(i);
-            self.open_gadget();
+            let (x, y) = self.tl.gadgets.remove(i).sx.unwrap();
+            self.open_gadget(x, y);
             return;
         }
         if let Some((x, y)) = self.tl.pud.as_ref().and_then(|p| p.sx) {
@@ -3110,7 +3136,7 @@ impl Game {
                     self.ach("satan");
                     self.event_ms(format!("hercule cash prize! +{} — \"keep it between us, kid\"", fmt_short(js_round(s.n))), 3500.0);
                     self.cue(Cue::Sfx("coin"));
-                    self.burst(18);
+                    self.burst_at(x, y - 12.0, &[0xffffff, 0xf2c84a, 0xb88a1a], 18, 120.0);
                     self.tl.satan = None;
                     return;
                 }
@@ -3159,7 +3185,7 @@ impl Game {
                 self.event("space pod caught — ×2 for 15s");
                 self.goal("star", 1.0, false);
                 self.cue(crate::hud::Cue::Fx("star"));
-                self.rng.skip(48);
+                self.spray(s.x, s.y, &[0xffffff, 0xffd84a, 0xff8a3a], 24, 120.0, 2.5, 0.7);
                 self.tl.star = None;
                 return;
             }
@@ -3169,7 +3195,9 @@ impl Game {
             self.goal("meteor", 1.0, false);
             let n = self.meteor_pay();
             self.gain(n);
-            self.rng.skip(32);
+            let m = &self.tl.meteors[i];
+            let (x, y) = (m.x, m.y);
+            self.burst_at(x, y, &[0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], 16, 110.0);
             return;
         }
         if let Some(m) = self.tl.moon.clone() {
@@ -3194,7 +3222,8 @@ impl Game {
                 );
                 self.event(msg);
                 self.cue(Cue::Fx("super"));
-                self.rng.skip(160);
+                let q = self.kid_screen(20.0);
+                self.spray(q.x, q.y, &[0xffffff, 0xffd0a0, 0x7a4a2a], 80, 220.0, 2.0, 1.0);
                 return;
             }
         }
@@ -3208,7 +3237,7 @@ impl Game {
                 self.combo = if t - self.last_click < 0.6 { self.combo_cap().min(self.combo + 0.1) } else { 1.0 };
                 self.last_click = t;
                 let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
-                self.hit_boss(dmg);
+                self.hit_boss(dmg, px, py);
                 return;
             }
         }
@@ -3217,19 +3246,19 @@ impl Game {
                 self.b.senzu_until = t + 15.0 + 5.0 * self.lvl(N_SENZU);
                 let msg = format!("senzu bean — ×1.5 for {}s", 15.0 + 5.0 * self.lvl(N_SENZU));
                 self.event(msg);
-                self.rng.skip(36);
+                self.spray(x, y, &[0xffffff, 0xb8f08a, 0x4fae3a], 18, 100.0, 3.0, 0.6);
                 self.tl.bean = None;
                 return;
             }
         }
-        if self.ape_tap() {
+        if self.ape_tap(px, py) {
             return;
         }
         self.train_tap();
     }
 
     /// The great ape takes the taps that would have trained.
-    fn ape_tap(&mut self) -> bool {
+    fn ape_tap(&mut self, px: f64, py: f64) -> bool {
         let t = self.t;
         if self.b.ape_until <= t || !(self.tl.ape.giant || self.s.lv(Upg::Tail) > 0) {
             return false;
@@ -3242,15 +3271,16 @@ impl Game {
             let g = 30f64.max(self.wrate() * 0.55 * (1.0 + self.ape_x()));
             self.gain(g);
             self.shake = self.shake.max(0.6);
-            self.burst(14);
+            self.burst_at(px, py, &[0xffffff, 0xe7e2d4, 0x9a8a70], 14, 150.0);
             self.cue(Cue::Sfx("hit"));
         }
         if self.s.lv(Upg::Tail) > 0 {
             let giant = self.tl.ape.giant;
             self.tl.ape.rage = 1f64.min(self.tl.ape.rage + if giant { 0.04 } else { 0.08 });
+            let h = self.kid_screen(APE0.h * self.tl.ape.k * 0.7);
             if !giant {
                 self.shake = self.shake.max(0.35);
-                self.burst(8);
+                self.burst_at(px, py, &[0xffffff, 0xe7e2d4, 0x9a8a70], 8, 110.0);
             }
             if self.tl.ape.rage >= 1.0 {
                 self.tl.ape.rage = 0.0;
@@ -3261,7 +3291,7 @@ impl Game {
                 self.shake = 0.9;
                 self.event("ROAAAR! +2s");
                 self.cue(Cue::Fx("super"));
-                self.burst(40);
+                self.burst_at(h.x, h.y, &[0xffffff, 0xfff27a, 0xe0332b], 40, 240.0);
             }
         }
         true
