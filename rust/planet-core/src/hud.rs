@@ -28,6 +28,8 @@ pub enum Cue {
     TreeGift(String),
     /// `ui.wishDone()`: the dragon chose (or left) without the player; the page closes the wish box
     WishDone,
+    /// `ui.itxPick(worlds, jump)`: instant transmission's picker, `[{key, label}, ...]` (the page calls back `itx_jump`)
+    ItxPick(String),
     /// `ui.notify(kind, arg)`: the widget's desktop notifications (a pod, a trip, a raid, the dragon); the site has none
     Notify(&'static str, String),
 }
@@ -44,6 +46,7 @@ impl Cue {
             Cue::Zeno => "[\"zeno\"]".into(),
             Cue::TreeGift(s) => arr(["\"treeGift\"".into(), json::str(s)]),
             Cue::WishDone => "[\"wishDone\"]".into(),
+            Cue::ItxPick(l) => arr(["\"itxPick\"".into(), l.clone()]),
             Cue::Notify(k, a) => arr(["\"notify\"".into(), json::str(k), json::str(a)]),
         }
     }
@@ -59,6 +62,9 @@ pub struct Hud {
     pub kaio_own: bool,
     pub kaio_ready: bool,
     pub kaio_left: f64,
+    pub itx_own: bool,
+    pub itx_ready: bool,
+    pub itx_left: f64,
     pub pl: f64,
     pub best: f64,
     pub rate: f64,
@@ -91,6 +97,7 @@ impl Hud {
         Obj::new()
             .raw("goal", Obj::new().str("text", self.goal_text).num("p", self.goal_p).num("n", self.goal_n).end())
             .raw("kaio", Obj::new().bool("own", self.kaio_own).bool("ready", self.kaio_ready).num("left", self.kaio_left).end())
+            .raw("itx", Obj::new().bool("own", self.itx_own).bool("ready", self.itx_ready).num("left", self.itx_left).end())
             .num("pl", self.pl)
             .num("best", self.best)
             .num("rate", self.rate)
@@ -127,9 +134,9 @@ pub struct ShopRow {
 }
 
 /// game.js `SHOP` key order (the shop's buttons, top to bottom).
-pub const SHOP_ORDER: [&str; 17] = [
-    "boots", "partner", "gravity", "cloud", "scouter", "galick", "senzu", "house", "armor", "tail", "kaio", "bigbang", "piccolo", "chamber", "ascend", "godki",
-    "zeno",
+pub const SHOP_ORDER: [&str; 18] = [
+    "boots", "partner", "gravity", "itx", "cloud", "scouter", "galick", "senzu", "house", "armor", "tail", "kaio", "bigbang", "piccolo", "chamber", "ascend",
+    "godki", "zeno",
 ];
 
 /// Shenron's wishes as the wish box shows them, in `WISHES` order: (label, what), with `{}` filled at offer time.
@@ -394,6 +401,9 @@ impl Game {
             kaio_own: s.lv(Upg::Kaio) > 0,
             kaio_ready: t >= self.b.kaio_ready,
             kaio_left: ceil(self.b.kaio_ready - t),
+            itx_own: s.lv(Upg::Itx) > 0,
+            itx_ready: self.itx_can(),
+            itx_left: 0f64.max(ceil(self.tl.itx_ready - t)),
             pl: s.pl,
             best: s.best,
             rate: self.rate(),
@@ -447,6 +457,10 @@ impl Game {
         let u = Upg::from_key(key).unwrap();
         let l = s.lv(u);
         let base = SHOP[u as usize].what;
+        if u == Upg::Itx && l > 0 {
+            let min: f64 = to_fixed(self.itx_cd() / 60.0, 1).parse().unwrap();
+            return format!("jump every {} min · trips {}% sooner", num(min), num(js_round(100.0 - 100.0 * self.soon())));
+        }
         if MILES.contains(&u) && l > 0 {
             return format!("{base} · ×2 at lv {}{}", num(self.next_mile(u)), if l >= 100 { " (every 50)" } else { "" });
         }

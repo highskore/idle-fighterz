@@ -17,10 +17,11 @@ pub enum Upg {
     Piccolo,
     Chamber,
     Tail,
+    Itx,
 }
 
 impl Upg {
-    pub const ALL: [Upg; 14] = [
+    pub const ALL: [Upg; 15] = [
         Upg::Boots,
         Upg::Partner,
         Upg::Gravity,
@@ -35,6 +36,7 @@ impl Upg {
         Upg::Piccolo,
         Upg::Chamber,
         Upg::Tail,
+        Upg::Itx,
     ];
 
     pub fn key(self) -> &'static str {
@@ -55,7 +57,7 @@ pub struct ShopItem {
 }
 
 /// Indexed by `Upg`. Unlock rules live in `Game::unlocked`.
-pub const SHOP: [ShopItem; 14] = [
+pub const SHOP: [ShopItem; 15] = [
     ShopItem { key: "boots", base: 50.0, k: 1.7, label: "weighted boots", what: "+1 per step" },
     ShopItem { key: "partner", base: 250.0, k: 1.7, label: "bubbles", what: "+4/s, trains with you" },
     ShopItem { key: "gravity", base: 2500.0, k: 2.6, label: "gravity chamber", what: "×1.15 everything" },
@@ -70,9 +72,13 @@ pub const SHOP: [ShopItem; 14] = [
     ShopItem { key: "piccolo", base: 30000.0, k: 2.4, label: "piccolo", what: "+60/s, zaps meteors" },
     ShopItem { key: "chamber", base: 150000.0, k: 2.8, label: "time chamber", what: "a door appears: train ×2 for 15s inside" },
     ShopItem { key: "tail", base: 40000.0, k: 2.5, label: "tail training", what: "great ape: +8% size, +2s, +×0.25 (less past lv 10)" },
+    ShopItem { key: "itx", base: 5e6, k: 2.6, label: "instant transmission", what: "two-finger tap or right-click: jump to a world you've been" },
 ];
 
 /// Producer milestones: these levels double output, then every 50 past 100.
+/// Where instant transmission can jump: every world but home, snake way and the arena.
+pub const ITX_WORLDS: [u32; 10] = [1, 2, 4, 5, 6, 7, 8, 10, 11, 12];
+
 pub const MILES: [Upg; 4] = [Upg::Boots, Upg::Partner, Upg::House, Upg::Piccolo];
 pub const MS: [u32; 4] = [10, 25, 50, 100];
 
@@ -526,7 +532,7 @@ pub const LATE_ACH: [(&str, &str); 5] = [
     ("super saiyan rage", "f_rage"),
 ];
 /// `ACH`: every achievement, in game.js order: (id, name, what earns it).
-pub const ACH: [(&str, &str, &str); 80] = [
+pub const ACH: [(&str, &str, &str); 81] = [
     ("lap1", "first steps", "run a lap of the planet"),
     ("laps100", "marathon", "run 100 laps"),
     ("ss", "super saiyan", "reach super saiyan"),
@@ -605,6 +611,7 @@ pub const ACH: [(&str, &str, &str); 80] = [
     ("lookout", "mr. popo's tiles", "visit kami's lookout"),
     ("kaiworld", "sacred world of the kais", "visit the supreme kai's world"),
     ("yardrat", "instant transmission", "visit yardrat"),
+    ("itx", "we have to go… instantly", "jump to another world with instant transmission"),
     ("streak", "golden hop", "hit a ×3 orb streak on snake way"),
     ("souls10", "ghost buster", "send 10 lost souls back to HFIL"),
 ];
