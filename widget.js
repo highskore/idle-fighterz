@@ -48,8 +48,14 @@
 
     // the game's own hud stays hidden; these mirror it
     const update = ui.update, shop = ui.shop;
+    // the app shows the power level beside its menu-bar icon: about once a second, and only when the short form changes
+    const SHORT = ['', 'K', 'M', 'B'];
+    const short = n => { n = Math.floor(n); if (n < 1000) return String(n); let e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); if (+m.toFixed(1) >= 1000) { e++; m /= 1000; } return e < SHORT.length ? m.toFixed(1) + SHORT[e] : n.toExponential(1).replace('+', ''); };
+    let titleAt = -1e9, title = '';
     ui.update = s => {
       update(s);
+      const at = performance.now();
+      if (at - titleAt >= 1000) { titleAt = at; const t = short(s.pl); if (t !== title) { title = t; invoke('tray_title', { text: t }); } }
       if (num.dataset.v !== $('pl').dataset.v) { num.dataset.v = $('pl').dataset.v; num.innerHTML = $('pl').innerHTML; }
       rate.textContent = $('rate').textContent + '/s';
       bar.firstChild.style.width = (s.form.p * 100).toFixed(1) + '%'; ring.lastChild.setAttribute('stroke-dashoffset', (100 - s.form.p * 100).toFixed(1));
@@ -121,11 +127,11 @@
       if (!conf.notify[kind] || quiet() || (root.classList.contains('awake') && !document.hidden) || at - (sent[kind] || 0) < 60000) return;
       sent[kind] = at; const [title, body] = NOTE[kind](arg); invoke('notify', { title, body });
     };
-    // hidden, the page gets no animation frames; with notifications on, the game keeps playing without drawing, in
-    // quarter-second steps that catch up on however long the (throttled) timer slept
+    // hidden, the page gets no animation frames; with notifications or the menu-bar power level on, the game keeps
+    // playing without drawing, in quarter-second steps that catch up on however long the (throttled) timer slept
     let bg = 0;
     document.addEventListener('visibilitychange', () => {
-      clearInterval(bg); st.headless = false; if (!document.hidden || !Object.values(conf.notify).some(Boolean)) return;
+      clearInterval(bg); st.headless = false; if (!document.hidden || !(conf.menubar_power || Object.values(conf.notify).some(Boolean))) return;
       st.headless = true; let was = performance.now();
       bg = setInterval(() => { const n = Math.min(240, Math.floor((performance.now() - was) / 250)); was = Math.max(was + n * 250, performance.now() - 250); for (let k = 0; k < n; k++) { T += .25; st.t = T; game.frame(T, .25); } }, 1000);
     });
