@@ -24,7 +24,7 @@ const head = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>highskore</title>
 <meta name="description" content="a smart contract developer portfolio">
 <meta property="og:description" content="a smart contract developer portfolio">
