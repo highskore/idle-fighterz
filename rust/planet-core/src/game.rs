@@ -65,6 +65,8 @@ pub struct Game {
     pub last_lap: f64,
     pub sprint: f64,
     pub riding: f64,
+    /// the `#snake-nimbus` preview hook (any hash with `nimbus`): snake way starts riding the nimbus
+    pub snake_nimbus: bool,
     pub acc: f64,
     pub auto_acc: f64,
     pub combo: f64,
@@ -117,6 +119,7 @@ impl Game {
             last_lap: 0.0,
             sprint: 0.0,
             riding: 0.0,
+            snake_nimbus: false,
             acc: 0.0,
             auto_acc: 0.0,
             combo: 1.0,
@@ -1149,6 +1152,7 @@ impl Game {
         if has("snake") {
             trip(self, 3e6, 2);
         }
+        self.snake_nimbus = has("nimbus");
         if has("door") {
             lv(self, Upg::Chamber, 1);
             self.tl.next_door = 0.0;
