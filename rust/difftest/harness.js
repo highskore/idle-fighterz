@@ -1,12 +1,12 @@
 // Headless JS planet game for differential testing against planet-core.
-// Loads world.js + shenron.js + game.js from the repo root into a vm with a seeded Math.random (the same LCG planet-core uses),
-// patches out the stage-3 timeline (events, trips, bosses, moon, senzu beans) when coreOnly is set, and never draws.
+// Loads world.js + shenron.js + game.js from the repo root into a vm with a seeded Math.random (the same LCG planet-core uses)
+// and never draws, so screen spots game.js sets while drawing (sx/sy, a boss's x/y) stay unset, as in a headless planet-core.
 const fs = require('fs'), vm = require('vm'), path = require('path')
 const ROOT = path.join(__dirname, '..', '..')
 
 function patch(src, from, to) { if (!src.includes(from)) throw new Error('harness anchor missing: ' + from.slice(0, 60)); return src.replace(from, to) }
 
-module.exports = function mount({ seed = 1, W = 600, H = 400, coreOnly = true, traceRng = false } = {}) {
+function mount({ seed = 1, W = 600, H = 400, traceRng = false } = {}) {
   let rs = seed >>> 0 || 1, draws = 0
   const sites = new Map()
   const rnd = () => {
@@ -16,6 +16,7 @@ module.exports = function mount({ seed = 1, W = 600, H = 400, coreOnly = true, t
   }
   const M = Object.create(Math); M.random = rnd
   const noop = () => {}, handlers = {}, win = {}, events = [], pending = [], errors = []
+  let wish = null
   const rect = () => ({ left: 0, top: 0, width: W, height: H })
   const ctx2d = { createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: noop }
   const cv = { width: 0, height: 0, style: {}, addEventListener: (k, f) => { handlers[k] = f }, setPointerCapture: noop, releasePointerCapture: noop, getBoundingClientRect: rect, getContext: () => ctx2d }
@@ -28,23 +29,14 @@ module.exports = function mount({ seed = 1, W = 600, H = 400, coreOnly = true, t
   let src = ['world.js', 'shenron.js', 'game.js'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
   src = patch(src, '    return { menu, learn, respec,', '    globalThis.__ev = s => eval(s);\n    return { menu, learn, respec,')
   src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) return; st.clear(); zb.fill(-1e9); ib.fill(0);')
-  if (coreOnly) {
-    src = patch(src, 'if (S.world === 3) updateSnake(t, dt); else {', 'if (S.world === 3) updateSnake(t, dt); else if (!globalThis.__coreOnly) {')
-    // the tree's auto taps sit inside the timeline block but are core economy: close the block before them, reopen it after
-    src = patch(src, "      if (lvl('auto') && playing) {", "      } if (lvl('auto') && playing) {")
-    src = patch(src, '      if (robotUntil > t) {', '      if (!globalThis.__coreOnly) { if (robotUntil > t) {')
-    src = patch(src, 'if (S.world === home() && (S.runBest >=', 'if (!globalThis.__coreOnly && S.world === home() && (S.runBest >=')
-    src = patch(src, '      if (S.world !== 3) {\n      if (S.partner >= 3', '      if (S.world !== 3 && !globalThis.__coreOnly) {\n      if (S.partner >= 3')
-    src = patch(src, 'if ((session > 40 || S.world === 2) && S.world !== 3 && !moon', 'if (!globalThis.__coreOnly && (session > 40 || S.world === 2) && S.world !== 3 && !moon')
-    src = patch(src, 'if (S.senzu > 0 && !bean', 'if (!globalThis.__coreOnly && S.senzu > 0 && !bean')
-  }
-  ctx.__coreOnly = coreOnly; ctx.__skip = true
+  ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
-  const ui = new Proxy({}, { get: (_, k) => k === 'event' ? (s => events.push([T, s])) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : noop })
+  const ui = new Proxy({}, { get: (_, k) => k === 'event' ? (s => events.push([T, s])) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
   const st = ctx.__makeStage({ querySelector: () => el }); st.resize()
   const game = ctx.__G.find(g => g.id === 'planet').mount(st, ui); game.start()
   const ev = s => ctx.__ev(s)
   const runPending = () => { pending.sort((a, b) => a[0] - b[0]); while (pending.length && pending[0][0] <= T) { const [, f] = pending.shift(); f() } }
   const step = (dt = 1 / 30) => { T += dt; st.t = T; game.frame(T, dt); runPending() }
-  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), events, errors, sites, get draws() { return draws }, get T() { return T } }
+  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), events, errors, sites, get draws() { return draws }, get T() { return T } }
 }
+module.exports = mount

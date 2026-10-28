@@ -1,7 +1,7 @@
 use crate::data::{Hero, Upg, ANGELS, TREE};
 use std::collections::BTreeSet;
 
-/// The persistent state: game.js's `S`, minus what belongs to stage-3 events (bosses, trips, wishes in progress).
+/// The persistent state: game.js's `S`.
 #[derive(Clone, Debug, Default)]
 pub struct Save {
     pub pl: f64,
@@ -41,6 +41,31 @@ pub struct Save {
     pub laps_total: u32,
     pub namek_at: f64,
     pub krillin_ally: bool,
+    pub krillin_dead: bool,
+    pub krillin_revives: u32,
+    /// space pods caught
+    pub stars: u32,
+    pub greg_wins: u32,
+    /// dr. gero and android 19 take turns
+    pub geros: u32,
+    /// the scouter broke (power over 9000)
+    pub o9k: bool,
+    pub bosses: u32,
+    pub tour_best: u32,
+    pub movies: u32,
+    pub trips: u32,
+    /// seconds left of a visit in progress
+    pub namek_left: f64,
+    /// lost souls blasted on snake way
+    pub souls: u32,
+    /// the next full moon makes a giant
+    pub big_ape: bool,
+    /// the spirit bomb level (gregory's reward)
+    pub spirit: u32,
+    /// the base form's capsule aura colour
+    pub aura: u32,
+    pub beaten: BTreeSet<String>,
+    pub foes: Vec<String>,
     pub ach: BTreeSet<&'static str>,
 }
 
