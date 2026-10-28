@@ -57,10 +57,10 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, has
   const runPending = () => { pending.sort((a, b) => a[0] - b[0]); while (pending.length && pending[0][0] <= T) { const [, f] = pending.shift(); f() } }
   const step = (dt = 1 / 30) => { T += dt; st.t = T; game.frame(T, dt); runPending() }
   // the canvas's pointer listeners and the window's keydown, called the way a browser would (clientX/Y in CSS pixels)
-  const ptr = (k, x, y) => handlers[k]({ clientX: x, clientY: y, pointerId: 1 })
+  const ptr = (k, x, y, pointerId = 1, button = 0) => handlers[k]({ clientX: x, clientY: y, pointerId, button })
   const input = {
     toBuf: (x, y) => st.toBuf({ clientX: x, clientY: y }),
-    down: (x, y) => ptr('pointerdown', x, y), move: (x, y) => ptr('pointermove', x, y), up: (x, y) => ptr('pointerup', x, y), cancel: () => handlers.pointercancel({}),
+    down: (x, y, id, button) => ptr('pointerdown', x, y, id, button), move: (x, y) => ptr('pointermove', x, y), up: (x, y) => ptr('pointerup', x, y), cancel: () => handlers.pointercancel({}),
     key: k => win.keydown({ key: k, repeat: false, target: { closest: () => null, blur: noop }, preventDefault: noop }),
   }
   return { ctx, game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), input, store, get update() { return update }, get shop() { return shop }, today: new FakeDate().toDateString(), events, errors, sites, get draws() { return draws }, get T() { return T } }

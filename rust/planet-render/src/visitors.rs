@@ -711,7 +711,33 @@ impl Scene {
             }
         }
         self.draw_ginyu(c, g, dt);
-        // the time chamber's afterimage: not ported yet
+        // the time chamber: every frame leaves a ghost of the last, so everything trails afterimages
+        if g.b.chamber_until > t {
+            let e = 1f64.min((t - g.tl.chamber_t0) / 0.5).min((g.b.chamber_until - t) / 0.5);
+            let f = 0.62 * e;
+            let n = c.fb.buf.len();
+            if self.echo.len() != n {
+                self.echo = c.fb.buf.clone();
+            }
+            let mix = |a: u32, b: u32, q: f64| (a as f64 + (b as f64 - a as f64) * q) as i64 as i32 as u32 & 255;
+            for k in 0..n {
+                let (p, q0) = (c.fb.buf[k], self.echo[k]);
+                let (al, a2) = (p >> 24, q0 >> 24);
+                if al == 0 && a2 == 0 {
+                    continue;
+                }
+                let q = if al != 0 { f * a2 as f64 / 255.0 } else { 1.0 };
+                let r = mix(p & 255, q0 & 255, q);
+                let gg = mix((p >> 8) & 255, (q0 >> 8) & 255, q);
+                let b = mix((p >> 16) & 255, (q0 >> 16) & 255, q);
+                let a = if al != 0 { al } else { ((a2 as f64 * f) as i64 as u32) & 255 };
+                let v = pk((r << 16) | (gg << 8) | b, a);
+                c.fb.buf[k] = v;
+                self.echo[k] = v;
+            }
+        } else {
+            self.echo.clear();
+        }
         for kb in g.tl.kis.clone() {
             if kb.disc {
                 for x in -5..=5 {

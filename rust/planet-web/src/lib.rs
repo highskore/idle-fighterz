@@ -69,8 +69,8 @@ impl Planet {
 
     // ── input: (x, y) in CSS pixels (clientX/Y), (bx, by) in buffer pixels (st.toBuf)
 
-    pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64) {
-        self.0.game.pointer_down(x, y, bx, by);
+    pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32, button: i32) {
+        self.0.game.pointer_down(x, y, bx, by, id, button);
     }
 
     pub fn pointer_move(&mut self, x: f64, y: f64, bx: f64, by: f64) {
@@ -118,6 +118,15 @@ impl Planet {
 
     pub fn auto_next(&mut self) {
         self.0.game.auto_next();
+    }
+
+    /// Instant transmission: the gesture or the button opens the picker (a `cues` entry), and a world from it jumps.
+    pub fn itx(&mut self) {
+        self.0.game.itx_open();
+    }
+
+    pub fn itx_jump(&mut self, w: u32) {
+        self.0.game.itx_jump(w);
     }
 
     /// A wish from the dragon's offer.
@@ -265,7 +274,7 @@ mod tests {
         p.start("Wed Oct 28 2026", 1.7e12);
         p.step(0.05, 1.7e12);
         assert!(p.frame().contains("\"hud\":"));
-        p.pointer_down(300.0, 200.0, 100.0, 66.0);
+        p.pointer_down(300.0, 200.0, 100.0, 66.0, 1, 0);
         p.pointer_up(100.0, 66.0);
         assert!(p.frame().contains("[\"sfx\",\"tap\"]"));
         assert!(p.save().contains("\"daily\":\"Wed Oct 28 2026\""));

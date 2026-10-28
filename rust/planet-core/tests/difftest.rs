@@ -44,6 +44,16 @@ fn wishes() {
 }
 
 #[test]
+fn lookout() {
+    scenario("lookout");
+}
+
+#[test]
+fn itx() {
+    scenario("itx");
+}
+
+#[test]
 fn attacks() {
     scenario("attacks");
 }

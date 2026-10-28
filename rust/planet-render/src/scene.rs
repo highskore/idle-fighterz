@@ -49,6 +49,10 @@ pub struct Scene {
     /// Where the drawing's random numbers come from: `None` shares the game's stream, as game.js does (the diffs need
     /// that); `Some` keeps the game's stream as it is headless, as the `--rust` page's game.js twin did
     pub own_rng: Option<planet_core::rng::Lcg>,
+    /// the time chamber's last frame (`echo`), empty outside it
+    pub(crate) echo: Vec<u32>,
+    /// the last instant transmission's departure (`blinkFx`)
+    blink: Option<Blink>,
     tones_key: Option<(u32, u8)>,
     pub tones: Option<Tones>,
 }
@@ -537,11 +541,21 @@ impl Scene {
 
     fn draw_hero(&mut self, c: &mut Ctx, g: &mut Game, dt: f64) -> HeroAt {
         let t = c.t;
+        // instant transmission: where he left from (with his facing and lift as last drawn), seen once
+        if let Some((from, t0)) = g.tl.blink_from {
+            if self.blink.as_ref().is_none_or(|b| b.t0 != t0) {
+                self.blink = Some(Blink { x: from.x, y: from.y, ang: from.ang, z: from.v[2], flip: g.flip_now, lift: g.lift_now, t0, fx: false });
+            }
+        }
         let kd = g.kid_screen(0.0);
         let form = &g.forms[g.s.form];
         let fi = ALL_FORMS.iter().position(|f| f.0 == form.name).unwrap_or(0);
         let hero = sprite::hero(hero_id(g));
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[fi] };
+        let bl = match &self.blink {
+            Some(b) if t - b.t0 < 0.75 => t - b.t0,
+            _ => -1.0,
+        };
         let ahead = ap(&c.m, g.frame3.road_pt(g.phi + 0.05));
         let ax = c.cx + ahead[0] * c.r;
         let flip = ax < kd.x;
@@ -696,8 +710,41 @@ impl Scene {
                 }
             }
             draw_hero(c, spr, 0.0, depth, 1.05, mx - sin(a2) * sh / 2.0, my + cos(a2) * sh / 2.0, a2);
+        } else if (0.0..0.18).contains(&bl) {
+            // he steps in out of the light
+            let ghost = itx_ghost(&itx_pose(&set.idle), bl / 0.18, t);
+            c.blit_z(&ghost, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+        } else if (0.0..0.75).contains(&bl) {
+            draw_hero(c, &itx_pose(&set.idle), lift, depth, 1.05, kd.x, kd.y, kd.ang);
         } else {
             draw_hero(c, spr, lift, depth, 1.05, kd.x, kd.y, kd.ang);
+        }
+        if bl >= 0.0 {
+            // where he stood: his shape fades out in a shimmer; where he lands, a ring of light pulls in
+            let b = self.blink.as_mut().unwrap();
+            if bl < 0.35 {
+                let ghost = itx_ghost(&set.idle, 1.0 - bl / 0.35, t);
+                c.blit_z(&ghost, b.x, b.y, b.ang, b.flip, b.lift, b.z * c.r + 6.0, 1.05);
+            }
+            if bl < 0.3 && seen {
+                let r = 3.0 + 16.0 * (1.0 - bl / 0.3);
+                let (hx, hy) = (kd.x + sin(kd.ang) * (lift + 16.0), kd.y - cos(kd.ang) * (lift + 16.0));
+                let mut a = 0.0;
+                while a < 6.28 {
+                    c.fb.px(hx + cos(a + bl * 9.0) * r, hy + sin(a + bl * 9.0) * r * 1.3, if a % 0.7 < 0.35 { 0xbff6ff } else { 0x2f8ae0 }, 1.0);
+                    a += 0.35;
+                }
+            }
+            if !b.fx {
+                b.fx = true;
+                let (bx, by, ba) = (b.x, b.y, b.ang);
+                for _ in 0..14 {
+                    let a = g.rng.random() * 6.28;
+                    let vx = (g.rng.random() - 0.5) * 12.0;
+                    let vy = -16.0 - g.rng.random() * 30.0;
+                    g.fx.push(Particle::new(bx + sin(ba) * 14.0 + cos(a) * 6.0, by - cos(ba) * 14.0 + sin(a) * 9.0, &[0xbff6ff, 0x7ae0f4, 0x2f8ae0]).v(vx, vy).life(0.7));
+                }
+            }
         }
         HeroAt { x: kd.x, y: kd.y, ang: kd.ang, flip, lift, depth, seen }
     }
@@ -1171,4 +1218,66 @@ impl Pn {
             Pn::Stone => &t.stone,
         }
     }
+}
+
+/// `blinkFx`: where an instant transmission left from, and whether its sparkle has been thrown
+struct Blink {
+    x: f64,
+    y: f64,
+    ang: f64,
+    z: f64,
+    flip: bool,
+    lift: f64,
+    t0: f64,
+    fx: bool,
+}
+
+/// `itxPose`: his standing sprite with the near arm raised, two fingers to the forehead, in his own colours.
+fn itx_pose(spr: &Sprite) -> Sprite {
+    let w = spr.w as i64;
+    let dx = spr.ax as i64 - 8;
+    let ix = |j: i64, i: i64| (j * w + i + dx) as usize;
+    let mut col = spr.col.clone();
+    let at = |j: i64, i: i64| spr.col[ix(j, i)];
+    let o = at(16, 3);
+    let glove = at(21, 13);
+    let hand = if glove == 0xffffff { glove } else { at(12, 7) };
+    let sleeve = at(19, 13);
+    for j in 18..=23 {
+        for i in 13..=15 {
+            col[ix(j, i)] = -1;
+        }
+    }
+    for j in 18..=22 {
+        col[ix(j, 12)] = o;
+    }
+    let rows: [(i64, &[(i64, char)]); 10] = [
+        (8, &[(11, 'o'), (12, 'o')]),
+        (9, &[(10, 'o'), (11, 'h'), (12, 'h'), (13, 'o')]),
+        (10, &[(10, 'o'), (11, 'h'), (12, 'h'), (13, 'h'), (14, 'o')]),
+        (11, &[(11, 'o'), (12, 'h'), (13, 'h'), (14, 'h'), (15, 'o')]),
+        (12, &[(12, 'o'), (13, 's'), (14, 's'), (15, 'o')]),
+        (13, &[(12, 'o'), (13, 's'), (14, 's'), (15, 'o')]),
+        (14, &[(12, 'o'), (13, 's'), (14, 's'), (15, 'o')]),
+        (15, &[(12, 'o'), (13, 's'), (14, 's'), (15, 'o')]),
+        (16, &[(12, 's'), (13, 's'), (14, 'o')]),
+        (17, &[(12, 's'), (13, 'o')]),
+    ];
+    for (j, cells) in rows {
+        for &(i, ch) in cells {
+            col[ix(j, i)] = match ch {
+                'o' => o,
+                'h' => hand,
+                _ => sleeve,
+            };
+        }
+    }
+    Sprite { col, ..spr.clone() }
+}
+
+/// `itxGhost`: `a` of the sprite's pixels, in blue light, dropping out row by row.
+fn itx_ghost(spr: &Sprite, a: f64, t: f64) -> Sprite {
+    let f = (t * 30.0).floor();
+    let col = spr.col.iter().enumerate().map(|(n, &c)| if c < 0 || h2(n as f64, f) > a { -1 } else if (n / spr.w) % 2 == 1 { 0x4aa8f0 } else { 0xbff6ff }).collect();
+    Sprite { col, ..spr.clone() }
 }

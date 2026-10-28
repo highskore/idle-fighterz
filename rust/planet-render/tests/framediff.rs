@@ -99,6 +99,7 @@ fn cases() -> Vec<Case> {
         c("#spirit", DESK, 60, true),
         c("#struggle", DESK, 900, false),
         c("#universe9", DESK, 300, true),
+        c("#itx", DESK, 60, true),
         c("#universe11", DESK, 300, true),
         c("#universe11", PHONE, 300, true),
     ];
