@@ -150,7 +150,7 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .hint { position: absolute; left: max(20px, env(safe-area-inset-left, 0px)); top: 18px; color: var(--muted); text-transform: uppercase; z-index: 2; pointer-events: none; }
 .game.buffs .hint, body.snake .hint { opacity: 0; visibility: hidden; }
 @media (min-width: 761px) { body.snake .hud { text-shadow: 0 0 2px #fff6dc, 0 0 6px #fff6dc; } }   /* snake way paints the whole sky: keep the numbers legible over the road */
-@media (min-width: 761px) { .hud .label { flex-wrap: wrap; row-gap: 0; max-width: min(540px, 46vw); margin-left: auto; } .hud .fxs { flex: 1 0 100%; white-space: normal; text-align: right; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } }
+@media (min-width: 761px) { .hud .label { flex-wrap: wrap; row-gap: 0; max-width: min(540px, 46vw); margin-left: auto; } .hud .fxs { flex: 1 0 100%; white-space: normal; text-align: right; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } .game:has(.fxs:not(:empty)) .toast { top: calc(9% + 48px); } }   /* the toast drops below a long buff line instead of covering it */
 
 .foot { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; text-transform: uppercase; color: var(--muted); }
 .foot .copy { display: flex; align-items: center; gap: 14px; color: var(--ink); }
@@ -281,7 +281,7 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
   /* the label wraps instead of cutting off: buffs and the visit timer get their own lines under it */
   .hud .label { flex-wrap: wrap; row-gap: 0; } .hud .fxs { flex: 1 0 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
   /* while something is happening up in the sky (snake way, hfil, a villain, the moon) the title gets out of the way */
-  body.busy .brand, body.hell .brand { opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
+  body.busy .brand, body.hell .brand, body.arena:has(.game.playing) .brand { opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
 }
 
 /* achievements and characters popup */
@@ -332,7 +332,7 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
 /* ozaru night: the full moon turns the sky black and starry */
 .game, .page { transition: background-color .8s; }
 body.night .game { background-color: #07070d !important; background-image: radial-gradient(1px 1px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 32% 8%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 58% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 76% 12%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 88% 34%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 8% 46%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 46% 40%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 94% 6%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 22% 60%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 68% 52%, #fff 50%, transparent 51%); }
-@media (min-width: 761px) { body.night .hud, body.night .hint, body.night .hud b, body.hell .hud, body.hell .hint, body.hell .hud b { color: #f2f2f2; } body.night .hud .label, body.night .hud .meta, body.hell .hud .label, body.hell .hud .meta { color: #9a9aa6; } }
+@media (min-width: 761px) { body.night .hud, body.night .hint, body.night .hud b, body.hell .hud, body.hell .hint, body.hell .hud b, body.arena .hud, body.arena .hint, body.arena .hud b { color: #f2f2f2; } body.night .hud .label, body.night .hud .meta, body.hell .hud .label, body.hell .hud .meta, body.arena .hud .label, body.arena .hud .meta, body.arena .goal { color: #b4b4c4; } }
 @media (max-width: 760px) { body.night .page, body.night { background-color: #07070d; } body.night { --sea: #141a3a; } body.night .foot { background: #07070d; border-color: #1c1c26; } body.night .foot a, body.night .foot nav { color: #e8e8ec; } }
 [data-icons="pills"] .ach { display: inline-flex; align-items: baseline; gap: 8px; font: inherit; text-transform: uppercase; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; } [data-icons="pills"] .ach span { display: none; font-size: 11px; text-transform: none; } [data-icons="pills"] .ach.open span { display: inline; } [data-icons="pills"] .ach.done b { color: var(--ink); }
 [data-icons="pills"] .ach.done { background: #fff7e6; border-color: #f2d9a8; } [data-icons="pills"].menu-body { display: flex; flex-wrap: wrap; gap: 6px; align-content: start; }
@@ -484,7 +484,7 @@ __PLANET__
       box.querySelector('button').focus({ preventScroll: true });
     },
     wishDone() { $('wish').hidden = true; $('game').classList.remove('wishing'); },   // the dragon picked for you
-    world(w) { root.style.setProperty('--sea', SEAS[w] || SEAS[0]); document.body.classList.toggle('lookout', w === 10); document.body.classList.toggle('kaiworld', w === 11); document.body.classList.toggle('yardrat', w === 12); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); document.body.classList.toggle('kame', w === 6); document.body.classList.toggle('paozu', w === 7); document.body.classList.toggle('future', w === 8); },
+    world(w) { root.style.setProperty('--sea', SEAS[w] || SEAS[0]); document.body.classList.toggle('lookout', w === 10); document.body.classList.toggle('kaiworld', w === 11); document.body.classList.toggle('yardrat', w === 12); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); document.body.classList.toggle('kame', w === 6); document.body.classList.toggle('paozu', w === 7); document.body.classList.toggle('future', w === 8); document.body.classList.toggle('arena', w === 9); },
     fx(kind, arg) { if (titleFx) titleFx(kind, arg); },
     bump() { const n = $('pl'); n.classList.add('bump'); clearTimeout(ui._b); ui._b = setTimeout(() => n.classList.remove('bump'), 110); },
   };

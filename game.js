@@ -2874,7 +2874,7 @@ GAMES.push({
       { id: 'critx', branch: 'body', tier: 2, name: 'pressure point', what: 'crits hit ×1 harder a rank', max: Infinity },
       { id: 'pride', branch: 'body', tier: 3, name: 'saiyan pride', what: 'combo goes to ×4', max: 1 },
       { id: 'idle', branch: 'spirit', tier: 0, name: 'meditation', what: 'idle income +50% a rank', max: Infinity },
-      { id: 'beam', branch: 'spirit', tier: 0, name: 'ki control', what: 'beams +50% a rank', max: Infinity },
+      { id: 'beam', branch: 'spirit', tier: 0, name: 'ki control', what: 'beams +25% a rank', max: Infinity },
       { id: 'chamber', branch: 'spirit', tier: 1, name: 'patience', what: 'the chamber door comes 25% more often a rank', max: Infinity },
       { id: 'senzu', branch: 'spirit', tier: 1, name: 'senzu farmer', what: 'senzu beans last 5s longer a rank', max: Infinity },
       { id: 'seedx', branch: 'spirit', tier: 1, name: 'zenkai', what: 'each ki seed +2% more a rank', max: Infinity },
@@ -2969,7 +2969,7 @@ GAMES.push({
     let wishBuff = {}, homeSince = 0, bangReady = 0, whisUntil = 0, whisReady = 0, chiUntil = 0, chiReady = 0, kameReady = 0, dance = null, fused = null, nextDance = 300, cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null, zen = null;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
-    let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, kis = [];
+    let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, nextSaga = 60, kis = [];
     let night = false, nightK = 0, shake = 0, moon = null, nextMoon = 150, apeUntil = 0, apeStep = 0, flashT = 0, senzuUntil = 0, combo = 1, lastClick = -9, charging = 0, beam = null, bean = null, nextBean = 30;
     function ascend() {
       // seeds grow with the square root of the power you give up; forms and trips start over from base
@@ -3012,7 +3012,7 @@ GAMES.push({
       if (k === 'armor' && S.armor === 1) ui.event('saiyan armor on — hit villains harder');
       save(); syncShop();
     });
-    const what = k => k === 'ascend' ? `reset for +${seedsNow()} ki seeds` : k === 'godki' ? `reset for +${godNow()} god ki` : k === 'zeno' ? `erase it all: zeno's favour ×${fmtShort(ZENO_X ** (S.zeno + 1))}` : MILES[k] && S[k] && nextMile(k) ? `${SHOP[k].what} · ×2 at lv ${nextMile(k)}${S[k] >= 100 ? ' (every 50)' : ''}` : k === 'chamber' && S.chamber ? `train ×${chamberX()} inside · next ×${chamberX(S.chamber + 1)}` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.75` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? `beam ×1.6 · next: ${kame() ? 'super kamehameha' : 'final flash'}` : S.galick >= 5 ? `beam ×1.6 (now ×${fmtShort(Math.round(1.6 ** S.galick))}) · full charge ×3` : 'beam ×1.6') : SHOP[k].what;
+    const what = k => k === 'ascend' ? `reset for +${seedsNow()} ki seeds` : k === 'godki' ? `reset for +${godNow()} god ki` : k === 'zeno' ? `erase it all: zeno's favour ×${fmtShort(ZENO_X ** (S.zeno + 1))}` : MILES[k] && S[k] && nextMile(k) ? `${SHOP[k].what} · ×2 at lv ${nextMile(k)}${S[k] >= 100 ? ' (every 50)' : ''}` : k === 'chamber' && S.chamber ? `train ×${chamberX()} inside · next ×${chamberX(S.chamber + 1)}` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.75` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? `beams hit harder · next: ${kame() ? 'super kamehameha' : 'final flash'}` : S.galick >= 5 ? 'beams hit harder · full charge ×1.25' : 'beams hit harder') : SHOP[k].what;
     const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0 && k !== 'godki' && k !== 'zeno').map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : k === 'godki' ? S.gods : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k) && (k !== 'ascend' || S.best >= 1e6), open: k === 'ascend' && treeOpen(), special: k === 'ascend' || k === 'godki' || k === 'zeno' }])));
 
     // the planet: a road ring near the rim, a cap of scenery facing the viewer
@@ -3393,7 +3393,7 @@ GAMES.push({
       if (star) { const rx = star.x - k.x, ry = star.y - k.y; if (rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < 8 + c * 3) onClick(star.x, star.y); }
       if (c >= 2.4) goal('beam');
       const ff = S.galick >= 5 && c >= 2.4; beam.ff = ff; beam.full = c >= 2.4; if (ff) ach('flash');   // galick lv 5: a full charge fires a final flash
-      const pts = Math.pow(1.6, S.galick) * lapValue() * 2.5 * c * mult() * (ff ? 3 : 1) * (1 + .5 * lvl('beam'));   // each level hits ×1.6 harder
+      const pts = beamPay() * c / 2.5 * (ff ? 1.25 : 1);
       const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1) * (1 + .15 * (S.galick - 1)); };
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && onLine(sb.sx, sb.sy - 6, 7)) killSaiba(sb);
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && onLine(m.x, m.y - m.spr.h / 2 * m.k, m.spr.w / 2 * m.k)) ginyuHit(m, pts * 2);
@@ -3406,6 +3406,7 @@ GAMES.push({
 
     const rate = () => Math.round((lapValue() / 7 + passive()) * mult());
     const wrate = () => Math.round((lapValue() / 7 + passive()) * mult(true));   // windfalls and villain hp: your rate without the temporary buffs, so stacking them first can't multiply a lump sum
+    const beamPay = () => wrate() * 4 * (1 + .25 * Math.log(Math.max(1, S.galick))) * (1 + .25 * lvl('beam'));   // a full charge, in seconds of rate: levels add a little, never compound
     function burst(x, y, c, n = 16, sp = 110) { for (let k = 0; k < n; k++) fx.add({ x, y, vx: (Math.random() - .5) * sp, vy: (Math.random() - .5) * sp, drag: 2.5, life: .6, c, raw: true }); }
     const GOALS = [
       { id: 'combo', n: 1, text: 'hit a ×2 combo' },
@@ -3477,7 +3478,7 @@ GAMES.push({
       ui.sfx && ui.sfx('boom');
       const r = 18 * (1 + .25 * (S.bigbang - 1)) * Math.max(1, R / 50);
       blasts.push({ x, y, r, t0: st.t }); shake = Math.max(shake, .45);
-      gain(Math.pow(1.6, Math.max(1, S.galick)) * lapValue() * 6.25 * mult() * (1 + .5 * lvl('beam')) * (1.1 + .1 * S.bigbang), x, y - 10, true);   // a bit more than a full-charge beam (its cooldown is about a beam's charge time); what it hits pays on top
+      gain(beamPay() * (1.3 + .05 * Math.log2(S.bigbang)), x, y - 10, true);   // a bit more than a full-charge beam (its cooldown is about a beam's charge time); what it hits pays on top
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(sb.sx - x, sb.sy - 6 - y) < r + 6) killSaiba(sb);
       for (const m of meteors) if (!m.dead && m.delay <= 0 && Math.hypot(m.x - x, m.y - y) < r + 4) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); }
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.hypot(m.x - x, m.y - m.spr.h / 2 * m.k - y) < r + 6) ginyuHit(m, Math.max(rate(), lapValue() * mult()) * 8 * S.bigbang);
@@ -3645,6 +3646,7 @@ GAMES.push({
       if (shen) return;
       if (look !== undefined) shenLook = look;
       if (S.world === 3) { summonLater = true; return; }
+      if (boss && !boss.dead) { if (!summonLater) ui.event('seven dragon balls — the dragon waits until the fight is over'); summonLater = true; return; }   // his timer would run out while the wish is up
       shen = { t0: st.t, phase: 'rise', phaseT: st.t, look: shenLook, wishes: S.world === 1 ? 3 : 1, porunga: S.world === 1 }; ach(S.world === 1 ? 'porunga' : 'shenron'); document.body.classList.add('shen'); ui.sfx && ui.sfx('dragon'); ui.event(S.world === 1 ? 'porunga awakens — three wishes…' : 'the eternal dragon awakens…');/*widget*/ ui.notify('shenron', S.world === 1 ? 'porunga' : 'shenron');/*/widget*/
     }
     const wishSeeds = () => Math.max(3, Math.ceil(seedsNow() / 5));
@@ -3696,7 +3698,7 @@ GAMES.push({
     }
     // the dragon's timeline runs here, not in the draw (snake way skips that), with a watchdog so no phase can hang
     function shenStep(t) {
-      if (summonLater && S.world !== 3 && !shen) { summonLater = false; summon(); }
+      if (summonLater && S.world !== 3 && !shen && !(boss && !boss.dead)) { summonLater = false; summon(); }
       if (!shen) return;
       const age = t - shen.t0, inPhase = t - shen.phaseT;
       if (shen.phase === 'rise' && age > 4.4) openWish();
@@ -4396,17 +4398,18 @@ GAMES.push({
       if (S.world === 2 && nextNappa > 0 && !boss && !shen && (nextNappa -= dt) <= 0) { nextNappa = 0; const hp = Math.max(800, wrate() * 50); boss = { name: 'nappa', spr: NAPPA, hp, max: hp, t0: t, until: t + 35, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event('nappa: "vegeta, let me handle this!" — tap him'); }
       // ultra instinct (or the end of the sagas) opens the multiverse, for the rest of the run
       if (!S.multi && (S.saga >= VILLAINS.length || S.form >= UI_FORM)) { S.multi = 1; S.multiT = session; nextBoss = Math.min(nextBoss, 20); topSync(); if (!S.world) travel(9); ui.event('the grand priest: "welcome to the tournament of power." — universe 9 is up first. beat each universe for a universe star', 5000); }
+      if (S.multi && S.saga < VILLAINS.length) nextSaga -= dt;   // sagas left when the multiverse opened keep coming, between universe fights
+      if (!tour && session > 110 && !boss && !shen && (S.multi ? S.saga < VILLAINS.length && nextSaga < 0 : (nextBoss -= dt) < 0)) {
+        // the next saga in story order
+        const n = VILLAINS.length, V0 = VILLAINS[S.saga % n], hp = Math.max(600, wrate() * 40) * (1 + .15 * S.saga), me = V0.name === 'vegeta' && S.hero === 'vegeta', twin = V0.name === 'goku black' && S.hero === 'goku';
+        boss = { name: me ? 'past vegeta' : V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 40, x: 0, y: 0, k: 1, flash: 0, nextKi: 1, saga: true };/*widget*/ ui.notify('raid', boss.name);/*/widget*/
+        ui.event(`saga ${S.saga % n + 1}/${n}: ` + (me ? 'your younger self shows up, scouter and all — "that\'s MY hair!" tap him' : twin ? 'goku black is attacking — "hey, that\'s MY face!" tap him' : `${V0.name} is attacking — tap him!`), 4000); if (S.multi) nextSaga = (120 + Math.random() * 60) / (S.zeno ? 4 : 1); else nextBoss = (160 + Math.random() * 60) / (S.zeno ? 4 : 1); krillinHit(V0.name);
+      }
       if (!tour && session > 110 && !boss && !shen && S.multi && (nextBoss -= dt) < 0) {
         // past the sagas: the multiverse. three fights a universe, a fixed wall each, the villains in that universe's colour
         const u = S.uni, k = S.uniStage, who = uniFighter(u, k), hp = uniHp(u, k), last = k === UNI_STAGES.length - 1;
         boss = { name: who, tag: uniName(u) + (last ? ' boss' : ` ${k + 1}/${UNI_STAGES.length}`), sprs: fighterSpr(who, uniColour(u)), get spr() { return this.sprs[this.p || 0]; }, hp, max: hp, t0: t, until: t + uniTime(), x: 0, y: 0, k: 1, flash: 0, nextKi: 1, uni: true, badge: uniBadge(u) + (last ? ' BOSS' : ''), tc: uniColour(u) };
         ui.event(`${uniName(u)}${last ? ' — its strongest' : ''}: ${who} steps up. ${uniTime()}s to win — tap!`, 3500); ui.sfx && ui.sfx('boss'); nextBoss = 10 + Math.random() * 6;
-      }
-      if (!tour && session > 110 && !boss && !shen && !S.multi && (nextBoss -= dt) < 0) {
-        // the next saga in story order; then the multiverse
-        const n = VILLAINS.length, V0 = VILLAINS[S.saga % n], hp = Math.max(600, wrate() * 40) * (1 + .15 * S.saga), me = V0.name === 'vegeta' && S.hero === 'vegeta', twin = V0.name === 'goku black' && S.hero === 'goku';
-        boss = { name: me ? 'past vegeta' : V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 40, x: 0, y: 0, k: 1, flash: 0, nextKi: 1, saga: true };/*widget*/ ui.notify('raid', boss.name);/*/widget*/
-        ui.event(`saga ${S.saga % n + 1}/${n}: ` + (me ? 'your younger self shows up, scouter and all — "that\'s MY hair!" tap him' : twin ? 'goku black is attacking — "hey, that\'s MY face!" tap him' : `${V0.name} is attacking — tap him!`), 4000); nextBoss = (160 + Math.random() * 60) / (S.zeno ? 4 : 1); krillinHit(V0.name);
       }
       // meteor storm: a 12s downpour; every bust counts and pays out at the end
       if (!storm && session > 120 && !tour && !shen && !boss && (nextStorm -= dt) < 0) { storm = { until: t + 12, next: t, hit: 0 }; ui.event('meteor storm! bust as many as you can'); ui.sfx && ui.sfx('boss'); nextStorm = 260 + Math.random() * 60; }
@@ -4431,7 +4434,7 @@ GAMES.push({
         boss.p = low ? 3 : boss.sprs[2] && (t - (boss.hitT ?? -9) < .4 || struggle) ? 1 + Math.floor(t * 6) % 2 : 0;
       }
       if (boss) {
-        if (!boss.dead && t > boss.until) { boss.dead = true; boss.fled = true; boss.t1 = t; if (boss.uni) { nextBoss = 20; ui.event(`${boss.name} holds ${boss.tag.replace(/ (boss|\d\/\d)$/, '')} — ${Math.round(boss.hp / boss.max * 100)}% left. grow, he's back in 20s`, 3500); } else ui.event(`${boss.name} got away`); }
+        if (!boss.dead && t > boss.until) { boss.dead = true; boss.fled = true; boss.t1 = t; if (boss.uni) { nextBoss = boss.hp / boss.max > .95 ? 150 : 20; ui.event(`${boss.name} holds ${boss.tag.replace(/ (boss|\d\/\d)$/, '')} — ${Math.round(boss.hp / boss.max * 100)}% left. grow, he's back in ${nextBoss}s`, 3500); } else ui.event(`${boss.name} got away`); }   // barely scratched: give the player time to grow before the next try
         if (boss.dead && t - boss.t1 > 1.2) boss = null;
         else if (!boss.dead && !struggle && (boss.nextKi -= dt) < 0) { boss.nextKi = .7; const h = handPos(); kis.push({ x: h.x, y: h.y, t0: t }); }
         if (boss && !boss.dead && S.krillinAlly && (boss.nextDisc = (boss.nextDisc ?? 2) - dt) < 0) { boss.nextDisc = 5; const h = handPos(); kis.push({ x: h.x, y: h.y - 10, t0: t, disc: true }); }
@@ -4488,7 +4491,7 @@ GAMES.push({
       if (riding > 0) fxs.push('nimbus ×1.5');
       if (carUntil > t) fxs.push(`king kai's car ×1.5 ${Math.ceil(carUntil - t)}s`);
       if (apeUntil > t) fxs.push(`${ape.giant ? 'giant ape' : 'great ape'} ×${1 + apeX()} ${Math.ceil(apeUntil - t)}s`);
-      const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.granted ? `dragon balls ${S.orbs7}/7` : '', S.granted ? `wishes ${S.granted}` : '', S.multi ? `${uniName(S.uni)} · fight ${S.uniStage + 1}/${UNI_STAGES.length}` : S.saga || session > 110 ? `saga ${S.saga + 1}/${VILLAINS.length}` : '', core() > ceiling() ? (S.multi ? 'ki ceiling — it rises with time; clearing universes lifts it too' : 'ki ceiling — reach ultra instinct or finish the sagas: the multiverse lifts it') : '', S.ustars ? `universe stars ${S.ustars} ×${fmtShort(Math.round(STAR_X ** (S.ustars * (ang('stars') ? 2 : 1))))}` : '', S.mastery ? `mastery ${S.mastery}` : '', S.seeds ? `ki seeds ${S.seeds}` : '', S.ascend ? `ki seeds ×${seedBoost().toFixed(1)}` : '', S.godTotal ? `god ki ${S.godki} · ×${fmtShort(godBoostOf(S.godTotal))}` : '', S.zeno ? `zeno's favour ×${fmtShort(ZENO_X ** S.zeno)}` : '', S.krillinAlly ? 'krillin: idle ×1.5' : ''].filter(Boolean).join(' · ');
+      const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.granted ? `dragon balls ${S.orbs7}/7` : '', S.granted ? `wishes ${S.granted}` : '', S.multi ? `${uniName(S.uni)} · fight ${S.uniStage + 1}/${UNI_STAGES.length}` : '', S.saga < VILLAINS.length && (S.saga || session > 110) ? `saga ${S.saga + 1}/${VILLAINS.length}` : '', core() > ceiling() ? (S.multi ? 'ki ceiling — it rises with time; clearing universes lifts it too' : 'ki ceiling — reach ultra instinct or finish the sagas: the multiverse lifts it') : '', S.ustars ? `universe stars ${S.ustars} ×${fmtShort(Math.round(STAR_X ** (S.ustars * (ang('stars') ? 2 : 1))))}` : '', S.mastery ? `mastery ${S.mastery}` : '', S.seeds ? `ki seeds ${S.seeds}` : '', S.ascend ? `ki seeds ×${seedBoost().toFixed(1)}` : '', S.godTotal ? `god ki ${S.godki} · ×${fmtShort(godBoostOf(S.godTotal))}` : '', S.zeno ? `zeno's favour ×${fmtShort(ZENO_X ** S.zeno)}` : '', S.krillinAlly ? 'krillin: idle ×1.5' : ''].filter(Boolean).join(' · ');
       const nf = FORMS[S.form + 1] || { name: `mastery ${S.mastery + 1}`, at: FORMS[S.form].at * LATE_STEP ** (S.mastery + 1) }, cf = FORMS[S.form];
       const G = GOALS.find(g => g.id === S.goal.id);
       ui.update({ goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, S.pl / nf.at) : 1 }, balls: S.orbs7, wishes: S.granted, ascend: S.ascend ? seedBoost().toFixed(1) : '', snake: S.world === 3, busy: S.world === 3 || !!(boss && !boss.dead) || !!(ginyu && !ginyu.done) || !!moon || !!storm });   // busy: something up in the sky the phone title would cover
@@ -4675,7 +4678,8 @@ GAMES.push({
       if (cloudFly) st.blit(puff, cloudFly.x - 13, cloudFly.y - 9, false, true);
       if (boss) {
         const k = boss.k = Math.max(.9, R / 62), ent = Math.min(1, (t - boss.t0) / 1.2), out = boss.dead ? Math.min(1, (t - boss.t1) / 1.2) : 0;
-        boss.x = cx + R * 1.45 + (1 - ent) * st.W * .4 + (boss.fled ? out * st.W * .5 : 0); boss.y = cy - R * .75 + Math.sin(t * 2) * 3 - (boss.fled ? out * 30 : 0);
+        const arena = S.world === 9;   // in the arena he stands lower and closer, clear of the power level in the corner
+        boss.x = cx + R * (arena ? 1.3 : 1.45) + (1 - ent) * st.W * .4 + (boss.fled ? out * st.W * .5 : 0); boss.y = cy - R * (arena ? .4 : .75) + Math.sin(t * 2) * 3 - (boss.fled ? out * 30 : 0);
         boss.x = Math.min(boss.x, st.W - Math.max((boss.spr.w - boss.spr.ax + 1) * k, st.textWidth(boss.name) / 2 + 1, 10 * k + 1) - 3 + (1 - ent) * st.W * .4 + (boss.fled ? out * st.W * .5 : 0));
         boss.flash = Math.max(0, boss.flash - dt);
         if (!(boss.dead && !boss.fled)) {
