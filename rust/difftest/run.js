@@ -5,7 +5,7 @@ const fs = require('fs'), path = require('path')
 const mount = require('./harness')
 
 // timeline systems planet-core has: the harness switches the rest off at their spawn points (planet-core mirrors the gates)
-const PORTED = ['pods', 'orbs']
+const PORTED = ['pods', 'orbs', 'meteors']
 const OFF = mount.SYSTEMS.filter(s => !PORTED.includes(s))
 
 const DT = 1 / 30
