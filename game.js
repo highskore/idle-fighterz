@@ -3351,7 +3351,7 @@ GAMES.push({
       if (crit) for (let i = 0; i < 10; i++) fx.add({ x: k.x, y: k.y - 14, vx: (Math.random() - .5) * 90, vy: -20 - Math.random() * 60, drag: 2, life: .5, c: [0xffffff, 0x9cf0b8, 0x34d873], raw: true });
       ui.bump();
     }
-    st.cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); if (playing && ride) { rideDown(bx, by); return; } if (playing && S.world === 3 && snk) { snakeDown(bx, by); return; }   // snake way acts on the press: no drag, beam charge or double-tap to swallow it
+    st.cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); if (playing && S.world === 3 && snk) { snakeDown(bx, by); return; }   // snake way acts on the press: no drag, beam charge or double-tap to swallow it
       drag = { x: e.clientX, y: e.clientY, moved: 0, t: st.t, ax: bx, ay: by }; try { st.cv.setPointerCapture(e.pointerId); } catch (_) {} });
     st.cv.addEventListener('pointermove', e => {
       if (!drag) return;
@@ -3359,7 +3359,7 @@ GAMES.push({
       if (charging > 0) { const [px, py] = st.toBuf(e); drag.ax = px; drag.ay = py; return; }
       if (drag.moved > 6) { st.cv.style.cursor = 'grabbing'; const k = 1.1 / (R * st.scale); vry = dx * k * 30; vrx = dy * k * 30; M = M3.ortho(M3.mul(M3.mul(M3.rx(dy * k), M3.ry(dx * k)), M)); idleT = 0; }
     });
-    st.cv.addEventListener('pointerup', e => { if (playing && ride) { ride.hold = 0; return; } if (playing && S.world === 3 && snk && snk.ptr) { const [px, py] = st.toBuf(e); snakeUp(px, py); return; }
+    st.cv.addEventListener('pointerup', e => { if (playing && S.world === 3 && snk && snk.ptr) { const [px, py] = st.toBuf(e); snakeUp(px, py); return; }
       if (drag && charging > .15) fireBeam(charging, drag.ax, drag.ay); else if (drag && drag.moved <= 6) { const [px, py] = st.toBuf(e); tap(px, py); } charging = 0; drag = null; st.cv.style.cursor = 'grab'; });
     st.cv.addEventListener('pointercancel', () => { drag = null; charging = 0; });
     function fireBeam(c, tx, ty) {
@@ -4038,7 +4038,6 @@ GAMES.push({
     addEventListener('keydown', e => {
       if (!playing || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, [contenteditable]')) return;
       const k = e.key.toLowerCase();
-      if (ride) { if (rideKey(k)) e.preventDefault(); return; }
       if (S.world === 3 && snk) {
         if (snk.how && snk.how.done) { snk.how.done(); e.preventDefault(); return; }   // any key closes the controls
         if (k === 'f' && !snk.fall) { const g = ghostAhead(); if (g) blastGhost(g); e.preventDefault(); return; }
@@ -4048,7 +4047,7 @@ GAMES.push({
       else return;
       e.preventDefault();
     });
-    addEventListener('keyup', e => { if (ride) ride.hold = 0; if (snk && (e.key === ' ' || e.key.toLowerCase() === 'arrowup' || e.key.toLowerCase() === 'w')) snk.hold = 0; });   // v2: let go to cut the jump short
+    addEventListener('keyup', e => { if (snk && (e.key === ' ' || e.key.toLowerCase() === 'arrowup' || e.key.toLowerCase() === 'w')) snk.hold = 0; });   // v2: let go to cut the jump short
     // ── update
     const airborne = t => t - snk.jumpT < .6 || t < snk.nimbus;
     function updateSnake(t, dt) {
@@ -4267,103 +4266,6 @@ GAMES.push({
       sblit(pose, W / 2 - pose.w * k, hy - pose.h * k * 2, k * 2); halo(W / 2, hy - pose.h * k * 2 - 3 * k, k * 2);
       if (!h.up) { label('FLYING BACK UP... TAP TO GO FASTER', W / 2, H * .1, 0xffffff, 0x5a0a08); if (snk.loss) { sayAt('-' + fmtShort(snk.loss), W / 2, H * .3, 'red'); snk.loss = 0; } }
     }
-    // ── the space pod: a trip to a far world is a ride through an asteroid field, the hero asleep at the pod's window (preview hooks #pod, #podB)
-    let ride = null;
-    const RIDE_TO = { 1: 'NAMEK', 2: 'PLANET VEGETA', 4: "BEERUS' PLANET", 11: "THE SUPREME KAI'S WORLD", 12: 'YARDRAT' };   // the far worlds; the rest are on earth, or a time machine away
-    const RIDE_HOW = [['hold or hold space', 'the pod climbs'], ['let go', 'the pod sinks'], ['every rock you dodge', 'pays when you land']];   // plain words: the pixel font has no arrows, dashes, slashes or commas
-    // the hero asleep: his own head with the eyes shut (only the face shows at the window), colours read off his current form
-    const sleepCache = {};
-    function sleeper() {
-      const key = S.hero + S.form; if (sleepCache[key]) return sleepCache[key];
-      const idle = (HERO().forms[S.form] || HERO().forms[0]).idle, ox = idle.w - 16, at = (i, j) => idle.col[j * idle.w + i + ox];
-      const head = { vegeta: VEGETA_HEAD, goku: GOKU_HEAD, gohan: GOHAN_HEAD, trunks: TRUNKS_HEAD }[S.hero] || VEGETA_HEAD, pal = {};
-      head.forEach((r, j) => [...r].forEach((c, i) => { if (c !== '.' && pal[c] === undefined) pal[c] = at(i, j); }));
-      const e0 = head.findIndex(r => r.includes('E')), shut = head.map((r, j) => j < e0 ? r : r.replace(/[Er]/g, c => j === e0 || c === 'r' ? 's' : 'o'));
-      return (sleepCache[key] = makeSprite(shut, pal, { emit: 'Ll' }));
-    }
-    const bigText = (s, x, y, k, c, o = 0x120c18) => { const pts = [], put = st.px; st.px = (a, b) => pts.push([a, b]); st.text(s, 0, 0, 0); st.px = put; const x0 = Math.round(x - st.textWidth(s) * k / 2);   // the 3x5 font blown up k times
-      for (const pass of [0, 1]) for (const [a, b] of pts) for (let p = pass - 1; p < k + 1 - pass; p++) for (let q = pass - 1; q < k + 1 - pass; q++) st.px(x0 + a * k + p, y + b * k + q, pass ? c : o); };
-    const ridePay = secs => secs > 0 ? Math.max(100, wrate() * secs) : 0;   // bare rate: a ride paid before you buffed up pays the same
-    function rideLay() {   // phones: the power strip sits low over the canvas, so the lane lives in the top 70%; desktop: the shop column covers the left fifth
-      const W = st.W, H = st.H, port = W / H < .8, top = (port ? H * .06 : 26) + 14, bot = (port ? H * .7 : H - 10) - 14;
-      return { W, H, port, top, bot, cx: port ? W / 2 : W * .6, pr: Math.max(10, Math.min(W, H) * .09), px: port ? W * .24 : Math.max(W * .23 + 30, W * .34), skip: port ? [W - 20, H * .7 - 8] : [W - 22, H - 12] };
-    }
-    function rideStart(w) {
-      if (ride || !playing) return; drag = null; charging = 0; const R = Math.random, rocks = [];
-      for (let i = 0; i < 30; i++) rocks.push({ at: 1.4 + i * .86 + R() * .3, y: R(), aim: R() < .65, r: 5 + R() * 7, sd: R() * 99, spin: (R() - .5) * 3 });   // most rocks are flung at where the pod is
-      ride = { w, el: 0, len: 30, secs: 0, hold: 0, done: 0, how: { t0: st.t }, y: .5, vy: 0, rocks, hits: 0, dodged: 0, hurt: -9 };
-      ui.event(`a space pod is taking you to ${(RIDE_TO[w] || 'namek').toLowerCase()} — the hero sleeps on the way`, 4000);
-    }
-    function rideEnd(t, skipped) {
-      const P = ride; if (P.done) return;
-      if (!skipped && !P.hits && P.dodged) P.secs += 15;   // a clean run through the field
-      const g = ridePay(Math.min(90, P.secs)); P.paid = g; P.done = t;
-      if (g) { gain(g, st.W / 2, st.H * .45, true); ui.sfx && ui.sfx('coin'); }
-      if (skipped) rideLand();
-    }
-    function rideLand() { const w = ride.w, g = ride.paid; ride = null; travel(w); namekUntil = st.t + 45; if (g) ui.event(`landed — the ride paid +${fmtShort(Math.round(g))}`, 3000); }
-    function rideDown(px, py) {
-      const P = ride; if (P.how) { P.how = null; return; } if (P.done) return;
-      const L = rideLay(); if (px !== null && Math.abs(px - L.skip[0]) < 18 && Math.abs(py - L.skip[1]) < 9) { rideEnd(st.t, true); return; }
-      P.hold = 1;
-    }
-    function rideKey(k) {
-      if (ride.how) { ride.how = null; return true; }   // any key closes the controls
-      if (k === 'escape') { rideEnd(st.t, true); return true; }
-      if (k === ' ' || k === 'arrowup' || k === 'w' || k === 'enter') { rideDown(null, null); return true; }
-      return false;
-    }
-    function updateRide(t, dt) {
-      const P = ride, L = rideLay();
-      if (P.how) { if (t - P.how.t0 > 10) P.how = null; return; }   // nothing moves while you read the controls; the box closes itself after 10s
-      if (P.done) { if (t - P.done > 1.8) rideLand(); return; }
-      P.el += dt;
-      const { top, bot, pr, px } = L;
-      P.vy += ((P.hold ? -1 : 1) * 1.1 - P.vy) * Math.min(1, dt * 5); P.y = Math.max(0, Math.min(1, P.y + P.vy * dt * 90 / (bot - top)));   // hold to climb, let go to sink: a steady drift, no flapping
-      const py = top + P.y * (bot - top), sp = L.W / (2.6 - .7 * Math.min(1, P.el / P.len));
-      for (const r of P.rocks) {
-        if (P.el < r.at) continue; const rr = r.r * Math.min(L.W, L.H) / 180;
-        if (r.x === undefined) { r.x = L.W + rr + 4; r.yy = r.aim ? py : top + r.y * (bot - top); r.near = Math.abs(r.yy - py) < rr + pr * .7; }   // on course for the pod as it flies in: only those count as a dodge, so sitting still earns nothing
-        r.x -= sp * dt; r.rr = rr;
-        if (!r.hit && !r.past && Math.hypot(r.x - px, r.yy - py) < rr + pr * .7) { r.hit = 1; P.hits++; P.hurt = t; shake = .5; burst(r.x, r.yy, [0xd8c8b0, 0x9a8a78, 0x5e5248], 18, 120); sayAt('THUD', px, py - pr - 6, 'red'); ui.sfx && ui.sfx('boom'); }
-        if (!r.hit && !r.past && r.x + rr < px - pr) { r.past = 1; if (r.near) { P.dodged++; P.secs += 4; sayAt('DODGE', px, py - pr - 6, 'gold'); } }
-      }
-      if (P.el > P.len && P.rocks.every(r => r.hit || r.past || r.x < -20)) rideEnd(t);
-    }
-    // ── drawing
-    function drawRock(r, t) { const R = r.rr, a0 = t * r.spin; for (let y = -R - 2; y <= R + 2; y++) for (let x = -R - 2; x <= R + 2; x++) { const an = Math.atan2(y, x) - a0, lim = R * (.8 + .25 * hash(Math.floor((an + 7) * 1.6) + r.sd)), d = Math.hypot(x, y); if (d > lim + 1) continue; const cr = Math.hypot(x - R * .3 * Math.cos(a0), y + R * .25) < R * .28, l = (-x - y) / (R * 1.6) + (bayer(r.x + x, r.yy + y) - .5) * .3; st.px(r.x + x, r.yy + y, d > lim ? 0x1a120c : cr ? 0x4a3e34 : l > .3 ? 0xb8a890 : l > -.2 ? 0x8a7a66 : 0x5e5244); } }
-    function drawField(t, L) {   // out in space, the pod side-on with the sleeper's face at its window
-      const { W, H, top, bot, pr, px } = L, P = ride, prog = Math.min(1, P.el / P.len), col = { 1: [0x57ad3c, 0xa6de66], 2: [0xc0402a, 0xf08a5a], 4: [0x8a5ad8, 0xc8a8ff], 11: [0x44a840, 0x92dc6e], 12: [0x8a7aa8, 0xc4b6da] }[P.w] || [0x57ad3c, 0xa6de66];
-      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) st.px(x, y, mixC(0x0a0820, 0x1a1040, y / H + (bayer(x, y) - .5) * .1));
-      const pR = 8 + prog * Math.min(W, H) * .35, pX = W + pR * .35, pY = L.port ? H * .38 : H * .45; for (let y = -pR; y <= pR; y++) for (let x = -pR; x <= pR; x++) { const d = Math.hypot(x, y); if (d <= pR) st.px(pX + x, pY + y, d > pR - 1 ? 0x120c18 : (-x - y) / pR + (bayer(pX + x, pY + y) - .5) * .3 > -.2 ? col[1] : col[0]); }   // the destination, growing
-      for (let i = 0; i < 90; i++) { const sp = 40 + hash(i) * 260, x = W - ((t * sp + hash(i + 5) * W * 3) % (W + 40)), y = hash(i + 11) * H, len = sp / 30; for (let d = 0; d < len; d++) st.px(x + d, y, sp > 200 ? 0xffffff : sp > 120 ? 0xc8c0f0 : 0x6a60a0, 1 - d / len); }
-      const py = top + P.y * (bot - top);
-      for (let x = 0; x < W; x += 3) { st.px(x, top - pr - 2, 0x3a3060); st.px(x, bot + pr + 2, 0x3a3060); }   // the edges of the lane
-      for (const r of P.rocks) if (r.x !== undefined && !r.hit && r.x > -20) drawRock(r, t);
-      const hurt = t - P.hurt < .5 && Math.floor(t * 16) % 2;
-      for (let i = 0; i < pr * 1.6; i++) for (let j = -pr * .35; j <= pr * .35; j++) if (Math.abs(j) < pr * .35 * (1 - i / (pr * 1.6)) + .5 && bayer(px - pr - i, py + j) < 1 - i / (pr * 1.6) + Math.sin(t * 30 + i) * .1) st.px(px - pr * .8 - i, py + j, i < pr * .3 ? 0xffffff : i < pr * .8 ? 0xffd84a : 0xf07a1e);   // exhaust
-      for (let y = -pr; y <= pr; y++) for (let x = -pr; x <= pr; x++) { const d = Math.hypot(x, y); if (d > pr) continue; const l = (-x * .4 - y) / pr; st.px(px + x, py + y, d > pr - 1.2 ? 0x22222e : hurt ? 0xff8a7a : l > .35 ? 0xffffff : l > -.25 ? 0xe4e4ec : 0xb4b8c6); }
-      for (let y = -pr; y <= pr; y++) st.px(px - pr * .45 + Math.abs(y) * .12, py + y, 0x9a9eae);   // the door seam
-      const wx = px + pr * .32, wy = py - pr * .22, wr = pr * .56, spr = sleeper(), hk = wr > 10 ? 2 : 1;
-      for (let y = -wr; y <= wr; y++) for (let x = -wr; x <= wr; x++) { const d = Math.hypot(x, y); if (d <= wr) st.px(wx + x, wy + y, d > wr - 1.2 ? 0x22222e : 0x4a2a6a); }
-      for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) { const c = spr.col[j * spr.w + i]; if (c < 0) continue; for (let p = 0; p < hk; p++) for (let q = 0; q < hk; q++) { const X = wx - 8 * hk + i * hk + p, Y = wy - 7 * hk + j * hk + q; if (Math.hypot(X - wx, Y - wy) < wr - 1.5) st.px(X, Y, c); } }   // his face, asleep against the glass
-      for (let y = -wr; y <= wr; y++) for (let x = -wr; x <= wr; x++) { const d = Math.hypot(x, y); if (d < wr - 1.5) st.px(wx + x, wy + y, x + y < -wr * .3 ? 0xd8b8ff : 0x6a2a8a, .32); }   // the purple glass over it
-      if (!P.how) label(`DODGED ${P.dodged}`, L.port ? W / 2 : L.cx, L.port ? H * .7 + 10 : H - 13, 0xffffff, 0x1a1040);
-    }
-    function drawRide(t, dt) {
-      const L = rideLay(), P = ride; drawField(t, L);
-      { const s = `SPACE POD TO ${RIDE_TO[P.w] || 'NAMEK'}`, x = L.cx, y = L.port ? L.H * .06 : 12, w = st.textWidth(s) / 2 + 5; for (let yy = -3; yy < 8; yy++) for (let xx = -w; xx <= w; xx++) st.px(x + xx, y + yy, 0x120c1c, .75); label(s, x, y, 0xffffff, 0x1a1040); }
-      const [kx, ky] = L.skip; for (let y = -7; y <= 7; y++) for (let x = -17; x <= 17; x++) { const e = Math.abs(x) === 17 || Math.abs(y) === 7; if (!(Math.abs(x) === 17 && Math.abs(y) === 7)) st.px(kx + x, ky + y, e ? 0xd4a017 : 0x1a0e08, e ? 1 : .8); } label('SKIP', kx, ky - 2, 0xffffff, 0x1a0e08);
-      hud(t, dt, Math.min(1, P.el / P.len), [0xd4a017, 0x3a3060]);
-      if (P.done) { const my = Math.round((L.top + L.bot) / 2); bigText('LANDING', L.cx, my - 8, 2, 0xffe08a, 0x1a0e08); if (P.paid) label('+' + fmtShort(Math.round(P.paid)), L.cx, my + 10, 0xffffff, 0x1a0e08); }
-      if (P.how) {   // the controls on a framed panel over the dimmed ride; any tap or key (or 10s) closes it
-        const W = st.W, H = st.H, left = Math.ceil(10 - (t - P.how.t0)), ink = 0x1a0e08, gold = 0xd4a017, pw = Math.min(W - 16, 240), ph = 40 + RIDE_HOW.length * 30, x0 = Math.round(L.port ? (W - pw) / 2 : Math.max(W * .23, (W - pw) / 2)), y0 = Math.round(L.port ? Math.max(8, (H * .76 - ph) / 2) : (H - ph) / 2);
-        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) st.px(x, y, 0x0c0604, .55);
-        for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) { const edge = x < 2 || y < 2 || x >= pw - 2 || y >= ph - 2; if (!((x < 3 || x >= pw - 3) && (y < 3 || y >= ph - 3))) st.px(x0 + x, y0 + y, edge ? gold : ink); }
-        label('ASTEROID FIELD', x0 + pw / 2, y0 + 10, 0xffe08a, ink); RIDE_HOW.forEach(([a, b], i) => { const y = y0 + 30 + i * 30; label(a.toUpperCase(), x0 + pw / 2, y, 0xffffff, ink); label(b.toUpperCase(), x0 + pw / 2, y + 11, gold, ink); });
-        label(`TAP TO GO  ${left}`, x0 + pw / 2, y0 + ph + 6, 0xffffff, 0x0c0604); }
-      st.flush();
-    }
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
       const rdt = dt; if (chamberUntil > t && S.world !== 3) dt *= .3;   // no slow-mo on snake way: jumps run on real time and couldn't clear a gap
@@ -4386,7 +4288,7 @@ GAMES.push({
       if ((saveAcc += dt) > 3) { saveAcc = 0; save(); }
 
       // ── timeline: the longer you stay, the more happens (all of it waits while you're on snake way)
-      if (ride) updateRide(t, rdt); else if (S.world === 3) updateSnake(t, dt); else {
+      if (S.world === 3) updateSnake(t, dt); else {
       // the space pod: on phones the title covers the top of the sky, so there it flies just above the planet
       if (session > 12) { if (!star && (nextStar -= dt) < 0) { once('stars', 'a saiyan space pod — tap it'); star = { x: -8, y: st.W / st.H < .8 ? cy - R * (1.12 + Math.random() * .16) : st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = (18 + Math.random() * 14) * (1 - .12 * lvl('pods')); } }
       if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < (S.world === 1 ? .4 : .2) + .05 * lvl('balls') }); }
@@ -4485,11 +4387,11 @@ GAMES.push({
       // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the eight worlds strictly in turn
       // a trip at the next power mark, or after two minutes at home, whichever comes first
       if (podWish && S.world === home() && !shen && (tour || boss) && podWish !== 2) { podWish = 2; ui.event(`your space pod is incoming — it lands after the ${tour ? 'tournament' : 'fight'}`); }   // the wished pod waits for the fight, and says so
-      if (S.world === home() && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT || podWish) && !tour && !shen && !boss && !dance && !ride) { podWish = 0; S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; (w => RIDE_TO[w] ? rideStart(w) : travel(w))([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12][(S.trips - 1) % 11]); namekUntil = t + (S.world === 3 ? 75 : 45); }
+      if (S.world === home() && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT || podWish) && !tour && !shen && !boss && !dance) { podWish = 0; S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12][(S.trips - 1) % 11]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && S.world !== 9 && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
       if (S.world && S.world !== 9) { S.namekLeft = Math.max(0, namekUntil - t); const hung = t - namekUntil > 120;   // watchdog: whatever is still running, no visit outlasts its timer by two minutes
         if (S.namekLeft <= 0 && (!shen || hung) && (S.world !== 3 || snk?.done || hung)) { if (hung && shen) { shen = null; document.body.classList.remove('shen'); ui.wishDone && ui.wishDone(); } travel(home()); namekUntil = 0; homeSince = session; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
-      if (S.world !== 3 && !ride) {
+      if (S.world !== 3) {
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && S.world === home() && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
       if (tour) {
@@ -4609,7 +4511,6 @@ GAMES.push({
       shenStep(t);
       // ── draw
       st.clear(); zb.fill(-1e9); ib.fill(0);
-      if (ride) { drawRide(t, dt); return; }
       if (S.world === 3 && snk) { drawSnake(t, dt); return; }
       if (S.world === 9) drawVoid(t); else drawSea(t, false);
       if (moon) {
@@ -4886,8 +4787,7 @@ GAMES.push({
     if (/snake/.test(HASH)) { S.best = Math.max(S.best, 3e6); S.namekAt = 3e6; S.trips = 2; }   // preview hooks: #snake (snake way), #snake-nimbus (riding the nimbus)
     if (/door/.test(HASH)) { S.chamber = Math.max(1, S.chamber); nextDoor = 0; }   // preview hook: #door (the time chamber door)
     if (/car/.test(HASH)) { session = 71; nextCar = 0; }   // preview hook: #car (king kai's car)
-    if (/podstar/.test(HASH)) { session = 13; nextStar = 0; }   // preview hook: #podstar (a saiyan space pod in the sky)
-    else if (/pod/.test(HASH)) { const go = () => playing ? rideStart(1) : setTimeout(go, 300); setTimeout(go, 800); }   // preview hooks: #pod, #podB (the pod ride to namek, once you press start)
+    if (/pod/.test(HASH)) { session = 13; nextStar = 0; }   // preview hook: #pod (a saiyan space pod)
     if (/storm/.test(HASH)) { session = 121; nextStorm = 0; }   // preview hook: #storm (meteor storm)
     if (/spirit/.test(HASH)) { S.spirit = Math.max(1, S.spirit); spirit = .97; }   // preview hook: #spirit (a nearly full spirit bomb)
     if (/struggle/.test(HASH)) { session = 111; nextBoss = 0; S.galick = Math.max(1, S.galick); }   // preview hook: #struggle (a villain who fires back)
