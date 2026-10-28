@@ -30,12 +30,12 @@ The game is one self-contained HTML page, stitched together from these sources:
 | `build.mjs` | stitches them into one page |
 
 ```sh
+npm ci                    # once: esbuild, subset-font and the fonts (@fontsource)
 node build.mjs            # → dist/planet.html, the highskore.com homepage
-npm install               # once, for the widget's inlined fonts (@fontsource)
 node build.mjs --widget   # → dist/index.html under the current directory, the powerrr widget's page
 ```
 
-No dependencies for the site build: `wasm/px.wasm` is committed and inlined as base64, so the page stays one file. After changing `wasm/src/lib.rs`, rebuild it with `npm run wasm` (Rust and `rustup target add wasm32-unknown-unknown`). The module has no dependencies and imports only `Math.pow`; each function is a line-for-line port of a JS loop that stays as the fallback (no WebAssembly, or a CSP without `wasm-unsafe-eval`), and both draw the same pixels. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build also leaves out the CDN three.js and Google Fonts and inlines the fonts from `@fontsource` in the `node_modules` of the directory it runs from.
+The site build minifies the page's scripts with esbuild and inlines its fonts, cut down to the characters the page has (`subset-font`), so it loads nothing from Google Fonts; three.js still comes from the CDN, deferred, so the game is playable before the title is built. Only the shipped page is minified: the sources the Rust difftest reads stay as they are. `wasm/px.wasm` is committed and inlined as base64, so the page stays one file. After changing `wasm/src/lib.rs`, rebuild it with `npm run wasm` (Rust and `rustup target add wasm32-unknown-unknown`). The module has no dependencies and imports only `Math.pow`; each function is a line-for-line port of a JS loop that stays as the fallback (no WebAssembly, or a CSP without `wasm-unsafe-eval`), and both draw the same pixels. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build also leaves out the CDN three.js and Google Fonts and inlines the fonts from `@fontsource` in the `node_modules` of the directory it runs from.
 
 Open `dist/planet.html` in a browser to play it locally.
 
@@ -88,5 +88,5 @@ npm run test:rust    # node rust/planet-web/test.mjs
 
 ## Where it's used
 
-- **highskore.com** has this repo as a submodule at `games/planet`; its `pnpm build:planet` runs `node build.mjs` and copies `dist/planet.html` to `public/planet.html`.
+- **highskore.com** has this repo as a submodule at `games/planet`; its `pnpm build:planet` runs `npm ci` here, then `node build.mjs`, and copies `dist/planet.html` to `public/planet.html`.
 - **[powerrr](https://github.com/highskore/powerrr)** has it as a submodule at `game/`, and builds the widget page with `node game/build.mjs --widget`.

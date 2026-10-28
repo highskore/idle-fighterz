@@ -14,6 +14,9 @@
   "devDependencies": {
     "@fontsource/fragment-mono": "5.2.8",
     "@fontsource/instrument-serif": "5.2.8",
-    "@fontsource/press-start-2p": "5.2.7"
+    "@fontsource/press-start-2p": "5.2.7",
+    "esbuild": "0.28.2",
+    "subset-font": "2.9.0",
+    "three": "0.147.0"
   }
 }

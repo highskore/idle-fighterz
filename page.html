@@ -425,10 +425,6 @@ __WIDGET_CSS__
 </div>
 
 <script id="font-bagel" type="application/json">__BAGEL__</script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/FontLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/TextGeometry.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
 <script>
 /*widget*/const WIDGET = document.documentElement.classList.contains('widget');
 let BARE = WIDGET;   // the floating widget draws no sky or backdrops; its window mode (a setting) turns them back on
@@ -759,9 +755,9 @@ __PLANET__
   new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); game.resize(); game.frame(st.t, 0); }, 60); }).observe(st.el);   // redraw now: resizing clears the canvas
   let visible = true; new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(st.el);
 
-  /* 3D pearl logo: one mesh per letter so each can wave, pop and bounce */
+  /* 3D pearl logo: one mesh per letter so each can wave, pop and bounce. three.js comes after this script, so the game is playable before the title is built */
   const logo = $('logo'), glint = $('glint'); let R3 = null;
-  try {
+  const title = () => { try {
     const renderer = new THREE.WebGLRenderer({ canvas: logo, antialias: (window.devicePixelRatio || 1) < 2, alpha: true, powerPreference: 'high-performance' });   // retina screens don't need MSAA
     renderer.setPixelRatio(innerWidth <= 760 ? Math.min(window.devicePixelRatio || 1, 1.75) : Math.min((window.devicePixelRatio || 1) * 1.4, 2.5));   // kept modest: this canvas redraws every frame of the scroll
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; renderer.setClearColor(0, 0);
@@ -895,7 +891,8 @@ __PLANET__
       renderer.render(scene, cam);
       drawGlints(dt);
     };
-  } catch (e) { logo.hidden = true; document.querySelector('.brand h1').removeAttribute('style'); }
+  } catch (e) { logo.hidden = true; document.querySelector('.brand h1').removeAttribute('style'); } };
+  addEventListener('DOMContentLoaded', title, { once: true });
 
   // the game draws at 30fps, except while the page scrolls: then every frame (up to 60fps), so the planet moves as
   // smoothly as the card sliding in. the pearl title is the heaviest thing on the page: at most 60fps (not 120 on
@@ -916,3 +913,4 @@ __PLANET__
 __WIDGET_JS__
 /*/widget*/})();
 </script>
+<script>__THREE__</script>

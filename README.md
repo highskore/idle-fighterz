@@ -48,10 +48,11 @@ Open [highskore.com](https://highskore.com), scroll (or press the cue on a phone
 
 ## Build from source
 
-You need Node. The site build has no dependencies.
+You need Node.
 
 ```sh
 git clone https://github.com/highskore/planet.git && cd planet
+npm ci                    # esbuild and the font subsetter, pinned
 node build.mjs            # → dist/planet.html
 ```
 
