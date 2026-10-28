@@ -7,7 +7,9 @@
     // the frame rate setting is the idle rate: 60 (smooth), 30 (balanced, the default) or 15 (battery saver). while the
     // pointer is about it doubles, up to 60
     let idleFps = 30;
-    const pace = () => { st.fps = root.classList.contains('awake') ? Math.min(60, idleFps * 2) : idleFps; };
+    // hidden (by the app, or document.hidden), nothing draws: 0
+    let away = false;
+    const pace = () => { st.fps = away || document.hidden ? 0 : root.classList.contains('awake') ? Math.min(60, idleFps * 2) : idleFps; };
     pace();
     go();
 
@@ -146,21 +148,30 @@
     const sent = {};
     ui.notify = (kind, arg) => {
       const at = Date.now();
-      if (!conf.notify[kind] || quiet() || (root.classList.contains('awake') && !document.hidden) || at - (sent[kind] || 0) < 60000) return;
+      if (!conf.notify[kind] || quiet() || (root.classList.contains('awake') && !away && !document.hidden) || at - (sent[kind] || 0) < 60000) return;
       sent[kind] = at; const [title, body] = NOTE[kind](arg); invoke('notify', { title, body });
     };
-    // hidden, the page gets no animation frames; with notifications or the menu-bar power level on, the game keeps
-    // playing without drawing, in quarter-second steps that catch up on however long the (throttled) timer slept
-    let bg = 0;
-    document.addEventListener('visibilitychange', () => {
-      clearInterval(bg); st.headless = false; if (!document.hidden || !(conf.menubar_power || Object.values(conf.notify).some(Boolean))) return;
-      st.headless = true; let was = performance.now();
-      bg = setInterval(() => { const n = Math.min(240, Math.floor((performance.now() - was) / 250)); was = Math.max(was + n * 250, performance.now() - 250); for (let k = 0; k < n; k++) { T += .25; st.t = T; game.frame(T, .25); } }, 1000);
-    });
+    // hidden, nothing draws. with notifications or the menu-bar power level on, the game keeps playing without drawing,
+    // in the 30fps steps it plays in on screen, a batch a second that catches up on however long the (throttled) timer
+    // slept, up to a minute; otherwise it pauses. the app says when it hides the window too: WebView2 may leave
+    // document.hidden false. a game the app runs (game.native) needs no steps from here
+    const STEP = 1000 / 30;
+    let bg = 0, was = 0;
+    const background = () => {
+      pace(); st.headless = away || document.hidden;
+      const play = st.headless && !game.native && (conf.menubar_power || Object.values(conf.notify).some(Boolean));
+      if (play && !bg) {
+        was = performance.now();
+        bg = setInterval(() => { const n = Math.min(1800, Math.floor((performance.now() - was) / STEP)); was = Math.max(was + n * STEP, performance.now() - STEP); for (let k = 0; k < n; k++) { T += STEP / 1000; st.t = T; game.frame(T, STEP / 1000); } }, 1000);
+      } else if (!play && bg) { clearInterval(bg); bg = 0; }
+      invoke('page_state', { hidden: document.hidden, away, ticking: !!bg });
+    };
+    document.addEventListener('visibilitychange', background);
+    if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; background(); });
 
     const apply = s => {
       const first = conf.layout !== s.layout || !w.firstChild; conf = s;
-      idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; pace();
+      idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; background();
       if (first) arrange(s.layout);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live
