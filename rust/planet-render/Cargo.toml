@@ -1,0 +1,9 @@
+[package]
+name = "planet-render"
+description = "Software framebuffer raster shared by the web and native targets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+planet-core = { path = "../planet-core" }

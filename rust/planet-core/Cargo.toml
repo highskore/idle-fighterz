@@ -1,0 +1,11 @@
+[package]
+name = "planet-core"
+description = "Game state, economy and the fixed-step simulation of the power planet idle game"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }  # exact float parsing: traces compare to the ulp

@@ -1,0 +1,13 @@
+[package]
+name = "planet-web"
+description = "WebAssembly entry point: canvas putImageData, input and the HTML HUD bridge (stage 4)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib"]   # becomes ["cdylib", "rlib"] with wasm-bindgen in stage 4
+
+[dependencies]
+planet-core = { path = "../planet-core" }
+planet-render = { path = "../planet-render" }
