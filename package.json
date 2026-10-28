@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "node build.mjs",
-    "build:widget": "node build.mjs --widget"
+    "build:widget": "node build.mjs --widget",
+    "wasm": "sh wasm/build.sh"
   },
   "devDependencies": {
     "@fontsource/fragment-mono": "5.2.8",

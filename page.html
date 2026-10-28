@@ -891,7 +891,7 @@ __PLANET__
     requestAnimationFrame(tick);
     const dt = Math.max(0, Math.min(.05, (now - prev) / 1000)); prev = now;
     T += dt;   // reduced motion still plays the game (it's the content); it only drops the screen shake
-    const scrolling = now - lastScroll < 250, gameDue = visible && now - last >= (scrolling ? 1000 / 60 : /*widget*/WIDGET && !root.classList.contains('awake') ? 1000 / 15 : /*/widget*/1000 / 30) - 2;
+    const scrolling = now - lastScroll < 250, gameDue = visible && now - last >= (scrolling ? 1000 / 60 : /*widget*/WIDGET ? 1000 / st.fps : /*/widget*/1000 / 30) - 2;
     if (R3 && now - lastTitle >= (scrolling ? 1000 / 30 : 1000 / 60) - 2) { lastTitle = now; R3(T); }
     if (!gameDue) return; const gdt = Math.min(.05, (now - last) / 1000); last = now;
     st.t = T; game.frame(T, gdt);
