@@ -893,8 +893,11 @@ __PLANET__
     T += dt;   // reduced motion still plays the game (it's the content); it only drops the screen shake
     const scrolling = now - lastScroll < 250, gameDue = visible && now - last >= (scrolling ? 1000 / 60 : /*widget*/WIDGET ? 1000 / st.fps : /*/widget*/1000 / 30) - 2;
     if (R3 && now - lastTitle >= (scrolling ? 1000 / 30 : 1000 / 60) - 2) { lastTitle = now; R3(T); }
-    if (!gameDue) return; const gdt = Math.min(.05, (now - last) / 1000); last = now;
-    st.t = T; game.frame(T, gdt);
+    if (!gameDue) return; const gdt = Math.min(/*widget*/WIDGET ? Math.max(.05, 1.5 / st.fps) : /*/widget*/.05, (now - last) / 1000); last = now;
+    /*widget*/// battery saver draws at 15fps: each frame also steps the one between, without drawing, so the game runs at full
+    // speed in the steps 30fps takes
+    if (gdt > .05) { const n = Math.ceil(gdt / .05), d = gdt / n, h = st.headless; st.headless = true; for (let k = n - 1; k > 0; k--) { st.t = T - k * d; game.frame(st.t, d); } st.headless = h; st.t = T; game.frame(T, d); return; }
+    /*/widget*/st.t = T; game.frame(T, gdt);
   }
   requestAnimationFrame(tick);
 /*widget*/
