@@ -4797,6 +4797,30 @@ GAMES.push({
             if (j < 4) add(xc + side * (hw - rb * 1.6 - j * rb * .8), pt - rb * .3 - j * rb * .6, rb * (1.05 - j * .1), false, j > 1 ? 1 : 0);
           }
         }
+      } else if (st.clouds && st.clouds[0] === 'f') {   // blends: a bed along the pill (it rests in it) and groups rising above
+        // it with sky between them. per variant: bed rows and puff size, groups, height, peak (-1..1, null: none), group
+        // width (of its slot: small = wide gaps), big puffs, and whether groups float clear of the bed
+        const F = { 1: [1, .12, 3, 1, 0, .8, 1, 0], 2: [2, .1, 4, .75, 0, .55, 0, 0], 3: [1, .11, 5, 1.05, -.45, .85, 0, 1],
+          4: [2, .12, 6, .55, null, .5, 0, 1], 5: [2, .1, 4, 1.25, .5, .8, 1, 0], 6: [1, .1, 3, .85, 0, .5, 0, 1] }[st.clouds[1]] || [];
+        const [bedRows, bedK, g, tall, peak, width, big, float] = F;
+        const vmin = Math.min(innerWidth, innerHeight), ph = (Math.min(26, Math.max(18, vmin * .07)) + 8) / st.scale, pt = st.H - ph / 2;
+        const xc = st.W / 2, hw = Math.min(st.W / 2 - 6 / st.scale, 200 / st.scale), sway = (i, L) => Math.sin(t * (.12 + .06 * L) + i * 1.9 + L * 2.1) * R * .03;
+        const rb = R * bedK;
+        for (let j = 0; j < bedRows; j++) {
+          const n = Math.ceil(hw * 2 / (rb * 1.15)) + 1;
+          for (let i = 0; i < n; i++) { const u = i / (n - 1) * 2 - 1, h = hash(i * 5.3 + j * 11.7); add(xc + u * (hw + rb * .2) + sway(i, j), pt - rb * .15 - j * rb * .75 - h * rb * .3 + bob(i * 3 + j, .008), rb * (.8 + .4 * h), j === 0); }
+        }
+        const bedTop = pt - rb * (.75 + .75 * (bedRows - 1)), slot = hw * 2 * .92 / g;
+        for (let q = 0; q < g; q++) {
+          const u = -.92 + (q + .5) * slot / hw, hq = hash(q * 9.7 + g), env = R * tall * (peak === null ? .4 + .2 * hq : .3 + .7 * Math.exp(-(((u - peak) / .55) ** 2)));
+          // each group a dome: a wide base row, narrower rows above, as tall as its envelope allows
+          const rg = R * (big ? .15 : .1), x = xc + u * hw + sway(q, 2) * 2, base = float ? bedTop - R * .14 : bedTop + rg * .3;
+          const nb = Math.max(2, Math.round(slot * width / (rg * 1.15))), rows = Math.max(1, Math.min(nb, Math.round(env / (rg * .8))));
+          for (let j = 0; j < rows; j++) {
+            const c = Math.max(1, nb - j - (j > 0 && nb > 3 ? 1 : 0));
+            for (let i = 0; i < c; i++) { const h = hash(q * 13 + i * 5 + j * 3.1), o = i - (c - 1) / 2; add(x + o * rg * 1.15 + (h - .5) * rg * .35 + (j % 2) * rg * .2, base - j * rg * .8 - h * rg * .25 + bob(q * 7 + i + j, .012), rg * (.8 + .4 * h) * (1 - .05 * j), false, j > 0 ? 1 : 0); }
+          }
+        }
       } else if (st.clouds === 'b') {   // a tilted ring of puffs round the planet: the far half behind it, the near half in front
         for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + t * .06; add(cx + Math.cos(a) * R * 1.3, cy + R * .12 + Math.sin(a) * R * .36, R * (.11 + .04 * hash(i * 2.1)), Math.sin(a) > 0); }
       } else if (st.clouds === 'c') {   // three loose clusters, one in front, drifting a little
