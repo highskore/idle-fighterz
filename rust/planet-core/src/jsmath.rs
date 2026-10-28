@@ -1,6 +1,8 @@
-//! V8's `Math` functions, bit for bit: fdlibm's sin, cos and atan2 (what V8 ships as `ieee754::*`) and its Kahan
-//! `Math.hypot`. Platform libms differ from these in the last bit, and the timeline's geometry (where the hero
-//! stands, where a ki blast flies) has to land on the same doubles as game.js.
+//! V8's `Math` functions, bit for bit: fdlibm's sin, cos and atan2 (V8's `ieee754::*`) and its Kahan `Math.hypot`.
+//! The timeline's geometry (where the hero stands, where a ki blast flies) has to land on the same doubles as game.js.
+//! V8 for arm64 is built with clang's FP contraction, which fuses each `a * b + c` inside an expression (the left
+//! product first) into one rounding, so these use `mul_add` in exactly those places: they match node on arm64 over
+//! 400k random arguments. x86-64 builds have no FMA in their baseline, so V8 there likely differs in the last bit.
 
 fn hi(x: f64) -> u32 {
     (x.to_bits() >> 32) as u32
@@ -28,11 +30,11 @@ fn k_sin(x: f64, y: f64, iy: bool) -> f64 {
     }
     let z = x * x;
     let v = z * x;
-    let r = S2 + z * (S3 + z * (S4 + z * (S5 + z * S6)));
+    let r = z.mul_add(z.mul_add(z.mul_add(z.mul_add(S6, S5), S4), S3), S2);
     if !iy {
-        x + v * (S1 + z * r)
+        v.mul_add(z.mul_add(r, S1), x)
     } else {
-        x - ((z * (0.5 * y - v * r) - y) - v * S1)
+        x - (-v).mul_add(S1, z.mul_add(0.5f64.mul_add(y, -(v * r)), -y))
     }
 }
 
@@ -49,14 +51,14 @@ fn k_cos(x: f64, y: f64) -> f64 {
         return 1.0;
     }
     let z = x * x;
-    let r = z * (C1 + z * (C2 + z * (C3 + z * (C4 + z * (C5 + z * C6)))));
+    let r = z * z.mul_add(z.mul_add(z.mul_add(z.mul_add(z.mul_add(C6, C5), C4), C3), C2), C1);
     if ix < 0x3fd33333 {
-        1.0 - (0.5 * z - (z * r - x * y))
+        1.0 - 0.5f64.mul_add(z, -z.mul_add(r, -(x * y)))
     } else {
         let qx = if ix > 0x3fe90000 { 0.28125 } else { with_hi(ix - 0x00200000, 0) };
-        let hz = 0.5 * z - qx;
+        let hz = 0.5f64.mul_add(z, -qx);
         let a = 1.0 - qx;
-        a - (hz - (z * r - x * y))
+        a - (hz - z.mul_add(r, -(x * y)))
     }
 }
 
@@ -100,9 +102,9 @@ fn rem_pio2(x: f64) -> Option<(i32, f64, f64)> {
         return None;
     }
     let t = x.abs();
-    let n = (t * INVPIO2 + 0.5) as i32;
+    let n = t.mul_add(INVPIO2, 0.5) as i32;
     let fnn = n as f64;
-    let mut r = t - fnn * PIO2_1;
+    let mut r = (-fnn).mul_add(PIO2_1, t);
     let mut w = fnn * PIO2_1T;
     let mut y0;
     let npio2_hw = |n: i32| hi(n as f64 * std::f64::consts::FRAC_PI_2);
@@ -116,14 +118,14 @@ fn rem_pio2(x: f64) -> Option<(i32, f64, f64)> {
             let t = r;
             w = fnn * PIO2_2;
             r = t - w;
-            w = fnn * PIO2_2T - ((t - r) - w);
+            w = fnn.mul_add(PIO2_2T, -((t - r) - w));
             y0 = r - w;
             let i = j - ((hi(y0) >> 20) & 0x7ff) as i32;
             if i > 49 {
                 let t = r;
                 w = fnn * PIO2_3;
                 r = t - w;
-                w = fnn * PIO2_3T - ((t - r) - w);
+                w = fnn.mul_add(PIO2_3T, -((t - r) - w));
                 y0 = r - w;
             }
         }
@@ -206,14 +208,14 @@ pub fn atan(x: f64) -> f64 {
         if ix < 0x3ff30000 {
             if ix < 0x3fe60000 {
                 id = 0;
-                x = (2.0 * x - 1.0) / (2.0 + x);
+                x = 2.0f64.mul_add(x, -1.0) / (2.0 + x);
             } else {
                 id = 1;
                 x = (x - 1.0) / (x + 1.0);
             }
         } else if ix < 0x40038000 {
             id = 2;
-            x = (x - 1.5) / (1.0 + 1.5 * x);
+            x = (x - 1.5) / 1.5f64.mul_add(x, 1.0);
         } else {
             id = 3;
             x = -1.0 / x;
@@ -221,13 +223,13 @@ pub fn atan(x: f64) -> f64 {
     }
     let z = x * x;
     let w = z * z;
-    let s1 = z * (AT[0] + w * (AT[2] + w * (AT[4] + w * (AT[6] + w * (AT[8] + w * AT[10])))));
-    let s2 = w * (AT[1] + w * (AT[3] + w * (AT[5] + w * (AT[7] + w * AT[9]))));
+    let s1 = z * w.mul_add(w.mul_add(w.mul_add(w.mul_add(w.mul_add(AT[10], AT[8]), AT[6]), AT[4]), AT[2]), AT[0]);
+    let s2 = w * w.mul_add(w.mul_add(w.mul_add(w.mul_add(AT[9], AT[7]), AT[5]), AT[3]), AT[1]);
     if id < 0 {
-        return x - x * (s1 + s2);
+        return (-x).mul_add(s1 + s2, x);
     }
     let id = id as usize;
-    let z = ATANHI[id] - ((x * (s1 + s2) - ATANLO[id]) - x);
+    let z = ATANHI[id] - (x.mul_add(s1 + s2, -ATANLO[id]) - x);
     if hx < 0 {
         -z
     } else {
@@ -325,4 +327,19 @@ pub fn hypot(v: &[f64]) -> f64 {
         sum = p;
     }
     sum.sqrt() * max
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matches_v8() {
+        // values from node 25 on arm64, where a plain (unfused) fdlibm is one ulp off
+        assert_eq!(sin(0.7791953906416893), 0.7027071839262887);
+        assert_eq!(sin(16.43856730312109), -0.6673196248681893);
+        assert_eq!(cos(-14.913382465019822), -0.7005839540352707);
+        assert_eq!(atan2(-7.154588392004371, 18.199517838656902), -0.37456101990228924);
+        assert_eq!(hypot(&[3.0, 4.0]), 5.0);
+    }
 }

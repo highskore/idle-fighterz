@@ -34,6 +34,8 @@ struct Report {
     /// values within tolerance but not bit-identical, and the worst relative gap among them
     inexact: usize,
     worst: f64,
+    /// the first few inexact values, for the log
+    loose: Vec<String>,
     bad: Vec<String>,
 }
 
@@ -44,6 +46,9 @@ impl Report {
         if ok && js != rs {
             self.inexact += 1;
             self.worst = self.worst.max(((js - rs) / js.abs()).abs());
+            if self.loose.len() < 5 {
+                self.loose.push(format!("t={t:.0}s {field}: js {js} rust {rs}"));
+            }
         }
         if !ok && self.bad.len() < 25 {
             self.bad.push(format!("t={t:.0}s {field}: js {js} rust {rs} (rel {:.2e})", ((js - rs) / js.abs().max(1e-300)).abs()));
@@ -144,6 +149,9 @@ fn scenario(name: &str) {
         rep.inexact,
         rep.worst
     );
+    for l in &rep.loose {
+        eprintln!("  inexact {l}");
+    }
     assert!(rep.bad.is_empty(), "{name} diverged:\n{}", rep.bad.join("\n"));
 }
 
