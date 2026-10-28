@@ -17,10 +17,11 @@ pub enum Upg {
     Piccolo,
     Chamber,
     Tail,
+    Itx,
 }
 
 impl Upg {
-    pub const ALL: [Upg; 14] = [
+    pub const ALL: [Upg; 15] = [
         Upg::Boots,
         Upg::Partner,
         Upg::Gravity,
@@ -35,6 +36,7 @@ impl Upg {
         Upg::Piccolo,
         Upg::Chamber,
         Upg::Tail,
+        Upg::Itx,
     ];
 
     pub fn key(self) -> &'static str {
@@ -55,7 +57,7 @@ pub struct ShopItem {
 }
 
 /// Indexed by `Upg`. Unlock rules live in `Game::unlocked`.
-pub const SHOP: [ShopItem; 14] = [
+pub const SHOP: [ShopItem; 15] = [
     ShopItem { key: "boots", base: 50.0, k: 1.7, label: "weighted boots", what: "+1 per step" },
     ShopItem { key: "partner", base: 250.0, k: 1.7, label: "bubbles", what: "+4/s, trains with you" },
     ShopItem { key: "gravity", base: 2500.0, k: 2.6, label: "gravity chamber", what: "×1.15 everything" },
@@ -70,10 +72,11 @@ pub const SHOP: [ShopItem; 14] = [
     ShopItem { key: "piccolo", base: 30000.0, k: 2.4, label: "piccolo", what: "+60/s, zaps meteors" },
     ShopItem { key: "chamber", base: 150000.0, k: 2.8, label: "time chamber", what: "a door appears: train ×2 for 15s inside" },
     ShopItem { key: "tail", base: 40000.0, k: 2.5, label: "tail training", what: "great ape: +8% size, +2s, +×0.25 (less past lv 10)" },
+    ShopItem { key: "itx", base: 15000.0, k: 2.45, label: "instant transmission", what: "two-finger tap or right-click the road: blink there" },
 ];
 
 /// Producer milestones: these levels double output, then every 50 past 100.
-pub const MILES: [Upg; 4] = [Upg::Boots, Upg::Partner, Upg::House, Upg::Piccolo];
+pub const MILES: [Upg; 5] = [Upg::Boots, Upg::Partner, Upg::House, Upg::Piccolo, Upg::Itx];
 pub const MS: [u32; 4] = [10, 25, 50, 100];
 
 #[derive(Clone, Debug)]

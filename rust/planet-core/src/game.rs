@@ -223,6 +223,16 @@ impl Game {
         1.25 + 0.25 * self.s.lvf(Upg::Kaio)
     }
 
+    /// Instant transmission's cooldown: 6s, down to 2s.
+    pub fn itx_cd(&self) -> f64 {
+        (6.0 / (1.0 + 0.1 * (self.s.lvf(Upg::Itx) - 1.0))).max(2.0)
+    }
+
+    /// How much sooner pods, the nimbus and trips come with instant transmission: up to 30%.
+    pub fn soon(&self) -> f64 {
+        (1.0 / (1.0 + 0.04 * self.s.lvf(Upg::Itx))).max(0.7)
+    }
+
     pub fn chamber_x(&self) -> f64 {
         1.5 + 0.5 * self.s.lvf(Upg::Chamber)
     }
@@ -296,6 +306,7 @@ impl Game {
             Upg::Bigbang => best >= 20000.0,
             Upg::Piccolo => best >= 10000.0,
             Upg::Chamber => best >= 40000.0,
+            Upg::Itx => self.s.ach.contains("yardrat") || best >= PLANET_EVERY,
         }
     }
 
@@ -503,6 +514,37 @@ impl Game {
         }
     }
 
+    /// game.js `blink(px, py)`: instant transmission ahead along the road to the spot under the tap; the road skipped
+    /// counts toward the lap. No random draws.
+    pub fn blink(&mut self, px: f64, py: f64) {
+        if !self.playing || self.s.lv(Upg::Itx) == 0 || self.s.world == 3 || self.t < self.tl.blink_ready || self.tl.struggle.is_some() {
+            return;
+        }
+        let c = &self.cam;
+        let (vx, vy) = ((px - c.cx) / c.r, (c.cy + c.bob - py) / c.r);
+        let q = vx * vx + vy * vy;
+        if q > 1.1 {
+            return;
+        }
+        let p = crate::geom::ap_t(&c.m, [vx, vy, (1.0 - q).max(0.0).sqrt()]);
+        let tau = 2.0 * std::f64::consts::PI;
+        let d = ((crate::jsmath::atan2(crate::geom::dot(p, self.frame3.e2), crate::geom::dot(p, self.frame3.e1)) - self.phi) % tau + tau) % tau;
+        if d > std::f64::consts::PI {
+            self.once("itxback", "instant transmission only goes forward — pick a spot on the road ahead");
+            return;
+        }
+        if d < 0.05 {
+            return;
+        }
+        let from = self.kid_screen(0.0);
+        self.tl.blink_from = Some((from, self.t));
+        self.phi += d;
+        self.tl.blink_ready = self.t + self.itx_cd();
+        self.ach("itx");
+        let n = (self.wrate() * 0.25 * self.ms(Upg::Itx)).max(20.0);
+        self.gain(n);
+    }
+
     pub fn kaioken(&mut self) {
         if !self.playing || self.s.lv(Upg::Kaio) == 0 || self.t < self.b.kaio_ready {
             return;
@@ -589,7 +631,7 @@ impl Game {
         s.pl = 0.0;
         s.run_best = 0.0;
         s.namek_at = 0.0;
-        s.levels = [0; 14];
+        s.levels = [0; Upg::ALL.len()];
         s.seeds = 0.0;
         s.ascend = 0.0;
         s.tree = [0; TREE.len()];
@@ -617,7 +659,7 @@ impl Game {
             b.t1 = self.t;
         }
         let s = &mut self.s;
-        s.levels = [0; 14];
+        s.levels = [0; Upg::ALL.len()];
         (s.pl, s.granted, s.multi, s.multi_t, s.uni_best, s.run_best, s.seeds, s.ascend, s.form, s.wishes, s.saga) =
             (0.0, 0, false, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0);
         (s.uni, s.uni_stage, s.ustars, s.mastery, s.godki, s.god_total, s.gods, s.auto_at, s.orbs7, s.namek_at) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0);
@@ -774,6 +816,7 @@ impl Game {
             "uni" => s.uni = v as u32,
             "krillinDead" => s.krillin_dead = v != 0.0,
             "orbs7" => s.orbs7 = v as u32,
+            "trips" => s.trips = v as u32,
             _ => {
                 if let Some(a) = key.strip_prefix("angel.").and_then(angel_ix) {
                     s.angel[a] = v != 0.0;

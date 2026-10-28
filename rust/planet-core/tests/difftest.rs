@@ -83,6 +83,7 @@ fn scenario(name: &str) {
                 "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 "summon" => g.summon(),
                 "pick" => g.pick(k),
+                "blink" => g.blink(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 a => panic!("unknown input {a}"),
             }
             ii += 1;
@@ -207,6 +208,9 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("fused", g.b.fused.map(|f| f.0)),
         ("preview", tl.preview.map(|p| p.1)),
         ("jumpH", n(tl.jump_h)),
+        ("blinkReady", n(tl.blink_ready)),
+        ("nextStar", n(tl.next_star)),
+        ("nextCloud", n(tl.next_cloud)),
     ]
 }
 
@@ -243,6 +247,11 @@ fn multiverse() {
 #[test]
 fn wishes() {
     scenario("wishes");
+}
+
+#[test]
+fn itx() {
+    scenario("itx");
 }
 
 #[test]

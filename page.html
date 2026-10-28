@@ -109,7 +109,7 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
   .shop button { flex-wrap: wrap; row-gap: 0; }
   .shop b { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .shop em { flex: none; }
-  /* 14 rows: descriptions show on hover, beside the row, instead of taking a line each */
+  /* 15 rows: descriptions show on hover, beside the row, instead of taking a line each */
   .shop { flex-wrap: nowrap; }
   .shop button { position: relative; }
   .shop button span { display: none; }
@@ -618,6 +618,7 @@ __PLANET__
     else if (kind === 'coin') { tone(988, 988, .06, 'square', .05); tone(1319, 1319, .14, 'square', .05, .06); }
     else if (kind === 'hit') tone(220, 90, .09, 'square', .06);
     else if (kind === 'beam') tone(1200, 140, .45, 'sawtooth', .05);
+    else if (kind === 'blink') { tone(1800, 500, .07, 'square', .04); tone(500, 2200, .12, 'square', .04, .07); }
     else if (kind === 'boom') { tone(160, 40, .4, 'sawtooth', .08); tone(90, 30, .5, 'square', .06, .03); }
     else if (kind === 'form') [523, 659, 784, 1047].forEach((f, i) => tone(f, f, .12, 'square', .05, i * .08));
     else if (kind === 'dragon') [130, 164, 196].forEach((f, i) => tone(f, f * .98, 1.6, 'triangle', .07, i * .15));

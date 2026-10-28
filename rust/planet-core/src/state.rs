@@ -7,7 +7,7 @@ pub struct Save {
     pub pl: f64,
     pub best: f64,
     pub run_best: f64,
-    pub levels: [u32; 14],
+    pub levels: [u32; 15],
     pub world: u32,
     pub orbs7: u32,
     pub wishes: u32,

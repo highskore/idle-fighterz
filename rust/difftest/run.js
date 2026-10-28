@@ -7,7 +7,7 @@ const mount = require('./harness')
 
 const DT = 1 / 30
 const POLICY = ['boots', 'partner', 'gravity', 'scouter', 'house', 'piccolo', 'cloud', 'armor', 'kaio', 'galick', 'senzu', 'chamber', 'bigbang']
-const LEVELS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber', 'tail']
+const LEVELS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber', 'tail', 'itx']
 
 // each scenario: seed, minutes, and a per-frame script (g: the game, f: frame index, act: records + applies an input)
 const SCENARIOS = {
@@ -45,6 +45,23 @@ const SCENARIOS = {
       if (f % (30 * 50) === 30 * 25) act({ a: 'summon' })
       // every other offer is picked by hand (its last wish), the rest wait out the 20s auto-pick
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
+    },
+  },
+  // instant transmission: the first trip goes to yardrat, which opens it before 1M; then it's bought and the hero blinks
+  // ahead every half second it can (some taps behind him or off the planet, which don't), and trips, pods and the nimbus come sooner
+  itx: {
+    seed: 13, minutes: 14,
+    script(g, f, act) {
+      if (f === 0) act({ a: 'set', k: 'trips', v: 10 })
+      if (f === 30 * 480) act({ a: 'set', k: 'itx', v: 30 })   // the 2s cooldown floor and the 30% cap on arrivals
+      if (f % 300 < 150 && f % 6 === 0) act({ a: 'train' })
+      if (f % 3 === 0) clickTargets(g, act)
+      if (f % 30 === 0) { buyAll(g, act, [...POLICY, 'itx']); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
+      if (f % 15 === 7 && g.ev('S.itx > 0')) {
+        const n = f / 15 | 0, at = n % 7 === 3 ? -.6 : .3 + (n % 5) * .55
+        const p = n % 11 === 5 ? g.ev('[cx + R * 1.5, cy]') : g.ev(`(v => [cx + v[0] * R, cy - v[1] * R + st.bob])(M3.ap(M, roadPt(phi + ${at})))`)
+        act({ a: 'blink', x: p[0], y: p[1] })
+      }
     },
   },
   idle: { seed: 1, minutes: 20, script(g, f, act) { if (f % 30 === 0) buyAll(g, act) } },
@@ -103,6 +120,7 @@ function apply(g, i) {
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
+  else if (i.a === 'blink') g.ev(`blink(${i.x}, ${i.y})`)
   else throw new Error('unknown input ' + i.a)
 }
 
@@ -116,7 +134,7 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['shen', shen ? ['rise', 'wish', 'granting', 'leave'].indexOf(shen.phase) : null], ['orbs', orbs.length], ['meteors', meteors.length], ['saibas', saibas.length], ['kis', kis.length],
     ['star', star ? star.x : null], ['cloud', cloudFly ? cloudFly.x : null], ['moon', moon ? moon.a : null], ['apeUntil', apeUntil], ['riding', riding], ['tour', tour ? tour.ko : null],
     ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
-    ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH]] })`
+    ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH], ['blinkReady', blinkReady], ['nextStar', nextStar], ['nextCloud', nextCloud]] })`
 
 function run(name) {
   const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)
