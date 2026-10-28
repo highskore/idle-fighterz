@@ -122,7 +122,22 @@ pub fn draw(c: &mut Ctx, g: &mut Game) {
                 if d <= rr {
                     let edge = d > rr - 2.0;
                     if edge || bayer(js_round(b.x + xx) as i64 as i32, js_round(b.y + yy) as i64 as i32) <= (1.0 - k) * 0.8 {
-                        c.fb.px(b.x + xx, b.y + yy, if edge { if k < 0.5 { 0xffffff } else { 0x8fd8ff } } else if d < rr * 0.4 { 0xffffff } else { 0xbfe9ff }, 1.0);
+                        let col = if edge {
+                            if k < 0.5 {
+                                0xffffff
+                            } else if b.kaio {
+                                0xff6a5a
+                            } else {
+                                0x8fd8ff
+                            }
+                        } else if d < rr * 0.4 {
+                            0xffffff
+                        } else if b.kaio {
+                            0xffb0a4
+                        } else {
+                            0xbfe9ff
+                        };
+                        c.fb.px(b.x + xx, b.y + yy, col, 1.0);
                     }
                 }
                 xx += 1.0;

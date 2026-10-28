@@ -495,8 +495,9 @@ impl Scene {
         }
         let hero = self.draw_hero(&mut c, g, dt);
         self.draw_visitors(&mut c, g, &hero, dt);
-        // not ported yet: the beam charge and the beam
+        crate::beam::draw_charge(&mut c, g);
         crate::effects::draw(&mut c, g);
+        crate::beam::draw_beam(&mut c, g);
         if g.sprint > 0.3 && g.rng.random() < 0.6 {
             let kd = g.kid_screen(0.0);
             let vx = (g.rng.random() - 0.5) * 30.0;

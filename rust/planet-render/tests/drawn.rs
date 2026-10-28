@@ -82,6 +82,21 @@ fn itx_drawn() {
 }
 
 #[test]
+fn attacks_drawn() {
+    drawn("attacks");
+}
+
+#[test]
+fn walls_drawn() {
+    drawn("walls");
+}
+
+#[test]
+fn input_drawn() {
+    drawn("input");
+}
+
+#[test]
 #[ignore = "game.js takes over 10 minutes to draw it; cargo test -- --ignored"]
 fn ascend_drawn() {
     drawn("ascend");
