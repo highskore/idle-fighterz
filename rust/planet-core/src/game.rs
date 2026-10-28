@@ -79,6 +79,8 @@ pub struct Game {
     pub flip_now: bool,
     /// particles (game.js `fx`): the simulation and the renderer both add, the renderer steps them
     pub fx: Vec<crate::fx::Particle>,
+    /// `flashT`: the white flash after a transform, a trip, a big hit; the renderer runs it down
+    pub flash_t: f64,
 }
 
 impl Game {
@@ -111,6 +113,7 @@ impl Game {
             lift_now: 0.0,
             flip_now: false,
             fx: Vec::new(),
+            flash_t: 0.0,
         }
     }
 
@@ -398,6 +401,7 @@ impl Game {
     }
 
     pub(crate) fn transform(&mut self, preview: bool) {
+        self.flash_t = 1.0;
         self.s.form += 1;
         self.victory();
         if !preview {
@@ -515,6 +519,7 @@ impl Game {
         self.b.tired_until = self.t + 25.0;
         self.b.kaio_ready = self.t + 45.0;
         self.shake = 0.5;
+        self.flash_t = 0.4;
         let msg = format!("kaioken! ×{}", self.kaio_x());
         self.event(msg);
         self.rng.skip(RNG_KAIOKEN);
@@ -583,6 +588,7 @@ impl Game {
         if self.s.form < MUI_FORM || self.god_now() == 0 {
             return;
         }
+        self.flash_t = 1.0;
         let g = self.god_now();
         self.s.godki += g;
         self.s.god_total += g;
@@ -637,6 +643,7 @@ impl Game {
             self.travel(0);
             self.tl.namek_until = 0.0;
         }
+        self.flash_t = 1.0;
         self.shake = 1.0;
     }
 

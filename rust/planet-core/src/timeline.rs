@@ -496,6 +496,8 @@ pub struct Tl {
     pub next_yam: f64,
     pub dance: Option<Dance>,
     pub next_dance: f64,
+    /// the fusion dance's result, by its baked sprite name (`FUSED.fat` has four frames)
+    pub fused_look: &'static str,
     pub cling: Option<f64>,
     pub next_cling: f64,
     pub car: Option<Car>,
@@ -599,6 +601,7 @@ impl Default for Tl {
             next_yam: 130.0,
             dance: None,
             next_dance: 300.0,
+            fused_look: "",
             cling: None,
             next_cling: 200.0,
             car: None,
@@ -870,6 +873,7 @@ impl Game {
                 bz.noise = 0f64.max(bz.noise - dt * 0.14);
                 if bz.noise >= 1.0 {
                     bz.awake = t;
+                    self.flash_t = 0.5;
                     self.shake = 0.8;
                     self.event("beerus is AWAKE — \"who dares?!\" everything ×0.25 until you find him pudding");
                     let c = self.rand_cap(0.4, 0.7);
@@ -894,6 +898,7 @@ impl Game {
             if ro.flag != 0.0 && ro.n == 0.0 && t - ro.flag > 1.1 {
                 self.tl.roshi.as_mut().unwrap().n = t;
                 self.b.roshi_until = t + 20.0;
+                self.flash_t = 0.6;
                 self.shake = 0.6;
                 self.ach("roshi");
                 self.event("kamehameha! roshi clears the sky — ×1.5 for 20s");
@@ -933,6 +938,7 @@ impl Game {
                 self.s.krillin_ally = false;
                 self.b.rage = 2.0 + self.s.krillin_revives as f64;
                 self.b.rage_until = t + 20.0;
+                self.flash_t = 1.0;
                 self.shake = 0.9;
                 self.ach("krillin");
                 let msg = format!("KRILLIN!!! — rage ×{} for 20s", self.b.rage);
@@ -1156,6 +1162,20 @@ impl Game {
                     0.75
                 };
                 self.b.fused = Some((x, t + if ok || sat { 25.0 } else { 15.0 }));
+                self.tl.fused_look = if sat {
+                    "FUSED.satan"
+                } else if ok {
+                    match res {
+                        "gogeta" => "FUSED.gogeta",
+                        "gotenks" => "FUSED.gotenks",
+                        _ => "FUSED.gohanVidel",
+                    }
+                } else if hits > 0 {
+                    "FUSED.fat"
+                } else {
+                    "FUSED.skinny"
+                };
+                self.flash_t = 1.0;
                 self.shake = 0.6;
                 self.ach("dance");
                 let msg = if sat {
@@ -1189,6 +1209,7 @@ impl Game {
         }
         if self.tl.cling.is_some_and(|boom| t > boom) {
             self.burst(30);
+            self.flash_t = 0.6;
             self.shake = 0.8;
             self.b.tired_until = self.b.tired_until.max(t + 6.0);
             self.event("BOOM — you got yamcha'd. tired ×0.75 for 6s");
@@ -1586,6 +1607,7 @@ impl Game {
                 let low = b.sprs.len() > 3 && b.hp / b.max < 0.4;
                 if low && !b.pow {
                     b.pow = true;
+                    self.flash_t = 0.4;
                     self.shake = 0.5;
                     let msg = POWER_UP.iter().find(|p| p.0 == b.name).map_or(format!("{} powers up!", b.name), |p| p.1.to_string());
                     self.event(msg);
@@ -1943,6 +1965,7 @@ impl Game {
             } else {
                 format!("{} defeated — +{p}", b.name)
             });
+            self.flash_t = 0.8;
             self.shake = 0.7;
             for _ in 0..4 {
                 self.rng.skip(2);
@@ -1972,6 +1995,7 @@ impl Game {
     }
 
     fn spirit_blast(&mut self) {
+        self.flash_t = 1.0;
         self.shake = 1.0;
         for i in 0..self.tl.saibas.len() {
             if !self.tl.saibas[i].dead && self.tl.saibas[i].sx.is_some() {
@@ -2012,6 +2036,7 @@ impl Game {
 
     fn open_capsule(&mut self) {
         self.tl.capsule = None;
+        self.flash_t = 0.3;
         let roll = self.r();
         self.burst(22);
         let t = self.t;
@@ -2067,6 +2092,7 @@ impl Game {
         }
         self.s.world = w;
         self.cam.layout(w);
+        self.flash_t = 1.0;
         self.shake = 0.5;
         self.burst(40);
         self.event(TRAVEL[w as usize]);
@@ -2676,6 +2702,7 @@ impl Game {
         }
         let m = self.tl.movie.as_mut().unwrap();
         if m.nova.is_some_and(|n| t > n.1) {
+            self.flash_t = 1.0;
             self.shake = 1.0;
             self.b.tired_until = self.b.tired_until.max(t + 8.0);
             self.event("SUPERNOVA — you're knocked flat. tired ×0.75 for 8s, and cooler leaves you for dead");
@@ -2802,6 +2829,7 @@ impl Game {
                 self.tl.fuse_offer = 0.0;
                 self.b.fuse_until = t + 30.0;
                 self.ach("fusion");
+                self.flash_t = 1.0;
                 self.shake = 0.6;
                 self.event("fusion ha! vegebubs — ×2 for 30s");
                 self.burst(50);
@@ -2938,6 +2966,7 @@ impl Game {
             if hypot(&[px - x, py - (y - 9.0)]) < 13.0 {
                 self.tl.chamber_t0 = t;
                 self.b.chamber_until = t + 15.0;
+                self.flash_t = 1.0;
                 self.ach("chamber");
                 let msg = format!("hyperbolic time chamber — time slows, training ×{} for 15s", self.chamber_x());
                 self.event(msg);
@@ -2997,6 +3026,7 @@ impl Game {
                 if giant {
                     self.ach("giantape");
                 }
+                self.flash_t = 1.0;
                 self.shake = 0.8;
                 let tail = giant || self.s.lv(Upg::Tail) > 0;
                 let msg = format!(
@@ -3068,6 +3098,7 @@ impl Game {
                 let g = 200f64.max(self.wrate() * 3.2 * (1.0 + self.ape_x()));
                 self.gain(g);
                 self.b.ape_until = (self.tl.ape.at + self.ape_len() + 10.0).min(self.b.ape_until + 2.0);
+                self.flash_t = 0.6;
                 self.shake = 0.9;
                 self.event("ROAAAR! +2s");
                 self.burst(40);

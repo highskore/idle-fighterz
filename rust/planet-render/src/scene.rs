@@ -38,9 +38,12 @@ impl View {
 /// What game.js keeps between frames for drawing only.
 #[derive(Default)]
 pub struct Scene {
-    /// `flashT`: the white flash after a transform
-    pub flash_t: f64,
+    
     pub(crate) built: Built,
+    /// the arena's baked void, for its canvas size
+    void: Option<(usize, usize, Vec<u32>)>,
+    /// the great ape's last step (`apeStep`)
+    ape_step: f64,
     key: Option<(u32, u32, u32)>,
     pub tones: Option<Tones>,
 }
@@ -346,7 +349,7 @@ impl Scene {
         let mut c = Ctx { fb, w: g.cam.w, h: g.cam.h, cx: g.cam.cx, cy: g.cam.cy, r: g.cam.r, m: g.cam.m, bob: g.cam.bob, t, l: light_dir(), world, tones: &tones };
         let sea = sea_pal(&tones.sea, g.tl.night_k);
         if world == 9 {
-            // the arena's void: not ported yet
+            crate::top::draw_void(&mut c, g, &mut self.void, view.bare);
         } else if view.bare {
             if view.clouds.is_some() {
                 draw_clouds(&mut c, view, &sea, false);
@@ -436,7 +439,7 @@ impl Scene {
             let spr = sprite::get(if sb.soldier { "SOLDIER" } else { "SAIBA" });
             c.blit_z(spr, sx, sy, atan2(v[0], v[1]), sin(t * 3.0 + sb.born) > 0.0, (up * down - 1.0) * 11.0 + hop, v[2] * c.r + 4.0, 1.1);
         }
-        let hero = self.draw_hero(&mut c, g);
+        let hero = self.draw_hero(&mut c, g, dt);
         self.draw_visitors(&mut c, g, &hero, dt);
         // not ported yet: the beam charge, the big bang, the spirit bomb, the beam struggle, blasts, the capsule, the beam
         if g.sprint > 0.3 && g.rng.random() < 0.6 {
@@ -467,9 +470,9 @@ impl Scene {
         } else if world != 9 {
             draw_sea(&mut c, view, &sea, world, true);
         }
-        if self.flash_t > 0.0 {
-            self.flash_t = 0f64.max(self.flash_t - dt * 1.8);
-            let a = self.flash_t * self.flash_t * 0.85;
+        if g.flash_t > 0.0 {
+            g.flash_t = 0f64.max(g.flash_t - dt * 1.8);
+            let a = g.flash_t * g.flash_t * 0.85;
             let w = c.fb.w;
             for k in 0..c.fb.buf.len() {
                 if (!view.bare || c.fb.buf[k] >> 24 != 0) && bayer((k % w) as i32, (k / w) as i32) < a {
@@ -481,7 +484,7 @@ impl Scene {
         self.tones = Some(tones);
     }
 
-    fn draw_hero(&mut self, c: &mut Ctx, g: &mut Game) -> HeroAt {
+    fn draw_hero(&mut self, c: &mut Ctx, g: &mut Game, dt: f64) -> HeroAt {
         let t = c.t;
         let kd = g.kid_screen(0.0);
         let form = &g.forms[g.s.form];
@@ -561,9 +564,31 @@ impl Scene {
             }
         };
         if g.b.ape_until > t {
-            // the great ape: not ported yet
+            // the great ape stomps: a little hop each step, a screen shake on landing
+            let step = (t * 3.2).floor();
+            if step != self.ape_step {
+                self.ape_step = step;
+                g.shake = g.shake.max(0.35);
+                for _ in 0..8 {
+                    let x = kd.x + (g.rng.random() - 0.5) * 30.0;
+                    let vx = (g.rng.random() - 0.5) * 60.0;
+                    let vy = -20.0 - g.rng.random() * 30.0;
+                    g.fx.push(Particle::new(x, kd.y, &[0xffffff, 0xe7e2d4]).v(vx, vy).drag(2.0).life(0.5).size(2.0, 0.0));
+                }
+            }
+            let (ux, uy) = (sin(kd.ang), -cos(kd.ang));
+            let half = ((kd.x + ux * lift) / (1.001 - ux)).min((c.w - kd.x - ux * lift) / (1.001 + ux)).min((kd.y + uy * lift) / (1.001 - uy)).min((c.h - kd.y - uy * lift) / (1.001 + uy)) - 3.0;
+            let a0 = sprite::get("APE.0");
+            let ape = &g.tl.ape;
+            let want = 2.3 * (1.0 + 0.08 * g.tail_lv()) * if ape.giant { 1.0 + 0.5 * 1f64.min((t - ape.at) / 1.2) } else { 1.0 };
+            let k = ape.k + (1.5f64.max(want.min(2.0 * half / (a0.w.max(a0.h) as f64))) - ape.k) * 1f64.min(dt * 2.0);
+            g.tl.ape.k = k;
+            let spr = sprite::get(if step as i64 % 2 == 0 { "APE.0" } else { "APE.1" });
+            draw_hero(c, spr, lift + sin(t * 3.2 * std::f64::consts::PI).abs() * 3.0, depth + 30.0, k, kd.x, kd.y, kd.ang);
         } else if g.b.fused.is_some_and(|f| f.1 > t) {
-            // bubbles' fusion with a dance partner: not ported yet
+            let look = g.tl.fused_look;
+            let spr = if look == "FUSED.fat" { sprite::get(["FUSED.fat.0", "FUSED.fat.1", "FUSED.fat.2", "FUSED.fat.3"][(t * 4.0).floor() as usize % 4]) } else { sprite::get(look) };
+            draw_hero(c, spr, lift, depth, 1.05, kd.x, kd.y, kd.ang);
         } else if fly {
             // the flight wish: a white-blue streak along the orbit, the superman pose
             let pal = [0xffffff, 0xcdeeff, 0x7ac8ff];

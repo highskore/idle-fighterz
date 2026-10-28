@@ -702,6 +702,9 @@ impl B<'_> {
 
 /// `TOP.dmg` as `topSync` sets it: none at universe 9, most of the floor by 11, all of it in ∞.
 pub fn top_dmg(g: &Game) -> f64 {
+    if !g.s.multi {
+        return 0.0;
+    }
     let n = planet_core::data::LADDER.len() as f64;
     if g.s.uni as f64 >= n {
         1.0

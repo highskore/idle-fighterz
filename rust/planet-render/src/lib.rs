@@ -7,6 +7,7 @@ pub mod scene;
 pub mod scenery;
 pub mod shade;
 pub mod tones;
+pub mod top;
 pub mod visitors;
 
 /// The buffers game.js keeps per stage: packed ABGR pixels as `ImageData` wants them (`st.buf`), depth (`zb`),

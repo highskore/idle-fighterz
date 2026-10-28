@@ -148,6 +148,7 @@ fn rust(k: &Case, w: usize, h: usize) -> (Game, Vec<u8>) {
         if f == k.frames - k.draw {
             // as frame.js does: headless game.js never steps its particles, so both start the drawn frames without them
             g.fx.clear();
+            g.flash_t = 0.0;
         }
         t += dt;
         g.frame(t, dt);
