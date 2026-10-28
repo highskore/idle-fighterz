@@ -127,7 +127,8 @@ pub fn draw_charge(c: &mut Ctx, g: &mut Game) {
         g.fx.push(Particle::new(hx + cos(a) * rr, hy + sin(a) * rr, &[0xffffff, p.spark]).v(-cos(a) * rr * 3.0, -sin(a) * rr * 3.0).life(0.3));
     }
     if ch >= 2.4 {
-        // `chargeCrackle` (its tremble is planet-core's draw_step)
+        // `chargeCrackle`, with its faint tremble
+        g.shake = g.shake.max(0.06);
         let kd = g.kid_screen(0.0);
         let (ux, uy) = (sin(kd.ang), -cos(kd.ang));
         let fb = &mut *c.fb;

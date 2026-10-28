@@ -399,7 +399,7 @@ impl Game {
             self.inp.stomp = true;
             self.shake = self.shake.max(0.35);
         }
-        if self.inp.charging >= 2.4 && self.hero_seen {
+        if self.inp.charging >= 2.4 && self.hero_seen && !self.drawn_here {
             self.shake = self.shake.max(0.06);
         }
         if let Some(c) = self.tl.capsule.as_mut() {

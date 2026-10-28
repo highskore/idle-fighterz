@@ -98,6 +98,9 @@ pub struct Game {
     pub flash_t: f64,
     /// whether the hero was in view the last time he was drawn (a full beam charge makes the screen tremble then)
     pub hero_seen: bool,
+    /// planet-render draws this game: a full charge's tremble then comes from the drawing, as in game.js, not from
+    /// `draw_step`'s guess from the last frame
+    pub drawn_here: bool,
 }
 
 impl Game {
@@ -138,6 +141,7 @@ impl Game {
             fx: Vec::new(),
             flash_t: 0.0,
             hero_seen: false,
+            drawn_here: false,
         };
         g.sync_shop();
         g
