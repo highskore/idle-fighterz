@@ -73,9 +73,9 @@
     // awake while the pointer is about (the game draws at 30fps then, 15 otherwise); the upgrades list or a popup keep it up
     let idle = 0;
     const keep = () => $('shop').classList.contains('open') || !$('menu').hidden || !$('ascBox').hidden || !$('shareBox').hidden;
-    // clouds under the floating planet (settings: always, while awake, or never, and their shape). window mode has the
+    // clouds under the floating planet (settings: always, while awake, or never, their shape and amount). window mode has the
     // full cloud sea instead
-    const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'e'); };
+    const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'c'); st.cloudAmt = conf.cloud_amount || 2; };
     const sleep = () => { if (keep()) idle = setTimeout(sleep, 1000); else { root.classList.remove('awake'); clouds(); } };
     const wake = ms => { root.classList.add('awake'); clouds(); clearTimeout(idle); idle = setTimeout(sleep, ms); };
     addEventListener('pointermove', () => wake(2500)); addEventListener('pointerdown', () => wake(2500), true);
@@ -135,7 +135,6 @@
       if (first) arrange(s.layout);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live
-      root.classList.toggle('cloudbed', BARE && s.clouds !== 'never' && /^[ef]/.test(s.cloud_shape || 'e'));   // dock clouds: the canvas reaches down behind the pill
       clouds();
       document.body.style.opacity = s.opacity;
       // the menu-bar icon may be hidden behind the notch: say how to get the widget back

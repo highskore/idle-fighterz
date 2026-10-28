@@ -4741,8 +4741,43 @@ GAMES.push({
       }
     }/*widget*/
     // widget clouds: whole puffs with their own edges (the widget's rim pass outlines them) instead of the screen-wide sea.
-    // five arrangements, st.clouds = 'a' bank under the planet, 'b' halo round it, 'c' drifting clusters, 'd' a plate,
-    // 'e' a band along the bottom of the canvas, which ends just above the dock, like the site's cloud sea
+    // five arrangements, st.clouds = 'c' drifting clusters (the default; st.cloudAmt adds more), 'a' bank under the planet,
+    // 'b' halo round it, 'd' a plate, 'e' a band along the bottom of the canvas, like the site's cloud sea
+    // hand-made cumulus outlines for the drifting clouds: lobes [dx, dy, r] in planet radii over a flat base at dy = 0 (a lobe
+    // is cut off at the base). 2-4 lobes overlapping heavily, one merged outline, wider than tall (1.6-3). checked at every
+    // scale and mirror by desktop/scripts/clouds.mjs, which also draws them all on one sheet
+    const CLOUD_TPL = [
+      [[-.18, -.02, .14], [0, -.08, .18], [.18, -.03, .13]],   // classic, tallest in the middle
+      [[-.15, 0, .12], [0, -.09, .17], [.15, 0, .11]],   // small and tall
+      [[-.16, -.08, .17], [.02, -.03, .14], [.17, .01, .11]],   // high at one end
+      [[-.23, -.02, .12], [-.08, -.07, .15], [.08, -.09, .16], [.22, -.03, .13]],   // a long stratocumulus
+      [[-.055, -.01, .1], [.055, -.04, .11]],   // a small double
+      [[-.22, 0, .13], [-.07, -.1, .18], [.11, -.12, .19], [.25, -.01, .12]],   // a big cumulus
+      [[-.18, .01, .1], [-.05, -.04, .14], [.11, -.07, .17]],   // a mound rising to one side
+    ];
+    // a template's lobes in canvas px for one spot: mirrored or not, scaled, each lobe a pixel bigger or smaller, and
+    // sometimes one small lobe on top of the tallest. seeded by k, so a cloud keeps its shape
+    function cloudLobes(tp, k, scale) {
+      const s = (hash(k * 3.1 + 9) < .5 ? -1 : 1) * scale, a = Math.abs(s);
+      const lobes = tp.map(([dx, dy, r], i) => [dx * s, dy * a, r * a + Math.round(hash(k * 11 + i * 1.7) * 2) - 1]);
+      if (tp.length < 4 && hash(k * 2.3 + 4) > .6) { const [dx, dy, r] = tp.reduce((p, q) => q[1] - q[2] < p[1] - p[2] ? q : p); lobes.push([(dx + .07) * s, (dy - r * .55) * a, .09 * a]); }
+      return lobes;
+    }
+    // one cloud, lowest lobes first so the higher ones shade over them, the base band darker like the site's cloud sea.
+    // the whole cloud moves to fit inside the canvas, never cut
+    function drawCloud(x, base, lobes, pal, pale = 0) {
+      const m = 1, x0 = Math.min(...lobes.map(([dx, , r]) => dx - r)), x1 = Math.max(...lobes.map(([dx, , r]) => dx + r)), top = Math.min(...lobes.map(([, dy, r]) => dy - r));
+      x = Math.round(Math.max(m - x0, Math.min(st.W - m - x1, x))); base = Math.round(Math.max(m - top, Math.min(st.H - m - 1, base)));
+      const band = -top * .35;
+      for (const [dx, dy, r] of [...lobes].sort((p, q) => q[1] - p[1])) {
+        const lx = x + dx, ly = base + dy;
+        for (let y = Math.floor(ly - r); y <= base; y++) for (let px = Math.floor(lx - r); px <= lx + r; px++) {
+          const ex = px - lx, ey = y - ly; if (ex * ex + ey * ey > r * r) continue;
+          const v = -(ex * .5 + ey * .9) / r + bayer(px, y) * .3 - Math.max(0, y - (base - band)) / band * .9;
+          st.px(px, y, pal[Math.min(3, (v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0) + pale)]);
+        }
+      }
+    }
     function cloudPuff(x0, y0, r, pal, pale = 0) {
       for (let y = Math.floor(y0 - r); y <= y0 + r; y++) for (let x = Math.floor(x0 - r); x <= x0 + r; x++) {
         const dx = x - x0, dy = y - y0; if (dx * dx + dy * dy > r * r) continue;
@@ -4762,71 +4797,19 @@ GAMES.push({
             add(x0 + rb + 1 + (i + (L % 2 ? .5 * (i < n - 1) : 0)) * gap + sway, st.H - r - 1 - R * .2 * (3 - L) - hash(i * 3.7 + L * 5.9) * rb * (L === 3 ? .5 : .9) + bob(i * 4 + L, .01), r, L === 3, L < 2 ? 1 : 0);
           }
         }
-      } else if (st.clouds && st.clouds[0] === 'e') {   // dock-cloud variants. the canvas reaches the pill's middle (html.cloudbed),
-        // so puffs can sit behind its top edge: the pill rests in them. pt: the pill's top, hw: half its width, in canvas px
-        const vmin = Math.min(innerWidth, innerHeight), ph = (Math.min(26, Math.max(18, vmin * .07)) + 8) / st.scale, pt = st.H - ph / 2;
-        const xc = st.W / 2, hw = Math.min(st.W / 2 - 6 / st.scale, 200 / st.scale), k = st.clouds[1];
-        const sway = (i, L) => Math.sin(t * (.12 + .06 * L) + i * 1.9 + L * 2.1) * R * .03;
-        if (k === '1') {   // nestled: a row straddling the pill's top edge, then rows above with tall puffs and dips
-          for (let L = 0; L < 4; L++) {
-            const rb = R * (.13 + .045 * L), n = Math.ceil(hw * 2 / (rb * 1.15)) + 1;
-            for (let i = 0; i < n; i++) {
-              const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, h = hash(i * 5.3 + L * 11.7), tall = h > .62 ? 1 : h < .25 ? -.6 : 0;
-              add(xc + u * (hw + rb * .3) + sway(i, L), pt - rb * .15 - R * .11 * (3 - L) * (1 + tall * .7) - (L < 3 ? h * rb * .5 : 0) + bob(i * 4 + L, .01), rb * (.75 + .55 * h), L === 3, L < 2 ? 1 : 0);
-            }
-          }
-        } else if (k === '2') {   // mound: columns of puffs under an arch that peaks under the planet and tapers to the pill's ends
-          const rb = R * .2, cols = Math.ceil(hw * 2 / (rb * 1.05)) + 1;
-          for (let i = 0; i < cols; i++) {
-            const u = i / (cols - 1) * 2 - 1, top = R * (.15 + .85 * (1 - u * u) ** 1.4), rows = Math.max(1, Math.round(top / (rb * .9)));
-            for (let j = 0; j < rows; j++) { const h = hash(i * 3.1 + j * 7.7), r = rb * (.8 + .45 * h) * (1 - .25 * Math.abs(u)); add(xc + u * hw + sway(i, j), pt - j * rb * .9 - h * rb * .25 + bob(i + j * 9, .01), r, j === 0, j >= 2 ? 1 : 0); }
-          }
-        } else if (k === '3') {   // scattered sea: separate groups at different heights, sky between them
-          const g = 6;
-          for (let q = 0; q < g; q++) {
-            const u = (q + .5) / g * 2 - 1, h = hash(q * 9.3), lift = R * (.08 + .5 * h), x = xc + u * hw * .92 + sway(q, 1) * 2, y = pt - lift, rb = R * (.13 + .07 * hash(q * 4.1)), m = 3 + Math.round(h), low = lift < R * .25;
-            for (let j = 0; j < m; j++) { const o = j - (m - 1) / 2; add(x + o * rb * 1.05, y + Math.abs(o) * rb * .35 + bob(q * 5 + j, .012), rb * (.75 + .3 * hash(q * 2 + j)) * (1 - Math.abs(o) * .12), low, low ? 0 : 1); }
-            add(x + (h - .5) * rb, y - rb * .75, rb * 1.05, low, low ? 0 : 1);   // a crown on each group, so it puffs up instead of lying flat
-          }
-        } else {   // '4' cuffs: a low bed along the pill, and cloud columns hugging both ends that climb up the sides
-          const rb = R * .17, n = Math.ceil(hw * 2 / (rb * 1.3)) + 1;
-          for (let i = 0; i < n; i++) { const u = i / (n - 1) * 2 - 1; add(xc + u * hw + sway(i, 3), pt - rb * .2 - hash(i * 6.1) * rb * .4 + bob(i, .01), rb * (.85 + .3 * hash(i * 2.9)), true); }
-          for (const side of [-1, 1]) for (let j = 0; j < 5; j++) {
-            const h = hash(j * 3.3 + (side + 1) * 5), r = rb * (1.35 - j * .12) * (.85 + .3 * h);
-            add(xc + side * (hw - r * .4 - h * rb * .6) + sway(j, side + 1), pt - rb * .4 - j * rb * 1.05 + bob(j * 2 + side, .01), r, j < 2, j > 1 ? 1 : 0);
-            if (j < 4) add(xc + side * (hw - rb * 1.6 - j * rb * .8), pt - rb * .3 - j * rb * .6, rb * (1.05 - j * .1), false, j > 1 ? 1 : 0);
-          }
-        }
-      } else if (st.clouds && st.clouds[0] === 'f') {   // blends: a bed along the pill (it rests in it) and groups rising above
-        // it with sky between them. per variant: bed rows and puff size, groups, height, peak (-1..1, null: none), group
-        // width (of its slot: small = wide gaps), big puffs, and whether groups float clear of the bed
-        const F = { 1: [1, .12, 3, 1, 0, .8, 1, 0], 2: [2, .1, 4, .75, 0, .55, 0, 0], 3: [1, .11, 5, 1.05, -.45, .85, 0, 1],
-          4: [2, .12, 6, .55, null, .5, 0, 1], 5: [2, .1, 4, 1.25, .5, .8, 1, 0], 6: [1, .1, 3, .85, 0, .5, 0, 1] }[st.clouds[1]] || [];
-        const [bedRows, bedK, g, tall, peak, width, big, float] = F;
-        const vmin = Math.min(innerWidth, innerHeight), ph = (Math.min(26, Math.max(18, vmin * .07)) + 8) / st.scale, pt = st.H - ph / 2;
-        const xc = st.W / 2, hw = Math.min(st.W / 2 - 6 / st.scale, 200 / st.scale), sway = (i, L) => Math.sin(t * (.12 + .06 * L) + i * 1.9 + L * 2.1) * R * .03;
-        const rb = R * bedK;
-        for (let j = 0; j < bedRows; j++) {
-          const n = Math.ceil(hw * 2 / (rb * 1.15)) + 1;
-          for (let i = 0; i < n; i++) { const u = i / (n - 1) * 2 - 1, h = hash(i * 5.3 + j * 11.7); add(xc + u * (hw + rb * .2) + sway(i, j), pt - rb * .15 - j * rb * .75 - h * rb * .3 + bob(i * 3 + j, .008), rb * (.8 + .4 * h), j === 0); }
-        }
-        const bedTop = pt - rb * (.75 + .75 * (bedRows - 1)), slot = hw * 2 * .92 / g;
-        for (let q = 0; q < g; q++) {
-          const u = -.92 + (q + .5) * slot / hw, hq = hash(q * 9.7 + g), env = R * tall * (peak === null ? .4 + .2 * hq : .3 + .7 * Math.exp(-(((u - peak) / .55) ** 2)));
-          // each group a dome: a wide base row, narrower rows above, as tall as its envelope allows
-          const rg = R * (big ? .15 : .1), x = xc + u * hw + sway(q, 2) * 2, base = float ? bedTop - R * .14 : bedTop + rg * .3;
-          const nb = Math.max(2, Math.round(slot * width / (rg * 1.15))), rows = Math.max(1, Math.min(nb, Math.round(env / (rg * .8))));
-          for (let j = 0; j < rows; j++) {
-            const c = Math.max(1, nb - j - (j > 0 && nb > 3 ? 1 : 0));
-            for (let i = 0; i < c; i++) { const h = hash(q * 13 + i * 5 + j * 3.1), o = i - (c - 1) / 2; add(x + o * rg * 1.15 + (h - .5) * rg * .35 + (j % 2) * rg * .2, base - j * rg * .8 - h * rg * .25 + bob(q * 7 + i + j, .012), rg * (.8 + .4 * h) * (1 - .05 * j), false, j > 0 ? 1 : 0); }
-          }
-        }
       } else if (st.clouds === 'b') {   // a tilted ring of puffs round the planet: the far half behind it, the near half in front
         for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + t * .06; add(cx + Math.cos(a) * R * 1.3, cy + R * .12 + Math.sin(a) * R * .36, R * (.11 + .04 * hash(i * 2.1)), Math.sin(a) > 0); }
-      } else if (st.clouds === 'c') {   // three loose clusters, one in front, drifting a little
-        [[-1, .5, false], [1.02, .18, false], [-.1, 1.02, true]].forEach(([u, v, f], k) => {
-          const x = cx + u * R + Math.sin(t * .15 + k * 2) * R * .08, y = cy + v * R;
-          add(x - R * .2, y + R * .03, R * .15, f); add(x, y - R * .07, R * .21, f); add(x + R * .21, y + R * .04, R * .14, f);
+      } else if (st.clouds === 'c') {   // loose clusters drifting a little: three at amount 1, then more per step (st.cloudAmt, 1-5)
+        // from a ranked list of spots, all clear of the planet and the hero's path round it: below and beside it first, then
+        // the gaps at the sides, then a few higher up. from amount 4 clouds grow a little
+        const amt = Math.max(1, Math.min(5, st.cloudAmt || 1));
+        const SPOTS = [[[-1.3, .5, false], [1.3, .15, false], [-.15, 1.1, true]], [[1, 1.05, true], [-1.6, -.3, false]],
+          [[1.6, .75, false], [-1.5, 1.05, false], [.5, 1.35, true]], [[1.45, -.75, false], [-1.15, -1.3, false], [-.6, 1.45, true]],
+          [[1.85, .2, false], [-1.9, .45, false], [.3, -1.55, false]]];
+        // every spot its own cloud: one of the templates, seeded by the spot, so it keeps its shape and neighbours differ
+        SPOTS.slice(0, amt).flat().forEach(([u, v, f], k) => {
+          const tp = CLOUD_TPL[Math.floor(hash(k * 7.3 + .5) * CLOUD_TPL.length)];
+          P.push({ cloud: cloudLobes(tp, k, R * (.7 + .6 * hash(k * 5.9 + 2)) * (amt >= 4 ? 1.1 : 1)), x: cx + u * R + Math.sin(t * .15 + k * 2) * R * .08, y: cy + v * R + R * .1, f });
         });
       } else if (st.clouds === 'd') {   // a broad flat plate the planet sits on: one row behind its rim, a lower row in front
         for (let i = 0; i < 9; i++) { const u = i / 8 * 2 - 1; add(cx + u * R * 1.45, cy + R * .9 + bob(i), R * (.19 + .05 * hash(i * 3.7)), false); }
@@ -4841,8 +4824,9 @@ GAMES.push({
       const pal = seaPal(), m = 1;   // every puff whole inside the canvas
       for (const p of cloudPuffs(t)) {
         if (p.f !== front) continue;
+        if (p.cloud) { drawCloud(p.x, p.y, p.cloud, pal); continue; }
         const r = Math.max(2, Math.round(p.r));
-        cloudPuff(Math.round(Math.min(st.W - m - r, Math.max(m + r, p.x))), Math.round(Math.min(st.H - m - r, p.y)), r, pal, Math.min(1, p.pale));
+        cloudPuff(Math.round(Math.min(st.W - m - r, Math.max(m + r, p.x))), Math.round(Math.min(st.H - m - r, Math.max(m + r, p.y))), r, pal, Math.min(1, p.pale));
       }
     }
     /*/widget*/

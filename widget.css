@@ -91,7 +91,6 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
    them. window mode runs the sky and cloud sea under the bar, like the site */
 .widget:not(.windowed)[data-layout="7"] .stage, .widget:not(.windowed)[data-layout="2"] .stage { bottom: calc(clamp(18px, 7vmin, 26px) + 18px); }
 .widget:not(.windowed)[data-layout="6"] .stage { top: calc(clamp(19px, 7vmin, 26px) + 14px); }
-.widget.cloudbed:not(.windowed)[data-layout="7"] .stage { bottom: calc(clamp(18px, 7vmin, 26px) / 2 + 10px); }   /* dock clouds: down to the pill's middle, so it rests in them */
 
 /* 1 ring: a thin ring behind the planet fills as the next form nears; the power level rides its top, the
    buttons sit on it (placed by script) */
