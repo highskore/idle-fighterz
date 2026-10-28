@@ -3,6 +3,7 @@
 
 pub mod bridge;
 pub mod data;
+pub mod floats;
 pub mod fx;
 pub mod game;
 pub mod geom;

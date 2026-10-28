@@ -93,6 +93,8 @@ pub struct Game {
     pub flip_now: bool,
     /// particles (game.js `fx`): the simulation and the renderer both add, the renderer steps them
     pub fx: Vec<crate::fx::Particle>,
+    /// the floating gain numbers (game.js `floats`): the simulation adds, the renderer ages them
+    pub floats: Vec<crate::floats::Float>,
     /// `flashT`: the white flash after a transform, a trip, a big hit; the renderer runs it down
     pub flash_t: f64,
     /// whether the hero was in view the last time he was drawn (a full beam charge makes the screen tremble then)
@@ -135,6 +137,7 @@ impl Game {
             lift_now: 0.0,
             flip_now: false,
             fx: Vec::new(),
+            floats: Vec::new(),
             flash_t: 0.0,
             hero_seen: false,
         };
@@ -529,7 +532,8 @@ impl Game {
             * if crit { 2.0 + self.lvl(N_CRITX) } else { 1.0 }
             * (1.0 + 0.5 * self.lvl(N_FIST))
             * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
-        self.gain(n);
+        let k = self.kid_screen(14.0);
+        self.gain_at(n, k.x, k.y - 10.0, crit);
         self.cue(Cue::Sfx("tap"));
         if crit {
             self.rng.skip(RNG_CRIT);
@@ -872,7 +876,8 @@ impl Game {
                     * if self.wished(WishBuff::Laps) { 3.0 } else { 1.0 }
                     * if self.tl.bz.is_some() { 3.0 } else { 1.0 }
                     * if self.b.whis_until > t { 2.0 } else { 1.0 };
-                self.gain(n);
+                let k = self.kid_screen(20.0);
+                self.gain_at(n, k.x, k.y - 14.0, true);
             }
         }
         if self.tl.jump_h > 0.0 || self.tl.jump_v > 0.0 {
