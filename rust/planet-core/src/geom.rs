@@ -50,6 +50,23 @@ pub fn rx(a: f64) -> M3 {
     [1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c]
 }
 
+/// `M3.rot(axis, a)`: a turn of `a` about a unit axis.
+pub fn rot([x, y, z]: V3, a: f64) -> M3 {
+    let (c, s) = (cos(a), sin(a));
+    let cc = 1.0 - c;
+    [
+        c + x * x * cc,
+        x * y * cc - z * s,
+        x * z * cc + y * s,
+        y * x * cc + z * s,
+        c + y * y * cc,
+        y * z * cc - x * s,
+        z * x * cc - y * s,
+        z * y * cc + x * s,
+        c + z * z * cc,
+    ]
+}
+
 pub fn ry(a: f64) -> M3 {
     let (c, s) = (cos(a), sin(a));
     [c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c]

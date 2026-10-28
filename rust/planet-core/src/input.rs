@@ -20,6 +20,8 @@ pub struct Drag {
     /// where the beam aims, in buffer pixels
     pub ax: f64,
     pub ay: f64,
+    /// the pointer (a second one landing with it is a two-finger tap)
+    pub id: i32,
 }
 
 /// A fired beam, for the renderer.
@@ -72,6 +74,10 @@ pub struct Input {
     pub vry: f64,
     /// seconds since the last drag
     pub idle_t: f64,
+    /// kami's lookout turns only round the road's pole: how far it has turned
+    pub yaw: f64,
+    /// game.js `w2Pole`: korin's tower is up
+    pub w2_pole: bool,
     /// how long the beam has charged (0 when not), up to 2.5
     pub charging: f64,
     pub beam: Option<Beam>,
@@ -91,6 +97,8 @@ impl Default for Input {
             vrx: 0.0,
             vry: 0.0,
             idle_t: 99.0,
+            yaw: 0.0,
+            w2_pole: false,
             charging: 0.0,
             beam: None,
             bang: None,
@@ -103,13 +111,24 @@ impl Default for Input {
 }
 
 impl Game {
-    /// `pointerdown`: (x, y) in CSS pixels, (bx, by) in buffer pixels.
-    pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64) {
+    /// `pointerdown`: (x, y) in CSS pixels, (bx, by) in buffer pixels, the browser's `pointerId` and `button`. A
+    /// right-click, or a second finger landing with the first, opens instant transmission.
+    pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32, button: i32) {
         if self.playing && self.s.world == 3 && self.tl.snk.is_some() {
             self.snake_tap(bx, by);
             return;
         }
-        self.inp.drag = Some(Drag { x, y, moved: 0.0, t: self.t, ax: bx, ay: by });
+        if button == 2 {
+            self.itx_open();
+            return;
+        }
+        if self.inp.drag.is_some_and(|d| d.id != id && self.s.lv(Upg::Itx) > 0 && self.t - d.t < 0.4 && d.moved <= 6.0) {
+            self.itx_open();
+            self.inp.drag = None;
+            self.inp.charging = 0.0;
+            return;
+        }
+        self.inp.drag = Some(Drag { x, y, moved: 0.0, t: self.t, ax: bx, ay: by, id });
     }
 
     /// `pointermove`: aims a charging beam, or spins the planet once the press has moved past 6px.
@@ -126,9 +145,15 @@ impl Game {
         }
         if d.moved > 6.0 {
             let k = 1.1 / (self.cam.r * self.cam.scale);
+            let pole = self.w2_pole();
             self.inp.vry = dx * k * 30.0;
-            self.inp.vrx = dy * k * 30.0;
-            self.cam.turn(dy * k, dx * k);
+            self.inp.vrx = if pole { 0.0 } else { dy * k * 30.0 };
+            if pole {
+                self.inp.yaw += dx * k;
+                self.cam.m = crate::geom::rot(self.frame3.n, self.inp.yaw);
+            } else {
+                self.cam.turn(dy * k, dx * k);
+            }
             self.inp.idle_t = 0.0;
         }
     }
@@ -455,6 +480,18 @@ impl Game {
                 i.vry *= 0.06f64.powf(dt);
             }
             self.cam.spin(dt);
+            // the lookout sits on korin's tower, so it only ever turns round its own axis
+            if self.w2_pole() {
+                if self.inp.vry.abs() > 0.001 {
+                    self.inp.yaw += self.inp.vry * dt;
+                }
+                self.inp.yaw += crate::geom::AUTO_SPIN * dt;
+                self.cam.m = crate::geom::rot(self.frame3.n, self.inp.yaw);
+            }
         }
+    }
+
+    fn w2_pole(&self) -> bool {
+        self.inp.w2_pole
     }
 }

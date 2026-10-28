@@ -32,6 +32,7 @@ impl Game {
         for u in &Upg::ALL[..13] {
             o = o.num(u.key(), level(self, *u));
         }
+        o = o.num("itx", level(self, Upg::Itx));
         let tree = TREE.iter().enumerate().filter(|(i, _)| s.tree[*i] > 0).fold(Obj::new(), |o, (i, n)| o.num(n.id, s.tree[i] as f64));
         let angel = ANGELS.iter().enumerate().filter(|(i, _)| s.angel[*i]).fold(Obj::new(), |o, (_, a)| o.num(a.id, 1.0));
         o = o
@@ -63,6 +64,7 @@ impl Game {
             .str("formTopName", s.form_top_name)
             .num("movies", s.movies as f64)
             .num("souls", s.souls as f64)
+            .num("been", s.been as f64)
             .num("tail", level(self, Upg::Tail));
         let ach = s.ach.iter().fold(Obj::new(), |o, id| o.num(id, s.ach_at.get(id).copied().unwrap_or(0.0)));
         let hero = CHARS.iter().find(|c| c.0 == s.hero).map_or("vegeta", |c| c.1);

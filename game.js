@@ -108,7 +108,7 @@ const ACH = [
   ['giantape', 'oozaru rampage', 'go giant great ape'], ['tail10', 'tail of steel', 'train your tail to lv 10'], ['tail25', 'king of the apes', 'train your tail to lv 25'], ['tail50', 'golden great ape', 'train your tail to lv 50'],
   ['flight', 'bukujutsu', 'wish for the power of flight'], ['flash', 'final flash!', 'fire a fully charged beam at beam lv 5'], ['movies3', 'triple feature', 'beat cooler, janemba and bojack'],
   ['namek', 'namekian holiday', 'visit namek'], ['kame', 'turtle school', 'visit kame house'], ['paozu', 'dinosaur country', 'visit mount paozu'], ['future', 'hope of the future', "visit trunks' future"],
-  ['lookout', "mr. popo's tiles", "visit kami's lookout"], ['kaiworld', 'sacred world of the kais', "visit the supreme kai's world"], ['yardrat', 'instant transmission', 'visit yardrat'],
+  ['lookout', "mr. popo's tiles", "visit kami's lookout"], ['kaiworld', 'sacred world of the kais', "visit the supreme kai's world"], ['yardrat', 'instant transmission', 'visit yardrat'], ['itx', 'we have to go… instantly', 'jump to another world with instant transmission'],
   ['streak', 'golden hop', 'hit a ×3 orb streak on snake way'], ['souls10', 'ghost buster', 'send 10 lost souls back to HFIL'],
 ].map(([id, name, text]) => ({ id, name, text }));
 /* great ape: the full-moon form, giant, armoured, red-eyed */
@@ -2801,7 +2801,7 @@ GAMES.push({
   id: 'planet',
   mount(st, ui) {
     const SAVE = 'hs-power';
-    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, piccolo: 0, chamber: 0, spirit: 0, world: 0, orbs7: 0, wishes: 0, granted: 0, ascend: 0, form: 0, seeds: 0, tree: {}, saga: 0, runBest: 0, uni: 0, uniStage: 0, multi: 0, multiT: 0, uniBest: 0, ustars: 0, mastery: 0, godki: 0, godTotal: 0, gods: 0, angel: {}, autoAt: 0, zeno: 0, formTop: 0, formTopName: '', movies: 0, souls: 0 };
+    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, piccolo: 0, chamber: 0, itx: 0, spirit: 0, world: 0, orbs7: 0, wishes: 0, granted: 0, ascend: 0, form: 0, seeds: 0, tree: {}, saga: 0, runBest: 0, uni: 0, uniStage: 0, multi: 0, multiT: 0, uniBest: 0, ustars: 0, mastery: 0, godki: 0, godTotal: 0, gods: 0, angel: {}, autoAt: 0, zeno: 0, formTop: 0, formTopName: '', movies: 0, souls: 0, been: 0 };
     // every visit starts from zero, achievements and heroes included; only the date of the last daily bonus carries over
     const KEEP = ['daily'];
     try { const saved = JSON.parse(localStorage.getItem(SAVE) || '{}'); for (const k of KEEP) if (k in saved) S[k] = saved[k]; } catch (_) {}
@@ -2843,6 +2843,7 @@ GAMES.push({
       boots: { base: 50, k: 1.7, label: 'weighted boots', what: '+1 per step' },
       partner: { base: 250, k: 1.7, label: 'bubbles', what: '+4/s, trains with you' },
       gravity: { base: 2500, k: 2.6, label: 'gravity chamber', what: '×1.15 everything' },
+      itx: { base: 5e6, k: 2.6, label: 'instant transmission', what: 'two-finger tap or right-click: jump to a world you\'ve been', unlock: () => !!S.ach.yardrat },   // learned on yardrat, the 11th trip; priced like gravity's levels by then
       cloud: { base: 1000, k: 2.2, label: 'flying nimbus', what: 'comes more often' },
       scouter: { base: 800, k: 2.1, label: 'scouter', what: '+10% crits (×2)', unlock: () => S.best >= 150 },
       galick: { base: 1500, k: 2.3, get label() { return kame() ? 'kamehameha' : 'galick charge'; }, what: 'hold to charge a beam', unlock: () => S.best >= 400 },
@@ -2858,10 +2859,12 @@ GAMES.push({
       godki: { base: 2e14, k: 1, label: 'god ki', what: 'reset for god ki', unlock: () => S.form >= MUI_FORM && godNow() > 0 },
       zeno: { base: 1, k: 1, label: 'zeno button', what: 'erase everything for zeno\'s favour', unlock: () => zenoReady() },
     };
-    const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber', 'tail'];
+    const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber', 'tail', 'itx'];
     const cost = k => k === 'ascend' ? Math.max(1e6, Math.floor(S.pl)) : k === 'godki' ? Math.max(2e14, Math.floor(S.pl)) : k === 'zeno' ? 0 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]) * (1 - .05 * lvl('deal')));   // ascending spends all you hold (1M at least), so that's its price
     // permanent: gravity ×1.15 a level, wishes ×1.25 each, ascensions +10% each; temporary boosts add up rather than multiply
     const KAIO = () => 1.25 + .25 * S.kaio;
+    // instant transmission: a jump's cooldown, from the end of its trip, shrinks from 5 min to 90s; pods, the nimbus and trips come up to 30% sooner
+    const itxCd = () => Math.max(90, 300 / (1 + .1 * (S.itx - 1))), soon = () => Math.max(.7, 1 / (1 + .04 * S.itx));
     // milestones: levels 10, 25, 50 and 100 of a producer double its output, then every 50 levels after, forever
     const MILES = { boots: 1, partner: 1, house: 1, piccolo: 1 }, MS = [10, 25, 50, 100];
     const ms = k => 2 ** (MS.filter(n => S[k] >= n).length + Math.max(0, Math.floor((S[k] - 100) / 50))), nextMile = k => MS.find(n => S[k] < n) || 100 + 50 * (Math.floor((S[k] - 100) / 50) + 1);
@@ -2967,7 +2970,7 @@ GAMES.push({
     let laughUntil = 0, chamberUntil = 0, chamberT0 = 0, echo = null, door = null, nextDoor = 60, kai = null, nextKai = 50, greg = null, nextGreg = 70, ship = null, nextShip = 200, nextNappa = 0, car = null, nextCar = 140, carUntil = 0, poseUntil = 0, storm = null, nextStorm = 240, spirit = 0, spiritReady = false, spiritShot = null, struggle = null, yam = null, nextYam = 130, zap = null, nextZap = 4, ginyu = null, nextGinyu = 160;
     let gadgets = [], nextGadget = 2, robotUntil = 0, robotAcc = 0, autoAcc = 0, gadgetUntil = 0, bikeUntil = 0, calmUntil = 0, nextAndro = 340, date = null, nextDate = 300, gero = null, nextGero = 230, a16 = null, nextA16 = 180;
     let bz = null, pud = null;   // beerus asleep on his planet, and the pudding that calms him
-    let wishBuff = {}, homeSince = 0, bangReady = 0, whisUntil = 0, whisReady = 0, chiUntil = 0, chiReady = 0, kameReady = 0, dance = null, fused = null, nextDance = 300, cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null, zen = null;
+    let wishBuff = {}, homeSince = 0, bangReady = 0, itxReady = 0, itxTrip = false, blinkFx = null, whisUntil = 0, whisReady = 0, chiUntil = 0, chiReady = 0, kameReady = 0, dance = null, fused = null, nextDance = 300, cling = null, nextCling = 200, preview = null, rage = 2, rageUntil = 0, roshiUntil = 0, roshi = null, nextRoshi = 200, kril = null, nextKril = 260, satan = null, zen = null;
     let dailyUntil = 0, fuseUntil = 0, fuseOffer = 0, nextFuse = 150, monkeyAt = null, kaioUntil = 0, tiredUntil = 0, kaioReady = 0, bang = null, blasts = [], lastTap = { t: -9, x: 0, y: 0 }, capsule = null, tour = null, nextTour = 45, namekUntil = 0;
     if (!(S.namekLeft > 0)) S.world = 0;   // namek is a visit; a visit in progress survives a reload
     let saibas = [], nextSaiba = 40, boss = null, nextBoss = 120, nextSaga = 60, kis = [];
@@ -3010,10 +3013,11 @@ GAMES.push({
       if (k === 'chamber' && S.chamber === 1) ui.event('the time chamber door will appear — tap it');
       if (k === 'kaio' && S.kaio === 1) ui.event('kaioken unlocked — hit the red button');
       if (k === 'bigbang' && S.bigbang === 1) ui.event('big bang attack — double-tap anywhere');
+      if (k === 'itx' && S.itx === 1) ui.event('instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you\'ve been');
       if (k === 'armor' && S.armor === 1) ui.event('saiyan armor on — hit villains harder');
       save(); syncShop();
     });
-    const what = k => k === 'ascend' ? `reset for +${seedsNow()} ki seeds` : k === 'godki' ? `reset for +${godNow()} god ki` : k === 'zeno' ? `erase it all: zeno's favour ×${fmtShort(ZENO_X ** (S.zeno + 1))}` : MILES[k] && S[k] && nextMile(k) ? `${SHOP[k].what} · ×2 at lv ${nextMile(k)}${S[k] >= 100 ? ' (every 50)' : ''}` : k === 'chamber' && S.chamber ? `train ×${chamberX()} inside · next ×${chamberX(S.chamber + 1)}` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.75` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? `beams hit harder · next: ${kame() ? 'super kamehameha' : 'final flash'}` : S.galick >= 5 ? 'beams hit harder · full charge ×1.25' : 'beams hit harder') : SHOP[k].what;
+    const what = k => k === 'ascend' ? `reset for +${seedsNow()} ki seeds` : k === 'godki' ? `reset for +${godNow()} god ki` : k === 'zeno' ? `erase it all: zeno's favour ×${fmtShort(ZENO_X ** (S.zeno + 1))}` : k === 'itx' && S.itx ? `jump every ${+(itxCd() / 60).toFixed(1)} min · trips ${Math.round(100 - 100 * soon())}% sooner` : MILES[k] && S[k] && nextMile(k) ? `${SHOP[k].what} · ×2 at lv ${nextMile(k)}${S[k] >= 100 ? ' (every 50)' : ''}` : k === 'chamber' && S.chamber ? `train ×${chamberX()} inside · next ×${chamberX(S.chamber + 1)}` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.75` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? `beams hit harder · next: ${kame() ? 'super kamehameha' : 'final flash'}` : S.galick >= 5 ? 'beams hit harder · full charge ×1.25' : 'beams hit harder') : SHOP[k].what;
     const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0 && k !== 'godki' && k !== 'zeno').map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : k === 'godki' ? S.gods : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k) && (k !== 'ascend' || S.best >= 1e6), open: k === 'ascend' && treeOpen(), special: k === 'ascend' || k === 'godki' || k === 'zeno' }])));
 
     // the planet: a road ring near the rim, a cap of scenery facing the viewer
@@ -3054,7 +3058,7 @@ GAMES.push({
     }
     const slabs = [];                        // the future's skyscrapers: { b: base, t: top, w: half-width, seed }
     function scenery() {
-      solids.length = 0; wcRoads.length = 0; slabs.length = 0;
+      solids.length = 0; wcRoads.length = 0; slabs.length = 0; w2Pole = false;   // only the lookout's scenery puts korin's tower back
       if (S.world === 9) return topScenery();
       if (S.world === 5) return westcityScenery();
       if (S.world === 6) return kameScenery();
@@ -3160,7 +3164,7 @@ GAMES.push({
     let w2Res = [], w2Pole = false;   // residents { spr, c, flip, k, hop, blink: [spots], ph }; korin's tower under the lookout
     function shadeSpot(o, n, x, y) { const q = M3.apT(M, n), g = vnoise3(q[0] * o.f + o.seed, q[1] * o.f, q[2] * o.f); return g > .64 ? tone(o.pal2, light(n) + .25, x, y) : tone(o.pal, light(n) + (o.lift || 0), x, y); }   // a bulb with blotches
     function w2Scenery() {
-      SHADE.spot = shadeSpot; w2Res = []; w2Pole = false;
+      SHADE.spot = shadeSpot; w2Res = [];
       const T = W2L[S.world].tones;
       let sd = 31 + S.world * 7; const rnd = () => (sd = sd * 16807 % 2147483647) / 2147483647;
       const put = (c, r, kind, o) => solids.push(Object.assign({ c, r, kind }, o)), pal = (c, r, p, lift = 0) => put(c, r, 'pal', { pal: p, lift });
@@ -3371,7 +3375,10 @@ GAMES.push({
       ui.bump();
     }
     st.cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); if (playing && S.world === 3 && snk) { snakeTap(bx, by); return; }   // snake way acts on the press: no drag, beam charge or double-tap to swallow it
-      drag = { x: e.clientX, y: e.clientY, moved: 0, t: st.t, ax: bx, ay: by }; try { st.cv.setPointerCapture(e.pointerId); } catch (_) {} });
+      if (e.button === 2) { itxOpen(); return; }   // right-click: instant transmission
+      if (drag && drag.id !== e.pointerId && S.itx > 0 && st.t - drag.t < .4 && drag.moved <= 6) { itxOpen(); drag = null; charging = 0; return; }   // a second finger lands with the first: a two-finger tap blinks, so taps, double-taps and holds keep their jobs
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0, t: st.t, ax: bx, ay: by }; try { st.cv.setPointerCapture(e.pointerId); } catch (_) {} });
+    st.cv.addEventListener('contextmenu', e => e.preventDefault());
     st.cv.addEventListener('pointermove', e => {
       if (!drag) return;
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
@@ -3477,6 +3484,20 @@ GAMES.push({
       else if (roll < .8) { bikeUntil = T0 + 12; ui.event('capsule: a hover bike — full sprint for 12s'); }
       else { orbs.push({ phi: phi + .8, star: true }); ui.event('capsule: a dragon radar — a dragon ball just ahead'); }
     }
+    // instant transmission: from home, jump to any world you've been (not snake way or the arena) for its normal trip
+    const ITX_WORLDS = [1, 2, 4, 5, 6, 7, 8, 10, 11, 12], itxWorlds = () => ITX_WORLDS.filter(w => S.been & 1 << w);
+    const itxCan = () => playing && S.itx > 0 && st.t >= itxReady && S.world === home() && !tour && !shen && !boss && !dance && !struggle && !(ginyu && !ginyu.done) && !movie;
+    function itxOpen() {
+      if (!(S.itx > 0) || !playing) return;
+      if (st.t < itxReady) { ui.event(`instant transmission recharges in ${Math.ceil(itxReady - st.t)}s`); return; }
+      if (!itxCan()) { ui.event('instant transmission only works from home, with no fight on'); return; }
+      ui.itxPick && ui.itxPick(itxWorlds().map(w => ({ key: w, label: WORLDS[w].name })), itxJump);
+    }
+    function itxJump(w) {
+      if (!itxCan() || !itxWorlds().includes(w)) return;
+      const k0 = kidScreen(); blinkFx = { x: k0.x, y: k0.y, ang: k0.ang, z: k0.v[2], flip: flipNow, lift: liftNow, t0: st.t + .35 };   // the arrival plays once the trip's flash fades
+      podWish = 0; S.namekAt = S.runBest * 4; travel(w); namekUntil = st.t + 45; itxTrip = true; ach('itx'); ui.sfx && ui.sfx('blink');
+    }
     function throwBang(x, y) { const h = handPos(); bangReady = st.t + 2.5; bang = { x0: h.x, y0: h.y, x1: x, y1: y, t0: st.t, dur: .38 }; }
     function explode(x, y) {
       ui.sfx && ui.sfx('boom');
@@ -3496,7 +3517,7 @@ GAMES.push({
     function travel(w) {
       ui.hell && ui.hell(false);
       if (!playing) return;
-      S.world = w; useWorld(w); layout(); scenery(); ui.world && ui.world(w);/*widget*/ if (w) ui.notify('trip', WORLDS[w].name);/*/widget*/
+      S.world = w; if (w && w !== 3 && w !== 9) S.been |= 1 << w; useWorld(w); layout(); scenery(); ui.world && ui.world(w);/*widget*/ if (w) ui.notify('trip', WORLDS[w].name);/*/widget*/
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
       ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', 'back in the null realm — the tournament of power goes on', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (WORLD_ACH[w]) ach(WORLD_ACH[w]);
@@ -3968,6 +3989,21 @@ GAMES.push({
         if ((on(i - 2, j) || on(i + 2, j) || on(i, j + 2)) && bayer(x, y) < .25 + .35 * pulse) buf[kk] = PK(0xb0201a);
       } }
     }
+    // instant transmission: his standing sprite with the near arm raised, two fingers to the forehead, in his own sleeve and hand colours
+    const itxPoses = new Map();
+    function itxPose(spr) {   // dx: super saiyan 3's hair widens the sprite behind him
+      if (itxPoses.has(spr)) return itxPoses.get(spr);
+      const w = spr.w, dx = spr.ax - 8, col = Int32Array.from(spr.col), at = (j, i) => spr.col[j * w + i + dx], o = at(16, 3), glove = at(21, 13), hand = glove === 0xffffff ? glove : at(12, 7), sleeve = at(19, 13);
+      for (let j = 18; j <= 23; j++) for (let i = 13; i <= 15; i++) col[j * w + i + dx] = -1;   // the hanging arm goes
+      for (let j = 18; j <= 22; j++) col[j * w + 12 + dx] = o;
+      const C = { o, h: hand, s: sleeve };
+      ['8:11o12o', '9:10o11h12h13o', '10:10o11h12h13h14o', '11:11o12h13h14h15o', '12:12o13s14s15o', '13:12o13s14s15o', '14:12o13s14s15o', '15:12o13s14s15o', '16:12s13s14o', '17:12s13o'].forEach(r => {
+        const [j, cells] = r.split(':'); for (const [, i, c] of cells.matchAll(/(\d+)(\w)/g)) col[+j * w + +i + dx] = C[c];
+      });
+      const pose = Object.assign({}, spr, { col }); itxPoses.set(spr, pose); return pose;
+    }
+    // a shimmer of the sprite: `a` of its pixels, in blue light and dropping out row by row
+    function itxGhost(spr, a, t) { const f = Math.floor(t * 30); return Object.assign({}, spr, { col: spr.col.map((c, n) => c < 0 || h2(n, f) > a ? -1 : (n / spr.w | 0) % 2 ? 0x4aa8f0 : 0xbff6ff) }); }
     function blitZ(spr, bx, by, ang, flip, lift, depth, k = 1, raw = false) {
       const ux = Math.sin(ang), uy = -Math.cos(ang), rx = Math.cos(ang), ry = Math.sin(ang);
       const ox = bx + ux * lift, oy = by + uy * lift, Rr = (Math.hypot(spr.w, spr.h) + 1) * k, W = st.W, H = st.H;
@@ -4291,10 +4327,10 @@ GAMES.push({
       // ── timeline: the longer you stay, the more happens (all of it waits while you're on snake way)
       if (S.world === 3) updateSnake(t, dt); else {
       // the space pod: on phones the title covers the top of the sky, so there it flies just above the planet
-      if (session > 12) { if (!star && (nextStar -= dt) < 0) { once('stars', 'a saiyan space pod — tap it');/*widget*/ ui.notify('pod');/*/widget*/ star = { x: -8, y: st.W / st.H < .8 ? cy - R * (1.12 + Math.random() * .16) : st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = (18 + Math.random() * 14) * (1 - .12 * lvl('pods')); } }
+      if (session > 12) { if (!star && (nextStar -= dt) < 0) { once('stars', 'a saiyan space pod — tap it');/*widget*/ ui.notify('pod');/*/widget*/ star = { x: -8, y: st.W / st.H < .8 ? cy - R * (1.12 + Math.random() * .16) : st.H * (.08 + Math.random() * .2), vx: st.W / 6 }; nextStar = (18 + Math.random() * 14) * (1 - .12 * lvl('pods')) * soon(); } }
       if (session > 30 && orbs.length < 3 && Math.random() < dt * .25) { once('orbs', 'ki orbs on the road'); orbs.push({ phi: phi + 1.5 + Math.random() * 2, star: session > 60 && Math.random() < (S.world === 1 ? .4 : .2) + .05 * lvl('balls') }); }
       if (session > 50) { if ((nextShower -= dt) < 0) { once('meteors', 'meteor shower — bust them'); for (let i = 0; i < 6; i++) meteors.push({ x: st.W * (.15 + Math.random() * .9), y: -10 - i * 18, vx: -st.W * .12, vy: st.H * .22, delay: i * .5 }); nextShower = 45 + Math.random() * 20; } }
-      if (session > 75 || S.cloud > 0) { if (!cloudFly && riding <= 0 && (nextCloud -= dt * (1 + S.cloud * .6)) < 0) { once('cloud', 'flying nimbus is here'); cloudFly = { x: -30, y: st.H * .3 }; nextCloud = 60 + Math.random() * 25; } }
+      if (session > 75 || S.cloud > 0) { if (!cloudFly && riding <= 0 && (nextCloud -= dt * (1 + S.cloud * .6)) < 0) { once('cloud', 'flying nimbus is here'); cloudFly = { x: -30, y: st.H * .3 }; nextCloud = (60 + Math.random() * 25) * soon(); } }
       if (session > 140 && !aura) { aura = true; ui.event('ki aura unlocked'); }
       // gregory hops about the planet now and then — catch him
       if (!greg && session > 60 && (nextGreg -= dt) < 0) { greg = { c: capPt(.2 + Math.random() * .9, Math.random() * 6.28), from: null, hopT: t, until: t + 10, hop: Math.max(.3, .75 - .08 * (S.gregWins || 0)) }; ui.event(S.gregWins ? `race gregory again — he's faster now. 10s` : 'race gregory! catch him in 10s'); nextGreg = 80 + Math.random() * 40; }
@@ -4389,10 +4425,10 @@ GAMES.push({
       // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the eight worlds strictly in turn
       // a trip at the next power mark, or after two minutes at home, whichever comes first
       if (podWish && S.world === home() && !shen && (tour || boss) && podWish !== 2) { podWish = 2; ui.event(`your space pod is incoming — it lands after the ${tour ? 'tournament' : 'fight'}`); }   // the wished pod waits for the fight, and says so
-      if (S.world === home() && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT || podWish) && !tour && !shen && !boss && !dance) { podWish = 0; S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12][(S.trips - 1) % 11]); namekUntil = t + (S.world === 3 ? 75 : 45); }
+      if (S.world === home() && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT * soon() || podWish) && !tour && !shen && !boss && !dance) { podWish = 0; S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12][(S.trips - 1) % 11]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && S.world !== 9 && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
       if (S.world && S.world !== 9) { S.namekLeft = Math.max(0, namekUntil - t); const hung = t - namekUntil > 120;   // watchdog: whatever is still running, no visit outlasts its timer by two minutes
-        if (S.namekLeft <= 0 && (!shen || hung) && (S.world !== 3 || snk?.done || hung)) { if (hung && shen) { shen = null; document.body.classList.remove('shen'); ui.wishDone && ui.wishDone(); } travel(home()); namekUntil = 0; homeSince = session; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
+        if (S.namekLeft <= 0 && (!shen || hung) && (S.world !== 3 || snk?.done || hung)) { if (hung && shen) { shen = null; document.body.classList.remove('shen'); ui.wishDone && ui.wishDone(); } travel(home()); namekUntil = 0; homeSince = session; if (itxTrip) { itxTrip = false; itxReady = t + itxCd(); } S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
       if (S.world !== 3) {
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
       if (!tour && !shen && !boss && S.world === home() && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
@@ -4509,7 +4545,7 @@ GAMES.push({
       const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.granted ? `dragon balls ${S.orbs7}/7` : '', S.granted ? `wishes ${S.granted}` : '', S.multi ? `${uniName(S.uni)} · fight ${S.uniStage + 1}/${UNI_STAGES.length}` : '', S.saga < VILLAINS.length && (S.saga || session > 110) ? `saga ${S.saga + 1}/${VILLAINS.length}` : '', core() > ceiling() ? (S.multi ? 'ki ceiling — it rises with time; clearing universes lifts it too' : 'ki ceiling — reach ultra instinct or finish the sagas: the multiverse lifts it') : '', S.ustars ? `universe stars ${S.ustars} ×${fmtShort(Math.round(STAR_X ** (S.ustars * (ang('stars') ? 2 : 1))))}` : '', S.mastery ? `mastery ${S.mastery}` : '', S.seeds ? `ki seeds ${S.seeds}` : '', S.ascend ? `ki seeds ×${seedBoost().toFixed(1)}` : '', S.godTotal ? `god ki ${S.godki} · ×${fmtShort(godBoostOf(S.godTotal))}` : '', S.zeno ? `zeno's favour ×${fmtShort(ZENO_X ** S.zeno)}` : '', S.krillinAlly ? 'krillin: idle ×1.5' : ''].filter(Boolean).join(' · ');
       const nf = FORMS[S.form + 1] || { name: `mastery ${S.mastery + 1}`, at: FORMS[S.form].at * LATE_STEP ** (S.mastery + 1) }, cf = FORMS[S.form];
       const G = GOALS.find(g => g.id === S.goal.id);
-      ui.update({ goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, S.pl / nf.at) : 1 }, balls: S.orbs7, wishes: S.granted, ascend: S.ascend ? seedBoost().toFixed(1) : '', snake: S.world === 3, busy: S.world === 3 || !!(boss && !boss.dead) || !!(ginyu && !ginyu.done) || !!moon || !!storm });   // busy: something up in the sky the phone title would cover
+      ui.update({ goal: { text: G.text, p: Math.min(S.goal.p, G.n), n: G.n }, kaio: { own: S.kaio > 0, ready: t >= kaioReady, left: Math.ceil(kaioReady - t) }, itx: { own: S.itx > 0, ready: itxCan(), left: Math.max(0, Math.ceil(itxReady - t)) }, pl: S.pl, best: S.best, rate: rate(), laps, time: session, effects: fxs.join(' · '), extra, combo, form: { name: S.form ? cf.name : 'base', x: cf.x, next: nf ? nf.name : '', p: nf ? Math.min(1, S.pl / nf.at) : 1 }, balls: S.orbs7, wishes: S.granted, ascend: S.ascend ? seedBoost().toFixed(1) : '', snake: S.world === 3, busy: S.world === 3 || !!(boss && !boss.dead) || !!(ginyu && !ginyu.done) || !!moon || !!storm });   // busy: something up in the sky the phone title would cover
       syncShop();
       }
 
@@ -4553,7 +4589,7 @@ GAMES.push({
         blitZ(sb.soldier ? SOLDIER : SAIBA, sb.sx, sb.sy, Math.atan2(v[0], v[1]), Math.sin(t * 3 + sb.born) > 0, (up * down - 1) * 11 + hop, v[2] * R + 4, 1.1);
       }
       // kid (and the monkey) against the depth buffer
-      const kd = kidScreen(), set = fuseUntil > t ? HERO().fused : HERO().forms[FORMS[S.form].i];
+      const kd = kidScreen(), set = fuseUntil > t ? HERO().fused : HERO().forms[FORMS[S.form].i], bl = blinkFx && t - blinkFx.t0 < .75 ? t - blinkFx.t0 : -1;
       const ahead = M3.ap(M, roadPt(phi + .05)), ax = cx + ahead[0] * R, flip = ax < kd.x;
       const surf = S.world === 6;
       const fly = wished('fly') && !surf && apeUntil <= t, spr = poseUntil > t || struggle ? set.pose : jumpH > 1 || surf || fly ? set.run[0] : set.run[Math.floor(t * (9 + sprint * 10)) % 4];
@@ -4575,7 +4611,14 @@ GAMES.push({
         drawHero(APE[step % 2], lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, ape.k);
       } else if (fused && fused.until > t) drawHero(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, lift, depth, 1.05);
       else if (fly) flyDraw(t, spr, kd, flip, lift, depth, seen, drawHero);
-      else drawHero(spr, lift, depth, 1.05);
+      else if (bl >= 0 && bl < .18) blitZ(itxGhost(itxPose(set.idle), bl / .18, t), kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);   // he steps in out of the light
+      else drawHero(bl >= 0 && bl < .75 ? itxPose(set.idle) : spr, lift, depth, 1.05);
+      if (bl >= 0) {   // where he stood: his shape fades out in a shimmer; where he lands, a ring of light pulls in
+        const B = blinkFx;
+        if (bl < .35) blitZ(itxGhost(set.idle, 1 - bl / .35, t), B.x, B.y, B.ang, B.flip, B.lift, B.z * R + 6, 1.05);
+        if (bl < .3 && seen) { const r = 3 + 16 * (1 - bl / .3), hx = kd.x + Math.sin(kd.ang) * (lift + 16), hy = kd.y - Math.cos(kd.ang) * (lift + 16); for (let a = 0; a < 6.28; a += .35) st.px(hx + Math.cos(a + bl * 9) * r, hy + Math.sin(a + bl * 9) * r * 1.3, a % .7 < .35 ? 0xbff6ff : 0x2f8ae0); }
+        if (!B.fx) { B.fx = 1; for (let k = 0; k < 14; k++) { const a = Math.random() * 6.28; fx.add({ x: B.x + Math.sin(B.ang) * 14 + Math.cos(a) * 6, y: B.y - Math.cos(B.ang) * 14 + Math.sin(a) * 9, vx: (Math.random() - .5) * 12, vy: -16 - Math.random() * 30, life: .7, s: 1, c: [0xbff6ff, 0x7ae0f4, 0x2f8ae0], raw: true }); } }
+      }
       if (dance && !dance.done && seen) { const b = dance.beats[dance.i]; if (b !== undefined) { const r = 6 + Math.max(0, b - t) * 26, hx = kd.x + Math.sin(kd.ang) * 14, hy = kd.y - Math.cos(kd.ang) * 14; for (let a = 0; a < 6.28; a += .12) st.px(hx + Math.cos(a) * r, hy + Math.sin(a) * r, Math.abs(b - t) < .32 ? 0xfff27a : 0xffffff); st.text(['fu', 'sion', 'ha!'][dance.i], hx, hy - r - 8, t - dance.ok < .3 ? 0xfff27a : 0xffffff); } }   // the beat ring
       if (cling) blitZ(SAIBA, kd.x - Math.cos(kd.ang) * 5, kd.y - Math.sin(kd.ang) * 5, kd.ang, !flip, lift + 6 + (cling.boom - t < 1 && Math.floor(t * 16) % 2 ? 1 : 0), depth + 1, .9);   // hugging his back, shaking before it blows
       // piccolo meditates above the planet; king kai and gregory stand on it
@@ -4886,6 +4929,7 @@ GAMES.push({
     if (/foes/.test(HASH)) S.foes = ['raditz', 'cell', 'broly', 'goku black'];   // preview hook: #foes (villains beaten this run, for hfil)
     if (/cvlink/.test(HASH)) setTimeout(() => { S.pl = S.best = S.runBest = 9.1e15; }, 3000);   // preview hook: #cvlink (power past MAX_SAFE_INTEGER after 3s: the cv link appears)
     if (/kaio/.test(HASH)) S.kaio = Math.max(1, S.kaio);   // preview hook: #kaio (kaioken owned)
+    if (/itx/.test(HASH)) { S.itx = Math.max(3, S.itx); S.ach.yardrat = S.ach.yardrat || Date.now(); S.been = ITX_WORLDS.reduce((m, w) => m | 1 << w, 0); const open = () => playing ? itxOpen() : setTimeout(open, 500); setTimeout(open, 1500); }   // preview hook: #itx (instant transmission owned, every world visited, the picker opens)
     if (/vegeta/.test(HASH)) { S.best = Math.max(S.best, 2e6); S.namekAt = 2e6; S.trips = 1; }   // preview hook: #vegeta (planet vegeta, then nappa)
     { const hh = HASH.match(/hero-(\w+)/); if (hh && HEROES[hh[1]]) S.hero = hh[1]; }   // preview hook: #hero-goku (play as any character)
     if (/snake/.test(HASH)) { S.best = Math.max(S.best, 3e6); S.namekAt = 3e6; S.trips = 2; }   // preview hooks: #snake (snake way), #snake-nimbus (riding the nimbus)
@@ -4925,7 +4969,7 @@ GAMES.push({
       worldName: WORLDS[S.world].name, wishes: S.granted, orbs: S.orbs7, seeds: S.ascend, sagas: VILLAINS.length, saga: S.saga,
       peak: S.formTop > S.form ? S.formTopName : '', uni: S.multi || S.uniBest ? uniBadge(Math.max(S.uni, S.uniBest)) : '', ustars: S.ustars, godki: S.godTotal, zeno: S.zeno ? fmtShort(ZENO_X ** S.zeno) : '', mastery: S.mastery, movies: S.movies, tail: S.tail });
     const ascendInfo = () => { const g = seedsNow(); return { ok: S.pl >= cost('ascend') && S.best >= 1e6, pl: fmtShort(Math.floor(S.pl)), seeds: g, now: seedBoost().toFixed(1), next: seedBoostOf(S.ascend + g).toFixed(1), keep: lvl('head') }; };   // what the ascend confirm box spells out
-    return { menu, learn, respec, ascendInfo, angels, learnAngel, autoNext, godInfo, zenoInfo, pick, thumb, card, frame, kaioken, start: () => {
+    return { menu, learn, respec, ascendInfo, angels, learnAngel, autoNext, godInfo, zenoInfo, pick, thumb, card, frame, kaioken, itx: itxOpen, start: () => {
       playing = true; syncShop();
       // first visit of the day: ×1.25 for five minutes and a dragon ball
       const today = new Date().toDateString();
