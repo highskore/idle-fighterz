@@ -12,6 +12,25 @@ use crate::timeline::Later;
 /// localStorage key
 pub const SAVE_KEY: &str = "hs-power";
 
+/// The levels in `S`'s key order, where `save_json` writes them right after `best` (tail comes later: game.js only adds
+/// it once it's bought).
+const LEVEL_KEYS: [Upg; 14] = [
+    Upg::Boots,
+    Upg::Partner,
+    Upg::Gravity,
+    Upg::Cloud,
+    Upg::Scouter,
+    Upg::Galick,
+    Upg::Senzu,
+    Upg::House,
+    Upg::Armor,
+    Upg::Kaio,
+    Upg::Bigbang,
+    Upg::Piccolo,
+    Upg::Chamber,
+    Upg::Itx,
+];
+
 fn flag(b: bool) -> f64 {
     if b {
         1.0
@@ -29,10 +48,9 @@ impl Game {
     pub fn save_json(&self) -> String {
         let s = &self.s;
         let mut o = Obj::new().num("pl", s.pl).num("best", s.best);
-        for u in &Upg::ALL[..13] {
-            o = o.num(u.key(), level(self, *u));
+        for u in LEVEL_KEYS {
+            o = o.num(u.key(), level(self, u));
         }
-        o = o.num("itx", level(self, Upg::Itx));
         let tree = TREE.iter().enumerate().filter(|(i, _)| s.tree[*i] > 0).fold(Obj::new(), |o, (i, n)| o.num(n.id, s.tree[i] as f64));
         let angel = ANGELS.iter().enumerate().filter(|(i, _)| s.angel[*i]).fold(Obj::new(), |o, (_, a)| o.num(a.id, 1.0));
         o = o

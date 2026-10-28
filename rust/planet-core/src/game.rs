@@ -598,14 +598,10 @@ impl Game {
         ITX_WORLDS.into_iter().filter(|w| self.s.been & 1 << w != 0).collect()
     }
 
-    /// game.js `itxCan()`: owned, recharged, at home, and nothing on (a fight, the dragon, the dance, a struggle).
-    pub fn itx_can(&self) -> bool {
+    /// game.js `calm()`: nothing on (no fight, the dragon, the dance or a struggle). Not `self.calm`, reduced motion.
+    pub fn calm(&self) -> bool {
         let tl = &self.tl;
-        self.playing
-            && self.s.lv(Upg::Itx) > 0
-            && self.t >= tl.itx_ready
-            && self.s.world == self.home()
-            && tl.tour.is_none()
+        tl.tour.is_none()
             && tl.shen.is_none()
             && tl.boss.is_none()
             && tl.dance.is_none()
@@ -614,18 +610,28 @@ impl Game {
             && tl.movie.is_none()
     }
 
-    /// game.js `itxOpen()` (the gesture or the button): the picker, or why it won't open.
-    pub fn itx_open(&mut self) {
+    /// game.js `itxCan()`: owned, recharged, at home, and calm.
+    pub fn itx_can(&self) -> bool {
+        self.playing && self.s.lv(Upg::Itx) > 0 && self.t >= self.tl.itx_ready && self.s.world == self.home() && self.calm()
+    }
+
+    /// game.js `itxNo()`: why it won't go (said only once it's owned and the game is on).
+    fn itx_no(&mut self) {
         if self.s.lv(Upg::Itx) == 0 || !self.playing {
             return;
         }
         if self.t < self.tl.itx_ready {
             let msg = format!("instant transmission recharges in {}s", (self.tl.itx_ready - self.t).ceil());
             self.event(msg);
-            return;
-        }
-        if !self.itx_can() {
+        } else {
             self.event("instant transmission only works from home, with no fight on");
+        }
+    }
+
+    /// game.js `itxOpen()` (the gesture or the button): the picker, or why it won't open.
+    pub fn itx_open(&mut self) {
+        if !self.itx_can() {
+            self.itx_no();
             return;
         }
         let list = crate::json::arr(
@@ -634,20 +640,27 @@ impl Game {
         self.cue(crate::hud::Cue::ItxPick(list));
     }
 
-    /// game.js `itxJump(w)`: that world's normal trip, starting now; the cooldown starts when it ends.
+    /// game.js `itxJump(w)`: that world's normal trip, starting now, on top of the natural ones (their timer and power
+    /// mark stay); the cooldown starts when it ends.
     pub fn itx_jump(&mut self, w: u32) {
-        if !self.itx_can() || !self.itx_worlds().contains(&w) {
+        if !self.itx_can() {
+            self.itx_no();
             return;
         }
-        let from = self.kid_screen(0.0);
-        self.tl.blink_from = Some((from, self.t + 0.35)); // the arrival plays once the trip's flash fades
-        self.tl.pod_wish = 0;
-        self.s.namek_at = self.s.run_best * 4.0;
-        self.travel(w);
-        self.tl.namek_until = self.t + 45.0;
+        if !self.itx_worlds().contains(&w) {
+            return;
+        }
+        self.trip(w);
         self.tl.itx_trip = true;
         self.ach("itx");
-        self.cue(crate::hud::Cue::Sfx("blink"));
+        self.cue(crate::hud::Cue::Sfx("itx"));
+    }
+
+    /// game.js `itxHome()`: a jumped trip is over, so the cooldown starts.
+    pub(crate) fn itx_home(&mut self) {
+        self.tl.itx_trip = false;
+        self.tl.itx_ready = self.t + self.itx_cd();
+        self.tl.itx_back = self.session;
     }
 
     pub fn kaioken(&mut self) {
@@ -795,6 +808,9 @@ impl Game {
         if self.s.world != 0 {
             self.travel(0);
             self.tl.namek_until = 0.0;
+        }
+        if self.tl.itx_trip {
+            self.itx_home();
         }
         self.shake = 1.0;
         self.cue(Cue::Form(self.s.form));
