@@ -4335,8 +4335,9 @@ GAMES.push({
       if (!cling && session > 150 && !shen && !boss && !tour && S.world === home() && (nextCling -= dt) < 0) { cling = { boom: t + 3.5 }; ui.event('a saibaman is hugging you — tap it off!'); nextCling = 240 + Math.random() * 120; }
       if (cling && t > cling.boom) { const k = kidScreen(10); burst(k.x, k.y, [0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160); shake = .8; flashT = .6; tiredUntil = Math.max(tiredUntil, t + 6); ui.sfx && ui.sfx('boom'); ui.event('BOOM — you got yamcha\'d. tired ×0.75 for 6s'); cling = null; }
       // king kai takes his car for a spin round the road; tap it for a ride
-      if (!car && session > 70 && !shen && (nextCar -= dt) < 0) { car = { phi: phi + Math.PI, until: t + 16 }; ui.event("king kai's out for a drive — tap his car"); nextCar = 170 + Math.random() * 60; }
-      if (car) { car.phi += .85 * dt; if (t > car.until) car = null; }
+      const carRoad = S.world !== 6 && S.world !== 10;   // no road for a car on kame house's sea or kami's lookout
+      if (!car && carRoad && session > 70 && !shen && (nextCar -= dt) < 0) { car = { phi: phi + Math.PI, until: t + 16 }; ui.event("king kai's out for a drive — tap his car"); nextCar = 170 + Math.random() * 60; }
+      if (car) { car.phi += .85 * dt; if (t > car.until || !carRoad) car = null; }
       if (kai && t > kai.until) kai = null;
       // the time chamber door, once you own the key
       if (S.chamber > 0 && !door && chamberUntil < t && (nextDoor -= dt) < 0) { door = { c: capPt(.25 + Math.random() * .9, Math.random() * 6.28), t0: t, until: t + 15 }; once('door', 'the time chamber door is open — tap it'); nextDoor = Math.max(40, (150 + Math.random() * 40) / (1 + .25 * lvl('chamber'))); }
