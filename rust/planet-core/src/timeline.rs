@@ -771,7 +771,7 @@ impl Game {
         }
     }
 
-    fn meteor_pay(&self) -> f64 {
+    pub(crate) fn meteor_pay(&self) -> f64 {
         25.0 * self.mult(false) * (1.0 + (self.laps.min(50) as f64) * 0.1)
     }
 
@@ -2521,7 +2521,7 @@ impl Game {
         false
     }
 
-    fn movie_hit(&mut self, i: usize, dmg: f64) {
+    pub(crate) fn movie_hit(&mut self, i: usize, dmg: f64) {
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let h = &mut self.tl.movie.as_mut().unwrap().minions[i];
         if h.dead {
@@ -2550,7 +2550,7 @@ impl Game {
         }
     }
 
-    fn break_web(&mut self, s: &str) {
+    pub(crate) fn break_web(&mut self, s: &str) {
         let m = self.tl.movie.as_mut().unwrap();
         m.web = None;
         m.next_web = self.t + 9.0;

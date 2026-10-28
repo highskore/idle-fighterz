@@ -2810,6 +2810,7 @@ GAMES.push({
     const kame = () => S.hero === 'goku' || S.hero === 'gohan';
     const BEAMS = { galick: { aim: 0x9a5af0, ball: 0xd9b8ff, ballEdge: 0x8a4ae8, spark: 0xc9a2ff, glow: 0xb98af8, mid: 0xe2cbff, edge: 0x7a3ae0 }, kame: { aim: 0x4aa8f0, ball: 0xb8e4ff, ballEdge: 0x2a8ae8, spark: 0xa2d8ff, glow: 0x7ac8ff, mid: 0xcdeeff, edge: 0x1f6ad8 } };
     const BEAM = () => kame() ? BEAMS.kame : BEAMS.galick;
+    const KAIO_BEAM = { ball: 0xffb0a4, spark: 0xff9a8a, glow: 0xff6a5a, mid: 0xffc8bf, edge: 0xc8201a };   // kaioken tints beams red
     delete S.nextSuper;
     // transformations: unlocked by power level, permanent until you ascend
     const AURAS = [[0xffffff, 0xffc2e2, 0xf05aa8], [0xffffff, 0xb8f5dc, 0x2fbf8a], [0xffffff, 0xffd8a0, 0xf28a1c], [0xffffff, 0xd9c8ff, 0x7a4ae0]];   // capsule cosmetics for the base form
@@ -3389,16 +3390,16 @@ GAMES.push({
       const k = handPos(); let dx = tx - k.x, dy = ty - k.y, dl = Math.hypot(dx, dy);
       if (dl < 4) { dx = Math.sin(k.ang); dy = -Math.cos(k.ang); dl = 1; }
       const dir = [dx / dl, dy / dl];
-      beam = { t0: st.t, c, x: k.x, y: k.y, dx: dir[0], dy: dir[1], z: kidScreen().v[2] * (R + 12) }; ui.sfx && ui.sfx('beam'); shake = Math.max(shake, .2 + c * .15);
+      beam = { t0: st.t, c, x: k.x, y: k.y, dx: dir[0], dy: dir[1], z: kidScreen().v[2] * (R + 12), kaio: kaioUntil > st.t, ape: apeUntil > st.t }; ui.sfx && ui.sfx('beam'); shake = Math.max(shake, .2 + c * .15);
       if (star) { const rx = star.x - k.x, ry = star.y - k.y; if (rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < 8 + c * 3) onClick(star.x, star.y); }
       if (c >= 2.4) goal('beam');
       const ff = S.galick >= 5 && c >= 2.4; beam.ff = ff; beam.full = c >= 2.4; if (ff) ach('flash');   // galick lv 5: a full charge fires a final flash
-      const pts = beamPay() * c / 2.5 * (ff ? 1.25 : 1);
+      const pts = beamPay() * c / 2.5 * (ff ? 1.25 : 1), dmg = pts * atkBuff();   // buffs hit harder; the payout stays on pts
       const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1) * (1 + .15 * (S.galick - 1)); };
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && onLine(sb.sx, sb.sy - 6, 7)) killSaiba(sb);
-      if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && onLine(m.x, m.y - m.spr.h / 2 * m.k, m.spr.w / 2 * m.k)) ginyuHit(m, pts * 2);
-      if (movie) movieBeam(onLine, pts);
-      if (boss && !boss.dead && onLine(boss.x, boss.y - boss.spr.h / 2 * boss.k, boss.spr.w / 2 * boss.k)) hitBoss(pts * 4, boss.x, boss.y - boss.spr.h / 2 * boss.k);
+      if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && onLine(m.x, m.y - m.spr.h / 2 * m.k, m.spr.w / 2 * m.k)) ginyuHit(m, dmg * 2);
+      if (movie) movieBeam(onLine, dmg);
+      if (boss && !boss.dead && onLine(boss.x, boss.y - boss.spr.h / 2 * boss.k, boss.spr.w / 2 * boss.k)) { const d = wallCap(dmg * 4, pts * 4); hitBoss(d, boss.x, boss.y - boss.spr.h / 2 * boss.k); buffPop(d, boss.x, boss.y - boss.spr.h * boss.k); }
       gain(pts, k.x, k.y - 16, true); ui.fx && ui.fx('buy');
       for (const m of meteors) { if (m.dead || m.delay > 0) continue; const rx = m.x - k.x, ry = m.y - k.y, along = rx * dir[0] + ry * dir[1], off = Math.abs(rx * dir[1] - ry * dir[0]); if (along > 0 && off < 6 + c * 3) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); } }
     }
@@ -3406,6 +3407,9 @@ GAMES.push({
 
     const rate = () => Math.round((lapValue() / 7 + passive()) * mult());
     const wrate = () => Math.round((lapValue() / 7 + passive()) * mult(true));   // windfalls and villain hp: your rate without the temporary buffs, so stacking them first can't multiply a lump sum
+    const atkBuff = () => (kaioUntil > st.t ? KAIO() : 1) * (apeUntil > st.t ? 1 + apeX() : 1);   // kaioken and the great ape on beam and big bang damage, never on what they pay
+    const wallCap = (d, bare) => boss.uni ? Math.max(bare, Math.min(d, boss.max * .25 / (1 + .5 * S.armor))) : d;   // on a universe's wall a buff adds at most up to a quarter of it a hit, like a spirit bomb
+    const buffPop = (dmg, x, y) => { if (atkBuff() > 1) floats.push({ x, y: y - 8, s: fmtShort(Math.round(dmg * (1 + .5 * S.armor))), life: 1, red: true }); };
     const beamPay = () => wrate() * 4 * (1 + .25 * Math.log(Math.max(1, S.galick))) * (1 + .25 * lvl('beam'));   // a full charge, in seconds of rate: levels add a little, never compound
     function burst(x, y, c, n = 16, sp = 110) { for (let k = 0; k < n; k++) fx.add({ x, y, vx: (Math.random() - .5) * sp, vy: (Math.random() - .5) * sp, drag: 2.5, life: .6, c, raw: true }); }
     const GOALS = [
@@ -3477,13 +3481,14 @@ GAMES.push({
     function explode(x, y) {
       ui.sfx && ui.sfx('boom');
       const r = 18 * (1 + .25 * (S.bigbang - 1)) * Math.max(1, R / 50);
-      blasts.push({ x, y, r, t0: st.t }); shake = Math.max(shake, .45);
+      blasts.push({ x, y, r: r * (apeUntil > st.t ? 1.6 : 1), t0: st.t, kaio: kaioUntil > st.t }); shake = Math.max(shake, .45);
       gain(beamPay() * (1.3 + .05 * Math.log2(S.bigbang)), x, y - 10, true);   // a bit more than a full-charge beam (its cooldown is about a beam's charge time); what it hits pays on top
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(sb.sx - x, sb.sy - 6 - y) < r + 6) killSaiba(sb);
       for (const m of meteors) if (!m.dead && m.delay <= 0 && Math.hypot(m.x - x, m.y - y) < r + 4) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); }
-      if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.hypot(m.x - x, m.y - m.spr.h / 2 * m.k - y) < r + 6) ginyuHit(m, Math.max(rate(), lapValue() * mult()) * 8 * S.bigbang);
-      if (movie) movieBlast(x, y, r, Math.max(rate(), lapValue() * mult()) * 8 * S.bigbang);
-      if (boss && !boss.dead && Math.hypot(boss.x - x, boss.y - boss.spr.h / 2 * boss.k - y) < r + boss.spr.w / 2 * boss.k) hitBoss(Math.max(rate(), lapValue() * mult()) * 12 * S.bigbang, x, y);
+      const hit = () => Math.max(rate(), lapValue() * mult(), Math.max(wrate(), lapValue() * mult(true)) * atkBuff());   // rate() already adds kaioken and the ape; the bare hit times atkBuff lets them stack as on a beam
+      if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.hypot(m.x - x, m.y - m.spr.h / 2 * m.k - y) < r + 6) ginyuHit(m, hit() * 8 * S.bigbang);
+      if (movie) movieBlast(x, y, r, hit() * 8 * S.bigbang);
+      if (boss && !boss.dead && Math.hypot(boss.x - x, boss.y - boss.spr.h / 2 * boss.k - y) < r + boss.spr.w / 2 * boss.k) { const d = wallCap(hit() * 12 * S.bigbang, Math.max(rate(), lapValue() * mult()) * 12 * S.bigbang); hitBoss(d, x, y); buffPop(d, x, y - 10); }
       if (star && Math.hypot(star.x - x, star.y - y) < r) onClick(star.x, star.y);
       burst(x, y, [0xffffff, 0xbfe9ff, 0x6fb0ff, 0x2f6ae0], 36, 220);
     }
@@ -4657,7 +4662,7 @@ GAMES.push({
       for (let i = blasts.length - 1; i >= 0; i--) {
         const b = blasts[i], k = (t - b.t0) / .45; if (k > 1) { blasts.splice(i, 1); continue; }
         const rr = b.r * (.3 + .7 * Math.sqrt(k));
-        for (let yy = -rr; yy <= rr; yy++) for (let xx = -rr; xx <= rr; xx++) { const d = Math.hypot(xx, yy); if (d > rr) continue; const edge = d > rr - 2; if (!edge && bayer(Math.round(b.x + xx), Math.round(b.y + yy)) > (1 - k) * .8) continue; st.px(b.x + xx, b.y + yy, edge ? (k < .5 ? 0xffffff : 0x8fd8ff) : d < rr * .4 ? 0xffffff : 0xbfe9ff); }
+        for (let yy = -rr; yy <= rr; yy++) for (let xx = -rr; xx <= rr; xx++) { const d = Math.hypot(xx, yy); if (d > rr) continue; const edge = d > rr - 2; if (!edge && bayer(Math.round(b.x + xx), Math.round(b.y + yy)) > (1 - k) * .8) continue; st.px(b.x + xx, b.y + yy, edge ? (k < .5 ? 0xffffff : b.kaio ? 0xff6a5a : 0x8fd8ff) : d < rr * .4 ? 0xffffff : b.kaio ? 0xffb0a4 : 0xbfe9ff); }
       }
       if (capsule) {
         const c = capsule; if (c.y < c.land) { c.vy += 160 * dt; c.y = Math.min(c.land, c.y + c.vy * dt); } else c.y = c.land + Math.sin((t - c.t0) * 4) * 1.5;
@@ -4668,8 +4673,8 @@ GAMES.push({
         const age = t - beam.t0, life = .7 + beam.c * .25;
         if (age > life) beam = null;
         else {
-          const bp = BEAM(), ff = beam.ff && !kame();   // vegeta's level-5 shot is a golden final flash; a kamehameha stays blue
-          const w = (3 + beam.c * 3) * (beam.ff ? 1.8 : 1) * (1 + .15 * (S.galick - 1)) * (1 - Math.pow(age / life, 3)), reach = Math.min(1, age / .12) * Math.max(st.W, st.H) * 1.6;
+          const bp = beam.kaio ? KAIO_BEAM : BEAM(), ff = beam.ff && !kame() && !beam.kaio;   // vegeta's level-5 shot is a golden final flash; a kamehameha stays blue
+          const w = (3 + beam.c * 3) * (beam.ff ? 1.8 : 1) * (beam.ape ? 1.5 : 1) * (1 + .15 * (S.galick - 1)) * (1 - Math.pow(age / life, 3)), reach = Math.min(1, age / .12) * Math.max(st.W, st.H) * 1.6;
           // the beam sits at vegeta's depth: from the far side only the part clearing the planet shows
           const px = (X, Y, c, a) => { const xi = Math.round(X), yi = Math.round(Y), k = yi * st.W + xi; if (xi >= 0 && yi >= 0 && xi < st.W && k < zb.length && zb[k] > beam.z + 6) return; st.px(X, Y, c, a); };
           for (let d = 2; d < reach; d += .6) {
@@ -4726,7 +4731,7 @@ GAMES.push({
       if (gero) { const h = handPos(); if (t - gero.t0 > 1.2) for (let i = 0; i <= 1; i += .02) if ((i * 50 + t * 20) % 4 < 2) st.px(h.x + (gero.x - h.x) * i, h.y + (gero.y - gero.spr.h * .55 - h.y) * i, 0xe0473e); st.blit(gero.spr, gero.x - gero.spr.w / 2, gero.y - gero.spr.h + Math.sin(t * 3) * 2, true, true); }
       /*widget*/if (BARE) { if (st.clouds && S.world !== 9) drawClouds(t, true); } else /*/widget*/if (S.world !== 9) drawSea(t, true);
       if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (/*widget*/(!BARE || st.buf[k] >>> 24) && /*/widget*/bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
-      for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y), a = Math.min(1, f.life * 2); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(f.s, x + ox, y + oy, 0xffffff, a); st.text(f.s, x, y, f.gold ? 0xd99a1c : 0x111111, a); }
+      for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y), a = Math.min(1, f.life * 2); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(f.s, x + ox, y + oy, 0xffffff, a); st.text(f.s, x, y, f.red ? 0xd8241e : f.gold ? 0xd99a1c : 0x111111, a); }
       for (let k = floats.length - 1; k >= 0; k--) if (floats[k].life <= 0) floats.splice(k, 1);
       st.flush();
     }

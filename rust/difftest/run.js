@@ -47,6 +47,35 @@ const SCENARIOS = {
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
     },
   },
+  // beams and the big bang at whatever is up (a villain, the ginyu force, meteors), with and without kaioken and the great ape;
+  // kaioken and the moon wait for a target, so the buffs land on villains
+  attacks: {
+    seed: 13, minutes: 14,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 4e5], ['best', 4e5], ['partner', 30], ['house', 15], ['piccolo', 5], ['boots', 4], ['scouter', 3], ['kaio', 3], ['galick', 5], ['bigbang', 1], ['zeno', 1], ['world', 2]]) act({ a: 'set', k, v })
+      const p = g.ev(`boss && !boss.dead ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : ginyu && !ginyu.done ? (m => m && [m.x, m.y - m.spr.h / 2 * m.k])(ginyu.members.find(m => !m.dead)) : null`)
+      if (f % 6 === 0 && f % 600 < 300) act({ a: 'train' })
+      if (f % 3 === 0 && (p || !g.ev('!!moon'))) clickTargets(g, act)
+      if (f % 30 === 0 && p && g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' })
+      const [x, y] = p || [300, 60]
+      if (f % 30 === 0) act({ a: 'beam', c: f % 300 ? .3 : 2.5, x, y })
+      if (f % 200 === 50) act({ a: 'bang', x, y })
+    },
+  },
+  // the same against the multiverse's walls, where a buff adds at most a quarter of a wall a hit
+  walls: {
+    seed: 17, minutes: 8,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 5e20], ['best', 5e20], ['gravity', 60], ['wishes', 12], ['ascend', 400], ['seeds', 30], ['multi', 1], ['multiT', 0], ['world', 9], ['uniBest', 2], ['ustars', 3], ['godTotal', 2], ['zeno', 1], ['house', 40], ['partner', 60], ['piccolo', 25], ['boots', 70], ['scouter', 4], ['kaio', 8], ['galick', 20], ['bigbang', 3]]) act({ a: 'set', k, v })
+      const p = g.ev('boss && !boss.dead ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : null')
+      if (f % 5 === 0 && f % 600 < 300) act({ a: 'train' })
+      if (f % 3 === 0 && (p || !g.ev('!!moon'))) clickTargets(g, act)
+      if (f % 30 === 0 && p && g.ev('st.t >= kaioReady')) act({ a: 'kaio' })
+      const [x, y] = p || [300, 60]
+      if (f % 30 === 0) act({ a: 'beam', c: f % 300 ? .3 : 2.5, x, y })
+      if (f % 200 === 50) act({ a: 'bang', x, y })
+    },
+  },
   idle: { seed: 1, minutes: 20, script(g, f, act) { if (f % 30 === 0) buyAll(g, act) } },
   active: {
     seed: 7, minutes: 20,
@@ -103,6 +132,8 @@ function apply(g, i) {
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
+  else if (i.a === 'beam') g.ev(`fireBeam(${i.c}, ${i.x}, ${i.y})`)
+  else if (i.a === 'bang') g.ev(`explode(${i.x}, ${i.y})`)
   else throw new Error('unknown input ' + i.a)
 }
 

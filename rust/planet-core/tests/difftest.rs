@@ -83,6 +83,8 @@ fn scenario(name: &str) {
                 "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 "summon" => g.summon(),
                 "pick" => g.pick(k),
+                "beam" => g.fire_beam(i["c"].as_f64().unwrap(), i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
+                "bang" => g.explode(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 a => panic!("unknown input {a}"),
             }
             ii += 1;
@@ -243,6 +245,16 @@ fn multiverse() {
 #[test]
 fn wishes() {
     scenario("wishes");
+}
+
+#[test]
+fn attacks() {
+    scenario("attacks");
+}
+
+#[test]
+fn walls() {
+    scenario("walls");
 }
 
 #[test]
