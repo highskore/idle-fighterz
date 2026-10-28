@@ -1,75 +1,64 @@
+<div align="center">
+
+<img src="docs/icon.png" width="96" alt="">
+
 # planet
 
-A DBZ-inspired pixel-art idle game on King Kai's planet, under a pearl 3D title. It's the homepage of [highskore.com](https://highskore.com), and the [powerrr](https://github.com/highskore/powerrr) desktop widget is built from it too.
+**A pixel-art idle game on a tiny planet.**
 
-## The game
+Your hero runs laps around a planet you can spin, powers up through the forms, visits other worlds and fights off villain raids. It's the homepage of [highskore.com](https://highskore.com), and the [Powerrr](https://github.com/highskore/powerrr) desktop widget is built from it too.
 
-- **The title**: "highskore" in 3D pearl (three.js, Bagel Fat One). Letters wave, pop on hover, bounce when tapped, and sweep through each transformation's colour.
-- **The scroll intro**: the page opens on the title alone. Scrolling settles it into place and brings up the game card. On phones the page doesn't scroll: the cue reads "press for fun" and plays the same intro (a swipe up works too), the title starts stacked as high / skore and the letters collide on their way into one line.
-- **The game**: Vegeta runs laps around a draggable planet over a sea of golden clouds. Tap to train, hold to charge a galick gun, drag to spin.
-  - 14 upgrades, from weighted boots to Piccolo, the time chamber and ascension.
-  - Forms from super saiyan to ultra instinct.
-  - Events: dragon balls and Shenron, great ape mode, villain raids (Frieza, Cell, Kid Buu, Beerus), the Ginyu Force, the Tournament of Power, the fusion dance, Gregory, King Kai's jokes, Saibamen and meteor showers.
-  - Other worlds: every 1M power, a 45-second trip to Namek (where Porunga grants wishes), Planet Vegeta or Snake Way, in turn.
+[![Play](https://img.shields.io/badge/play-highskore.com-f59e0b)](https://highskore.com)
+[![Desktop widget](https://img.shields.io/badge/desktop-powerrr-111)](https://github.com/highskore/powerrr)
+![One HTML file](https://img.shields.io/badge/build-one%20HTML%20file-6b7280)
+![WebAssembly](https://img.shields.io/badge/WebAssembly-pixel%20kernel-654ff0?logo=webassembly&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Every visit starts from zero: power, upgrades, achievements and characters all reset on refresh. Only the date of the last daily bonus is kept in `localStorage` (`hs-power`).
+<img src="docs/hero.png" alt="The planet game on highskore.com: a super saiyan 2 hero flying round King Kai's planet while Raditz raids, the upgrade list on the left and the power level on the right" width="820">
 
-## Building
+</div>
 
-The game is one self-contained HTML page, stitched together from these sources:
+## Features
 
-| file | what it is |
-| --- | --- |
-| `page.html` | layout, styles, HUD and the three.js title; `__WORLD__`, `__PLANET__` and `__BAGEL__` are filled in by the build |
-| `world.js` | the pixel stage: buffer, sprites, text, particles |
-| `game.js` | the game: planet renderer, Vegeta, upgrades, events, villains |
-| `shenron.js` | Shenron and Porunga |
-| `wasm/` | the per-pixel hot loops in Rust (the planet on plain grass worlds, outlines, the widget's rim), built into `wasm/px.wasm` |
-| `bagel.typeface.json` | the title font as a three.js typeface |
-| `widget.js`, `widget.css` | the desktop widget's extras, only in the `--widget` build |
-| `build.mjs` | stitches them into one page |
+- **Idle, or not.** Your hero trains on his own. Tap to train harder, hold to charge a beam, drag to spin the planet.
+- **Upgrades and forms.** 14 upgrades, from weighted boots to Piccolo and the time chamber, and forms from super saiyan through ultra instinct, with each hero's own forms past it.
+- **Four heroes.** Start as Vegeta, and unlock Goku, Gohan and Future Trunks as you play.
+- **Villain raids.** Saga after saga of villains, the Ginyu Force, movie villains, the androids and a Tournament of Power.
+- **Other worlds.** Trips to Namek, Planet Vegeta, Snake Way, Beerus' planet, Kami's lookout, Yardrat and more.
+- **Dragon balls.** Collect all seven, and Shenron (or Porunga, on Namek) grants a wish.
+- **Ascension.** Reset for ki seeds and spend them in a three-branch training tree; later, god ki.
+- **Lots of little events.** Great ape nights, the fusion dance, Gregory races, King Kai's jokes, space pods, Saibamen and meteor storms.
+
+<img src="docs/worlds.png" alt="Three of the other worlds: Namek, Kami's lookout and Beerus' planet" width="820">
+
+## Play
+
+Open [highskore.com](https://highskore.com), scroll (or press the cue on a phone), then press start. Every visit starts from zero, so there's nothing to install and nothing to lose. For the desktop, get [Powerrr](https://github.com/highskore/powerrr).
+
+| | |
+|---|---|
+| Train | Click or tap the planet, or <kbd>Space</kbd> |
+| Spin the planet | Drag |
+| Fire a beam | Hold, then let go where you want it (once you own the galick charge) |
+| Big bang attack | Double-tap (once you own it) |
+| Kaioken | The red kaioken button (once you own it) |
+| Spirit bomb | Tap the ball once it's full |
+| Snake Way | Tap, <kbd>Space</kbd>, <kbd>W</kbd>/<kbd>D</kbd> or <kbd>↑</kbd>/<kbd>→</kbd> to run; tap a lost soul or press <kbd>F</kbd> to blast it |
+| Close a menu | <kbd>Esc</kbd> |
+
+## Build from source
+
+You need Node. The site build has no dependencies.
 
 ```sh
-node build.mjs            # → dist/planet.html, the highskore.com homepage
-npm install               # once, for the widget's inlined fonts (@fontsource)
-node build.mjs --widget   # → dist/index.html under the current directory, the powerrr widget's page
+git clone https://github.com/highskore/planet.git && cd planet
+node build.mjs            # → dist/planet.html
 ```
 
-No dependencies for the site build: `wasm/px.wasm` is committed and inlined as base64, so the page stays one file. After changing `wasm/src/lib.rs`, rebuild it with `npm run wasm` (Rust and `rustup target add wasm32-unknown-unknown`). The module has no dependencies and imports only `Math.pow`; each function is a line-for-line port of a JS loop that stays as the fallback (no WebAssembly, or a CSP without `wasm-unsafe-eval`), and both draw the same pixels. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build also leaves out the CDN three.js and Google Fonts and inlines the fonts from `@fontsource` in the `node_modules` of the directory it runs from.
+Open `dist/planet.html` in a browser. Locally, preview hooks such as `#raid`, `#namek` or `#lookout` jump straight to an event or a world.
 
-Open `dist/planet.html` in a browser to play it locally.
+For the sources, the widget build, the WebAssembly kernel, every preview hook and the Rust port, see [docs/DEVELOPING.md](docs/DEVELOPING.md). The port's plan is in [rust/PLAN.md](rust/PLAN.md).
 
-### Preview hooks
+## License
 
-Add these to the URL to jump straight to something. They only work off the live site (local files, localhost and Vercel previews); on highskore.com they're ignored so nobody can cheat with them:
-
-| hook | what it shows |
-| --- | --- |
-| `#raid` | a villain raid |
-| `#ginyu` | the Ginyu Force |
-| `#tournament` | the Tournament of Power |
-| `#fusion` | the fusion dance |
-| `#visitors` | Gregory and King Kai |
-| `#namek` | a Namek visit |
-| `#porunga` | a Namek visit, then summon Porunga |
-| `#shenron` | summon Shenron |
-| `#ape` | the full moon |
-| `#frieza` | Frieza's ship lands |
-| `#yamcha` | Yamcha in his crater |
-| `#gregory` | the Gregory race |
-| `#vegeta` | a planet vegeta visit, then nappa |
-| `#hero-goku` | play as goku (or `gohan`, `trunks`) |
-| `#snake` | snake way |
-| `#car` | king kai's car |
-| `#kaio` | kaioken already owned |
-| `#door` | the time chamber door |
-| `#pod` | a saiyan space pod |
-| `#storm` | a meteor storm |
-| `#spirit` | a nearly full spirit bomb |
-| `#struggle` | a villain who starts a beam struggle |
-| `#chamber` | the time chamber |
-
-## Where it's used
-
-- **highskore.com** has this repo as a submodule at `games/planet`; its `pnpm build:planet` runs `node build.mjs` and copies `dist/planet.html` to `public/planet.html`.
-- **[powerrr](https://github.com/highskore/powerrr)** has it as a submodule at `game/`, and builds the widget page with `node game/build.mjs --widget`.
+[MIT](LICENSE)
