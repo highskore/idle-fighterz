@@ -394,7 +394,7 @@ __WIDGET_CSS__
     <div class="pair">
       <button type="button" class="shop-toggle" id="shopToggle" aria-expanded="false" aria-controls="shop">upgrades <i id="shopCount"></i></button>
       <button type="button" class="kaio" id="kaio" hidden>kaioken</button>
-      <button type="button" class="kaio itxb" id="itxBtn" hidden>transmission</button>
+      <button type="button" class="kaio itxb" id="itxBtn" title="instant transmission" aria-label="instant transmission" hidden>transmission</button>
     </div>
     <button type="button" class="mbtn" id="sndM" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="mbtn" id="shareM" aria-label="share your power level"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11H6v9h12v-9h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="shop" id="shop"></div>
@@ -462,7 +462,7 @@ __PLANET__
       lastPl = s.pl;
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
       const kb = $('kaio'); kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kb.textContent = s.kaio.ready ? 'kaioken' : 'kaioken ' + s.kaio.left + 's';
-      if (s.itx) { const ib = $('itxBtn'); ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; ib.textContent = s.itx.left > 0 ? `transmission ${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}` : 'transmission'; }
+      if (s.itx) { const ib = $('itxBtn'), name = matchMedia('(max-width: 760px)').matches ? 'IT' : 'transmission'; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; ib.textContent = s.itx.left > 0 ? `${name} ${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}` : name; }   // phones keep it short: it shares a row with upgrades and kaioken
       const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
       if (pl.dataset.v !== txt) { pl.dataset.v = txt; pl.innerHTML = num + (suf ? `<small>${suf}</small>` : ''); pl.style.setProperty('--len', Math.max(9, num.length + suf.length * .6)); }
       const mx = $('mx'); mx.textContent = s.combo > 1 ? '×' + s.combo.toFixed(2).replace(/\.?0+$/, '') : ''; mx.classList.toggle('hot', s.combo >= 2);
