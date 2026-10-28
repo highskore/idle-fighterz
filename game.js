@@ -2839,7 +2839,7 @@ GAMES.push({
       senzu: { base: 4000, k: 2.2, label: 'senzu tree', what: 'beans: tap for ×1.5', unlock: () => S.best >= 1000 },
       house: { base: 6000, k: 2.3, label: 'capsule house', what: '+40/s (a new dome up to lv 9)', unlock: () => S.best >= 2000 },
       armor: { base: 12000, k: 2.4, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
-      tail: { base: 40000, k: 2.5, label: 'tail training', what: 'great ape: +8% size, +2s, +×0.25 (to lv 10)', unlock: () => !!S.ach.ape && S.tail < 10 },
+      tail: { base: 40000, k: 2.5, label: 'tail training', what: 'great ape: +8% size, +2s, +×0.25 (less past lv 10)', unlock: () => !!S.ach.ape },
       kaio: { base: 20000, k: 2.6, label: 'kaioken', what: 'red button: big boost, then tired', unlock: () => S.best >= 8000 },
       bigbang: { base: 60000, k: 2.5, label: 'big bang attack', what: 'double-tap: an exploding ki ball', unlock: () => S.best >= 20000 },
       piccolo: { base: 30000, k: 2.4, label: 'piccolo', what: '+60/s, zaps meteors', unlock: () => S.best >= 10000 },
@@ -2944,8 +2944,9 @@ GAMES.push({
     const core = () => Math.pow(1.15, S.gravity) * Math.pow(1.25, S.wishes) * (1 + .05 * lvl('wish') * S.wishes) * seedBoost() * ECON;   // the engine the ki ceiling caps; forms sit outside it; shenron's favour adds per wish, compounding it snowballed
     // the great ape: tail training (shop) makes him bigger, longer and stronger; shenron's "bigger great ape" makes the next one a giant on top
     let ape = { cd: 0, rage: 0, giant: false, at: 0, k: 2.3 };
-    const apeLen = () => 15 + 2 * S.tail + (ape.giant ? 15 : 0), apeX = () => 2 + .25 * S.tail + (ape.giant ? 1 : 0);   // apeX: his bonus on top of ×1
-    const apeWant = () => 2.3 * (1 + .08 * S.tail) * (ape.giant ? 1 + .5 * Math.min(1, (st.t - ape.at) / 1.2) : 1);
+    const tailLv = () => S.tail <= 10 ? S.tail : 10 + 2 * Math.sqrt(S.tail - 10);   // tail training never ends; past lv 10 each level adds a little less
+    const apeLen = () => 15 + 2 * tailLv() + (ape.giant ? 15 : 0), apeX = () => 2 + .25 * tailLv() + (ape.giant ? 1 : 0);   // apeX: his bonus on top of ×1
+    const apeWant = () => 2.3 * (1 + .08 * tailLv()) * (ape.giant ? 1 + .5 * Math.min(1, (st.t - ape.at) / 1.2) : 1);
     const mult = (bare) => {   // permanent boosts multiply; temporary ones add their bonuses, so a pile of buffs can't explode
       const T = st.t, b = bare ? 1 : 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * apeX() + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (fused && fused.until > T ? fused.x - 1 : 0) + (laughUntil > T) * .25 + (chamberUntil > T) * (chamberX() - 1) + (rageUntil > T) * (rage - 1) + (chiUntil > T) * .5 + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
       return capped(core()) * FORMS[S.form].x * lateBoost() * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1);
@@ -3363,10 +3364,10 @@ GAMES.push({
       if (!drag) return;
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
       if (charging > 0) { const [px, py] = st.toBuf(e); drag.ax = px; drag.ay = py; return; }
-      if (drag.moved > 6) { st.cv.style.cursor = 'grabbing'; const k = 1.1 / (R * st.scale); vry = dx * k * 30; vrx = dy * k * 30; M = M3.ortho(M3.mul(M3.mul(M3.rx(dy * k), M3.ry(dx * k)), M)); idleT = 0; }
+      if (drag.moved > 6) { st.cv.style.cursor = 'default'; const k = 1.1 / (R * st.scale); vry = dx * k * 30; vrx = dy * k * 30; M = M3.ortho(M3.mul(M3.mul(M3.rx(dy * k), M3.ry(dx * k)), M)); idleT = 0; }
     });
     st.cv.addEventListener('pointerup', e => {
-      if (drag && charging > .15) fireBeam(charging, drag.ax, drag.ay); else if (drag && drag.moved <= 6) { const [px, py] = st.toBuf(e); tap(px, py); } charging = 0; drag = null; st.cv.style.cursor = 'grab'; });
+      if (drag && charging > .15) fireBeam(charging, drag.ax, drag.ay); else if (drag && drag.moved <= 6) { const [px, py] = st.toBuf(e); tap(px, py); } charging = 0; drag = null; st.cv.style.cursor = 'default'; });
     st.cv.addEventListener('pointercancel', () => { drag = null; charging = 0; });
     function fireBeam(c, tx, ty) {
       if (S.world === 3) return;
@@ -3390,7 +3391,7 @@ GAMES.push({
       gain(pts, k.x, k.y - 16, true); ui.fx && ui.fx('buy');
       for (const m of meteors) { if (m.dead || m.delay > 0) continue; const rx = m.x - k.x, ry = m.y - k.y, along = rx * dir[0] + ry * dir[1], off = Math.abs(rx * dir[1] - ry * dir[0]); if (along > 0 && off < 6 + c * 3) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); } }
     }
-    st.cv.style.cursor = 'grab';
+    st.cv.style.cursor = 'default';
 
     const rate = () => Math.round((lapValue() / 7 + passive()) * mult());
     const wrate = () => Math.round((lapValue() / 7 + passive()) * mult(true));   // windfalls and villain hp: your rate without the temporary buffs, so stacking them first can't multiply a lump sum
