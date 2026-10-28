@@ -1,9 +1,8 @@
 //! The differential test with drawing on: game.js draws every frame (run.js `<scenario>+draw`) and so does
 //! planet-render. The random draws particles spend and the screen spots the drawing writes back feed the simulation
 //! on both sides, the script also taps what only the drawing places, and the state samples must match as in
-//! planet-core's difftest. Every frame is also compared: run.js records an FNV-1a hash of each frame game.js draws
-//! (without the floating gain numbers, which planet-render doesn't draw yet), and planet-render's frame must hash the
-//! same; a frame that doesn't is saved under rust/target/difftest for a look.
+//! planet-core's difftest. Every frame is also compared: run.js records an FNV-1a hash of each frame game.js draws,
+//! and planet-render's frame must hash the same; a frame that doesn't is saved under rust/target/difftest for a look.
 //!
 //! game.js's traces are cached under rust/target/difftest, keyed by a hash of the JS, so a Rust-only change replays
 //! against them in seconds. Each scenario is its own test: run them side by side with `--test-threads=4`.

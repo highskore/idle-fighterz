@@ -450,6 +450,11 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("been", n(s.been as f64)),
         ("nextStar", n(tl.next_star)),
         ("nextCloud", n(tl.next_cloud)),
+        ("floats", n(g.floats.len() as f64)),
+        ("floatXY", n(g.floats.iter().fold(0.0, |a, f| a + f.x * 3.0 + f.y))),
+        ("floatLife", n(g.floats.iter().fold(0.0, |a, f| a + f.life))),
+        ("floatS", g.floats.last().map(|f| f.s.bytes().fold(0i32, |h, c| h.wrapping_mul(31).wrapping_add(c as i32)) as f64)),
+        ("floatTone", g.floats.last().map(|f| if f.red { 2.0 } else { f64::from(u8::from(f.gold)) })),
     ]
 }
 
