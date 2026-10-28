@@ -135,6 +135,7 @@
       if (first) arrange(s.layout);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live
+      root.classList.toggle('cloudbed', BARE && s.clouds !== 'never' && /^e/.test(s.cloud_shape || 'e'));   // dock clouds: the canvas reaches down behind the pill
       clouds();
       document.body.style.opacity = s.opacity;
       // the menu-bar icon may be hidden behind the notch: say how to get the widget back

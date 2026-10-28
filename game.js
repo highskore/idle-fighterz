@@ -4762,6 +4762,41 @@ GAMES.push({
             add(x0 + rb + 1 + (i + (L % 2 ? .5 * (i < n - 1) : 0)) * gap + sway, st.H - r - 1 - R * .2 * (3 - L) - hash(i * 3.7 + L * 5.9) * rb * (L === 3 ? .5 : .9) + bob(i * 4 + L, .01), r, L === 3, L < 2 ? 1 : 0);
           }
         }
+      } else if (st.clouds && st.clouds[0] === 'e') {   // dock-cloud variants. the canvas reaches the pill's middle (html.cloudbed),
+        // so puffs can sit behind its top edge: the pill rests in them. pt: the pill's top, hw: half its width, in canvas px
+        const vmin = Math.min(innerWidth, innerHeight), ph = (Math.min(26, Math.max(18, vmin * .07)) + 8) / st.scale, pt = st.H - ph / 2;
+        const xc = st.W / 2, hw = Math.min(st.W / 2 - 6 / st.scale, 200 / st.scale), k = st.clouds[1];
+        const sway = (i, L) => Math.sin(t * (.12 + .06 * L) + i * 1.9 + L * 2.1) * R * .03;
+        if (k === '1') {   // nestled: a row straddling the pill's top edge, then rows above with tall puffs and dips
+          for (let L = 0; L < 4; L++) {
+            const rb = R * (.13 + .045 * L), n = Math.ceil(hw * 2 / (rb * 1.15)) + 1;
+            for (let i = 0; i < n; i++) {
+              const u = n > 1 ? i / (n - 1) * 2 - 1 : 0, h = hash(i * 5.3 + L * 11.7), tall = h > .62 ? 1 : h < .25 ? -.6 : 0;
+              add(xc + u * (hw + rb * .3) + sway(i, L), pt - rb * .15 - R * .11 * (3 - L) * (1 + tall * .7) - (L < 3 ? h * rb * .5 : 0) + bob(i * 4 + L, .01), rb * (.75 + .55 * h), L === 3, L < 2 ? 1 : 0);
+            }
+          }
+        } else if (k === '2') {   // mound: columns of puffs under an arch that peaks under the planet and tapers to the pill's ends
+          const rb = R * .2, cols = Math.ceil(hw * 2 / (rb * 1.05)) + 1;
+          for (let i = 0; i < cols; i++) {
+            const u = i / (cols - 1) * 2 - 1, top = R * (.15 + .85 * (1 - u * u) ** 1.4), rows = Math.max(1, Math.round(top / (rb * .9)));
+            for (let j = 0; j < rows; j++) { const h = hash(i * 3.1 + j * 7.7), r = rb * (.8 + .45 * h) * (1 - .25 * Math.abs(u)); add(xc + u * hw + sway(i, j), pt - j * rb * .9 - h * rb * .25 + bob(i + j * 9, .01), r, j === 0, j >= 2 ? 1 : 0); }
+          }
+        } else if (k === '3') {   // scattered sea: separate groups at different heights, sky between them
+          const g = 6;
+          for (let q = 0; q < g; q++) {
+            const u = (q + .5) / g * 2 - 1, h = hash(q * 9.3), lift = R * (.08 + .5 * h), x = xc + u * hw * .92 + sway(q, 1) * 2, y = pt - lift, rb = R * (.13 + .07 * hash(q * 4.1)), m = 3 + Math.round(h), low = lift < R * .25;
+            for (let j = 0; j < m; j++) { const o = j - (m - 1) / 2; add(x + o * rb * 1.05, y + Math.abs(o) * rb * .35 + bob(q * 5 + j, .012), rb * (.75 + .3 * hash(q * 2 + j)) * (1 - Math.abs(o) * .12), low, low ? 0 : 1); }
+            add(x + (h - .5) * rb, y - rb * .75, rb * 1.05, low, low ? 0 : 1);   // a crown on each group, so it puffs up instead of lying flat
+          }
+        } else {   // '4' cuffs: a low bed along the pill, and cloud columns hugging both ends that climb up the sides
+          const rb = R * .17, n = Math.ceil(hw * 2 / (rb * 1.3)) + 1;
+          for (let i = 0; i < n; i++) { const u = i / (n - 1) * 2 - 1; add(xc + u * hw + sway(i, 3), pt - rb * .2 - hash(i * 6.1) * rb * .4 + bob(i, .01), rb * (.85 + .3 * hash(i * 2.9)), true); }
+          for (const side of [-1, 1]) for (let j = 0; j < 5; j++) {
+            const h = hash(j * 3.3 + (side + 1) * 5), r = rb * (1.35 - j * .12) * (.85 + .3 * h);
+            add(xc + side * (hw - r * .4 - h * rb * .6) + sway(j, side + 1), pt - rb * .4 - j * rb * 1.05 + bob(j * 2 + side, .01), r, j < 2, j > 1 ? 1 : 0);
+            if (j < 4) add(xc + side * (hw - rb * 1.6 - j * rb * .8), pt - rb * .3 - j * rb * .6, rb * (1.05 - j * .1), false, j > 1 ? 1 : 0);
+          }
+        }
       } else if (st.clouds === 'b') {   // a tilted ring of puffs round the planet: the far half behind it, the near half in front
         for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + t * .06; add(cx + Math.cos(a) * R * 1.3, cy + R * .12 + Math.sin(a) * R * .36, R * (.11 + .04 * hash(i * 2.1)), Math.sin(a) > 0); }
       } else if (st.clouds === 'c') {   // three loose clusters, one in front, drifting a little
