@@ -149,9 +149,8 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 @media (max-width: 760px) { .goal { grid-column: 1 / -1; background: rgba(255,255,255,.94); border-radius: 10px; padding: 6px 10px 8px; } }
 .hint { position: absolute; left: max(20px, env(safe-area-inset-left, 0px)); top: 18px; color: var(--muted); text-transform: uppercase; z-index: 2; pointer-events: none; }
 .game.buffs .hint, body.snake .hint { opacity: 0; visibility: hidden; }
+@media (min-width: 761px) { body.snake .hud { text-shadow: 0 0 2px #fff6dc, 0 0 6px #fff6dc; } }   /* snake way paints the whole sky: keep the numbers legible over the road */
 @media (min-width: 761px) { .hud .label { flex-wrap: wrap; row-gap: 0; max-width: min(540px, 46vw); margin-left: auto; } .hud .fxs { flex: 1 0 100%; white-space: normal; text-align: right; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } }
-/* snake way controls panel: the shop and hud sink under its dim and take no taps while it's up */
-.game.howto .shop, .game.howto .hud, .game.howto .pair, .game.howto .mbtn { opacity: .12; pointer-events: none; } .game.howto .shop button { pointer-events: none; }
 
 .foot { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; text-transform: uppercase; color: var(--muted); }
 .foot .copy { display: flex; align-items: center; gap: 14px; color: var(--ink); }
@@ -465,7 +464,7 @@ __PLANET__
       $('fname').textContent = s.form.name + (s.form.x > 1 ? ' ×' + s.form.x : ''); $('fbar').style.width = (s.form.p * 100).toFixed(1) + '%'; $('fnext').textContent = s.form.next ? 'next ' + s.form.next.replace('super saiyan', 'ss') : 'max';
       const dots = $('dots'); if (dots.childElementCount !== 7) dots.innerHTML = '<i></i>'.repeat(7); [...dots.children].forEach((d, i) => d.classList.toggle('on', i < s.balls));
       $('bmeta').textContent = [s.wishes ? 'wishes ' + s.wishes : '', s.ascend ? 'ascended ×' + s.ascend : ''].filter(Boolean).join(' · ');
- $('rate').textContent = fmt(s.rate); $('laps').textContent = s.laps; const m = Math.floor(s.time / 60), sec = Math.floor(s.time % 60); $('time').textContent = String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'); $('boost').textContent = s.effects; const g = $('game'), bd = document.body; g.classList.toggle('buffs', !!s.effects); g.classList.toggle('howto', !!s.howto); bd.classList.toggle('snake', !!s.snake); bd.classList.toggle('busy', !!s.busy); if (s.pl >= Number.MAX_SAFE_INTEGER) bd.classList.add('cv'); if ($('extra').dataset.v !== s.extra) { $('extra').dataset.v = s.extra; $('extra').innerHTML = s.extra.split(' · ').map(x => `<span>${x}</span>`).join(''); } },
+ $('rate').textContent = fmt(s.rate); $('laps').textContent = s.laps; const m = Math.floor(s.time / 60), sec = Math.floor(s.time % 60); $('time').textContent = String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'); $('boost').textContent = s.effects; const g = $('game'), bd = document.body; g.classList.toggle('buffs', !!s.effects); bd.classList.toggle('snake', !!s.snake); bd.classList.toggle('busy', !!s.busy); if (s.pl >= Number.MAX_SAFE_INTEGER) bd.classList.add('cv'); if ($('extra').dataset.v !== s.extra) { $('extra').dataset.v = s.extra; $('extra').innerHTML = s.extra.split(' · ').map(x => `<span>${x}</span>`).join(''); } },
     shop(items) {
       const el = $('shop');
       const keys = Object.keys(items).join();
