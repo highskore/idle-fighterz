@@ -3257,10 +3257,10 @@ GAMES.push({
       { const lk = W2L[S.world]; if (lk) { R = Math.round(R * (lk.zoom || 1)); cy += Math.round(st.H * (lk.dy || 0)); } }   // some worlds sit the planet bigger, smaller or higher
       zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H);
     }
-    // view rotation (drag to spin) with inertia, easing home when idle
-    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99, spinA = 0;
+    // view rotation (drag to spin) with inertia, and a slow automatic turn
+    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99;
     // each world idles round its own axis at its own pace: a small tilt off the road's pole keeps the road in view; the lookout turns upright over korin's tower
-    const spinOf = w => ({ u: w === 10 ? [0, 1, 0] : N, w: .012 * (hash(w * 9.7) < .5 ? -1 : 1) });   // a steady turn about the planet's own axis, like a slow drag; a tilted axis made the road wobble
+    const AUTO_SPIN = .06;   // radians a second
     const fx = particleSystem(), puff = makePuff(26, 11);
 
     // ── game state
@@ -3479,7 +3479,7 @@ GAMES.push({
     function travel(w) {
       ui.hell && ui.hell(false);
       if (!playing) return;
-      S.world = w; spinA = 0; useWorld(w); layout(); scenery(); ui.world && ui.world(w);/*widget*/ if (w) ui.notify('trip', WORLDS[w].name);/*/widget*/
+      S.world = w; useWorld(w); layout(); scenery(); ui.world && ui.world(w);/*widget*/ if (w) ui.notify('trip', WORLDS[w].name);/*/widget*/
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
       ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', 'back in the null realm — the tournament of power goes on', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
@@ -4244,10 +4244,9 @@ GAMES.push({
       const rdt = dt; if (chamberUntil > t && S.world !== 3) dt *= .3;   // no slow-mo on snake way: the run would crawl
       if (playing) session += dt; st.bob = Math.round(Math.sin(t * .7) * 2) + (shake > 0 && !st.calm ? Math.round((Math.random() - .5) * 5 * shake) : 0); shake = Math.max(0, shake - dt);
       idleT += dt;
-      const sp = spinOf(S.world || 0); spinA += sp.w * dt; M = M3.ortho(M3.mul(M, M3.rot(sp.u, sp.w * dt)));   // in the planet's own frame, so it adds to any drag
       if (!drag) {
         if (Math.abs(vrx) + Math.abs(vry) > .001) { M = M3.ortho(M3.mul(M3.mul(M3.rx(vrx * dt), M3.ry(vry * dt)), M)); vrx *= Math.pow(.06, dt); vry *= Math.pow(.06, dt); }
-        if (idleT > 3) { const I = M3.rot(sp.u, spinA), k = Math.min(1, dt * .7); M = M3.ortho(M.map((v, i) => v + (I[i] - v) * k)); }
+        M = M3.ortho(M3.mul(M3.ry(AUTO_SPIN * dt), M));   // a slow sideways drag that never stops, the same turn the mouse makes
       }
       // running: sprint decays; riding the golden cloud triples everything
       sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);
