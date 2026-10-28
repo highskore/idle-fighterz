@@ -1,0 +1,14 @@
+{
+  "name": "planet",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs",
+    "build:widget": "node build.mjs --widget"
+  },
+  "devDependencies": {
+    "@fontsource/fragment-mono": "5.2.8",
+    "@fontsource/instrument-serif": "5.2.8",
+    "@fontsource/press-start-2p": "5.2.7"
+  }
+}

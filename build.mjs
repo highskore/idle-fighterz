@@ -1,7 +1,7 @@
-// Builds public/planet.html — the whole homepage as one self-contained file — from the sources in planet/.
-// The root route is rewritten to it in next.config.js. Run: pnpm build:planet
+// Builds dist/planet.html — the whole highskore.com homepage as one self-contained file — from the sources here.
+// Run: node build.mjs (highskore.com copies the result to its public/planet.html).
 // With --widget it builds the desktop widget's page instead, into dist/index.html under the directory it runs from
-// (desktop/ here): see desktop/README.md
+// (the root of highskore/powerrr, which has this repo as its game/ submodule)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -55,8 +55,9 @@ if (widget) {
   writeFileSync(join(out, 'index.html'), '<!doctype html>\n<html lang="en" class="widget">\n<head>\n<meta charset="utf-8">\n<title>powerrr</title>\n' + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
   console.log(join(out, 'index.html'), 'written')
 } else {
-  writeFileSync(join(here, '..', 'public', 'planet.html'), head + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
-  console.log('public/planet.html written')
+  mkdirSync(join(here, 'dist'), { recursive: true })
+  writeFileSync(join(here, 'dist', 'planet.html'), head + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
+  console.log('dist/planet.html written')
 }
 
 // the widget runs offline: no CDN three.js (only the title used it, and the widget has no title), and the
