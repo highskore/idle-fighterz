@@ -1,4 +1,4 @@
-//! V8's `Math` functions, bit for bit: fdlibm's sin, cos and atan2 (V8's `ieee754::*`) and its Kahan `Math.hypot`.
+//! V8's `Math` functions, bit for bit: fdlibm's sin, cos, atan2 and log (V8's `ieee754::*`) and its Kahan `Math.hypot`.
 //! The timeline's geometry (where the hero stands, where a ki blast flies) has to land on the same doubles as game.js.
 //! V8 for arm64 is built with clang's FP contraction, which fuses each `a * b + c` inside an expression (the left
 //! product first) into one rounding, so these use `mul_add` in exactly those places: they match node on arm64 over
@@ -303,6 +303,71 @@ pub fn atan2(y: f64, x: f64) -> f64 {
     }
 }
 
+/// `Math.log`: fdlibm's `__ieee754_log`, with clang's contractions.
+pub fn log(x: f64) -> f64 {
+    const LN2_HI: f64 = 6.93147180369123816490e-01;
+    const LN2_LO: f64 = 1.90821492927058770002e-10;
+    const TWO54: f64 = 1.80143985094819840000e+16;
+    const LG1: f64 = 6.666666666666735130e-01;
+    const LG2: f64 = 3.999999999940941908e-01;
+    const LG3: f64 = 2.857142874366239149e-01;
+    const LG4: f64 = 2.222219843214978396e-01;
+    const LG5: f64 = 1.818357216161805012e-01;
+    const LG6: f64 = 1.531383769920937332e-01;
+    const LG7: f64 = 1.479819860511658591e-01;
+    let mut x = x;
+    let mut hx = hi(x) as i32;
+    let lx = lo(x);
+    let mut k: i32 = 0;
+    if hx < 0x00100000 {
+        if ((hx & 0x7fffffff) as u32 | lx) == 0 {
+            return f64::NEG_INFINITY;
+        }
+        if hx < 0 {
+            return f64::NAN;
+        }
+        k -= 54;
+        x *= TWO54;
+        hx = hi(x) as i32;
+    }
+    if hx >= 0x7ff00000 {
+        return x + x;
+    }
+    k += (hx >> 20) - 1023;
+    hx &= 0x000fffff;
+    let i = (hx + 0x95f64) & 0x100000;
+    x = with_hi((hx | (i ^ 0x3ff00000)) as u32, lo(x));
+    k += i >> 20;
+    let f = x - 1.0;
+    let dk = k as f64;
+    if (0x000fffff & (2 + hx)) < 3 {
+        if f == 0.0 {
+            return if k == 0 { 0.0 } else { dk.mul_add(LN2_HI, dk * LN2_LO) };
+        }
+        let r = f * f * (-0.33333333333333333f64).mul_add(f, 0.5);
+        return if k == 0 { f - r } else { dk.mul_add(LN2_HI, -((-dk).mul_add(LN2_LO, r) - f)) };
+    }
+    let s = f / (2.0 + f);
+    let z = s * s;
+    let w = z * z;
+    let i = (hx - 0x6147a) | (0x6b851 - hx);
+    let t1 = w * w.mul_add(w.mul_add(LG6, LG4), LG2);
+    let t2 = z * w.mul_add(w.mul_add(w.mul_add(LG7, LG5), LG3), LG1);
+    let r = t2 + t1;
+    if i > 0 {
+        let hfsq = 0.5 * f * f;
+        if k == 0 {
+            f - (-s).mul_add(hfsq + r, hfsq)
+        } else {
+            dk.mul_add(LN2_HI, -((hfsq - s.mul_add(hfsq + r, dk * LN2_LO)) - f))
+        }
+    } else if k == 0 {
+        (-s).mul_add(f - r, f)
+    } else {
+        dk.mul_add(LN2_HI, -(s.mul_add(f - r, -(dk * LN2_LO)) - f))
+    }
+}
+
 /// `Math.hypot`: V8 scales by the largest magnitude and sums with Kahan compensation.
 pub fn hypot(v: &[f64]) -> f64 {
     let mut max = 0.0f64;
@@ -342,6 +407,7 @@ mod tests {
         assert_eq!(sin(16.43856730312109), -0.6673196248681893);
         assert_eq!(cos(-14.913382465019822), -0.7005839540352707);
         assert_eq!(atan2(-7.154588392004371, 18.199517838656902), -0.37456101990228924);
+        assert_eq!(log(3.0), 1.0986122886681096);
         assert_eq!(hypot(&[3.0, 4.0]), 5.0);
     }
 }
