@@ -23,6 +23,7 @@ const M3 = {
   apT: (m, v) => [m[0] * v[0] + m[3] * v[1] + m[6] * v[2], m[1] * v[0] + m[4] * v[1] + m[7] * v[2], m[2] * v[0] + m[5] * v[1] + m[8] * v[2]],
   rx: a => { const c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, c, -s, 0, s, c]; },
   ry: a => { const c = Math.cos(a), s = Math.sin(a); return [c, 0, s, 0, 1, 0, -s, 0, c]; },
+  rot: ([x, y, z], a) => { const c = Math.cos(a), s = Math.sin(a), C = 1 - c; return [c + x * x * C, x * y * C - z * s, x * z * C + y * s, y * x * C + z * s, c + y * y * C, y * z * C - x * s, z * x * C - y * s, z * y * C + x * s, c + z * z * C]; },   // about a unit axis
   ortho: m => { let a = V.norm([m[0], m[1], m[2]]); const b0 = [m[3], m[4], m[5]], d = V.dot(a, b0), b = V.norm([b0[0] - a[0] * d, b0[1] - a[1] * d, b0[2] - a[2] * d]); return [...a, ...b, ...V.cross(a, b)]; },
 };
 
@@ -3250,7 +3251,9 @@ GAMES.push({
       zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H);
     }
     // view rotation (drag to spin) with inertia, easing home when idle
-    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99;
+    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99, spinA = 0;
+    // each world idles round its own axis at its own pace: a small tilt off the road's pole keeps the road in view; the lookout turns upright over korin's tower
+    const spinOf = w => { const a = hash(w * 3.7 + 1) * 6.283; return { u: w === 10 ? [0, 1, 0] : V.norm(V.add(N, V.add(V.mul(E1, Math.cos(a)), E2, Math.sin(a)), .03 + .05 * hash(w * 5.1 + 2))), w: (.006 + .008 * hash(w * 2.3 + 3)) * (hash(w * 9.7) < .5 ? -1 : 1) }; };
     const fx = particleSystem(), puff = makePuff(26, 11);
 
     // ── game state
@@ -3468,7 +3471,7 @@ GAMES.push({
     function travel(w) {
       ui.hell && ui.hell(false);
       if (!playing) return;
-      S.world = w; useWorld(w); layout(); scenery(); ui.world && ui.world(w);
+      S.world = w; spinA = 0; useWorld(w); layout(); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
       ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', 'back in the null realm — the tournament of power goes on', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
@@ -3913,6 +3916,20 @@ GAMES.push({
         const kk = y * W + x, z = z0 + (t1[2] * u + t2[2] * w) * k; if (zb[kk] > z + 3) continue; st.buf[kk] = PK(c);
       } }
     }
+    // kaioken: the sprite washed red, a pulsing red rim round it and flames licking up off the top, depth-tested like the sprite
+    function kaioAura(spr, bx, by, ang, flip, lift, depth, k, t) {
+      const ux = Math.sin(ang), uy = -Math.cos(ang), rx = Math.cos(ang), ry = Math.sin(ang), ox = bx + ux * lift, oy = by + uy * lift, Rr = (Math.hypot(spr.w, spr.h) + 6) * k, W = st.W, H = st.H, buf = st.buf;
+      const on = (i, j) => i >= 0 && j >= 0 && i < spr.w && j < spr.h && spr.col[j * spr.w + (flip ? spr.w - 1 - i : i)] >= 0, pulse = .5 + .5 * Math.sin(t * 9), f = Math.floor(t * 12), wash = .12 + .08 * pulse;
+      for (let y = Math.floor(oy - Rr); y <= oy + Rr; y++) { if (y < 0 || y >= H) continue; for (let x = Math.floor(ox - Rr); x <= ox + Rr; x++) {
+        if (x < 0 || x >= W) continue; const kk = y * W + x; if (zb[kk] > depth) continue;
+        const dx = x + .5 - ox, dy = y + .5 - oy, i = Math.floor((dx * rx + dy * ry) / k + spr.ax + .5), j = Math.floor(spr.ay + .5 - (dx * ux + dy * uy) / k);
+        if (on(i, j)) { const [r, g, b] = UNPK(buf[kk]); buf[kk] = PK(((r + (255 - r) * wash) << 16) | ((g * (1 - wash)) << 8) | (b * (1 - wash))); continue; }
+        if (on(i - 1, j) || on(i + 1, j) || on(i, j - 1) || on(i, j + 1)) { buf[kk] = PK(pulse > .5 ? 0xff4a3a : 0xe0332b); continue; }
+        const fl = 2 + (h2(i * 13 + f * 7, f) * 4 | 0); let q = 0; for (let n = 2; n <= fl; n++) if (on(i, j + n)) { q = n; break; }
+        if (q) { buf[kk] = PK(q >= fl ? 0xffd0c0 : q > 2 ? 0xff8a6a : 0xff4a3a); continue; }
+        if ((on(i - 2, j) || on(i + 2, j) || on(i, j + 2)) && bayer(x, y) < .25 + .35 * pulse) buf[kk] = PK(0xb0201a);
+      } }
+    }
     function blitZ(spr, bx, by, ang, flip, lift, depth, k = 1, raw = false) {
       const ux = Math.sin(ang), uy = -Math.cos(ang), rx = Math.cos(ang), ry = Math.sin(ang);
       const ox = bx + ux * lift, oy = by + uy * lift, Rr = (Math.hypot(spr.w, spr.h) + 1) * k, W = st.W, H = st.H;
@@ -4083,9 +4100,9 @@ GAMES.push({
     function kaiPlanet(kx, ky, kr, glow = true) {   // king kai's tiny planet: a green ball, a road round it, the red-roofed house
       const px = (x, y, c) => st.px(x, y, c);
       if (glow) for (let y = -kr - 8; y <= kr + 8; y++) for (let x = -kr - 8; x <= kr + 8; x++) { const d = Math.hypot(x, y); if (d > kr && d < kr + 8 && bayer(kx + x, ky + y) < (1 - (d - kr) / 8) * .55) px(kx + x, ky + y, 0xfff6d8); }
-      const G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e];
+      const G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e], Rk = M3.rot(V.norm([.35, 1, .12]), st.t * .18);   // it turns about the road's own axis, so only the meadow drifts past
       for (let y = -kr; y <= kr; y++) for (let x = -kr; x <= kr; x++) { const d = Math.hypot(x, y); if (d > kr + .3) continue; if (d > kr - .7) { px(kx + x, ky + y, 0x1f3a1a); continue; }
-        const nz = Math.sqrt(Math.max(0, 1 - (d / kr) ** 2)), l = (-x * .55 - y * .7) / kr * .8 + nz * .5 + (bayer(kx + x, ky + y) - .5) * .35, band = Math.abs((y + x * .35) - kr * .25) < Math.max(1, kr * .09);
+        const nz = Math.sqrt(Math.max(0, 1 - (d / kr) ** 2)), qa = (Rk[0] * x + Rk[1] * y) / kr + Rk[2] * nz, qb = (Rk[3] * x + Rk[4] * y) / kr + Rk[5] * nz, qc = (Rk[6] * x + Rk[7] * y) / kr + Rk[8] * nz, l = (-x * .55 - y * .7) / kr * .8 + nz * .5 + (bayer(kx + x, ky + y) - .5) * .35 + Math.sin(qa * 5 + Math.sin(qc * 4) * 1.5) * Math.sin(qb * 4.5 + qc * 2) * .3, band = Math.abs((y + x * .35) - kr * .25) < Math.max(1, kr * .09);
         px(kx + x, ky + y, band ? (l > .3 ? 0xfdfaf2 : 0xd8d2c4) : G5[Math.max(0, Math.min(5, Math.round(1 + l * 3.4)))]); }
       if (kr > 9) { const hr = Math.max(2, kr * .28); for (let y = -hr; y <= 0; y++) for (let x = -hr; x <= hr; x++) if (x * x + y * y <= hr * hr) px(kx - kr * .35 + x, ky - kr * .4 + y, x + y < 0 ? 0xf6985a : 0xc04e26); }
     }
@@ -4352,9 +4369,10 @@ GAMES.push({
       const rdt = dt; if (chamberUntil > t && S.world !== 3) dt *= .3;   // no slow-mo on snake way: jumps run on real time and couldn't clear a gap
       if (playing) session += dt; st.bob = Math.round(Math.sin(t * .7) * 2) + (shake > 0 && !st.calm ? Math.round((Math.random() - .5) * 5 * shake) : 0); shake = Math.max(0, shake - dt);
       idleT += dt;
+      const sp = spinOf(S.world || 0); spinA += sp.w * dt; M = M3.ortho(M3.mul(M, M3.rot(sp.u, sp.w * dt)));   // in the planet's own frame, so it adds to any drag
       if (!drag) {
         if (Math.abs(vrx) + Math.abs(vry) > .001) { M = M3.ortho(M3.mul(M3.mul(M3.rx(vrx * dt), M3.ry(vry * dt)), M)); vrx *= Math.pow(.06, dt); vry *= Math.pow(.06, dt); }
-        if (idleT > 3) { const I = M3.I(), k = Math.min(1, dt * .7); M = M3.ortho(M.map((v, i) => v + (I[i] - v) * k)); }
+        if (idleT > 3) { const I = M3.rot(sp.u, spinA), k = Math.min(1, dt * .7); M = M3.ortho(M.map((v, i) => v + (I[i] - v) * k)); }
       }
       // running: sprint decays; riding the golden cloud triples everything
       sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);
@@ -4642,12 +4660,13 @@ GAMES.push({
       if (seen && (aura || boostUntil > t || riding > 0 || S.form > 0 || kaioUntil > t || S.aura)) for (let i = 0; i < (S.form > 0 ? 4 : 3); i++) { const a = kd.ang + (Math.random() - .5) * .9, r = 4 + Math.random() * 8; fx.add({ x: kd.x + Math.sin(kd.ang) * (lift + 10) + Math.cos(a) * r, y: kd.y - Math.cos(kd.ang) * (lift + 10) + Math.sin(a) * r * .5, vx: Math.sin(kd.ang) * 20, vy: -Math.cos(kd.ang) * 30, life: .5, s: 1, grow: 1, c: kaioUntil > t ? [0xffffff, 0xff9a8a, 0xe0332b] : !S.form && S.aura ? AURAS[(S.aura - 1) % AURAS.length] : FORMS[S.form].aura, raw: true }); }
       // super saiyan 2+: crackling sparks around him
       if (seen && FORMS[S.form].sparks && Math.random() < .35) { let x = kd.x + (Math.random() - .5) * 22, y = kd.y - Math.cos(kd.ang) * (lift + 14) + (Math.random() - .5) * 26; for (let k = 0; k < 6; k++) { st.px(x, y, FORMS[S.form].sparks); x += (Math.random() - .5) * 4; y += 1 + Math.random() * 2; } }
+      const drawHero = (s, l, d, k) => { blitZ(s, kd.x, kd.y, kd.ang, flip, l, d, k); if (kaioUntil > t) kaioAura(s, kd.x, kd.y, kd.ang, flip, l, d, k, t); };
       if (apeUntil > t) {
         // giant ape stomps: a little hop each step and a screen shake on landing
         const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for (let k = 0; k < 8; k++) fx.add({ x: kd.x + (Math.random() - .5) * 30, y: kd.y, vx: (Math.random() - .5) * 60, vy: -20 - Math.random() * 30, drag: 2, life: .5, s: 2, c: [0xffffff, 0xe7e2d4], raw: true }); }
-        blitZ(APE[step % 2], kd.x, kd.y, kd.ang, flip, lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
-      } else if (fused && fused.until > t) blitZ(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
-      else blitZ(spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+        drawHero(APE[step % 2], lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
+      } else if (fused && fused.until > t) drawHero(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, lift, depth, 1.05);
+      else drawHero(spr, lift, depth, 1.05);
       if (dance && !dance.done && seen) { const b = dance.beats[dance.i]; if (b !== undefined) { const r = 6 + Math.max(0, b - t) * 26, hx = kd.x + Math.sin(kd.ang) * 14, hy = kd.y - Math.cos(kd.ang) * 14; for (let a = 0; a < 6.28; a += .12) st.px(hx + Math.cos(a) * r, hy + Math.sin(a) * r, Math.abs(b - t) < .32 ? 0xfff27a : 0xffffff); st.text(['fu', 'sion', 'ha!'][dance.i], hx, hy - r - 8, t - dance.ok < .3 ? 0xfff27a : 0xffffff); } }   // the beat ring
       if (cling) blitZ(SAIBA, kd.x - Math.cos(kd.ang) * 5, kd.y - Math.sin(kd.ang) * 5, kd.ang, !flip, lift + 6 + (cling.boom - t < 1 && Math.floor(t * 16) % 2 ? 1 : 0), depth + 1, .9);   // hugging his back, shaking before it blows
       // piccolo meditates above the planet; king kai and gregory stand on it
