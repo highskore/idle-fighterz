@@ -308,12 +308,15 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
 function run(name) {
   const drawn = name.endsWith('+draw'), base = drawn ? name.slice(0, -5) : name
   const sc = SCENARIOS[base]; if (!sc) throw new Error('no scenario ' + name)
-  const g = mount({ seed: sc.seed, saved: sc.saved, calm: !!sc.calm })
+  const g = mount({ seed: sc.seed, saved: sc.saved, calm: !!sc.calm, noFloats: drawn })
+  // drawn, a hash of every frame game.js draws (FNV-1a over its pixels), for planet-render to match
+  const hashes = [], fnv = b => { let h = 0x811c9dc5; for (let k = 0; k < b.length; k++) h = Math.imul(h ^ b[k], 16777619) >>> 0; return h }
   if (drawn) { g.ctx.__skip = false; g.ctx.BARE = false; DRAWN = true }
   let frames = Math.round(sc.minutes * 60 / DT); const inputs = [], samples = []
   for (let f = 0; f < frames; f++) {
     sc.script(g, f, i => { inputs.push({ f, ...i }); apply(g, i) })
     g.step(DT)
+    if (drawn) hashes.push(fnv(g.ev('st.buf')))
     // every tenth second also the save, as JSON.stringify(S) writes it to localStorage
     // and the HUD: what ui.update and ui.shop last got, every second; the menus and confirm boxes every tenth
     if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE), hud: g.update, side: g.side, shop: g.shop, offer: g.ev("!!shen && shen.phase === 'wish'") ? g.offer() : null, ...((f + 1) % 300 === 0 ? { save: JSON.parse(g.ev('JSON.stringify(S)')), menus: menus(g) } : {}) })
@@ -322,7 +325,7 @@ function run(name) {
   }
   if (g.errors.length) throw new Error(g.errors.join('\n'))
   const kept = t => t <= frames * DT + 1e-6
-  return { name, seed: sc.seed, calm: !!sc.calm, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.filter(([t]) => kept(t)).map(([t, e, ms]) => [+t.toFixed(2), e, ms]), cues: g.cues.filter(([t]) => kept(t)).map(([t, ...c]) => [+t.toFixed(2), ...c]) }
+  return { name, seed: sc.seed, calm: !!sc.calm, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.filter(([t]) => kept(t)).map(([t, e, ms]) => [+t.toFixed(2), e, ms]), cues: g.cues.filter(([t]) => kept(t)).map(([t, ...c]) => [+t.toFixed(2), ...c]), ...(drawn ? { hashes: hashes.slice(0, frames) } : {}) }
 }
 
 // number formatting: the game's fmtShort, and the HUD's big/short from page.html
