@@ -9,6 +9,7 @@
 #![allow(clippy::approx_constant)] // game.js turns by 6.28 and laps by 6.283, not by τ
 
 use crate::data::*;
+use crate::fx::Particle;
 use crate::game::{Game, WishBuff};
 use crate::geom::{self, Spot, V3};
 use crate::jsmath::{atan2, cos, hypot, sin};
@@ -94,6 +95,8 @@ pub struct Member {
     pub y: f64,
     pub k: f64,
     pub dead: bool,
+    /// the white flash of a hit, run down by the renderer
+    pub flash: f64,
 }
 
 /// The ginyu force, or androids 17 and 18.
@@ -239,6 +242,8 @@ pub struct Boss {
     pub t1: f64,
     pub hit_t: Option<f64>,
     pub pow: bool,
+    /// the white flash of a hit, run down by the renderer
+    pub flash: f64,
 }
 
 impl Boss {
@@ -267,6 +272,7 @@ impl Boss {
             t1: 0.0,
             hit_t: None,
             pow: false,
+            flash: 0.0,
         }
     }
 
@@ -498,6 +504,8 @@ pub struct Tl {
     pub next_door: f64,
     pub chamber_t0: f64,
     pub next_zap: f64,
+    /// piccolo's zap: from (x0, y0) to (x1, y1), at t0; the renderer draws it and lets it go
+    pub zap: Option<(f64, f64, f64, f64, f64)>,
     pub saibas: Vec<Saiba>,
     pub next_saiba: f64,
     pub pod_wish: u32,
@@ -599,6 +607,7 @@ impl Default for Tl {
             next_door: 60.0,
             chamber_t0: 0.0,
             next_zap: 4.0,
+            zap: None,
             saibas: Vec::new(),
             next_saiba: 40.0,
             pod_wish: 0,
@@ -674,9 +683,18 @@ impl Game {
         self.rng.random()
     }
 
-    /// `burst()`: n particles, two draws each.
+    /// `burst()` where the particles' spot isn't tracked yet: n particles, two draws each.
     fn burst(&mut self, n: u32) {
         self.rng.skip(2 * n);
+    }
+
+    /// `burst(x, y, c, n, sp)`: n particles flying apart from (x, y).
+    pub(crate) fn burst_at(&mut self, x: f64, y: f64, c: &[u32], n: u32, sp: f64) {
+        for _ in 0..n {
+            let vx = (self.rng.random() - 0.5) * sp;
+            let vy = (self.rng.random() - 0.5) * sp;
+            self.fx.push(Particle::new(x, y, c).v(vx, vy).drag(2.5).life(0.6));
+        }
     }
 
     pub(crate) fn once(&mut self, key: &'static str, text: &str) {
@@ -831,9 +849,7 @@ impl Game {
             self.tl.next_greg = 80.0 + self.r() * 40.0;
         }
         if let Some(g) = self.tl.greg.clone() {
-            if t > g.until {
-                if g.sx.is_some() {
-                    self.burst(8);
+            if t > g.until { if let Some((x, y)) = g.sx { self.burst_at(x, y, &[0xffffff, 0xd8a868], 8, 60.0);
                 }
                 self.tl.greg = None;
                 self.event("gregory got away");
@@ -883,9 +899,7 @@ impl Game {
                 self.event("kamehameha! roshi clears the sky — ×1.5 for 20s");
                 for i in 0..self.tl.meteors.len() {
                     let m = &mut self.tl.meteors[i];
-                    if !m.dead && m.delay <= 0.0 {
-                        m.dead = true;
-                        self.burst(8);
+                    if !m.dead && m.delay <= 0.0 { m.dead = true; let (x, y) = (m.x, m.y); self.burst_at(x, y, &[0xffffff, 0x9fdcff, 0x2f9ae0], 8, 80.0);
                     }
                 }
                 for i in 0..self.tl.saibas.len() {
@@ -960,7 +974,7 @@ impl Game {
             let members = [("android 17", A17), ("android 18", A18)]
                 .iter()
                 .enumerate()
-                .map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false })
+                .map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 })
                 .collect();
             self.tl.ginyu = Some(Ginyu { androids: true, members, max: hp * 2.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0 });
             self.event("androids 17 and 18 drop in — \"we're just bored\"");
@@ -1092,8 +1106,7 @@ impl Game {
             if y.boom != 0.0 && t > y.boom {
                 self.tl.yam.as_mut().unwrap().boom = 0.0;
                 self.shake = 0.6;
-                if y.sx.is_some() {
-                    self.burst(30);
+                if let Some((x, yy)) = y.sx { self.burst_at(x, yy - 6.0, &[0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160.0);
                 }
                 self.event("BOOM. yamcha got wrecked again — tap him");
             }
@@ -1211,12 +1224,14 @@ impl Game {
         if self.s.lv(Upg::Piccolo) > 0 && tick(&mut self.tl.next_zap, dt) {
             self.tl.next_zap = 0.6f64.max(5.0 / (1.0 + 0.35 * (self.s.lvf(Upg::Piccolo) - 1.0)));
             let m = self.tl.meteors.iter().position(|m| !m.dead && m.delay <= 0.0);
-            if let (Some(i), Some(_)) = (m, self.tl.piccolo_at) {
+            if let (Some(i), Some((px, py))) = (m, self.tl.piccolo_at) {
+                let (mx, my) = (self.tl.meteors[i].x, self.tl.meteors[i].y);
+                self.tl.zap = Some((px, py - 8.0, mx, my, t));
                 self.tl.meteors[i].dead = true;
                 self.goal("meteor", 1.0, false);
                 let n = self.meteor_pay();
                 self.gain(n);
-                self.burst(12);
+                self.burst_at(mx, my, &[0xffffff, 0xfff08a, 0x9a6ad8], 12, 90.0);
             }
         }
         // the ginyu force
@@ -1230,7 +1245,7 @@ impl Game {
         {
             self.krillin_hit("the ginyu force");
             let hp = 300f64.max(self.wrate() * 9.0);
-            let members = GINYU.iter().enumerate().map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false }).collect();
+            let members = GINYU.iter().enumerate().map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 }).collect();
             self.tl.ginyu = Some(Ginyu { androids: false, members, max: hp * 5.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0 });
             self.event("the ginyu force strikes a pose!");
             self.tl.next_ginyu = 300.0 + self.r() * 60.0;
@@ -1269,8 +1284,7 @@ impl Game {
             let sb = &mut self.tl.saibas[i];
             if !sb.dead && t - sb.born > sb.life {
                 sb.dead = true;
-                if sb.sx.is_some() {
-                    self.burst(8);
+                if let Some((x, y)) = sb.sx { self.burst_at(x, y - 4.0, &[0xe7e2d4, 0xcfc8b6], 8, 50.0);
                 }
             }
         }
@@ -1687,8 +1701,10 @@ impl Game {
             s.x += s.vx * dt;
             s.y += sin(t * 3.0) * 0.3;
             let gone = s.x > w + 12.0;
+            let (sx, sy) = (s.x, s.y);
             if self.rng.random() < 0.9 {
-                self.rng.random();
+                let y = sy + (self.rng.random() - 0.5) * 4.0;
+                self.fx.push(Particle::new(sx - 7.0, y, &[0xffffff, 0xffd84a, 0xff8a3a]).v(-30.0, 0.0).life(0.45).size(2.0, 0.0));
             }
             if gone {
                 self.tl.star = None;
@@ -1824,6 +1840,7 @@ impl Game {
             return;
         }
         m.hp -= dmg * arm;
+        m.flash = 0.12;
         self.rng.skip(10);
         if m.hp <= 0.0 {
             m.dead = true;
@@ -1855,6 +1872,7 @@ impl Game {
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let b = self.tl.boss.as_mut().unwrap();
         b.hp -= dmg * arm;
+        b.flash = 0.12;
         b.hit_t = Some(t);
         self.burst(6);
         let b = self.tl.boss.clone().unwrap();
@@ -2527,6 +2545,7 @@ impl Game {
         let b = self.tl.boss.as_mut().unwrap();
         if twin_up && b.hp - dmg * arm <= 0.0 {
             b.hp = 1.0;
+            b.flash = 0.12;
             self.burst(5);
             self.say("his other half holds him together — beat the double first");
             return true;

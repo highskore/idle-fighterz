@@ -77,6 +77,8 @@ pub struct Game {
     /// how high the hero is drawn off the road and whether he faces left: the renderer sets these
     pub lift_now: f64,
     pub flip_now: bool,
+    /// particles (game.js `fx`): the simulation and the renderer both add, the renderer steps them
+    pub fx: Vec<crate::fx::Particle>,
 }
 
 impl Game {
@@ -108,6 +110,7 @@ impl Game {
             tl: Tl::default(),
             lift_now: 0.0,
             flip_now: false,
+            fx: Vec::new(),
         }
     }
 

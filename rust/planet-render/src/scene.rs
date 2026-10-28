@@ -4,14 +4,16 @@
 //! hero, piccolo, bubbles and the visitors stand) are written back to the game the same way.
 
 use planet_core::data::{Upg, ALL_FORMS};
-use planet_core::geom::{add, ap, dot, mul, norm, V3};
+use planet_core::geom::{ap, dot, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, pow, sin};
 use planet_core::num::js_round;
 use planet_core::sprite::{self, Sprite};
+use planet_core::fx::Particle;
 use planet_core::Game;
 
 use crate::scenery::{Built, Kind, Pn, Solid};
 use crate::tones::{self, Tones};
+use crate::visitors::HeroAt;
 use crate::{bayer, h2, pk, px, Framebuffer};
 
 /// How the canvas is shown: the site (sky and cloud sea) or the floating desktop widget (no backdrop; its own clouds).
@@ -33,54 +35,12 @@ impl View {
     }
 }
 
-/// world.js's particle: a square of pixels that grows and dissolves.
-#[derive(Clone, Debug)]
-pub struct Particle {
-    pub x: f64,
-    pub y: f64,
-    pub vx: f64,
-    pub vy: f64,
-    pub g: f64,
-    pub drag: f64,
-    pub life: f64,
-    pub age: f64,
-    pub s: f64,
-    pub grow: f64,
-    pub c: Vec<u32>,
-}
-
-impl Particle {
-    pub fn new(x: f64, y: f64, c: &[u32]) -> Self {
-        Particle { x, y, vx: 0.0, vy: 0.0, g: 0.0, drag: 0.0, life: 1.0, age: 0.0, s: 1.0, grow: 0.0, c: c.to_vec() }
-    }
-    fn v(mut self, vx: f64, vy: f64) -> Self {
-        self.vx = vx;
-        self.vy = vy;
-        self
-    }
-    fn life(mut self, l: f64) -> Self {
-        self.life = l;
-        self
-    }
-    fn size(mut self, s: f64, grow: f64) -> Self {
-        self.s = s;
-        self.grow = grow;
-        self
-    }
-    fn drag(mut self, d: f64) -> Self {
-        self.drag = d;
-        self
-    }
-}
-
 /// What game.js keeps between frames for drawing only.
 #[derive(Default)]
 pub struct Scene {
-    /// `fx`: particles, drawn newest first
-    pub fx: Vec<Particle>,
     /// `flashT`: the white flash after a transform
     pub flash_t: f64,
-    built: Built,
+    pub(crate) built: Built,
     key: Option<(u32, u32, u32)>,
     pub tones: Option<Tones>,
 }
@@ -329,19 +289,15 @@ impl Scene {
         Self::default()
     }
 
-    fn add(&mut self, p: Particle) {
-        self.fx.push(p);
-    }
-
     /// world.js `particleSystem().step`: age, move and draw every particle, newest first.
-    fn step_fx(&mut self, fb: &mut Framebuffer, dt: f64) {
-        let mut i = self.fx.len();
+    fn step_fx(fx: &mut Vec<Particle>, fb: &mut Framebuffer, dt: f64) {
+        let mut i = fx.len();
         while i > 0 {
             i -= 1;
-            let p = &mut self.fx[i];
+            let p = &mut fx[i];
             p.age += dt;
             if p.age >= p.life {
-                self.fx.remove(i);
+                fx.remove(i);
                 continue;
             }
             p.vy += p.g * dt;
@@ -480,25 +436,30 @@ impl Scene {
             let spr = sprite::get(if sb.soldier { "SOLDIER" } else { "SAIBA" });
             c.blit_z(spr, sx, sy, atan2(v[0], v[1]), sin(t * 3.0 + sb.born) > 0.0, (up * down - 1.0) * 11.0 + hop, v[2] * c.r + 4.0, 1.1);
         }
-        self.draw_hero(&mut c, g, dt);
-        self.draw_visitors(&mut c, g, t);
+        let hero = self.draw_hero(&mut c, g);
+        self.draw_visitors(&mut c, g, &hero, dt);
+        // not ported yet: the beam charge, the big bang, the spirit bomb, the beam struggle, blasts, the capsule, the beam
         if g.sprint > 0.3 && g.rng.random() < 0.6 {
             let kd = g.kid_screen(0.0);
             let vx = (g.rng.random() - 0.5) * 30.0;
-            self.add(Particle::new(kd.x, kd.y, &[0xffffff, 0xe7e2d4]).v(vx, -10.0).drag(3.0).life(0.4).size(1.0, 1.5));
+            g.fx.push(Particle::new(kd.x, kd.y, &[0xffffff, 0xe7e2d4]).v(vx, -10.0).drag(3.0).life(0.4).size(1.0, 1.5));
         }
         if let Some((x, y)) = g.tl.cloud_fly {
             blit(c.fb, sprite::get("puff"), x - 13.0, y - 9.0, false);
         }
+        self.draw_boss(&mut c, g, dt);
+        // the movie villains: not ported yet
+        self.draw_late(&mut c, g, dt);
         for i in 0..g.tl.meteors.len() {
             if g.tl.meteors[i].delay <= 0.0 {
                 self.draw_meteor(&mut c, g, i, view);
             }
         }
-        self.step_fx(c.fb, dt);
+        Self::step_fx(&mut g.fx, c.fb, dt);
         if let Some(s) = &g.tl.star {
             blit(c.fb, sprite::get("POD"), s.x - 7.0, s.y - 7.0, false);
         }
+        self.draw_gero(&mut c, g);
         if view.bare {
             if view.clouds.is_some() && world != 9 {
                 draw_clouds(&mut c, view, &sea, true);
@@ -520,7 +481,7 @@ impl Scene {
         self.tones = Some(tones);
     }
 
-    fn draw_hero(&mut self, c: &mut Ctx, g: &mut Game, _dt: f64) {
+    fn draw_hero(&mut self, c: &mut Ctx, g: &mut Game) -> HeroAt {
         let t = c.t;
         let kd = g.kid_screen(0.0);
         let form = &g.forms[g.s.form];
@@ -559,7 +520,7 @@ impl Scene {
                 let by = kd.y - cos(kd.ang) * lift + s * sin(kd.ang);
                 let vx = (if flip { 20.0 } else { -20.0 }) + (g.rng.random() - 0.5) * 20.0;
                 let vy = -20.0 - g.rng.random() * 25.0;
-                self.add(Particle::new(bx, by, &[0xffffff, 0xcfe6f2]).v(vx, vy).drag(2.0).life(0.5));
+                g.fx.push(Particle::new(bx, by, &[0xffffff, 0xcfe6f2]).v(vx, vy).drag(2.0).life(0.5));
             }
         }
         let kaio = g.b.kaio_until > t;
@@ -579,7 +540,7 @@ impl Scene {
                     .v(sin(kd.ang) * 20.0, -cos(kd.ang) * 30.0)
                     .life(0.5)
                     .size(1.0, 1.0);
-                self.add(p);
+                g.fx.push(p);
             }
         }
         if let Some(sp) = FORM_LOOK[fi].1 {
@@ -654,106 +615,14 @@ impl Scene {
                 for _ in 0..3 {
                     let r = 5.0 + g.rng.random() * 7.0;
                     let a = g.rng.random() * 6.28;
-                    self.add(Particle::new(mx + cos(a) * r, my + sin(a) * r * 0.7, &pal).v(-cos(a2) * dir * 30.0, -sin(a2) * dir * 30.0).life(0.4).size(1.0, 1.0));
+                    g.fx.push(Particle::new(mx + cos(a) * r, my + sin(a) * r * 0.7, &pal).v(-cos(a2) * dir * 30.0, -sin(a2) * dir * 30.0).life(0.4).size(1.0, 1.0));
                 }
             }
             draw_hero(c, spr, 0.0, depth, 1.05, mx - sin(a2) * sh / 2.0, my + cos(a2) * sh / 2.0, a2);
         } else {
             draw_hero(c, spr, lift, depth, 1.05, kd.x, kd.y, kd.ang);
         }
-        if let Some(_cl) = g.tl.cling {
-            let boom = _cl;
-            c.blit_z(
-                sprite::get("SAIBA"),
-                kd.x - cos(kd.ang) * 5.0,
-                kd.y - sin(kd.ang) * 5.0,
-                kd.ang,
-                !flip,
-                lift + 6.0 + if boom - t < 1.0 && (t * 16.0).floor() as i64 % 2 != 0 { 1.0 } else { 0.0 },
-                depth + 1.0,
-                0.9,
-            );
-        }
-    }
-
-    fn draw_visitors(&mut self, c: &mut Ctx, g: &mut Game, t: f64) {
-        let (cx, cy, r, bob) = (c.cx, c.cy, c.r, c.bob);
-        let m = c.m;
-        // piccolo meditates above the planet
-        if g.s.lv(Upg::Piccolo) > 0 {
-            let cc = g.frame3.cap_pt(0.6, 0.9);
-            let v = ap(&m, mul(cc, 1.28));
-            g.tl.piccolo_at = if v[2] > -0.2 { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
-            if let Some((x, y)) = g.tl.piccolo_at {
-                c.blit_z(sprite::get("PICCOLO"), x, y, 0.0, false, 0.0, v[2] * r + 8.0, 0.95);
-            }
-        } else {
-            g.tl.piccolo_at = None;
-        }
-        if let Some(car) = g.tl.car.as_mut() {
-            let v = ap(&m, g.frame3.road_pt(car.phi));
-            let ahead = ap(&m, g.frame3.road_pt(car.phi + 0.05));
-            let ax = cx + ahead[0] * r;
-            if v[2] > 0.05 {
-                let (sx, sy) = (cx + v[0] * r, cy - v[1] * r + bob);
-                car.sx = Some((sx, sy));
-                c.blit_z(sprite::get("KAICAR"), sx, sy, atan2(v[0], v[1]), ax > sx, 0.0, v[2] * r + 6.0, 0.9);
-            } else {
-                car.sx = None;
-            }
-        }
-        if let Some(kai) = g.tl.kai.as_mut() {
-            let v = ap(&m, kai.c);
-            let up = 1f64.min((t - kai.t0) / 0.4) * 1f64.min((kai.until - t) / 0.4);
-            if v[2] > 0.05 {
-                let (sx, sy) = (cx + v[0] * r, cy - v[1] * r + bob);
-                kai.sx = Some((sx, sy));
-                c.blit_z(sprite::get("KINGKAI"), sx, sy, atan2(v[0], v[1]), false, (up - 1.0) * 18.0, v[2] * r + 6.0, 0.85);
-            } else {
-                kai.sx = None;
-            }
-        }
-        if let Some(b) = g.tl.bean.clone() {
-            if let Some((sx, sy)) = b.sx {
-                let v = ap(&m, b.c);
-                let ang = atan2(v[0], v[1]);
-                let hop = 3.0 + sin(t * 3.0).abs() * 3.0;
-                c.blit_z(sprite::get("SENZU"), sx, sy, ang, false, hop, v[2] * r + 6.0, 1.5);
-                if g.rng.random() < 0.12 {
-                    let x = sx + (g.rng.random() - 0.5) * 14.0;
-                    let y = sy - hop - 8.0 - g.rng.random() * 8.0;
-                    self.add(Particle::new(x, y, &[0xffffff, 0xdaf8b4]).v(0.0, -12.0).life(0.5));
-                }
-            }
-        }
-        if let Some(gr) = g.tl.greg.as_mut() {
-            let k = 1f64.min((t - gr.hop_t) / 0.35);
-            let from = gr.from.unwrap_or(gr.c);
-            let cc = norm(add(mul(from, 1.0 - k), gr.c, k));
-            let v = ap(&m, cc);
-            if v[2] > 0.05 {
-                let (sx, sy) = (cx + v[0] * r, cy - v[1] * r + bob);
-                gr.sx = Some((sx, sy));
-                c.blit_z(sprite::get("GREGORY"), sx, sy, atan2(v[0], v[1]), k < 1.0 && from[0] > gr.c[0], sin(k * std::f64::consts::PI) * 9.0, v[2] * r + 4.0, 1.1);
-            } else {
-                gr.sx = None;
-            }
-        }
-        if g.s.lv(Upg::Partner) > 0 && g.b.fuse_until <= t {
-            let mv = ap(&m, g.frame3.road_pt(g.phi - 0.32));
-            let (mx, my, ma) = (cx + mv[0] * r, cy - mv[1] * r + bob, atan2(mv[0], mv[1]));
-            let kk = 2.6f64.min(1.0 + 0.16 * (g.s.lv(Upg::Partner) as f64).sqrt());
-            g.tl.monkey_at = if mv[2] > 0.0 { Some((mx, my, kk)) } else { None };
-            if g.tl.fuse_offer > t && g.rng.random() < 0.7 {
-                let x = mx + (g.rng.random() - 0.5) * 12.0;
-                let y = my - 4.0 - g.rng.random() * 10.0;
-                self.add(Particle::new(x, y, &[0xffffff, 0xffe08a, 0xff9a3c]).v(0.0, -20.0).life(0.5));
-            }
-            let fr = (t * 8.0).floor() as i64 % 2;
-            c.blit_z(sprite::get(if fr == 0 { "MONKEY.0" } else { "MONKEY.1" }), mx, my, ma, g.flip_now, if g.tl.fuse_offer > t { sin(t * 9.0).abs() * 3.0 } else { 0.0 }, mv[2] * r + 5.0, 1.1 * kk);
-        } else {
-            g.tl.monkey_at = None;
-        }
+        HeroAt { x: kd.x, y: kd.y, ang: kd.ang, flip, lift, depth, seen }
     }
 
     fn draw_meteor(&mut self, c: &mut Ctx, g: &mut Game, i: usize, view: &View) {
@@ -839,7 +708,7 @@ impl Scene {
             let s0 = 16.0 + g.rng.random() * 6.0;
             let px0 = x - dx * s0 + (g.rng.random() - 0.5) * 3.0;
             let vx = (g.rng.random() - 0.5) * 4.0;
-            self.add(Particle::new(px0, y - dy * s0, &[0x9a948e, 0x7e7872, 0x625e5a, 0x4e4b48]).v(vx, -4.0).drag(1.5).life(0.7).size(2.0, 3.0));
+            g.fx.push(Particle::new(px0, y - dy * s0, &[0x9a948e, 0x7e7872, 0x625e5a, 0x4e4b48]).v(vx, -4.0).drag(1.5).life(0.7).size(2.0, 3.0));
         }
     }
 }

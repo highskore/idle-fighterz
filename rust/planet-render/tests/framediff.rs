@@ -57,21 +57,38 @@ fn cases() -> Vec<Case> {
         c("#hero-gohan#form2", PHONE, 120, true),
         c("#hero-trunks#form4", DESK, 120, true),
         c("#kaio", DESK, 120, true),
-        c("#visitors", DESK, 1000, true),
-        c("#gregory", DESK, 900, true),
-        c("#car", DESK, 900, true),
-        c("#pod", DESK, 420, true),
-        c("#storm", DESK, 3700, false),
-        c("#raid", DESK, 3400, false),
-        c("#ape", DESK, 1300, false),
-        c("#roshi", DESK, 2760, false),
-        c("#door", DESK, 60, false),
-        c("#fusion", DESK, 120, false),
-        c("#frieza", DESK, 4600, false),
-        c("#ginyu", DESK, 4600, false),
-        c("#androids", DESK, 6100, false),
-        c("#saga4", DESK, 3400, false),
-        c("#universe9", DESK, 3400, false),
+        c("#visitors", DESK, 60, true),
+        c("#visitors", PHONE, 60, true),
+        c("#gregory", DESK, 60, true),
+        c("#car", DESK, 60, true),
+        c("#pod", DESK, 60, true),
+        c("#storm", DESK, 300, true),
+        c("#raid", DESK, 300, true),
+        c("#raid", PHONE, 300, true),
+        c("#saga4", DESK, 300, true),
+        c("#saga7", DESK, 300, true),
+        c("#ginyu", DESK, 300, true),
+        c("#androids", DESK, 300, true),
+        c("#frieza", DESK, 300, true),
+        c("#roshi", DESK, 90, true),
+        c("#ape", DESK, 90, true),
+        c("#ozaru", DESK, 300, false),
+        c("#door", DESK, 60, true),
+        c("#fusion", DESK, 90, true),
+        c("#yamcha", DESK, 60, true),
+        c("#date", DESK, 60, true),
+        c("#gero", DESK, 60, true),
+        c("#sixteen", DESK, 60, true),
+        c("#krillin", DESK, 60, true),
+        c("#dance", DESK, 60, true),
+        c("#dance", DESK, 160, false),
+        c("#cling", DESK, 60, true),
+        c("#tournament", DESK, 300, true),
+        c("#beerus", DESK, 300, true),
+        c("#zeno", DESK, 60, false),
+        c("#cooler", DESK, 120, false),
+        c("#shenron", DESK, 120, false),
+        c("#universe9", DESK, 300, false),
     ];
     for (shape, must) in [('c', true), ('a', true), ('b', true), ('d', true), ('e', true)] {
         v.push(Case { widget: Some(Some((shape, 2))), ..c("", (800, 600), 200, must) });
@@ -128,6 +145,10 @@ fn rust(k: &Case, w: usize, h: usize) -> (Game, Vec<u8>) {
     let dt = 1.0 / 30.0;
     let mut t = 0.0;
     for f in 0..k.frames {
+        if f == k.frames - k.draw {
+            // as frame.js does: headless game.js never steps its particles, so both start the drawn frames without them
+            g.fx.clear();
+        }
         t += dt;
         g.frame(t, dt);
         if f >= k.frames - k.draw {

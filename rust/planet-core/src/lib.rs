@@ -2,6 +2,7 @@
 //! It never touches pixels; planet-render draws from it.
 
 pub mod data;
+pub mod fx;
 pub mod game;
 pub mod geom;
 pub mod jsmath;
