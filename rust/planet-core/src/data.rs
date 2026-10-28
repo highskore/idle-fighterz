@@ -263,10 +263,23 @@ pub const ZENO_GODS: u32 = 2;
 /// game.js laps at 6.283, a hair short of 2π; kept so lap timing matches
 #[allow(clippy::approx_constant)]
 pub const LAP: f64 = 6.283;
-/// Cosmetic particles game.js draws from Math.random at these moments; planet-core burns the same draws.
-pub const RNG_TRANSFORM: u32 = 180;
-pub const RNG_CRIT: u32 = 20;
-pub const RNG_KAIOKEN: u32 = 80;
+/// Each form's aura colours (`FORMS[i].aura`), by `ALL_FORMS` index.
+pub const FORM_AURA: [[u32; 3]; 14] = [
+    [0xffffff, 0xbfe9ff, 0x6fb0ff],
+    [0xffffff, 0xfff8b0, 0xffe02e],
+    [0xffffff, 0xfff8b0, 0xffe02e],
+    [0xffffff, 0xfff8b0, 0xffd60a],
+    [0xffd0c0, 0xff7a5a, 0xd8344a],
+    [0xffffff, 0x9fe6ff, 0x2f9ae0],
+    [0xe6d6ff, 0xa070f0, 0x4a1f9a],
+    [0xffffff, 0xff9a8a, 0xc8302a],
+    [0xffffff, 0xd8e8ff, 0x8aa0c8],
+    [0xffffff, 0xeef2ff, 0xa8b4d0],
+    [0xc8e8ff, 0x3a74d8, 0x122e78],
+    [0xffffff, 0xe2d4ff, 0x8a4ae0],
+    [0xd8c0ff, 0x7a3ad0, 0x2a0a5a],
+    [0xffffff, 0xfff4b0, 0x6ab8f0],
+];
 
 pub const N_BRAWL: usize = 4;
 pub const N_BEAM: usize = 8;
