@@ -1173,6 +1173,7 @@ impl Game {
             self.session = 111.0;
             self.tl.next_boss = 0.0;
             lv(self, Upg::Galick, 1);
+            self.tl.struggle_force = true;
         }
         if has("frieza") {
             self.session = 151.0;

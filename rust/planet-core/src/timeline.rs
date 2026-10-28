@@ -537,6 +537,8 @@ pub struct Tl {
     pub next_movie: f64,
     pub last_movie: &'static str,
     pub movie_force: &'static str,
+    /// the `#struggle` preview hook: every villain fires back
+    pub struggle_force: bool,
     pub movie_note: Option<(f64, String)>,
     pub next_nappa: f64,
     pub boss: Option<Boss>,
@@ -647,6 +649,7 @@ impl Default for Tl {
             next_movie: 480.0,
             last_movie: "",
             movie_force: "",
+            struggle_force: false,
             movie_note: None,
             next_nappa: 0.0,
             boss: None,
@@ -1633,7 +1636,7 @@ impl Game {
         // beam struggle
         if self.tl.struggle.is_none() && self.s.lv(Upg::Galick) > 0 && self.tl.boss.as_ref().is_some_and(|b| !b.dead && !b.struggled && t - b.t0 > 5.0) {
             self.tl.boss.as_mut().unwrap().struggled = true;
-            if self.r() < 0.6 {
+            if self.tl.struggle_force || self.r() < 0.6 {
                 self.tl.struggle = Some(Struggle { t0: t, until: t + 7.0, p: 0.5 });
                 let b = self.tl.boss.as_mut().unwrap();
                 b.until = b.until.max(t + 10.0);
