@@ -1,9 +1,11 @@
-  // desktop widget: play at once, with the hud in one of four layouts (a setting) that wakes while the pointer is
+    // clouds under the floating planet (settings: always, while awake, or never; and their shape). window mode has the
+    // full cloud sea instead
+    const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'a'); };  // desktop widget: play at once, with the hud in one of five layouts (a setting) that wakes while the pointer is
   // about. a press on empty sky (or ⌥/⌘-press anywhere) drags the window instead of training. settings live in the
   // app (desktop/src-tauri); notifications for big moments go out through it too
   if (WIDGET) {
     const tauri = window.__TAURI__, invoke = tauri ? tauri.core.invoke : () => Promise.resolve();
-    let conf = { layout: 1, hud: 'hover', opacity: 1, notify: {}, quiet: {} };
+    let conf = { layout: 7, hud: 'hover', opacity: 1, notify: {}, quiet: {} };
     go();
 
     const ICON = {
@@ -14,9 +16,11 @@
       gear: '<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.8"/>',
       close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
     };
-    const LABEL = { up: 'upgrades', kaio: 'kaioken', share: 'share', snd: 'sound', gear: 'settings', close: 'hide to the menu bar' };
+    const LABEL = { up: 'upgrades', kaio: 'kaioken', share: 'share', snd: 'sound', gear: 'settings', close: 'hide' };
     const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
     const w = el('div', 'w'), pl = el('div', 'w-pl', '<b class="w-n">0</b><span class="w-rate"></span>'), bar = el('span', 'w-bar', '<b></b>'), btns = el('div', 'w-btns'), num = pl.firstChild, rate = pl.lastChild;
+    // the dock's middle: the form and a bar to the next one, dragon balls and wishes once there are any
+    const info = el('div', 'w-info', '<span class="w-form"></span><span class="w-balls"></span><span class="w-wish"></span><span class="w-next"><b></b></span>'), [iForm, iBalls, iWish, iNext] = info.children;
     const ring = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); ring.setAttribute('class', 'w-ring'); ring.setAttribute('viewBox', '0 0 100 100');
     ring.innerHTML = '<circle class="track" cx="50" cy="50" r="49"/><circle class="fill" cx="50" cy="50" r="49" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 50 50)"/>';
     const B = {};
@@ -28,12 +32,13 @@
     $('game').append(w);
 
     // each layout is the same pieces in different boxes; the ring goes behind the game canvas, so the action reads on top of it
-    const LAYOUTS = [1, 2, 3, 6];
+    const LAYOUTS = [7, 1, 2, 3, 6];
     function arrange(n) {
-      n = LAYOUTS.includes(n) ? n : 1;
+      n = LAYOUTS.includes(n) ? n : 7;
       root.dataset.layout = n; w.textContent = ''; ring.remove(); for (const b of Object.values(B)) { b.style.left = b.style.top = ''; btns.append(b); }
       const box = cls => el('div', cls);
-      if (n === 1) { st.el.before(ring); w.append(pl, btns); placeRing(); }
+      if (n === 7) { const b = box('w-dock'); b.append(pl, info, btns); w.append(b); }
+      else if (n === 1) { st.el.before(ring); w.append(pl, btns); placeRing(); }
       else if (n === 2) { const b = box('w-bottom'); b.append(pl, btns, bar); w.append(b); }
       else if (n === 3) { pl.append(bar); w.append(pl, btns); }
       else { const t = box('w-top'); t.append(pl, btns, bar); w.append(t); }
@@ -51,6 +56,15 @@
       rate.textContent = $('rate').textContent + '/s';
       bar.firstChild.style.width = (s.form.p * 100).toFixed(1) + '%'; ring.lastChild.setAttribute('stroke-dashoffset', (100 - s.form.p * 100).toFixed(1));
       B.kaio.hidden = !s.kaio.own; B.kaio.disabled = !s.kaio.ready; B.kaio.title = s.kaio.ready ? 'kaioken' : `kaioken in ${s.kaio.left}s`;
+      const f = s.form, key = [f.name, f.next, s.balls, s.wishes].join();
+      if (info.dataset.k !== key) {
+        info.dataset.k = key;
+        iForm.textContent = f.name === 'base' ? (f.next ? '→ ' + f.next : '') : `${f.name} ×${f.x}`;
+        iBalls.hidden = !(s.balls || s.wishes); iBalls.innerHTML = '<i class="on"></i>'.repeat(s.balls) + '<i></i>'.repeat(Math.max(0, 7 - s.balls)); iBalls.title = `dragon balls ${s.balls}/7`;
+        iWish.hidden = !s.wishes; iWish.textContent = '★' + s.wishes; iWish.title = `wishes ${s.wishes}`;
+        iNext.hidden = !f.next; iNext.title = f.next ? 'next: ' + f.next : '';
+      }
+      iNext.firstChild.style.width = (f.p * 100).toFixed(1) + '%';
     };
     let couldAscend = null;
     ui.shop = items => {
@@ -61,8 +75,11 @@
     // awake while the pointer is about (the game draws at 30fps then, 15 otherwise); the upgrades list or a popup keep it up
     let idle = 0;
     const keep = () => $('shop').classList.contains('open') || !$('menu').hidden || !$('ascBox').hidden || !$('shareBox').hidden;
-    const sleep = () => { if (keep()) idle = setTimeout(sleep, 1000); else root.classList.remove('awake'); };
-    const wake = ms => { root.classList.add('awake'); clearTimeout(idle); idle = setTimeout(sleep, ms); };
+    // clouds under the floating planet (settings: always, while awake, or never, and their shape). window mode has the
+    // full cloud sea instead
+    const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'a'); };
+    const sleep = () => { if (keep()) idle = setTimeout(sleep, 1000); else { root.classList.remove('awake'); clouds(); } };
+    const wake = ms => { root.classList.add('awake'); clouds(); clearTimeout(idle); idle = setTimeout(sleep, ms); };
     addEventListener('pointermove', () => wake(2500)); addEventListener('pointerdown', () => wake(2500), true);
     addEventListener('focusin', () => wake(4000));
     root.addEventListener('mouseleave', () => wake(500));
@@ -81,12 +98,12 @@
       e.stopPropagation(); e.preventDefault(); win.startDragging();
     }, true);
 
-    // nothing behind the scene, so everything solid gets a 1px dark rim where it meets the wallpaper: it reads on light
-    // and dark desktops alike. glows and dithered haze (not fully opaque) stay rimless
+    // floating, nothing is behind the scene, so everything solid gets a 1px dark rim where it meets the wallpaper: it
+    // reads on light and dark desktops alike. glows and dithered haze (not fully opaque) stay rimless
     const flush = st.flush, RIM = 0xd8140f0c;
     st.flush = () => {
       const b = st.buf, W = st.W, H = st.H, solid = k => b[k] >>> 24 >= 0xf0;
-      for (let y = 0; y < H; y++) for (let x = 0, k = y * W; x < W; x++, k++) if (!(b[k] >>> 24) && ((x > 0 && solid(k - 1)) || (x < W - 1 && solid(k + 1)) || (y > 0 && solid(k - W)) || (y < H - 1 && solid(k + W)))) b[k] = RIM;
+      if (BARE) for (let y = 0; y < H; y++) for (let x = 0, k = y * W; x < W; x++, k++) if (!(b[k] >>> 24) && ((x > 0 && solid(k - 1)) || (x < W - 1 && solid(k + 1)) || (y > 0 && solid(k - W)) || (y < H - 1 && solid(k + W)))) b[k] = RIM;
       flush();
     };
 
@@ -106,21 +123,27 @@
       if (!conf.notify[kind] || quiet() || (root.classList.contains('awake') && !document.hidden) || at - (sent[kind] || 0) < 60000) return;
       sent[kind] = at; const [title, body] = NOTE[kind](arg); invoke('notify', { title, body });
     };
-    // hidden to the menu bar the page gets no animation frames; with notifications on, the game keeps going at 4 steps a second
+    // hidden, the page gets no animation frames; with notifications on, the game keeps playing without drawing, in
+    // quarter-second steps that catch up on however long the (throttled) timer slept
     let bg = 0;
     document.addEventListener('visibilitychange', () => {
-      clearInterval(bg); if (!document.hidden || !Object.values(conf.notify).some(Boolean)) return;
-      let was = performance.now();
-      bg = setInterval(() => { const now = performance.now(), dt = Math.min(2, (now - was) / 1000); was = now; for (let k = 0; k < 4; k++) { T += dt / 4; st.t = T; game.frame(T, dt / 4); } }, 1000);
+      clearInterval(bg); st.headless = false; if (!document.hidden || !Object.values(conf.notify).some(Boolean)) return;
+      st.headless = true; let was = performance.now();
+      bg = setInterval(() => { const n = Math.min(240, Math.floor((performance.now() - was) / 250)); was = Math.max(was + n * 250, performance.now() - 250); for (let k = 0; k < n; k++) { T += .25; st.t = T; game.frame(T, .25); } }, 1000);
     });
 
     const apply = s => {
       const first = conf.layout !== s.layout || !w.firstChild; conf = s;
       if (first) arrange(s.layout);
       root.classList.toggle('pin', s.hud === 'always');
+      BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live
+      clouds();
       document.body.style.opacity = s.opacity;
+      // the menu-bar icon may be hidden behind the notch: say how to get the widget back
+      const keys = (s.shortcut || '').split('+').map(p => ({ Ctrl: '⌃', Alt: '⌥', Shift: '⇧', Cmd: '⌘' })[p] || p.replace(/^(Key|Digit)/, '')).join('');
+      B.close.title = B.close.ariaLabel = keys ? `hide (${keys} brings it back)` : 'hide';
     };
-    arrange(1);
+    arrange(7);
     invoke('get_settings').then(s => s && apply(s));
     if (tauri) tauri.event.listen('settings', e => apply(e.payload));
   }
