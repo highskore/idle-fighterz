@@ -21,7 +21,7 @@ Your hero runs laps around a planet you can spin, powers up through the forms, v
 ## Features
 
 - **Idle, or not.** Your hero trains on his own. Tap to train harder, hold to charge a beam, drag to spin the planet.
-- **Upgrades and forms.** 14 upgrades, from weighted boots to Piccolo and the time chamber, and forms from super saiyan through ultra instinct, with each hero's own forms past it.
+- **Upgrades and forms.** Upgrades from weighted boots to Piccolo and the time chamber, and forms from super saiyan through ultra instinct, with each hero's own forms past it.
 - **Four heroes.** Start as Vegeta, and unlock Goku, Gohan and Future Trunks as you play.
 - **Villain raids.** Saga after saga of villains, the Ginyu Force, movie villains, the androids and a Tournament of Power.
 - **Other worlds.** Trips to Namek, Planet Vegeta, Snake Way, Beerus' planet, Kami's lookout, Yardrat and more.
