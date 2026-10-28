@@ -11,9 +11,12 @@ through one API, `planet_core::bridge::Bridge`, with plain calls in and JSON str
   the HUD. That view uses the same shim, with the `Planet` calls swapped for `invoke`. Every argument and result is a
   number, a bool or a JSON string, so the messages are identical.
 
-Everything that reaches the HUD is checked against game.js. The difftest compares the snapshot and the shop every
-second, the dragon's offer while it waits, the menu, angels, confirm boxes and share card every ten seconds, and every
-toast (its text, time and duration) in order, in all ten scenarios.
+Everything planet-core sends the HUD is checked against game.js, in every scenario. Every second the difftest compares
+the snapshot (with `night`, `world`, `shen` and `look` against `ui.night`, `ui.world` and the body classes as they stood
+when game.js called `ui.update`) and the shop (`Game::shop`, the same string the bridge ships). It compares the dragon's
+offer while it waits, and the menu, angels, confirm boxes and share card every ten seconds. Every toast (text, time,
+duration) and every cue (call, time, arguments) is compared in order. The pictures the HUD shows (`thumb`, the card's
+`spr` and `scene`) still come from game.js and aren't planet-core's.
 
 ## Calls
 
@@ -23,10 +26,11 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `Planet` (wasm) / `Bridge` (Rust) | game.js / page.html |
 |---|---|
 | `new(seed, w, h, scale)` | `mount(st, ui)`: `w`×`h` is `st.W`×`st.H`, `scale` is `st.scale` |
-| `load(text)` | the stored `localStorage['hs-power']`. A new visit keeps only the daily bonus's date, as game.js does |
+| `load(text)` | the stored `localStorage['hs-power']`. A new visit keeps only the daily bonus's date, as game.js does. Text over 1 MB, nested deeper than 64 or with a number past a double's range is ignored |
+| `set_calm(on)` | page.html's `st.calm` (prefers-reduced-motion): no screen shake, and no random draw for it, as in game.js. Set it before `start` |
 | `start(today, now_ms)` | `start()`: `today` is `new Date().toDateString()` (the daily bonus), `now_ms` is `Date.now()` |
-| `step(elapsed_s, now_ms) → steps` | `frame(t, dt)`. Fixed 1/30 s steps, at most 8 a call |
-| `step_one(now_ms) → t` | one fixed step (the lockstep renderer below steps one at a time) |
+| `step(elapsed_s, now_ms) → steps` | `frame(t, dt)`. Fixed 1/30 s steps, at most 8 a call. For the native widget (stage 5); the web page doesn't call it yet |
+| `step_one(now_ms) → t` | one fixed step. The web shim calls this, one step at a time, because the twin below steps in lockstep |
 | `frame() → message` | see below; call it after stepping and after every command |
 | `resize(w, h, scale)` | `resize()` (`layout()`) |
 | `pointer_down(x, y, bx, by)`, `pointer_move(x, y, bx, by)`, `pointer_up(bx, by)`, `pointer_cancel()` | the canvas's pointer listeners: tap, double tap (big bang), drag (spin, with inertia), hold (beam charge); on snake way the press acts |
@@ -40,7 +44,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures (see stage 5) |
 | `save() → text` | what to store under `hs-power`: `JSON.stringify(S)`, key for key |
 | `playing() → bool` | |
-| `spots(json)`, `probe() → json` | the temporary renderer bridge (below) |
+| `spots(json)`, `probe() → json` | the temporary renderer bridge (below). `spots` ignores what `load` ignores; `probe` is `{t, pl, draws, mult, passive}` |
 
 ## The frame message
 
@@ -50,15 +54,17 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 { "hud": {...}, "shop": {...}, "wish": [...], "world": 3, "events": [["text", 2600]], "cues": [["sfx", "tap"], ["bump"]] }
 ```
 
-- `hud`, while playing, when anything the HUD shows has changed. This is `ui.update`'s argument: `goal {text, p, n}`,
+- `hud`, while playing, when anything on it has changed. This is `ui.update`'s argument: `goal {text, p, n}`,
   `kaio {own, ready, left}`, `pl`, `best`, `rate`, `laps`, `time`, `effects` (the buffs line), `extra` (the run's
   standing), `combo`, `form {name, x, next, p}`, `balls`, `wishes`, `ascend`, `snake`, `busy`. Four fields that
   game.js sets elsewhere ride along: `night` (`ui.night`), `world`, `shen` and `look` (game.js's `shen`, `jelly` and
-  `earth` body classes). It's planet-core's `Hud` struct, built where game.js calls `ui.update`. Values are kept to
-  what the page shows (`time` in whole seconds, timers in whole seconds), so idle play changes it about once a second.
+  `earth` body classes), as they stand at that point of the frame. It's planet-core's `Hud` struct, built where game.js
+  calls `ui.update`, and once more at `start`, so the first message already has a goal. `time` and the timers are whole
+  seconds, but `pl`, `combo` and the form's progress are the raw numbers, so in play the snapshot changes on most steps.
   The struct is `PartialEq`, so checking for a change costs one comparison.
-- `shop`, while playing, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, what, can, open, special}}`
-  in shop order.
+- `shop`, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, what, can, open, special}}` in shop
+  order. It's `Game::shop`, rebuilt wherever game.js calls `syncShop` (the HUD point of a frame, mounting, `start`, buys,
+  the tree and the angels), so it can come before play starts, as game.js's does.
 - `wish`: `ui.wish`'s list, `[{key, label, what, tier}]`, once for each offer the dragon makes. The words are fixed
   when the offer is made, as in game.js. The callback is `pick_wish(key)`.
 - `world`: the world, when it changed. The page calls `ui.hell(false)` and then `ui.world(w)`.
@@ -68,10 +74,11 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   `achieved`, `zeno`, `treeGift(text)`, `wishDone`, and `notify(kind, arg)` (the widget's desktop notifications for a
   pod, a trip, a raid and the dragon; the site has no `ui.notify`, so the shim skips it).
 
-Cues come from the main call sites: taps, buys, laps, forms, ascending, god ki, the zeno erase, achievements, beams, the
-big bang, boss hits, the dragon, pods, mastery stars and wishes. game.js has about 70 more `ui.sfx`/`ui.fx` sites, for
-smaller moments (a gregory catch's coin, a struggle tap). They're sounds and title effects only, nothing on the HUD,
-and can be added one line at a time (`self.cue(Cue::Sfx("coin"))`).
+Every cue game.js emits is ported, at the same point of the same call (90 sites). None is draw-only: the one site in
+game.js's drawing code, `explode`'s `boom` when a big bang lands, runs in the block both sides hoist out of the drawing.
+The difftest can't reach the cues on taps at things only the renderer places (king kai, gregory, yamcha, the car, the
+door, satan, roshi, pudding, zeno, krillin's date, gadgets, ginyu members and movie henchmen); those are ported but not
+diffed until stage 1 writes the screen spots back.
 
 ## The save
 
@@ -93,19 +100,25 @@ game.js (the twin) in lockstep with the Rust game:
 - Its `ui`, storage, timers, preview hooks, body classes and listeners are its own. `assemble.mjs` wraps game.js in a
   function that shadows `Math`, `setTimeout`, `localStorage`, `location`, `document` and `addEventListener`. Its timers
   run on simulated time, the way the difftest harness runs them.
-- game.js changes the game in four places while drawing: the big bang lands, a great ape's stomp shakes the screen,
-  and the capsule a boss drops falls and opens itself after 8 s. planet-core does these in `Game::draw_step` after
+- game.js changes the game in five places while drawing: the big bang lands, a great ape's stomp shakes the screen, a
+  full beam charge makes it tremble while the hero is in view, and the capsule a boss drops falls and opens itself
+  after 8 s. planet-core does these in `Game::draw_step` after
   the frame. The difftest harness and the twin both run them just before drawing, so drawing a frame or skipping it
   changes nothing.
 - It reports where it drew what taps and beams aim at, after every step: `spots(json)` (planet-core's `spots.rs`),
   giving the hero's lift and facing, piccolo, bubbles, the boss, the ginyu force, movie henchmen, the visitors,
   saibamen, birds, gadgets and snake way's ghosts.
+- `start` reads the clock once: planet-core gets that date, and the twin runs `start()` with its `Date` pinned to the
+  same moment, so a start across midnight gives both the same day. `st.calm` goes to `set_calm`; the twin reads it from
+  the shared stage.
 - Once a second the shim compares planet-core's power and random draws (`probe()`) with the twin's. On a mismatch it
   logs `planet: the drawing drifted from the game` once.
 
 `node rust/planet-web/test.mjs [minutes] [seed]` runs exactly what `build.mjs --rust` ships, in a vm with a stub DOM and
 drawing on. It plays through the page's entry points (taps on whatever the twin drew, drags, held beams, double taps,
-keys, the shop, wishes, the tree) and checks power and draws every frame.
+keys, the shop, wishes, the tree) and checks power and draws every frame, and that the HUD the Rust side sent matches
+the twin's last `ui.update` field for field. Its clock starts 2 ms before a midnight with a save stamped with the coming
+day, so it also checks that both sides start on the same day.
 
 When stage 1 lands, `spots` becomes planet-render writing the same fields, and `draw_step` stays in planet-core. The
 twin, `assemble.mjs`'s wrapping and the shim's lockstep loop go away. The shim's frame becomes `step()` and a

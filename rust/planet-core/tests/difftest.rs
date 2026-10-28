@@ -9,6 +9,11 @@ use planet_core::Game;
 use replay::{js, js_args, scenario};
 
 #[test]
+fn calm() {
+    scenario("calm");
+}
+
+#[test]
 fn idle() {
     scenario("idle");
 }

@@ -145,9 +145,19 @@ pub fn arr<I: IntoIterator<Item = String>>(items: I) -> String {
     format!("[{}]", v.join(","))
 }
 
-/// Parses JSON text; `None` if it isn't valid JSON.
+/// The longest text `parse` reads: a save is a few kB, so anything near this came from somewhere else.
+pub const MAX_LEN: usize = 1 << 20;
+
+/// How deep arrays and objects may nest: the parser recurses, so this bounds its stack.
+pub const MAX_DEPTH: usize = 64;
+
+/// Parses JSON text; `None` if it isn't valid JSON, is longer than `MAX_LEN`, nests deeper than `MAX_DEPTH`, or has
+/// a number that overflows a double. The text comes from localStorage and a renderer, so none of that may panic.
 pub fn parse(s: &str) -> Option<Value> {
-    let mut p = Parser { b: s.as_bytes(), i: 0 };
+    if s.len() > MAX_LEN {
+        return None;
+    }
+    let mut p = Parser { b: s.as_bytes(), i: 0, depth: 0 };
     let v = p.value()?;
     p.ws();
     (p.i == p.b.len()).then_some(v)
@@ -156,6 +166,7 @@ pub fn parse(s: &str) -> Option<Value> {
 struct Parser<'a> {
     b: &'a [u8],
     i: usize,
+    depth: usize,
 }
 
 impl Parser<'_> {
@@ -180,6 +191,32 @@ impl Parser<'_> {
     fn value(&mut self) -> Option<Value> {
         self.ws();
         match *self.b.get(self.i)? {
+            b'{' | b'[' => {
+                if self.depth == MAX_DEPTH {
+                    return None;
+                }
+                self.depth += 1;
+                let v = self.nested();
+                self.depth -= 1;
+                v
+            }
+            b'"' => self.string().map(Value::Str),
+            b't' => self.lit("true", Value::Bool(true)),
+            b'f' => self.lit("false", Value::Bool(false)),
+            b'n' => self.lit("null", Value::Null),
+            _ => {
+                let st = self.i;
+                while self.i < self.b.len() && matches!(self.b[self.i], b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9') {
+                    self.i += 1;
+                }
+                std::str::from_utf8(&self.b[st..self.i]).ok()?.parse().ok().filter(|n: &f64| n.is_finite()).map(Value::Num)
+            }
+        }
+    }
+
+    /// An object or an array, at `self.i`.
+    fn nested(&mut self) -> Option<Value> {
+        match self.b[self.i] {
             b'{' => {
                 self.i += 1;
                 let mut m = BTreeMap::new();
@@ -197,7 +234,7 @@ impl Parser<'_> {
                     }
                 }
             }
-            b'[' => {
+            _ => {
                 self.i += 1;
                 let mut v = Vec::new();
                 if self.eat(b']').is_some() {
@@ -210,17 +247,6 @@ impl Parser<'_> {
                         return Some(Value::Arr(v));
                     }
                 }
-            }
-            b'"' => self.string().map(Value::Str),
-            b't' => self.lit("true", Value::Bool(true)),
-            b'f' => self.lit("false", Value::Bool(false)),
-            b'n' => self.lit("null", Value::Null),
-            _ => {
-                let st = self.i;
-                while self.i < self.b.len() && matches!(self.b[self.i], b'-' | b'+' | b'.' | b'e' | b'E' | b'0'..=b'9') {
-                    self.i += 1;
-                }
-                std::str::from_utf8(&self.b[st..self.i]).ok()?.parse().ok().map(Value::Num)
             }
         }
     }
@@ -302,5 +328,25 @@ mod tests {
         assert_eq!(v.get("c"), Some(&Value::Arr(vec![Value::Num(1.0), Value::Bool(true)])));
         assert_eq!(parse("{\"k\":\"\\u00e9\"}").unwrap().get("k").and_then(Value::as_str), Some("é"));
         assert!(parse("{").is_none());
+    }
+
+    #[test]
+    fn rejects_hostile_text() {
+        // deep nesting used to recurse until the stack overflowed and aborted the process
+        for open in ["[", "{\"a\":"] {
+            assert!(parse(&open.repeat(100_000)).is_none());
+        }
+        let nest = |n: usize| format!("{}{}", "[".repeat(n), "]".repeat(n));
+        assert!(parse(&nest(MAX_DEPTH)).is_some());
+        assert!(parse(&nest(MAX_DEPTH + 1)).is_none());
+        // numbers JSON.parse would read as Infinity
+        for n in ["1e999", "-1e999", "{\"pl\":1e400}"] {
+            assert!(parse(n).is_none(), "{n}");
+        }
+        assert_eq!(parse("1.7976931348623157e308"), Some(Value::Num(f64::MAX)));
+        // a valid but huge string
+        let big = format!("\"{}\"", "x".repeat(MAX_LEN));
+        assert!(parse(&big).is_none());
+        assert!(parse(&format!("\"{}\"", "x".repeat(MAX_LEN - 2))).is_some(), "exactly MAX_LEN is fine");
     }
 }
