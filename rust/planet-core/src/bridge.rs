@@ -49,7 +49,9 @@ impl Bridge {
 
     /// Runs the fixed steps `elapsed` real seconds cover (at most 8, so a stall can't snowball); returns how many.
     pub fn step(&mut self, elapsed: f64, now_ms: f64) -> u32 {
-        self.step_drawn(elapsed, now_ms, &mut |_, _| {})
+        let n = self.step_drawn(elapsed, now_ms, &mut |_, _| {});
+        self.game.fx.clear(); // undrawn, nothing ages the particles out
+        n
     }
 
     /// `step`, with `draw` run in every step where game.js draws (see `step_one_drawn`).
@@ -70,7 +72,9 @@ impl Bridge {
 
     /// Exactly one fixed step; returns the new time (a renderer stepping in lockstep runs its own frame at it).
     pub fn step_one(&mut self) -> f64 {
-        self.step_one_drawn(&mut |_, _| {})
+        let t = self.step_one_drawn(&mut |_, _| {});
+        self.game.fx.clear(); // undrawn, nothing ages the particles out
+        t
     }
 
     /// One fixed step with `draw` run where game.js draws: after the frame's logic, before the timeouts due.
