@@ -372,7 +372,9 @@ body.lookout:not(.night) .game { background: linear-gradient(#ece4ff, #a2b4f2 60
 body.kaiworld:not(.night) .game { background: linear-gradient(#eafff4, #9ae0c6 75%) !important; }
 /* yardrat: a pastel pink sky */
 body.yardrat:not(.night) .game { background: linear-gradient(#fff2f8, #eebcda 75%) !important; }
-</style>
+/*widget*/
+__WIDGET_CSS__
+/*/widget*/</style>
 
 <div class="scroller" id="scroller">
 <div class="page">
@@ -425,7 +427,8 @@ body.yardrat:not(.night) .game { background: linear-gradient(#fff2f8, #eebcda 75
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/geometries/TextGeometry.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
 <script>
-__WORLD__
+/*widget*/const WIDGET = document.documentElement.classList.contains('widget');
+/*/widget*/__WORLD__
 __PLANET__
 (() => {
   const $ = id => document.getElementById(id), root = document.documentElement;
@@ -884,11 +887,13 @@ __PLANET__
     requestAnimationFrame(tick);
     const dt = Math.max(0, Math.min(.05, (now - prev) / 1000)); prev = now;
     T += dt;   // reduced motion still plays the game (it's the content); it only drops the screen shake
-    const scrolling = now - lastScroll < 250, gameDue = visible && now - last >= (scrolling ? 1000 / 60 : 1000 / 30) - 2;
+    const scrolling = now - lastScroll < 250, gameDue = visible && now - last >= (scrolling ? 1000 / 60 : /*widget*/WIDGET && !root.classList.contains('awake') ? 1000 / 15 : /*/widget*/1000 / 30) - 2;
     if (R3 && now - lastTitle >= (scrolling ? 1000 / 30 : 1000 / 60) - 2) { lastTitle = now; R3(T); }
     if (!gameDue) return; const gdt = Math.min(.05, (now - last) / 1000); last = now;
     st.t = T; game.frame(T, gdt);
   }
   requestAnimationFrame(tick);
-})();
+/*widget*/
+__WIDGET_JS__
+/*/widget*/})();
 </script>
