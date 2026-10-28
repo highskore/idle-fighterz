@@ -86,6 +86,19 @@ npm run build:rust   # node build.mjs --rust: planet-core runs the game behind t
 npm run test:rust    # node rust/planet-web/test.mjs
 ```
 
+## Tests
+
+CI (`.github/workflows/ci.yml`) runs on every pull request and push to main: both page builds; rustfmt, clippy and the JS-vs-Rust difftest; the wasm builds (`wasm/px.wasm` must match its source) and `rust/planet-web/test.mjs`; every preview hook in headless Chromium; and the pixel baselines.
+
+```sh
+npm test             # both builds, rustfmt and the difftest
+npm run test:hooks   # every preview hook (each "// preview hook" in game.js) at 1280×800 and 390×844: no page or console errors
+npm run test:visual  # the pixel baselines in test/browser/__screenshots__ (Linux only: they're rendered on CI)
+npm run shots        # the same screenshots into shots/, without comparing
+```
+
+The browser tests (`test/browser/`, Playwright) serve the page, its fonts (from `@fontsource`) and three.js from disk, run the game on Playwright's fake clock and seed `Math.random` with the difftest's LCG, so a state draws the same pixels every run. The 3D title is stubbed out (software WebGL takes seconds a frame) except in one hooks test. A visual state's canvas must match its baseline exactly; the whole page may differ by a shade where Chromium anti-aliases text and rounded corners. Every CI run uploads its screenshots as the `screenshots` artifact and links them on the pull request. To take new baselines, run the workflow by hand with *update baselines* (it commits them to the branch), or copy a run's `screenshots` artifact over `test/browser/__screenshots__`.
+
 ## Where it's used
 
 - **highskore.com** has this repo as a submodule at `games/planet`; its `pnpm build:planet` runs `node build.mjs` and copies `dist/planet.html` to `public/planet.html`.
