@@ -336,6 +336,9 @@ pub struct Ape {
 
 #[derive(Clone, Debug)]
 pub struct SpiritShot {
+    pub x0: f64,
+    pub y0: f64,
+    pub r: f64,
     pub x1: f64,
     pub y1: f64,
     pub t0: f64,
@@ -358,6 +361,8 @@ pub struct Shen {
     pub wishes: u32,
     pub porunga: bool,
     pub t1: f64,
+    /// which of shenron's four looks (`shenLook`: 'rising' unless the #shenronN hook picks one)
+    pub look: usize,
     /// the offer on the table: indexes into `WISHES`
     pub offer: Vec<usize>,
 }
@@ -430,6 +435,8 @@ pub struct Henchman {
     pub x: Option<f64>,
     pub y: f64,
     pub k: f64,
+    /// the white flash of a hit, run down by the renderer
+    pub flash: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -447,6 +454,8 @@ pub struct Movie {
     pub next_web: f64,
     pub nova: Option<(f64, f64)>,
     pub over: f64,
+    /// the jelly wobble: every row of the screen sways until then (the renderer's)
+    pub wob: f64,
 }
 
 /// State game.js changes from `setTimeout`, due at a time.
@@ -544,6 +553,8 @@ pub struct Tl {
     pub preview: Option<(usize, f64)>,
     pub shen: Option<Shen>,
     pub summon_later: bool,
+    /// `shenLook`: which look the dragon comes in (the #shenronN hook sets it)
+    pub shen_look: usize,
     pub snk: Option<Snake>,
     pub jump_h: f64,
     pub jump_v: f64,
@@ -647,6 +658,7 @@ impl Default for Tl {
             preview: None,
             shen: None,
             summon_later: false,
+            shen_look: 1,
             snk: None,
             jump_h: 0.0,
             jump_v: 0.0,
@@ -1514,7 +1526,7 @@ impl Game {
         if self.tl.tour.is_none() && session > 110.0 && self.tl.boss.is_none() && self.tl.shen.is_none() && self.s.multi && tick(&mut self.tl.next_boss, dt) {
             let (u, k) = (self.s.uni as usize, self.s.uni_stage as usize);
             let who = uni_fighter(u, k);
-            let hp = UNI_HP * UNI_STEP.powf(u as f64) * UNI_STAGES[k];
+            let hp = UNI_HP * crate::jsmath::pow(UNI_STEP, u as f64) * UNI_STAGES[k];
             let last = k == UNI_STAGES.len() - 1;
             let ut = self.uni_time();
             let mut b = Boss::new(0, who.into(), Dim::default(), hp, t, t + ut);
@@ -1974,7 +1986,8 @@ impl Game {
         }
     }
 
-    fn spirit_pos(&self) -> (f64, f64, f64) {
+    /// Where the spirit bomb hangs over the hero, and its radius (`spiritPos`).
+    pub fn spirit_pos(&self) -> (f64, f64, f64) {
         let kd = self.kid_screen(0.0);
         let up = self.lift_now + 34.0 + self.tl.spirit * 10.0 + if self.b.ape_until > self.t { APE0.h * 2.3 } else { 0.0 };
         (kd.x + sin(kd.ang) * up, kd.y - cos(kd.ang) * up, 2.0 + self.tl.spirit * 9.0 * 1f64.max(self.cam.r / 60.0))
@@ -1988,7 +2001,8 @@ impl Game {
         } else {
             (self.cam.cx, self.cam.cy - self.cam.r * 1.5)
         };
-        self.tl.spirit_shot = Some(SpiritShot { x1: to.0, y1: to.1, t0: self.t });
+        let from = self.spirit_pos();
+        self.tl.spirit_shot = Some(SpiritShot { x0: from.0, y0: from.1, r: from.2, x1: to.0, y1: to.1, t0: self.t });
         self.tl.spirit = 0.0;
         self.tl.spirit_ready = false;
         self.ach("spirit");
@@ -2034,7 +2048,8 @@ impl Game {
         }
     }
 
-    fn open_capsule(&mut self) {
+    /// The capsule pops open (the renderer calls it 8s after it lands, as game.js's drawing does).
+    pub fn open_capsule(&mut self) {
         self.tl.capsule = None;
         self.flash_t = 0.3;
         let roll = self.r();
@@ -2306,7 +2321,7 @@ impl Game {
             return;
         }
         let porunga = self.s.world == 1;
-        self.tl.shen = Some(Shen { t0: self.t, phase: Phase::Rise, phase_t: self.t, wishes: if porunga { 3 } else { 1 }, porunga, t1: 0.0, offer: Vec::new() });
+        self.tl.shen = Some(Shen { t0: self.t, phase: Phase::Rise, phase_t: self.t, wishes: if porunga { 3 } else { 1 }, porunga, t1: 0.0, offer: Vec::new(), look: self.tl.shen_look });
         self.ach(if porunga { "porunga" } else { "shenron" });
         self.event(if porunga { "porunga awakens — three wishes…" } else { "the eternal dragon awakens…" });
     }
@@ -2333,7 +2348,7 @@ impl Game {
         for (i, &(key, tier)) in WISHES[..KRILLIN_WISH].iter().enumerate() {
             if self.wish_ok(key) {
                 let r = self.r();
-                pool.push((i, r.powf(1.0 / tier.odds())));
+                pool.push((i, crate::jsmath::pow(r, 1.0 / tier.odds())));
             }
         }
         pool.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
@@ -2522,7 +2537,7 @@ impl Game {
         b.struggled = true;
         self.new_boss(b);
         let minions =
-            o.minions.iter().map(|&name| Henchman { name, spr: movie_dim(name), hp: mh, max: mh, twin: false, dead: false, x: None, y: 0.0, k: 1.0 }).collect();
+            o.minions.iter().map(|&name| Henchman { name, spr: movie_dim(name), hp: mh, max: mh, twin: false, dead: false, x: None, y: 0.0, k: 1.0, flash: 0.0 }).collect();
         self.tl.movie = Some(Movie {
             o,
             boss: self.tl.boss_ids,
@@ -2536,6 +2551,7 @@ impl Game {
             next_web: t + 5.0,
             nova: None,
             over: 0.0,
+            wob: if o.jelly { t + 1.6 } else { 0.0 },
         });
         self.tl.last_movie = who;
         self.krillin_hit(who);
@@ -2586,6 +2602,7 @@ impl Game {
             return;
         }
         h.hp -= dmg * arm;
+        h.flash = 0.12;
         self.burst(5);
         let h = &mut self.tl.movie.as_mut().unwrap().minions[i];
         if h.hp > 0.0 {
@@ -2714,8 +2731,9 @@ impl Game {
         }
         if o.split && m.twin.is_none() && b.hp < b.max * 0.5 {
             let hp = b.max * 0.35;
-            m.minions.push(Henchman { name: "janemba", spr: b.spr(), hp, max: hp, twin: true, dead: false, x: None, y: 0.0, k: 1.0 });
+            m.minions.push(Henchman { name: "janemba", spr: b.spr(), hp, max: hp, twin: true, dead: false, x: None, y: 0.0, k: 1.0, flash: 0.0 });
             m.twin = Some(m.minions.len() - 1);
+            m.wob = t + 1.0;
             self.shake = 0.5;
             self.event("janemba splits in two! the real one won't fall while his double stands");
         }
@@ -2723,6 +2741,7 @@ impl Game {
         if o.flip && m.flips < 3 && b.hp < b.max * (0.75 - 0.25 * m.flips as f64) {
             m.flips += 1;
             m.flip_until = t + 6.0;
+            m.wob = t + 0.8;
             self.event("janemba twists space — left is right for 6s: hit his reflection");
         }
         let m = self.tl.movie.as_mut().unwrap();

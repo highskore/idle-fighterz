@@ -204,3 +204,17 @@ pub fn tones(w: u32) -> Tones {
 pub fn is_w2(w: u32) -> bool {
     matches!(w, 2 | 10 | 11 | 12)
 }
+
+/// janemba's jelly world (`JELLY`): candy-pink ground, mint roads, gummy trees.
+pub fn jelly() -> Tones {
+    let mut t = kai();
+    t.grass = v(&[0xb83a8a, 0xd8569e, 0xf07ab8, 0xff9ccc, 0xffc0de, 0xffe2f0]);
+    t.road = v(&[0x5ac8a8, 0x7ae0c0, 0xa6f2d8, 0xdafff0]);
+    t.dome = v(&[0x7a4ac8, 0x9a6ae0, 0xb890f0, 0xd6b8ff, 0xf0e2ff]);
+    t.band = v(&[0xe0a020, 0xf2c040, 0xffdc6a, 0xfff2b0]);
+    t.leaf = v(&[0x2a9a3a, 0x48c050, 0x78e070, 0xa8f498, 0xdaffc8]);
+    t.trunk = v(&[0xc82a3a, 0xf6f0f0, 0xc82a3a, 0xf6f0f0]);
+    t.stone = v(&[0x6a3a9a, 0x8a5ab8, 0xac80d8, 0xd0b0f2]);
+    t.glass = v(&[0x2a8ae0, 0x5ab0f2, 0x9ad6ff, 0xdaf2ff]);
+    t
+}

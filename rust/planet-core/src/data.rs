@@ -124,7 +124,7 @@ pub fn ladder_of(h: Hero) -> Vec<Form> {
     };
     let mut v: Vec<Form> = ALL_FORMS[..9].iter().map(|&(name, at, x)| Form { name, at, x }).collect();
     for (j, &i) in late.iter().enumerate() {
-        v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * LATE_STEP.powf(j as f64), x: LATE_X[j] });
+        v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j] });
     }
     v
 }

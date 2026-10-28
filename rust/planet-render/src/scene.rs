@@ -44,7 +44,10 @@ pub struct Scene {
     void: Option<(usize, usize, Vec<u32>)>,
     /// the great ape's last step (`apeStep`)
     ape_step: f64,
+    /// shenron's track per look, built on first use
+    tracks: std::collections::HashMap<usize, crate::shenron::Track>,
     key: Option<(u32, u32, u32)>,
+    tones_key: Option<(u32, u8)>,
     pub tones: Option<Tones>,
 }
 
@@ -334,7 +337,18 @@ impl Scene {
         if self.key != Some(key) {
             self.key = Some(key);
             self.built = crate::scenery::build(g);
-            self.tones = Some(tones::tones(g.s.world));
+        }
+        // janemba's jelly world and bojack's earth recolour the planet (`recolour`) until the movie ends; the sea stays
+        let look = g.tl.movie.as_ref().map_or(0, |m| if m.o.jelly { 1 } else if m.o.earth { 2 } else { 0 });
+        if self.tones_key != Some((g.s.world, look)) {
+            self.tones_key = Some((g.s.world, look));
+            let mut t = tones::tones(g.s.world);
+            if look != 0 {
+                let sea = t.sea.clone();
+                t = if look == 1 { tones::jelly() } else { tones::tones(5) };
+                t.sea = sea;
+            }
+            self.tones = Some(t);
         }
     }
 
@@ -423,7 +437,30 @@ impl Scene {
                 }
             }
         }
-        // shenron: not ported yet
+        // drawn after the planet's outline, depth-tested so the planet, trees and runner occlude him
+        if let Some(sh) = g.tl.shen.clone() {
+            c.fb.dm.fill(0);
+            let mut sc = crate::shenron::Ctx {
+                fb: &mut *c.fb,
+                z: 0.0,
+                w: c.w,
+                h: c.h,
+                cx: c.cx,
+                cy: c.cy + c.bob,
+                r: c.r,
+                t,
+                rise: 1f64.min((t - sh.t0) / 1.1),
+                age: t - sh.t0,
+                gone: if sh.phase == planet_core::timeline::Phase::Leave { 1f64.min((t - sh.t1) / 1.6) } else { 0.0 },
+                glow: sh.look == 3,
+            };
+            if sh.porunga {
+                crate::shenron::draw_porunga(&mut sc);
+            } else {
+                let tr = self.tracks.entry(sh.look).or_insert_with(|| crate::shenron::Track::new(sh.look));
+                crate::shenron::draw(&mut sc, sh.look, tr);
+            }
+        }
         for i in 0..g.tl.saibas.len() {
             let sb = g.tl.saibas[i].clone();
             let v = ap(&c.m, sb.c);
@@ -441,7 +478,8 @@ impl Scene {
         }
         let hero = self.draw_hero(&mut c, g, dt);
         self.draw_visitors(&mut c, g, &hero, dt);
-        // not ported yet: the beam charge, the big bang, the spirit bomb, the beam struggle, blasts, the capsule, the beam
+        // not ported yet: the beam charge and the big bang (inputs stage 4 brings), their blasts, the beam
+        crate::effects::draw(&mut c, g, dt);
         if g.sprint > 0.3 && g.rng.random() < 0.6 {
             let kd = g.kid_screen(0.0);
             let vx = (g.rng.random() - 0.5) * 30.0;
@@ -451,7 +489,7 @@ impl Scene {
             blit(c.fb, sprite::get("puff"), x - 13.0, y - 9.0, false);
         }
         self.draw_boss(&mut c, g, dt);
-        // the movie villains: not ported yet
+        self.draw_movie(&mut c, g, dt);
         self.draw_late(&mut c, g, dt);
         for i in 0..g.tl.meteors.len() {
             if g.tl.meteors[i].delay <= 0.0 {
@@ -612,7 +650,8 @@ impl Scene {
                 let k = j as f64 / n as f64;
                 let w = w0 * (1.0 - k) + 0.6;
                 let zi = js_round(p.1) * c.w + js_round(p.0);
-                if p.0 >= 0.0 && p.1 >= 0.0 && p.0 < c.w && p.1 < c.h && c.fb.zb[zi as usize] as f64 > p.2 + 4.0 {
+                // game.js reads past the buffer's end here (undefined, so never behind)
+                if p.0 >= 0.0 && p.1 >= 0.0 && p.0 < c.w && p.1 < c.h && c.fb.zb.get(zi as usize).is_some_and(|&z| z as f64 > p.2 + 4.0) {
                     continue;
                 }
                 let mut s = 0.0;

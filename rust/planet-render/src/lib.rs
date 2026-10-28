@@ -2,10 +2,12 @@
 //!
 //! `px` holds px.wasm's kernels (the same source file builds both), `scene` turns a `planet_core::Game` into pixels.
 
+pub mod effects;
 pub mod px;
 pub mod scene;
 pub mod scenery;
 pub mod shade;
+pub mod shenron;
 pub mod tones;
 pub mod top;
 pub mod visitors;

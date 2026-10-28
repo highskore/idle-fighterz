@@ -783,3 +783,155 @@ fn uni_badge(g: &Game) -> (String, u32) {
     };
     (badge + if last { " BOSS" } else { "" }, tc)
 }
+
+/// `mvBlit`: a sprite scaled by k, standing on (x, y), optionally flashed white or faded.
+fn mv_blit(c: &mut Ctx, spr: &Sprite, x: f64, y: f64, k: f64, flip: bool, white: bool, a: f64) {
+    for j in 0..spr.h {
+        for i in 0..spr.w {
+            let col = spr.col[j * spr.w + if flip { spr.w - 1 - i } else { i }];
+            if col < 0 {
+                continue;
+            }
+            let mut yy = 0.0;
+            while yy < k {
+                let mut xx = 0.0;
+                while xx < k {
+                    c.fb.px(x + (i as f64 - spr.ax) * k + xx, y + (j as f64 - spr.h as f64) * k + yy, if white { 0xffffff } else { col as u32 }, a);
+                    xx += 1.0;
+                }
+                yy += 1.0;
+            }
+        }
+    }
+}
+
+impl Scene {
+    /// `movieDraw`: the henchmen in a row (janemba's double mirrored on the left), the supernova, bujin's web, the
+    /// mirrored space and the jelly wobble.
+    pub(crate) fn draw_movie(&mut self, c: &mut Ctx, g: &mut Game, dt: f64) {
+        let t = c.t;
+        let (Some(mut m), Some(b)) = (g.tl.movie.clone(), g.tl.boss.clone()) else { return };
+        let Some(bspr) = sprite::baked().get(&format!("MOVIE.{}", b.name)) else { return };
+        let n = m.o.minions.len() as f64;
+        let w = c.w;
+        for (i, h) in m.minions.iter_mut().enumerate() {
+            let spr = sprite::get(&format!("MOVIE.{}", h.name));
+            if h.twin {
+                h.k = b.k;
+                let (x, y) = (c.cx - c.r * 1.45, c.cy - c.r * 0.75 + sin(t * 2.0 + 1.0) * 3.0);
+                h.x = Some(((spr.w as f64 / 2.0 + 2.0) * h.k + 3.0).max((c.w - (spr.w as f64 / 2.0 + 2.0) * h.k - 3.0).min(x)));
+                h.y = (spr.h as f64 * h.k + 18.0).max((c.h * 0.8).min(y));
+            } else {
+                h.k = 0.9f64.max(c.r / 62.0);
+                let fi = i as f64;
+                let slot = fi - (n - 1.0) / 2.0;
+                let e = 0f64.max(1f64.min((t - m.t0) / 1.2 - fi * 0.1));
+                let (tx, ty) = (c.cx + slot * c.r * 0.55, c.cy - c.r * 1.12 + slot.abs() * c.r * 0.08 + sin(t * 2.0 + fi) * 2.0);
+                h.x = Some(tx + c.w * 0.6 * (1.0 - e));
+                h.y = ty;
+            }
+            h.flash = 0f64.max(h.flash - dt);
+            if h.dead {
+                continue;
+            }
+            let hx = h.x.unwrap();
+            let fi = if h.twin { 0.0 } else { i as f64 };
+            mv_blit(c, spr, hx, h.y, h.k, if h.twin { false } else { (t * 2.0 + fi) % 2.0 < 1.0 }, h.flash > 0.0, 1.0);
+            let bw = js_round(if h.twin { 20.0 } else { 12.0 } * h.k);
+            let bx = js_round(hx - bw / 2.0);
+            let by = js_round(h.y - spr.h as f64 * h.k - 5.0);
+            let f = 0f64.max(h.hp / h.max);
+            let mut x = -1.0;
+            while x <= bw {
+                for y in -1..=1 {
+                    let y = y as f64;
+                    c.fb.px(bx + x, by + y, if x < 0.0 || x == bw || y != 0.0 { 0x1d1030 } else if x < bw * f { 0x34d873 } else { 0xffffff }, 1.0);
+                }
+                x += 1.0;
+            }
+        }
+        let over = m.over != 0.0;
+        let web = m.web.is_some();
+        let (flip_until, wob, nova) = (m.flip_until, m.wob, m.nova);
+        let bujin = m.minions.iter().find(|h| h.name == "bujin").cloned();
+        g.tl.movie = Some(m);
+        if over {
+            return;
+        }
+        if let Some((n0, n1)) = nova {
+            let p = 1f64.min((t - n0) / (n1 - n0));
+            let r = (3.0 + 11.0 * p) * b.k;
+            let up = b.y - bspr.h as f64 * b.k - 18.0 - r;
+            let ny = (r + 4.0).max(up);
+            let nx = if up < r + 4.0 { b.x - bspr.w as f64 * b.k / 2.0 - r - 6.0 } else { b.x };
+            let mut yy = -r - 3.0;
+            while yy <= r + 3.0 {
+                let mut xx = -r - 3.0;
+                while xx <= r + 3.0 {
+                    let d = hypot(&[xx, yy]);
+                    if d <= r {
+                        c.fb.px(nx + xx, ny + yy, if d < r * 0.45 { 0xfff2d0 } else if d < r * 0.8 { 0xffb050 } else { 0xf06a20 }, 1.0);
+                    } else if d <= r + 3.0 && crate::bayer(js_round(nx + xx) as i64 as i32, js_round(ny + yy) as i64 as i32) < 0.5 {
+                        c.fb.px(nx + xx, ny + yy, 0xffd0a0, 0.7);
+                    }
+                    xx += 1.0;
+                }
+                yy += 1.0;
+            }
+        }
+        if web {
+            let (hx, hy) = g.hand_pos();
+            if let Some(bj) = bujin {
+                let spr = sprite::get("MOVIE.bujin");
+                let bx = bj.x.unwrap_or(0.0);
+                let mut i = 0.0;
+                while i <= 1.0 {
+                    c.fb.px(
+                        bx + (hx - bx) * i + sin(i * 30.0 + t * 8.0) * 2.0,
+                        bj.y - spr.h as f64 * bj.k / 2.0 + (hy - bj.y + spr.h as f64 * bj.k / 2.0) * i,
+                        if i * 60.0 % 4.0 < 2.0 { 0xff9af0 } else { 0x9ae84a },
+                        1.0,
+                    );
+                    i += 0.015;
+                }
+            }
+            let mut a = 0.0;
+            while a < 6.28 {
+                for r in [8.0, 14.0] {
+                    c.fb.px(hx + cos(a) * r, hy + sin(a) * r, 0xff9af0, 0.8);
+                }
+                a += 0.05;
+            }
+            let mut a = 0.0;
+            while a < 6.28 {
+                for r in 0..14 {
+                    let r = r as f64;
+                    c.fb.px(hx + cos(a) * r, hy + sin(a) * r, 0xffc8f6, 0.8);
+                }
+                a += 0.785;
+            }
+        }
+        if flip_until > t {
+            for y in 0..c.fb.h {
+                if (y >> 2) % 2 != 0 {
+                    c.fb.px(w / 2.0, y as f64, 0xc070ff, 0.7);
+                }
+            }
+            mv_blit(c, bspr, w - b.x, b.y, b.k, false, false, 0.45);
+        }
+        if wob > t {
+            let amp = 3.0 * (wob - t);
+            let wi = c.fb.w;
+            for y in 0..c.fb.h {
+                let s = js_round(sin(y as f64 * 0.12 + t * 14.0) * amp);
+                if s == 0.0 {
+                    continue;
+                }
+                let row: Vec<u32> = c.fb.buf[y * wi..(y + 1) * wi].to_vec();
+                for x in 0..wi {
+                    c.fb.buf[y * wi + x] = row[0f64.max((wi as f64 - 1.0).min(x as f64 - s)) as usize];
+                }
+            }
+        }
+    }
+}

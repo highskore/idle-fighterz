@@ -78,8 +78,15 @@ const SCENARIOS = {
   },
 }
 
-// taps the things game.js can hit-test without drawing: the space pod, a falling meteor, the full moon, dr. gero
+// taps the things game.js can hit-test without drawing: the space pod, a falling meteor, the full moon, dr. gero; drawn,
+// also gregory, king kai, his car, a saibaman, the boss and the ginyu force, the door, a senzu bean, yamcha
+let DRAWN = false
+const PLACED = `greg && greg.sx !== undefined ? [greg.sx, greg.sy - 4] : kai && kai.sx !== undefined && !kai.laughed ? [kai.sx, kai.sy - 8] : car && car.sx !== undefined ? [car.sx, car.sy - 6]
+  : saibas.find(s => !s.dead && s.sx !== undefined) ? (s => [s.sx, s.sy - 5])(saibas.find(s => !s.dead && s.sx !== undefined))
+  : boss && !boss.dead && boss.x ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : ginyu && ginyu.members.find(m => !m.dead && m.x) ? (m => [m.x, m.y - m.spr.h / 2 * m.k])(ginyu.members.find(m => !m.dead && m.x))
+  : door && door.sx !== undefined ? [door.sx, door.sy - 8] : bean && bean.sx !== undefined ? [bean.sx, bean.sy - 4] : yam && yam.sx !== undefined ? [yam.sx, yam.sy] : null`
 function clickTargets(g, act) {
+  if (DRAWN) { const q = g.ev(PLACED); if (q) return act({ a: 'click', x: q[0], y: q[1] }) }
   const p = g.ev(`star ? [star.x, star.y] : meteors.find(m => !m.dead && m.delay <= 0 && m.y > 0) ? (m => [m.x, m.y])(meteors.find(m => !m.dead && m.delay <= 0 && m.y > 0))
     : moon && moon.a > .5 && !moon.leaving ? [moon.x, moon.y] : gero && st.t - gero.t0 > 2 ? [gero.x, gero.y - gero.spr.h / 2] : null`)
   if (p) act({ a: 'click', x: p[0], y: p[1] })
@@ -118,14 +125,20 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
     ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH]] })`
 
+// name+draw: game.js draws every frame (planet-render's drawn difftest), so the screen spots it writes while drawing are
+// set, and the script also taps what only the drawing places (the visitors, the boss, the ginyu force)
 function run(name) {
-  const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)
+  const drawn = name.endsWith('+draw'), base = drawn ? name.slice(0, -5) : name
+  const sc = SCENARIOS[base]; if (!sc) throw new Error('no scenario ' + name)
   const g = mount({ seed: sc.seed })
-  const frames = Math.round(sc.minutes * 60 / DT), inputs = [], samples = []
+  if (drawn) { g.ctx.__skip = false; g.ctx.BARE = false; DRAWN = true }
+  let frames = Math.round(sc.minutes * 60 / DT); const inputs = [], samples = []
   for (let f = 0; f < frames; f++) {
     sc.script(g, f, i => { inputs.push({ f, ...i }); apply(g, i) })
     g.step(DT)
     if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE) })
+    // drawn, the run stops at the first trip to snake way: planet-render doesn't draw it yet
+    if (drawn && g.ev('S.world') === 3) { while (samples.length && samples[samples.length - 1].tl[0][1] === 3) samples.pop(); frames = samples.length ? samples[samples.length - 1].f + 1 : 0; while (inputs.length && inputs[inputs.length - 1].f >= frames) inputs.pop(); break }
   }
   if (g.errors.length) throw new Error(g.errors.join('\n'))
   return { name, seed: sc.seed, dt: DT, frames, inputs, samples, events: g.events.map(([t, e]) => [+t.toFixed(2), e]) }

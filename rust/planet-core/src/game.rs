@@ -141,7 +141,7 @@ impl Game {
         let l = self.s.lv(u);
         let hit = MS.iter().filter(|&&n| l >= n).count() as f64;
         let past = ((l as f64 - 100.0) / 50.0).floor().max(0.0);
-        2f64.powf(hit + past)
+        crate::jsmath::pow(2f64, hit + past)
     }
 
     pub fn seed_boost_of(&self, a: f64) -> f64 {
@@ -149,7 +149,7 @@ impl Game {
         if b <= SEED_SOFT {
             b
         } else {
-            SEED_SOFT * (b / SEED_SOFT).powf(SEED_EXP)
+            SEED_SOFT * crate::jsmath::pow(b / SEED_SOFT, SEED_EXP)
         }
     }
 
@@ -171,7 +171,7 @@ impl Game {
 
     pub fn seeds_now(&self) -> f64 {
         let p = self.s.pl / 1e4;
-        (if self.ang(A_DIVINE) { p.powf(0.55) } else { p.sqrt() }).floor().max(1.0)
+        (if self.ang(A_DIVINE) { crate::jsmath::pow(p, 0.55) } else { p.sqrt() }).floor().max(1.0)
     }
 
     pub fn god_now(&self) -> u32 {
@@ -188,8 +188,8 @@ impl Game {
 
     /// The ki ceiling: the capped engine shrinks to a small power past it.
     pub fn ceiling(&self) -> f64 {
-        let time = if self.s.multi { CEIL_T.powf(((self.session - self.s.multi_t) / 60.0).max(0.0)) } else { 1.0 };
-        CEIL0 * time * CEIL_STEP.powf(self.s.uni_best as f64)
+        let time = if self.s.multi { crate::jsmath::pow(CEIL_T, ((self.session - self.s.multi_t) / 60.0).max(0.0)) } else { 1.0 };
+        CEIL0 * time * crate::jsmath::pow(CEIL_STEP, self.s.uni_best as f64)
     }
 
     pub fn capped(&self, m: f64) -> f64 {
@@ -197,19 +197,19 @@ impl Game {
         if m <= c {
             m
         } else {
-            c * (m / c).powf(CEIL_EXP)
+            c * crate::jsmath::pow(m / c, CEIL_EXP)
         }
     }
 
     pub fn late_boost(&self) -> f64 {
         let stars = self.s.ustars as f64 * if self.ang(A_STARS) { 2.0 } else { 1.0 };
-        STAR_X.powf(stars) * MASTERY_X.powf(self.s.mastery as f64) * Self::god_boost_of(self.s.god_total as f64) * ZENO_X.powf(self.s.zeno as f64)
+        crate::jsmath::pow(STAR_X, stars) * crate::jsmath::pow(MASTERY_X, self.s.mastery as f64) * Self::god_boost_of(self.s.god_total as f64) * crate::jsmath::pow(ZENO_X, self.s.zeno as f64)
     }
 
     /// The engine the ceiling caps; forms sit outside it.
     pub fn core(&self) -> f64 {
         let w = self.s.wishes as f64;
-        1.15f64.powf(self.s.lvf(Upg::Gravity)) * 1.25f64.powf(w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON
+        crate::jsmath::pow(1.15f64, self.s.lvf(Upg::Gravity)) * crate::jsmath::pow(1.25f64, w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON
     }
 
     pub fn tail_lv(&self) -> f64 {
@@ -311,7 +311,7 @@ impl Game {
 
     pub fn cost(&self, u: Upg) -> f64 {
         let it = &SHOP[u as usize];
-        (it.base * it.k.powf(self.s.lvf(u)) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
+        (it.base * crate::jsmath::pow(it.k, self.s.lvf(u)) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
     }
 
     /// Ascending spends all you hold, 1M at least.
@@ -531,7 +531,7 @@ impl Game {
 
     /// Uncapped nodes cost double every 5 ranks.
     pub fn rank_cost(n: &Node, r: u32) -> f64 {
-        TIER_COST[n.tier] as f64 * 2f64.powf((r / 5) as f64)
+        TIER_COST[n.tier] as f64 * crate::jsmath::pow(2f64, (r / 5) as f64)
     }
 
     pub fn node_open(&self, i: usize) -> bool {
@@ -649,8 +649,15 @@ impl Game {
 
     // ── the fixed step
 
-    /// One frame of game.js `frame(t, dt)`: `t` is the new time, `dt` the step.
+    /// One frame of game.js `frame(t, dt)`, then the `setTimeout`s that came due: `t` is the new time, `dt` the step.
     pub fn frame(&mut self, t: f64, dt: f64) {
+        self.sim(t, dt);
+        self.timeouts();
+    }
+
+    /// `frame(t, dt)` up to its drawing. A renderer draws between this and `timeouts()`, as game.js draws inside
+    /// `frame()` before the page runs the timeouts that came due (follow-up wishes, the summon after a goal).
+    pub fn sim(&mut self, t: f64, dt: f64) {
         self.t = t;
         let rdt = dt;
         let dt = if self.b.chamber_until > t && self.s.world != 3 { dt * 0.3 } else { dt };
@@ -739,7 +746,7 @@ impl Game {
                 self.transform(self.tl.preview.is_some());
             }
             let last = self.forms.len() - 1;
-            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0) {
+            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * crate::jsmath::pow(LATE_STEP, self.s.mastery as f64 + 1.0) {
                 self.s.mastery += 1;
                 self.ach("mastery");
             }
@@ -759,6 +766,10 @@ impl Game {
             self.timeline_moon(t, dt);
         }
         self.shen_step(t);
+    }
+
+    /// The `setTimeout`s due by now.
+    pub fn timeouts(&mut self) {
         self.run_later();
     }
 
@@ -799,8 +810,8 @@ impl Game {
 
 impl Game {
     /// game.js's preview hooks (`#raid`, `#namek`, `#form12`, `#hero-goku`, ...), applied as `mount()` applies them,
-    /// after the world is set up and before `start()`. The five that wait on a `setTimeout` (`#flight`, `#chamber`,
-    /// `#buffs`, `#cvlink`, `#shenron`) aren't ported.
+    /// after the world is set up and before `start()`. Of those that wait on a `setTimeout`, `#shenron` is ported;
+    /// `#flight`, `#chamber`, `#buffs` and `#cvlink` aren't.
     pub fn preview(&mut self, hash: &str) {
         use crate::data::{Hero, Upg, LADDER, MUI_FORM, VILLAINS};
         let has = |k: &str| hash.contains(k);
@@ -1011,6 +1022,13 @@ impl Game {
             self.s.world = 9;
             self.cam.layout(9);
             self.tl.namek_until = 1e9;
+        }
+        if let Some(i) = hash.find("shenron") {
+            // `setTimeout(() => summon(look), 800)`
+            if let Some(d) = hash[i + 7..].chars().next().and_then(|c| c.to_digit(10)) {
+                self.tl.shen_look = d as usize;
+            }
+            self.tl.later.push((0.8, crate::timeline::Later::Summon));
         }
         if has("tournament") {
             self.session = 76.0;

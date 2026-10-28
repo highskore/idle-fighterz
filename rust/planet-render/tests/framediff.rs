@@ -47,7 +47,8 @@ fn cases() -> Vec<Case> {
         c("#lookout", DESK, 400, true),
         c("#kaiworld", DESK, 400, true),
         c("#yardrat", DESK, 400, true),
-        c("#top", DESK, 60, false),
+        c("#top", DESK, 60, true),
+        c("#top", PHONE, 60, true),
         c("#snake", DESK, 400, false),
         c("#form1", DESK, 120, true),
         c("#form3", DESK, 120, true),
@@ -72,7 +73,7 @@ fn cases() -> Vec<Case> {
         c("#frieza", DESK, 300, true),
         c("#roshi", DESK, 90, true),
         c("#ape", DESK, 90, true),
-        c("#ozaru", DESK, 300, false),
+        c("#ozaru", DESK, 300, true),
         c("#door", DESK, 60, true),
         c("#fusion", DESK, 90, true),
         c("#yamcha", DESK, 60, true),
@@ -81,14 +82,25 @@ fn cases() -> Vec<Case> {
         c("#sixteen", DESK, 60, true),
         c("#krillin", DESK, 60, true),
         c("#dance", DESK, 60, true),
-        c("#dance", DESK, 160, false),
+        c("#dance", DESK, 160, true),
         c("#cling", DESK, 60, true),
         c("#tournament", DESK, 300, true),
         c("#beerus", DESK, 300, true),
-        c("#zeno", DESK, 60, false),
-        c("#cooler", DESK, 120, false),
-        c("#shenron", DESK, 120, false),
-        c("#universe9", DESK, 300, false),
+        c("#zeno", DESK, 60, true),
+        c("#cooler", DESK, 120, true),
+        c("#cooler", DESK, 600, true),
+        c("#janemba", DESK, 300, true),
+        c("#bojack", DESK, 300, true),
+        c("#shenron", DESK, 60, true),
+        c("#shenron", DESK, 200, true),
+        c("#shenron0", DESK, 200, true),
+        c("#shenron2", DESK, 200, true),
+        c("#shenron3", PHONE, 200, true),
+        c("#spirit", DESK, 60, true),
+        c("#struggle", DESK, 900, false),
+        c("#universe9", DESK, 300, true),
+        c("#universe11", DESK, 300, true),
+        c("#universe11", PHONE, 300, true),
     ];
     for (shape, must) in [('c', true), ('a', true), ('b', true), ('d', true), ('e', true)] {
         v.push(Case { widget: Some(Some((shape, 2))), ..c("", (800, 600), 200, must) });
@@ -97,6 +109,9 @@ fn cases() -> Vec<Case> {
     v.push(Case { widget: Some(Some(('c', 1))), ..c("", (500, 400), 200, true) });
     v.push(Case { widget: Some(None), ..c("", (800, 600), 200, true) });
     v.push(Case { widget: Some(None), ..c("#namek", (800, 600), 400, true) });
+    v.push(Case { widget: Some(Some(('c', 3))), ..c("#top", (800, 600), 60, true) });
+    v.push(Case { widget: Some(Some(('a', 2))), ..c("#raid", (800, 600), 300, true) });
+    v.push(Case { widget: Some(Some(('e', 2))), ..c("#westcity", (1040, 600), 400, true) });
     v
 }
 
@@ -151,10 +166,11 @@ fn rust(k: &Case, w: usize, h: usize) -> (Game, Vec<u8>) {
             g.flash_t = 0.0;
         }
         t += dt;
-        g.frame(t, dt);
+        g.sim(t, dt);
         if f >= k.frames - k.draw {
             sc.draw(&mut fb, &mut g, &view, dt);
         }
+        g.timeouts();
     }
     if widget {
         planet_render::px::rim(&mut fb);
