@@ -40,7 +40,7 @@ Another agent is moving the per-pixel loops (sphere and depth raster, `blitZ` sp
 - `planet-render` has the buffers and primitives game.js shares: `Framebuffer`, with `buf` (packed ABGR, the same layout as ImageData), `zb`, `ib` and `dm`; `st.px` blending; `PK`; `bayer`; and `h2` with exact JS `|0` and `Math.imul` semantics. These are covered by unit tests against world.js values.
 - The kernels sit behind `trait Raster` (`sphere`, `blit_z`, with clouds and rim to follow), with signatures that mirror game.js.
 - When the perf crate lands, either it implements `Raster` over `Framebuffer`, or its code moves into `planet-render` (preferred: one crate, one owner). In both cases scene building, which turns `Game` into a list of draw calls, stays above the trait and is the part this port writes.
-- As of this branch the perf agent had pushed nothing (`git ls-remote` showed only `main` and three merged branches, and there were no open PRs). Check again before stage 1 starts.
+- The perf crate is `wasm/`: a dependency-free `cdylib` with C-ABI exports (`alloc`, `planet`, `outline`, `rim`, `bbox`, `params`, `palette`) over buffers in its own linear memory, which the page's typed arrays view directly. It has the planet on plain grass worlds, `outline()` and the rim. `blitZ` and the clouds stayed in JS: about 2% of a frame each in the profile. The kernels are statement-for-statement ports of the JS, so folding them into `planet-render` behind `Raster` is a move, not a rewrite.
 
 ### planet-web
 
