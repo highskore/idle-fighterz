@@ -71,28 +71,74 @@ const SCENARIOS = {
       if (f === 30 * 72 && !(Math.abs(g.ev('M[4]') - this.m4) > .05 && pole() > .05)) fail('a vertical drag at home did not tilt it')
     },
   },
-  // instant transmission: 30M of power and no unlock until the first trip reaches yardrat; then it's bought and, every
-  // second, opened (right-click, two fingers) and a jump tried to a world you've been, home or away, in a fight or not,
-  // so the cooldown from each jumped trip's end, the at-home rule and the 90s floor (lv 40) all get diffed
+  // instant transmission: 30M of power and no unlock until the first trip reaches yardrat (a right-click before then is
+  // a tap); then it's bought and every second a gesture is tried (a two-thumb tap, a right-click, two thumbs too far
+  // apart in time, two thumbs with one sliding) and a jump picked from the last picker, home or away, in a fight or not.
+  // It checks that jumps land and leave the natural trips alone, the cooldown at lv 1 and its 90s floor at lv 40, the
+  // refusals, that a natural trip due during a jump waits 84s at home, and that two thumbs in a struggle stay taps
   itx: {
-    seed: 13, minutes: 16,
+    seed: 13, minutes: 20,
     script(g, f, act) {
-      const fail = m => { throw new Error('itx: ' + m) }
+      const fail = m => { throw new Error('itx: ' + m) }, k = this.k || (this.k = { jumps: 0, end1: 0, end40: 0, away: 0, fight: 0, opened: 0, clicked: 0, slid: 0, sloppy: 0, struggle: 0, deferred: 0, back: -1e9, trip: 0, trips: 0 })
+      const cd = lv => Math.max(90, 300 / (1 + .1 * (lv - 1))), FLOOR = 120 * .7
+      const picks = () => g.cues.filter(c => c[1] === 'itxPick').length, itxToasts = () => g.events.filter(e => /^instant transmission/.test(e[1])).length
+      const thumbs = (x, y) => { press(g, act, 'down', x - 6, y, { id: 2, touch: true }); press(g, act, 'down', x + 6, y, { id: 3, touch: true }); press(g, act, 'up', x - 6, y, { id: 2 }); press(g, act, 'up', x + 6, y, { id: 3 }) }
+      // what the last step did: a jumped trip home starts the cooldown, exactly; a natural trip leaves 84s after one
+      const trip = g.ev('+itxTrip'), trips = g.ev('S.trips')
+      if (k.trip && !trip) {
+        const lv = g.ev('S.itx'), late = g.ev('st.t + ' + cd(lv)), due = g.ev('session - homeSince > TRIP_WAIT * soon() || S.runBest >= (S.namekAt || PLANET_EVERY)')
+        if (g.ev('itxReady') !== late) fail(`cooldown at lv ${lv}: ${g.ev('itxReady - st.t')}s, not ${cd(lv)}s`)
+        if (g.ev('homeSince') !== k.hs || g.ev('S.namekAt') !== k.na) fail('a jump moved the natural trips\' timer or power mark')
+        if (lv === 1) k.end1++; if (lv === 40) k.end40++; if (due) k.deferred++
+        k.back = g.ev('session')
+      }
+      if (trips !== k.trips && f > 30 * 12) { if (g.ev('session') - k.back < FLOOR) fail(`a natural trip ${g.ev('session') - k.back}s after a jump`) }
+      k.trip = trip; k.trips = trips
       if (f === 0) { for (const [k, v] of [['pl', 3e7], ['best', 3e7], ['trips', 10]]) act({ a: 'set', k, v }); if (g.ev("SHOP.itx.unlock()")) fail('open before yardrat') }
+      if (f === 30 * 3) { const b = g.cues.length; press(g, act, 'down', 300, 300, { button: 2 }); press(g, act, 'up', 300, 300); if (picks() || itxToasts() || !g.cues.slice(b).some(c => c[1] === 'bump')) fail('a right-click before instant transmission was not a tap') }
       if (f === 30 * 10 && !(g.ev('S.world') === 12 && g.ev("SHOP.itx.unlock()"))) fail('yardrat did not open it')
       if (f === 30 * 10) act({ a: 'buy', k: 'itx' })
       if (f === 30 * 600) act({ a: 'set', k: 'itx', v: 40 })
       if (f % 300 < 150 && f % 6 === 0) act({ a: 'train' })
       if (f % 3 === 0) clickTargets(g, act)
       if (f % 30 === 0 && f > 30 * 10) { buyAll(g, act, POLICY); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
-      if (f % 30 === 15 && g.ev('S.itx > 0')) {
-        const n = f / 30 | 0, ws = g.ev('itxWorlds()'), home = g.ev('S.world === home()'), was = g.ev('S.world')
-        if (n % 4 === 1) { press(g, act, 'down', 300, 300, { button: 2 }); press(g, act, 'up', 300, 300) }
-        else if (n % 4 === 3) { press(g, act, 'down', 294, 300); press(g, act, 'down', 306, 300, { id: 2 }); press(g, act, 'up', 294, 300); press(g, act, 'up', 306, 300) }
-        if (ws.length) act({ a: 'jump', k: ws[(n / 7 | 0) % ws.length] })
-        if (!home && g.ev('S.world') !== was) fail('jumped while away')
+      if (g.ev('S.itx > 0')) {
+        // may: what itxCan() should say, written out here so a broken itxCan can't vouch for itself
+        const n = f / 30 | 0, p = f % 30, n0 = picks(), t0 = itxToasts(), sp = g.ev('struggle ? struggle.p : null')
+        const may = g.ev('playing && st.t >= itxReady && S.world === home() && !tour && !shen && !boss && !dance && !struggle && !(ginyu && !ginyu.done) && !movie')
+        if (p === 15) k.step = may ? (k.step || 0) + 1 : 0
+        const step = k.step || 0, hold = f >= 30 * 700 && f < 30 * 880   // a while without jumping, so fights find it recharged
+        if (p === 15 && !may && !g.ev('S.world === 3 && !!snk')) {   // snake way takes every press itself
+          if (n % 2) { thumbs(300, 300); if (picks() !== n0 || itxToasts() !== t0) fail('a two-thumb tap that can\'t go opened or said something') }
+          else { press(g, act, 'down', 300, 300, { button: 2 }); press(g, act, 'up', 300, 300); if (picks() !== n0 || itxToasts() !== t0 + 1) fail('a right-click that can\'t go opened or said nothing') }
+          if (n % 2 && sp !== null) { if (!(g.ev('struggle.p') > sp)) fail('two thumbs in a beam struggle were not taps'); k.struggle++ }
+        }
+        // ready: first one thumb slides, then the second lands 0.2s late, then a real two-thumb tap (or a right-click) opens it
+        if (step === 1 && p === 15) { press(g, act, 'down', 294, 300, { id: 2, touch: true }); press(g, act, 'down', 306, 300, { id: 3, touch: true }); k.slid++ }
+        if (step === 1 && p === 16) press(g, act, 'move', 294, 312, { id: 2 })
+        if (step === 1 && p === 17) { press(g, act, 'up', 294, 312, { id: 2 }); press(g, act, 'up', 306, 300, { id: 3 }) }
+        if (step === 2 && p === 15) { press(g, act, 'down', 294, 300, { id: 2, touch: true }); k.sloppy++ }
+        if (step === 2 && p === 21) press(g, act, 'down', 306, 300, { id: 3, touch: true })
+        if (step === 2 && p === 22) { press(g, act, 'up', 294, 300, { id: 2 }); press(g, act, 'up', 306, 300, { id: 3 }) }
+        if ((step === 1 || step === 2) && p >= 15 && p <= 22 && picks() !== n0) fail('two thumbs that weren\'t a two-finger tap opened the picker')
+        if (step >= 3 && p === 15 && !hold) {
+          if (k.jumps % 2) { press(g, act, 'down', 300, 300, { button: 2 }); press(g, act, 'up', 300, 300) } else thumbs(300, 300)
+          if (picks() !== n0 + 1) fail(`a ${k.jumps % 2 ? 'right-click' : 'two-thumb tap'} at home did not open the picker`)
+          k[k.jumps % 2 ? 'clicked' : 'opened']++
+        }
+        // a jump from the last picker: right after it opens, and every second from a stale one, wherever we are
+        if (p === 15 && g.itx && (step >= 3 && !hold || !may)) {
+          const ws = g.itx.worlds.map(w => w.key), w = ws[(n / 7 | 0) % ws.length], home = g.ev('S.world === home()'), was = g.ev('S.world')
+          act({ a: 'jump', k: w })
+          if (may) { k.hs = g.ev('homeSince'); k.na = g.ev('S.namekAt'); if (g.ev('S.world') !== w || g.ev('S.trips') !== trips || !g.ev('itxTrip')) fail('a jump did not land, or counted as a natural trip'); k.jumps++; k.trip = 1 }
+          else { if (g.ev('S.world') !== was) fail('jumped when it could not'); if (itxToasts() === t0) fail('a refused jump said nothing'); if (!home) k.away++; else if (g.ev('st.t >= itxReady')) k.fight++ }
+        }
       }
-      if (f === 30 * 900 && g.ev('itxReady') - g.ev('st.t') > 90) fail('the floor is past 90s')
+      if (f === 30 * 60 * 20 - 1) {
+        const want = { jumps: 4, end1: 1, end40: 2, away: 1, fight: 1, opened: 2, clicked: 2, slid: 4, sloppy: 4, struggle: 1, deferred: 1 }
+        for (const [key, n] of Object.entries(want)) if (k[key] < n) fail(`only ${k[key]} ${key} (want ${n}): ${JSON.stringify(k)}`)
+        console.error('itx: ' + JSON.stringify(k))
+      }
     },
   },
   // pointer attacks (see attack()) at whatever is up (a villain, the ginyu force), with and without kaioken and the great ape;
@@ -263,10 +309,11 @@ function apply(g, i) {
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
-  else if (i.a === 'jump') g.ev(`itxJump(${i.k})`)
-  else if (i.a === 'down') g.input.down(i.x, i.y, i.id, i.button)
-  else if (i.a === 'move') g.input.move(i.x, i.y)
-  else if (i.a === 'up') g.input.up(i.x, i.y)
+  // a world from the last picker game.js opened (the harness keeps its callback)
+  else if (i.a === 'jump') { if (!g.itx || !g.itx.worlds.some(w => w.key === i.k)) throw new Error('no picker with world ' + i.k); g.itx.jump(i.k) }
+  else if (i.a === 'down') g.input.down(i.x, i.y, i.id, i.button, i.touch)
+  else if (i.a === 'move') g.input.move(i.x, i.y, i.id)
+  else if (i.a === 'up') g.input.up(i.x, i.y, i.id)
   else if (i.a === 'cancel') g.input.cancel()
   else if (i.a === 'key') g.input.key(i.k)
   else throw new Error('unknown input ' + i.a)
@@ -284,7 +331,7 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
     ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH],
     ['charging', charging], ['dragged', drag ? drag.moved : null], ['vrx', vrx], ['vry', vry], ['m4', M[4]], ['beam', beam ? beam.c : null], ['beamDx', beam ? beam.dx : null],
-    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['itxReady', itxReady], ['itxTrip', +itxTrip], ['been', S.been], ['nextStar', nextStar], ['nextCloud', nextCloud]] })`
+    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['itxReady', itxReady], ['itxTrip', +itxTrip], ['itxBack', isFinite(itxBack) ? itxBack : null], ['two', two ? two.moved[0] + two.moved[1] + (two.lift ? 100 : 0) : null], ['been', S.been], ['nextStar', nextStar], ['nextCloud', nextCloud]] })`
 
 function run(name) {
   const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)
