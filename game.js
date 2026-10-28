@@ -3265,7 +3265,7 @@ GAMES.push({
       R = Math.round(st.W / st.H < .8 ? Math.min(st.W * .34, st.H * .22) : wide ? Math.min(st.W * .19, st.H * .3) : Math.min(st.W * .28, st.H * .24));
       cx = Math.round(st.W * fcx); cy = Math.round(st.H * (wide ? .5 : st.W / st.H < .8 ? .5 : .55));/*widget*/ if (WIDGET) { R = Math.max(56, Math.min(70, Math.round(Math.min(st.W, st.H) * .2))); cy = Math.round(st.H * .5); }   // the widget: the planet at the site's size against the sprites (56-70px, as on phones and desktops), with room round it/*/widget*/
       { const lk = W2L[S.world]; if (lk) { R = Math.round(R * (lk.zoom || 1)); cy += Math.round(st.H * (lk.dy || 0)); } }   // some worlds sit the planet bigger, smaller or higher
-      zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H);
+      if (PX) { zb = st.zb; ib = st.ib; dm = st.dm; } else { zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H); }
     }
     // view rotation (drag to spin) with inertia, and a slow automatic turn
     let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99;
@@ -3719,6 +3719,14 @@ GAMES.push({
         buf[k] = PK(shade(o, [dx / pr, -dy / pr, sq / pr], x, y));
       } }
     }
+    // the planet on a plain grass world: px.wasm's planet(), the same pixels as sphere() with shadePlanet()
+    function planet(id) {
+      const g = TONES.grass, r = TONES.road;
+      if (!PX || S.world === 5 || S.world === 6 || S.world === 8 || S.world === 9 || W2L[S.world] || wcRoads.length || pzWater || g.length > 8 || r.length > 8) return sphere({ c: [0, 0, 0], r: 1 }, id, shadePlanet);
+      const v = M3.ap(M, [0, 0, 0]), m = PX.memory.buffer, pal = new Uint32Array(m, PX.palette(), 16);
+      new Float64Array(m, PX.params(), 24).set([cx + v[0] * R, cy - v[1] * R + st.bob, v[2] * R, R, id, ...M, ...L, ...N, g.length, r.length]);
+      pal.set(g); pal.set(r, 8); PX.planet();
+    }
     const tone = (pal, lum, x, y) => pal[Math.max(0, Math.min(pal.length - 1, Math.floor((lum + (bayer(x, y) - .5) * .2) * pal.length)))];
     const light = n => Math.max(0, V.dot(n, L)) * .78 + .22;
     const street = c => Math.abs(c) < .7 && Math.abs(c * 4 - Math.round(c * 4)) < .04;
@@ -3918,6 +3926,7 @@ GAMES.push({
     }
 
     function outline() {
+      if (PX) return PX.outline();
       const W = st.W, H = st.H, buf = st.buf;
       for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
         const k = y * W + x, id = ib[k];
@@ -4513,7 +4522,7 @@ GAMES.push({
         }
       }
       let id = 1;
-      sphere({ c: [0, 0, 0], r: 1 }, id++, shadePlanet);
+      planet(id++);
       for (const o of solids) { if (o.fly) o.c = o.fly(t); sphere(o, id++, SHADE[o.kind]); }   // west city hover cars move
       for (const o of slabs) slab(o, id++);
       for (const o of orbs) sphere({ c: V.mul(roadPt(o.phi), 1.14 + Math.sin(t * 4 + o.phi) * .015), r: o.star ? .055 : .045 }, id++, o.star ? SHADE.dorb : SHADE.orb);

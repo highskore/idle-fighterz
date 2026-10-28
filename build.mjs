@@ -15,7 +15,7 @@ const fence = s => s.replace(/\/\*widget\*\/([\s\S]*?)\/\*\/widget\*\//g, widget
 
 let page = fence(read('page.html'))
   .replace('__BAGEL__', () => read('bagel.typeface.json'))
-  .replace('__WORLD__', () => fence(read('world.js')))
+  .replace('__WORLD__', () => fence(read('world.js')).replace('__PX__', () => readFileSync(join(here, 'wasm', 'px.wasm')).toString('base64')))
   .replace('__PLANET__', () => read('shenron.js') + fence(read('game.js')))
 if (widget) page = widgetPage(page)
 const split = page.indexOf('</style>') + '</style>'.length

@@ -8,6 +8,9 @@
    Island-plane coordinates: (u, v) in the unit disc; screen = (cx + u*rx, cy + v*ry).
 */
 const GAMES = [];
+// the per-pixel hot loops in WebAssembly (wasm/, built into px.wasm and inlined by build.mjs); where it can't run
+// (no WebAssembly, or a CSP without wasm-unsafe-eval) the JS loops draw the same pixels
+const PX = (() => { try { const b = atob('__PX__'), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new WebAssembly.Instance(new WebAssembly.Module(u), { js: { pow: Math.pow } }).exports; } catch (e) { return null; } })();
 function hash(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
 function h2(x, y) { let n = (x * 374761393 + y * 668265263) | 0; n = Math.imul(n ^ (n >>> 13), 1274126177); return ((n ^ (n >>> 16)) >>> 0) / 4294967295; }
 function rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) % 1000003) / 1000003; }; }
@@ -57,11 +60,16 @@ function makeStage(section) {
     st.scale = r.width < 560 ? 2 : 3;/*widget*/ if (WIDGET) st.scale = r.width >= 520 ? 2 : 1;   // the widget: 1× up to medium, 2× at large, so a site-sized planet fits with room round it/*/widget*/
     st.W = Math.ceil(r.width / st.scale); st.H = Math.ceil(r.height / st.scale);
     cv.width = st.W; cv.height = st.H;
-    img = ctx.createImageData(st.W, st.H); buf = new Uint32Array(img.data.buffer);
+    if (PX) {   // the pixels, depth, ids and mask in the module's memory: drawn into from both sides, put on the canvas uncopied
+      const n = st.W * st.H, p = PX.alloc(st.W, st.H), m = PX.memory.buffer;
+      img = new ImageData(new Uint8ClampedArray(m, p, n * 4), st.W, st.H); buf = new Uint32Array(m, p, n);
+      st.zb = new Float32Array(m, p + n * 4, n); st.ib = new Uint16Array(m, p + n * 8, n); st.dm = new Uint8Array(m, p + n * 10, n);
+    } else { img = ctx.createImageData(st.W, st.H); buf = new Uint32Array(img.data.buffer); }
     st.buf = buf;
   };
   st.clear = () => buf.fill(0);
-  st.flush = () => ctx.putImageData(img, 0, 0);
+  st.flush = () => ctx.putImageData(img, 0, 0);/*widget*/
+  st.put = (x, y, w, h) => ctx.putImageData(img, 0, 0, x, y, w, h);   // just a box of it/*/widget*/
   st.px = (x, y, hex, a = 1) => {
     x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= st.W || y >= st.H) return;
     const k = y * st.W + x;

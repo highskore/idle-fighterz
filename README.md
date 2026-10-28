@@ -24,6 +24,7 @@ The game is one self-contained HTML page, stitched together from these sources:
 | `world.js` | the pixel stage: buffer, sprites, text, particles |
 | `game.js` | the game: planet renderer, Vegeta, upgrades, events, villains |
 | `shenron.js` | Shenron and Porunga |
+| `wasm/` | the per-pixel hot loops in Rust (the planet on plain grass worlds, outlines, the widget's rim), built into `wasm/px.wasm` |
 | `bagel.typeface.json` | the title font as a three.js typeface |
 | `widget.js`, `widget.css` | the desktop widget's extras, only in the `--widget` build |
 | `build.mjs` | stitches them into one page |
@@ -34,7 +35,7 @@ npm install               # once, for the widget's inlined fonts (@fontsource)
 node build.mjs --widget   # → dist/index.html under the current directory, the powerrr widget's page
 ```
 
-No dependencies for the site build. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build also leaves out the CDN three.js and Google Fonts and inlines the fonts from `@fontsource` in the `node_modules` of the directory it runs from.
+No dependencies for the site build: `wasm/px.wasm` is committed and inlined as base64, so the page stays one file. After changing `wasm/src/lib.rs`, rebuild it with `npm run wasm` (Rust and `rustup target add wasm32-unknown-unknown`). The module has no dependencies and imports only `Math.pow`; each function is a line-for-line port of a JS loop that stays as the fallback (no WebAssembly, or a CSP without `wasm-unsafe-eval`), and both draw the same pixels. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build also leaves out the CDN three.js and Google Fonts and inlines the fonts from `@fontsource` in the `node_modules` of the directory it runs from.
 
 Open `dist/planet.html` in a browser to play it locally.
 

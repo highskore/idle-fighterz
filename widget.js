@@ -4,6 +4,11 @@
   if (WIDGET) {
     const tauri = window.__TAURI__, invoke = tauri ? tauri.core.invoke : () => Promise.resolve();
     let conf = { layout: 7, hud: 'hover', opacity: 1, notify: {}, quiet: {} };
+    // the frame rate setting is the idle rate: 60 (smooth), 30 (balanced, the default) or 15 (battery saver). while the
+    // pointer is about it doubles, up to 60
+    let idleFps = 30;
+    const pace = () => { st.fps = root.classList.contains('awake') ? Math.min(60, idleFps * 2) : idleFps; };
+    pace();
     go();
 
     const ICON = {
@@ -46,13 +51,16 @@
     const RING = { gear: 208, close: 332, up: 52, kaio: 78, share: 102, snd: 128 };
     function placeRing() { for (const [k, deg] of Object.entries(RING)) { const a = deg * Math.PI / 180; B[k].style.left = `calc(50% + ${(Math.cos(a) * 38).toFixed(2)}vmin)`; B[k].style.top = `calc(55% + ${(Math.sin(a) * 38).toFixed(2)}vmin)`; } }
 
-    // the game's own hud stays hidden; these mirror it
-    const update = ui.update, shop = ui.shop;
+    // the game's own hud stays hidden; these mirror it. the hud needn't follow every frame: at most 30 times a second
+    // while it shows, 4 while it's hidden
+    const update = ui.update, shop = ui.shop, due = { u: 0, s: 0 };
+    const hudDue = k => { const now = performance.now(); if (now - due[k] < (root.classList.contains('awake') || root.classList.contains('pin') || keep() ? 30 : 250)) return false; due[k] = now; return true; };
     // the app shows the power level beside its menu-bar icon: about once a second, and only when the short form changes
     const SHORT = ['', 'K', 'M', 'B'];
     const short = n => { n = Math.floor(n); if (n < 1000) return String(n); let e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); if (+m.toFixed(1) >= 1000) { e++; m /= 1000; } return e < SHORT.length ? m.toFixed(1) + SHORT[e] : n.toExponential(1).replace('+', ''); };
     let titleAt = -1e9, title = '';
     ui.update = s => {
+      if (!hudDue('u')) return;
       update(s);
       const at = performance.now();
       if (at - titleAt >= 1000) { titleAt = at; const t = short(s.pl); if (t !== title) { title = t; invoke('tray_title', { text: t }); } }
@@ -72,18 +80,19 @@
     };
     let couldAscend = null;
     ui.shop = items => {
+      if (!hudDue('s')) return;
       shop(items); B.up.querySelector('i').textContent = $('shopCount').textContent;
       const can = !!(items.ascend && items.ascend.can); if (can && couldAscend === false) ui.notify('ascend'); couldAscend = can;
     };
 
-    // awake while the pointer is about (the game draws at 30fps then, 15 otherwise); the upgrades list or a popup keep it up
+    // awake while the pointer is about; the upgrades list or a popup keep it up
     let idle = 0;
     const keep = () => $('shop').classList.contains('open') || !$('menu').hidden || !$('ascBox').hidden || !$('shareBox').hidden;
     // clouds under the floating planet (settings: always, while awake, or never, their shape and amount). window mode has the
     // full cloud sea instead
     const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'c'); st.cloudAmt = conf.cloud_amount || 2; };
-    const sleep = () => { if (keep()) idle = setTimeout(sleep, 1000); else { root.classList.remove('awake'); clouds(); } };
-    const wake = ms => { root.classList.add('awake'); clouds(); clearTimeout(idle); idle = setTimeout(sleep, ms); };
+    const sleep = () => { if (keep()) idle = setTimeout(sleep, 1000); else { root.classList.remove('awake'); clouds(); pace(); } };
+    const wake = ms => { root.classList.add('awake'); clouds(); pace(); clearTimeout(idle); idle = setTimeout(sleep, ms); };
     addEventListener('pointermove', () => wake(2500)); addEventListener('pointerdown', () => wake(2500), true);
     addEventListener('focusin', () => wake(4000));
     root.addEventListener('mouseleave', () => wake(500));
@@ -104,11 +113,24 @@
 
     // floating, nothing is behind the scene, so everything solid gets a 1px dark rim where it meets the wallpaper: it
     // reads on light and dark desktops alike. glows and dithered haze (not fully opaque) stay rimless
-    const flush = st.flush, RIM = 0xd8140f0c;
+    // with px.wasm, only the box round what's drawn goes to the canvas, joined with the box drawn last time (which it may
+    // have to clear): outside both the canvas and the buffer are empty alike. `shown` is that last box, null when the
+    // canvas may hold anything (a full put), [0, 0, -1, -1] when it's empty (a resize clears it)
+    const flush = st.flush, resize = st.resize, RIM = 0xd8140f0c, NONE = [0, 0, -1, -1];
+    let shown = null;
+    st.resize = () => { resize(); shown = NONE; };
     st.flush = () => {
+      if (BARE && PX) {
+        PX.rim();
+        const b = new Int32Array(PX.memory.buffer, PX.bbox(), 4), now = [b[0], b[1], b[2], b[3]], was = shown || [0, 0, st.W - 1, st.H - 1];
+        const u = now[2] < now[0] ? was : was[2] < was[0] ? now : [Math.min(was[0], now[0]), Math.min(was[1], now[1]), Math.max(was[2], now[2]), Math.max(was[3], now[3])];
+        if (u[2] >= u[0]) st.put(u[0], u[1], u[2] - u[0] + 1, u[3] - u[1] + 1);
+        shown = now;
+        return;
+      }
       const b = st.buf, W = st.W, H = st.H, solid = k => b[k] >>> 24 >= 0xf0;
       if (BARE) for (let y = 0; y < H; y++) for (let x = 0, k = y * W; x < W; x++, k++) if (!(b[k] >>> 24) && ((x > 0 && solid(k - 1)) || (x < W - 1 && solid(k + 1)) || (y > 0 && solid(k - W)) || (y < H - 1 && solid(k + W)))) b[k] = RIM;
-      flush();
+      flush(); shown = null;
     };
 
     // notifications: each kind its own toggle, none in quiet hours, none while you're looking, at most one a minute per kind
@@ -138,6 +160,7 @@
 
     const apply = s => {
       const first = conf.layout !== s.layout || !w.firstChild; conf = s;
+      idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; pace();
       if (first) arrange(s.layout);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live
