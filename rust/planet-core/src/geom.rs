@@ -114,7 +114,7 @@ pub struct Spot {
 }
 
 impl Cam {
-    /// The headless harness's buffer: a 600×400 canvas at game.js's pixel scale.
+    /// A view of a `w`×`h` buffer (game.js's `st.W`×`st.H`, in its big pixels).
     pub fn new(w: f64, h: f64) -> Self {
         let mut c = Cam { w, h, r: 40.0, cx: 0.0, cy: 0.0, m: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], bob: 0.0 };
         c.layout(0);

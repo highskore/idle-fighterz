@@ -103,7 +103,7 @@ impl Game {
             last_click: -9.0,
             shake: 0.0,
             events: Vec::new(),
-            cam: Cam::new(200.0, 134.0),
+            cam: Cam::new(200.0, 134.0), // the harness's 600×400 canvas in game.js pixels; the HUD bridge resizes it
             frame3: Frame::new(),
             tl: Tl::default(),
             lift_now: 0.0,
