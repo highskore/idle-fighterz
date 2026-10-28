@@ -148,10 +148,15 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .goal b { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--gold); border-radius: 3px; transition: width .4s; }
 @media (max-width: 760px) { .goal { grid-column: 1 / -1; background: rgba(255,255,255,.94); border-radius: 10px; padding: 6px 10px 8px; } }
 .hint { position: absolute; left: max(20px, env(safe-area-inset-left, 0px)); top: 18px; color: var(--muted); text-transform: uppercase; z-index: 2; pointer-events: none; }
+.game.buffs .hint, body.snake .hint { opacity: 0; visibility: hidden; }
+@media (min-width: 761px) { .hud .label { flex-wrap: wrap; row-gap: 0; max-width: min(540px, 46vw); margin-left: auto; } .hud .fxs { flex: 1 0 100%; white-space: normal; text-align: right; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } }
+/* snake way controls panel: the shop and hud sink under its dim and take no taps while it's up */
+.game.howto .shop, .game.howto .hud, .game.howto .pair, .game.howto .mbtn { opacity: .12; pointer-events: none; } .game.howto .shop button { pointer-events: none; }
 
 .foot { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; text-transform: uppercase; color: var(--muted); }
 .foot .copy { display: flex; align-items: center; gap: 14px; color: var(--ink); }
 .foot nav { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink); }
+body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once your power level passes 9,007,199,254,740,991 */
 
 /* card: logo above a framed game panel, links below */
 .page { display: flex; flex-direction: column; align-items: center; padding-block: 52px 28px; gap: 18px; }
@@ -274,6 +279,10 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
   .hud .meta.stats { grid-column: 2; grid-row: 1 / span 3; flex-direction: column; gap: 0; align-items: end; justify-content: center; }
   .hud .form { grid-column: 1 / -1; }
   .hud .balls { grid-column: 1 / -1; justify-content: space-between; }
+  /* the label wraps instead of cutting off: buffs and the visit timer get their own lines under it */
+  .hud .label { flex-wrap: wrap; row-gap: 0; } .hud .fxs { flex: 1 0 100%; white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  /* while something is happening up in the sky (snake way, hfil, a villain, the moon) the title gets out of the way */
+  body.busy .brand, body.hell .brand { opacity: 0; visibility: hidden; transition: opacity .3s, visibility .3s; }
 }
 
 /* achievements and characters popup */
@@ -285,6 +294,8 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .menu-tabs button, .menu-x { font: inherit; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid transparent; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
 .menu-tabs button.on { color: var(--ink); border-color: var(--line); }
 .menu-tabs b { font-weight: inherit; color: var(--gold); }
+.menu-tabs button { white-space: nowrap; }
+@media (max-width: 560px) { .menu-card header { padding: 8px 4px 8px 8px; } .menu-tabs { gap: 0; } .menu-tabs button { font-size: 11px; letter-spacing: 0; padding: 5px 8px; } .menu-x { padding: 4px 8px; } }
 .menu-x { font-size: 18px; line-height: 1; padding: 4px 10px; }
 .menu-body { overflow: auto; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .menu-body.chars { grid-template-columns: repeat(4, minmax(0, 140px)); justify-content: center; }
@@ -297,7 +308,7 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .tree-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px; color: var(--muted); text-transform: uppercase; }
 .tree-head b { color: var(--gold); font-weight: inherit; }
 .tree-head button { font: inherit; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
-.node { font: inherit; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px; text-align: left; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
+.node { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; font: inherit; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px; text-align: left; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
 .node:disabled { cursor: default; opacity: .55; }
 .node.locked { opacity: .3; }
 .node.cap { border-width: 2px; }
@@ -385,7 +396,7 @@ body.future:not(.night) .game { background: linear-gradient(#7a828c, #4e5866 75%
     <header><span class="share-title" id="ascTitle">ascend?</span><button type="button" class="menu-x" id="ascX" aria-label="close">×</button></header>
     <div class="asc-body"><p id="ascLose"></p><p id="ascKeep"></p><div class="share-actions"><button type="button" class="share-go" id="ascGo">ascend</button><button type="button" id="ascNo">not yet</button></div></div>
   </div></div>
-  <footer class="foot gutter" id="foot"><span class="copy"><button type="button" class="snd" id="snd" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="snd" id="share"><span class="long">share score</span><span class="short">share</span></button></span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
+  <footer class="foot gutter" id="foot"><span class="copy"><button type="button" class="snd" id="snd" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="snd" id="share"><span class="long">share score</span><span class="short">share</span></button></span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a class="cv" href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
   <nav class="tabbar" aria-label="Game menu"><button type="button" data-tab="shop">upgrades <i id="tabCount"></i></button><button type="button" data-tab="train" class="train">train</button><button type="button" data-tab="links">links</button></nav>
   <div class="edge" aria-hidden="true"></div>
 </div>
@@ -409,6 +420,15 @@ __PLANET__
   // shop prices stay short so a row never wraps: 950,000 then 1.2M, 21.9M …
   const short = n => { n = Math.floor(n); if (n < 1e6) return n.toLocaleString('en-US'); const e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); return e < SUF.length ? m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0) + (['', '', 'M'][e] || SUF[e]) : n.toExponential(1).replace('+', ''); };
   let lastCombo = 1, goalKey = '';
+  // hold a buy button to keep buying: a click buys one; held past 400ms it repeats, quicker and quicker, until you let go or run out
+  let holdT = 0; const holdStop = () => { clearTimeout(holdT); holdT = 0; }; addEventListener('pointerup', holdStop); addEventListener('pointercancel', holdStop);
+  const hold = (el, buy, can) => {
+    let n = 0, held = false;
+    const step = () => { if (!can()) return holdStop(); held = true; buy(); n++; holdT = setTimeout(step, Math.max(35, 250 * .82 ** n)); };
+    el.addEventListener('pointerdown', e => { if (e.button) return; n = 0; held = false; holdStop(); holdT = setTimeout(step, 400); });
+    el.addEventListener('pointerleave', holdStop);
+    el.addEventListener('click', e => { if (held) { held = false; e.stopImmediatePropagation(); } }, true);   // the release after a held run isn't one more buy
+  };
   let toastT = 0, buyFn = null, shopBuilt = false, titleFx = null;
   let lastPl = 0;
   const SEAS = ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c'];   // each world's deepest sea tone
@@ -425,11 +445,11 @@ __PLANET__
       $('fname').textContent = s.form.name + (s.form.x > 1 ? ' ×' + s.form.x : ''); $('fbar').style.width = (s.form.p * 100).toFixed(1) + '%'; $('fnext').textContent = s.form.next ? 'next ' + s.form.next.replace('super saiyan', 'ss') : 'max';
       const dots = $('dots'); if (dots.childElementCount !== 7) dots.innerHTML = '<i></i>'.repeat(7); [...dots.children].forEach((d, i) => d.classList.toggle('on', i < s.balls));
       $('bmeta').textContent = [s.wishes ? 'wishes ' + s.wishes : '', s.ascend ? 'ascended ×' + s.ascend : ''].filter(Boolean).join(' · ');
- $('rate').textContent = fmt(s.rate); $('laps').textContent = s.laps; const m = Math.floor(s.time / 60), sec = Math.floor(s.time % 60); $('time').textContent = String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'); $('boost').textContent = s.effects; if ($('extra').dataset.v !== s.extra) { $('extra').dataset.v = s.extra; $('extra').innerHTML = s.extra.split(' · ').map(x => `<span>${x}</span>`).join(''); } },
+ $('rate').textContent = fmt(s.rate); $('laps').textContent = s.laps; const m = Math.floor(s.time / 60), sec = Math.floor(s.time % 60); $('time').textContent = String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'); $('boost').textContent = s.effects; const g = $('game'), bd = document.body; g.classList.toggle('buffs', !!s.effects); g.classList.toggle('howto', !!s.howto); bd.classList.toggle('snake', !!s.snake); bd.classList.toggle('busy', !!s.busy); if (s.pl >= Number.MAX_SAFE_INTEGER) bd.classList.add('cv'); if ($('extra').dataset.v !== s.extra) { $('extra').dataset.v = s.extra; $('extra').innerHTML = s.extra.split(' · ').map(x => `<span>${x}</span>`).join(''); } },
     shop(items) {
       const el = $('shop');
       const keys = Object.keys(items).join();
-      if (shopBuilt !== keys) { goalKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', () => buyFn && (b.dataset.buy === 'ascend' ? askAscend() : buyFn(b.dataset.buy)))); shopBuilt = keys; ui.achieved && ui.achieved(); }
+      if (shopBuilt !== keys) { goalKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => { b.addEventListener('click', () => buyFn && (b.dataset.buy === 'ascend' ? askAscend() : buyFn(b.dataset.buy))); if (b.dataset.buy !== 'ascend') hold(b, () => buyFn && buyFn(b.dataset.buy), () => !b.disabled); }); shopBuilt = keys; ui.achieved && ui.achieved(); }
       $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
       for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + v.level : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
     },
@@ -444,6 +464,7 @@ __PLANET__
       box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { box.hidden = true; $('game').classList.remove('wishing'); done(options[+b.dataset.i].key); }));
       box.querySelector('button').focus({ preventScroll: true });
     },
+    wishDone() { $('wish').hidden = true; $('game').classList.remove('wishing'); },   // the dragon picked for you
     world(w) { root.style.setProperty('--sea', SEAS[w] || SEAS[0]); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); document.body.classList.toggle('kame', w === 6); document.body.classList.toggle('paozu', w === 7); document.body.classList.toggle('future', w === 8); },
     fx(kind, arg) { if (titleFx) titleFx(kind, arg); },
     bump() { const n = $('pl'); n.classList.add('bump'); clearTimeout(ui._b); ui._b = setTimeout(() => n.classList.remove('bump'), 110); },
@@ -600,7 +621,7 @@ __PLANET__
         const b = document.createElement('button'); b.type = 'button'; b.className = 'node' + (n.can ? ' can' : '') + (n.lvl ? ' on' : '') + (n.open ? '' : ' locked') + (tier === 3 ? ' cap' : ''); b.disabled = !n.can;
         b.innerHTML = `<i>${row ? '' : br.name + ' · ' + br.pts + ' pts'}</i><b>${n.name}</b><span>${n.what}</span><em>${!n.open ? `needs ${n.need} in ${n.branch}` : (n.max === Infinity ? 'lv ' + n.lvl : n.lvl + '/' + n.max) + (n.lvl < n.max ? ' · ' + n.cost + ' seed' + (n.cost > 1 ? 's' : '') : '')}</em>`;
         b.style.gridColumn = col + 1; b.style.gridRow = row + 2;
-        b.addEventListener('click', () => { game.learn(n.id); renderMenu(); }); body.append(b);
+        b.addEventListener('click', () => { game.learn(n.id); renderMenu(); }); hold(b, () => { game.learn(n.id); renderMenu(); }, () => (game.menu().tree.find(x => x.id === n.id) || {}).can); body.append(b);
       }));
       return;
     }
