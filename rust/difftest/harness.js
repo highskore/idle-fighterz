@@ -9,7 +9,7 @@ function patch(src, from, to) { if (!src.includes(from)) throw new Error('harnes
 // the wall clock the game reads (Date.now() stamps achievements, toDateString() decides the daily bonus): fixed, then simulated time
 const EPOCH = 1793188800000   // 2026-10-28 12:00 UTC
 
-function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = {}) {
+function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, calm = false } = {}) {
   let rs = seed >>> 0 || 1, draws = 0
   const sites = new Map()
   const rnd = () => {
@@ -18,13 +18,14 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = 
     return (rs = (rs * 1664525 + 1013904223) >>> 0) / 4294967296
   }
   const M = Object.create(Math); M.random = rnd
-  const noop = () => {}, handlers = {}, win = {}, events = [], pending = [], errors = []
-  let wish = null, update = null, shop = null
+  const noop = () => {}, handlers = {}, win = {}, events = [], cues = [], pending = [], errors = []
+  let wish = null, update = null, shop = null, side = null, night = false, world = null
   const rect = () => ({ left: 0, top: 0, width: W, height: H })
   const ctx2d = { createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: noop }
   const cv = { width: 0, height: 0, style: {}, addEventListener: (k, f) => { handlers[k] = f }, setPointerCapture: noop, releasePointerCapture: noop, getBoundingClientRect: rect, getContext: () => ctx2d }
   const el = { getBoundingClientRect: rect, querySelector: () => cv, closest: () => null, dataset: {} }
-  const body = { classList: { toggle: noop, add: noop, remove: noop, contains: () => false } }
+  const classes = new Set()
+  const body = { classList: { toggle: (c, on) => (on ?? !classes.has(c)) ? classes.add(c) : classes.delete(c), add: (...c) => c.forEach(x => classes.add(x)), remove: (...c) => c.forEach(x => classes.delete(x)), contains: c => classes.has(c) } }
   const doc = { querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, createElement: () => ({ getContext: () => ctx2d, style: {} }), addEventListener: noop, body }
   let T = 0
   const now = () => EPOCH + Math.floor(T * 1000)
@@ -42,9 +43,14 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = 
   src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) { let __stomp, __heroSeen = false; if (!(S.world === 3 && snk)) { if (bang && Math.min(1, (t - bang.t0) / bang.dur) >= 1) { explode(bang.x1, bang.y1); bang = null; } if (apeUntil > t && Math.floor(t * 3.2) !== apeStep) { apeStep = Math.floor(t * 3.2); shake = Math.max(shake, .35); __stomp = true; } if (charging >= 2.4 && __heroSeen) shake = Math.max(shake, .06); if (capsule) { const c = capsule; if (c.y < c.land) { c.vy += 160 * dt; c.y = Math.min(c.land, c.y + c.vy * dt); } else c.y = c.land + Math.sin((t - c.t0) * 4) * 1.5; if (t - c.t0 > 8) openCapsule(); } } return; } st.clear(); zb.fill(-1e9); ib.fill(0);')
   ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
-  // what the HUD gets: toasts with their time and duration, and the last ui.update / ui.shop arguments
-  const ui = new Proxy({}, { get: (_, k) => k === 'event' ? ((s, ms = 2600) => events.push([T, s, ms])) : k === 'update' ? (u => { update = u }) : k === 'shop' ? (s => { shop = s }) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
-  const st = ctx.__makeStage({ querySelector: () => el }); st.resize()
+  // what the HUD gets: toasts and the other one-shot calls (cues) with their time and arguments, the last ui.update /
+  // ui.shop arguments, and beside each ui.update what game.js has set elsewhere by then: ui.night, ui.world and the body classes
+  const CUES = ['sfx', 'fx', 'bump', 'achieved', 'zeno', 'treeGift', 'wishDone', 'notify']
+  const look = () => classes.has('jelly') ? 'jelly' : classes.has('earth') ? 'earth' : ''
+  const ui = new Proxy({}, { get: (_, k) => k === 'event' ? ((s, ms = 2600) => events.push([T, s, ms])) : CUES.includes(k) ? ((...a) => cues.push([T, k, ...a]))
+    : k === 'update' ? (u => { update = u; side = { night, world, shen: classes.has('shen'), look: look() } }) : k === 'night' ? (n => { night = n }) : k === 'world' ? (w => { world = w })
+    : k === 'shop' ? (s => { shop = s }) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
+  const st = ctx.__makeStage({ querySelector: () => el }); st.resize(); st.calm = calm
   const game = ctx.__G.find(g => g.id === 'planet').mount(st, ui); game.start()
   const ev = s => ctx.__ev(s)
   const runPending = () => { pending.sort((a, b) => a[0] - b[0]); while (pending.length && pending[0][0] <= T) { const [, f] = pending.shift(); f() } }
@@ -56,6 +62,6 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = 
     down: (x, y) => ptr('pointerdown', x, y), move: (x, y) => ptr('pointermove', x, y), up: (x, y) => ptr('pointerup', x, y), cancel: () => handlers.pointercancel({}),
     key: k => win.keydown({ key: k, repeat: false, target: { closest: () => null, blur: noop }, preventDefault: noop }),
   }
-  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), input, store, get update() { return update }, get shop() { return shop }, today: new FakeDate().toDateString(), events, errors, sites, get draws() { return draws }, get T() { return T } }
+  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), input, store, get update() { return update }, get side() { return side }, get shop() { return shop }, today: new FakeDate().toDateString(), events, cues, errors, sites, get draws() { return draws }, get T() { return T } }
 }
 module.exports = mount

@@ -31,6 +31,10 @@ const SCENARIOS = {
       if (f % 30 === 0 && f >= 60) { buyAll(g, act); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
       if (f === 30 * 330) { act({ a: 'set', k: 'uni', v: Math.max(1, g.ev('S.uni')) }); act({ a: 'set', k: 'pl', v: 3e14 }) }
       if (f === 30 * 331) act({ a: 'buy', k: 'godki' })
+      // the characters tab (goku opens with super saiyan, gohan stays locked) and the angels' tab after the god ki
+      if (f === 30 * 40) { act({ a: 'hero', k: 'gohan' }); act({ a: 'hero', k: 'goku' }) }
+      if (f === 30 * 200) act({ a: 'hero', k: 'vegeta' })
+      if (f === 30 * 332) { act({ a: 'angel', k: 'auto' }); act({ a: 'angel', k: 'divine' }); act({ a: 'auto' }); act({ a: 'auto' }) }
       if (f === 30 * 420) act({ a: 'buy', k: 'zeno' })
     },
   },
@@ -121,6 +125,17 @@ const SCENARIOS = {
     seed: 4, minutes: 6, saved: JSON.stringify({ pl: 812, best: 9000, boots: 3, daily: 'Tue Oct 27 2026', ach: { lap1: 1793100000000 }, hero: 'vegeta', goal: { id: 'laps', p: 2 } }),
     script(g, f, act) { if (f % 6 === 0 && f % 300 < 200) act({ a: 'train' }); if (f % 30 === 0) buyAll(g, act) },
   },
+  // prefers-reduced-motion: the screen doesn't shake, and game.js skips the shake's random draw (kaioken, over 9000,
+  // trips and villains all shake it)
+  calm: {
+    seed: 19, minutes: 8, calm: true,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 2e4], ['best', 2e4], ['kaio', 1], ['galick', 2], ['bigbang', 1], ['partner', 8]]) act({ a: 'set', k, v })
+      if (f % 5 === 0 && f % 300 < 200) act({ a: 'train' })
+      if (f % 3 === 0) clickTargets(g, act)
+      if (f % 30 === 0) { buyAll(g, act); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
+    },
+  },
   idle: { seed: 1, minutes: 20, script(g, f, act) { if (f % 30 === 0) buyAll(g, act) } },
   active: {
     seed: 7, minutes: 20,
@@ -196,7 +211,11 @@ function apply(g, i) {
   else if (i.a === 'buy') g.buy(i.k)
   else if (i.a === 'kaio') g.game.kaioken()
   else if (i.a === 'learn') g.game.learn(i.k)
-  else if (i.a === 'set') g.ev(`S.${i.k} = ${JSON.stringify(i.v)}`)
+  else if (i.a === 'angel') g.game.learnAngel(i.k)
+  else if (i.a === 'auto') g.game.autoNext()
+  else if (i.a === 'hero') g.game.pick(i.k)
+  // a poked world is where the page opened: game.js's mount hands it to ui.world
+  else if (i.a === 'set') { g.ev(`S.${i.k} = ${JSON.stringify(i.v)}`); if (i.k === 'world') g.ev('ui.world(S.world)') }
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
@@ -224,17 +243,17 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
 
 function run(name) {
   const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)
-  const g = mount({ seed: sc.seed, saved: sc.saved })
+  const g = mount({ seed: sc.seed, saved: sc.saved, calm: !!sc.calm })
   const frames = Math.round(sc.minutes * 60 / DT), inputs = [], samples = []
   for (let f = 0; f < frames; f++) {
     sc.script(g, f, i => { inputs.push({ f, ...i }); apply(g, i) })
     g.step(DT)
     // every tenth second also the save, as JSON.stringify(S) writes it to localStorage
     // and the HUD: what ui.update and ui.shop last got, every second; the menus and confirm boxes every tenth
-    if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE), hud: g.update, shop: g.shop, offer: g.ev("!!shen && shen.phase === 'wish'") ? g.offer() : null, ...((f + 1) % 300 === 0 ? { save: JSON.parse(g.ev('JSON.stringify(S)')), menus: menus(g) } : {}) })
+    if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE), hud: g.update, side: g.side, shop: g.shop, offer: g.ev("!!shen && shen.phase === 'wish'") ? g.offer() : null, ...((f + 1) % 300 === 0 ? { save: JSON.parse(g.ev('JSON.stringify(S)')), menus: menus(g) } : {}) })
   }
   if (g.errors.length) throw new Error(g.errors.join('\n'))
-  return { name, seed: sc.seed, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.map(([t, e, ms]) => [+t.toFixed(2), e, ms]) }
+  return { name, seed: sc.seed, calm: !!sc.calm, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.map(([t, e, ms]) => [+t.toFixed(2), e, ms]), cues: g.cues.map(([t, ...c]) => [+t.toFixed(2), ...c]) }
 }
 
 // number formatting: the game's fmtShort, and the HUD's big/short from page.html
