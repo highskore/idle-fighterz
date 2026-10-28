@@ -2829,6 +2829,7 @@ GAMES.push({
     let FORMS = ladderOf(S.hero);
     S.form = Math.min(S.form || 0, FORMS.length - 1);
     const save = () => { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (_) {} };
+    S.tail = S.tail || 0;
     const SHOP = {
       boots: { base: 50, k: 1.7, label: 'weighted boots', what: '+1 per step' },
       partner: { base: 250, k: 1.7, label: 'bubbles', what: '+4/s, trains with you' },
@@ -2839,6 +2840,7 @@ GAMES.push({
       senzu: { base: 4000, k: 2.2, label: 'senzu tree', what: 'beans: tap for ×1.5', unlock: () => S.best >= 1000 },
       house: { base: 6000, k: 2.3, label: 'capsule house', what: '+40/s (a new dome up to lv 9)', unlock: () => S.best >= 2000 },
       armor: { base: 12000, k: 2.4, label: 'saiyan armor', what: '+50% vs villains & saibamen', unlock: () => S.best >= 5000 },
+      tail: { base: 40000, k: 2.5, label: 'tail training', what: 'great ape: +8% size, +2s, +×0.25 (to lv 10)', unlock: () => !!S.ach.ape && S.tail < 10 },
       kaio: { base: 20000, k: 2.6, label: 'kaioken', what: 'red button: big boost, then tired', unlock: () => S.best >= 8000 },
       bigbang: { base: 60000, k: 2.5, label: 'big bang attack', what: 'double-tap: an exploding ki ball', unlock: () => S.best >= 20000 },
       piccolo: { base: 30000, k: 2.4, label: 'piccolo', what: '+60/s, zaps meteors', unlock: () => S.best >= 10000 },
@@ -2847,7 +2849,7 @@ GAMES.push({
       godki: { base: 2e14, k: 1, label: 'god ki', what: 'reset for god ki', unlock: () => S.form >= MUI_FORM && godNow() > 0 },
       zeno: { base: 1, k: 1, label: 'zeno button', what: 'erase everything for zeno\'s favour', unlock: () => zenoReady() },
     };
-    const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber'];
+    const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber', 'tail'];
     const cost = k => k === 'ascend' ? Math.max(1e6, Math.floor(S.pl)) : k === 'godki' ? Math.max(2e14, Math.floor(S.pl)) : k === 'zeno' ? 0 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]) * (1 - .05 * lvl('deal')));   // ascending spends all you hold (1M at least), so that's its price
     // permanent: gravity ×1.15 a level, wishes ×1.25 each, ascensions +10% each; temporary boosts add up rather than multiply
     const KAIO = () => 1.25 + .25 * S.kaio;
@@ -2941,8 +2943,12 @@ GAMES.push({
     const chamberLen = () => 15, chamberX = (lv = S.chamber) => 1.5 + .5 * lv;   // a fixed 15s visit: the shop raises what training inside pays, the tree brings the door round sooner
     const ECON = .35;   // every gain runs through mult(); an active player reaches super saiyan god in about half an hour
     const core = () => Math.pow(1.15, S.gravity) * Math.pow(1.25, S.wishes) * (1 + .05 * lvl('wish') * S.wishes) * seedBoost() * ECON;   // the engine the ki ceiling caps; forms sit outside it; shenron's favour adds per wish, compounding it snowballed
+    // the great ape: tail training (shop) makes him bigger, longer and stronger; shenron's "bigger great ape" makes the next one a giant on top
+    let ape = { cd: 0, rage: 0, giant: false, at: 0, k: 2.3 };
+    const apeLen = () => 15 + 2 * S.tail + (ape.giant ? 15 : 0), apeX = () => 2 + .25 * S.tail + (ape.giant ? 1 : 0);   // apeX: his bonus on top of ×1
+    const apeWant = () => 2.3 * (1 + .08 * S.tail) * (ape.giant ? 1 + .5 * Math.min(1, (st.t - ape.at) / 1.2) : 1);
     const mult = (bare) => {   // permanent boosts multiply; temporary ones add their bonuses, so a pile of buffs can't explode
-      const T = st.t, b = bare ? 1 : 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * 2 + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (fused && fused.until > T ? fused.x - 1 : 0) + (laughUntil > T) * .25 + (chamberUntil > T) * (chamberX() - 1) + (rageUntil > T) * (rage - 1) + (chiUntil > T) * .5 + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
+      const T = st.t, b = bare ? 1 : 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * apeX() + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (fused && fused.until > T ? fused.x - 1 : 0) + (laughUntil > T) * .25 + (chamberUntil > T) * (chamberX() - 1) + (rageUntil > T) * (rage - 1) + (chiUntil > T) * .5 + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
       return capped(core()) * FORMS[S.form].x * lateBoost() * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1);
     };
     const lapValue = () => 30 * (1 + S.boots * ms('boots'));
@@ -3333,7 +3339,7 @@ GAMES.push({
       for (const m of meteors) if (!m.dead && m.delay <= 0 && Math.hypot(px - m.x, py - m.y) < 15) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); for (let k = 0; k < 16; k++) fx.add({ x: m.x, y: m.y, vx: (Math.random() - .5) * 110, vy: (Math.random() - .5) * 110, drag: 2.5, life: .6, c: [0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], raw: true }); return; }
       // anywhere else: train — a sprint burst and a few points
       if (moon && moon.a > .3 && !moon.leaving && Math.hypot(px - moon.x, py - moon.y) < moon.r + 6) {
-        apeUntil = st.t + 15; moon.leaving = true; ach('ape'); flashT = 1; shake = .8; ui.event('great ape mode — ×3'); ui.fx && ui.fx('super');
+        ape = { cd: 0, rage: 0, giant: !!S.bigApe, at: st.t, k: 2.3 }; S.bigApe = 0; apeUntil = st.t + apeLen(); moon.leaving = true; ach('ape'); flashT = 1; shake = .8; ui.event(`${ape.giant ? 'a giant great ape' : 'great ape mode'} — ×${1 + apeX()}${ape.giant || S.tail ? ', tap to ' + (ape.giant ? 'stomp' : 'build rage') : ''}`); ui.fx && ui.fx('super');
         for (let k = 0; k < 80; k++) { const q = kidScreen(20); fx.add({ x: q.x, y: q.y, vx: (Math.random() - .5) * 220, vy: (Math.random() - .5) * 220, drag: 2, life: 1, c: [0xffffff, 0xffd0a0, 0x7a4a2a], raw: true }); }
         return;
       }
@@ -3341,6 +3347,7 @@ GAMES.push({
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(px - sb.sx, py - (sb.sy - 6)) < 9) { killSaiba(sb); return; }
       if (boss && !boss.dead && Math.abs(px - boss.x) < (boss.spr.w / 2 + 3) * boss.k && py > boss.y - (boss.spr.h + 2) * boss.k && py < boss.y + 4) { combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; hitBoss(tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist')) * (1 + .5 * lvl('brawl')), px, py); return; }
       if (bean && bean.sx !== undefined && Math.hypot(px - bean.sx, py - (bean.sy - 6)) < 13) { senzuUntil = st.t + 15 + 5 * lvl('senzu'); ui.event(`senzu bean — ×1.5 for ${15 + 5 * lvl('senzu')}s`); for (let k = 0; k < 18; k++) fx.add({ x: bean.sx, y: bean.sy, vx: (Math.random() - .5) * 100, vy: (Math.random() - .5) * 100, drag: 3, life: .6, c: [0xffffff, 0xb8f08a, 0x4fae3a], raw: true }); bean = null; return; }
+      if (apeTap(px, py)) return;   // the ape takes the taps that would have trained
       // train: rhythm builds a combo up to ×2; the scouter adds crits
       combo = wished('combo') ? comboCap() : st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; if (combo >= 2) goal('combo');
       sprint = Math.min(1.2, sprint + .5);
@@ -3635,6 +3642,7 @@ GAMES.push({
       { key: 'power', tier: 'epic', label: 'eternal power', what: () => '×1.25 to everything, forever, even after ascending', grant: () => { S.wishes++; ui.event('your wish is granted — ×1.25 forever'); } },
       { key: 'form', tier: 'rare', label: () => 'a taste of ' + FORMS[S.form + 1].name, what: () => `×${FORMS[S.form + 1].x} for 60 seconds`, ok: () => S.form < FORMS.length - 1, grant: () => { preview = { from: preview ? preview.from : S.form, until: st.t + 60 }; transform(true); } },   // a second taste still falls back to where you started
       { key: 'seeds', tier: 'rare', label: 'the seeds of power', what: () => `+${wishSeeds()} ki seeds, kept forever`, grant: () => { const g = wishSeeds(); S.seeds += g; S.ascend += g; ui.event(`your wish is granted — +${g} ki seeds (×${seedBoost().toFixed(1)} on everything)`); } },
+      { key: 'bigape', tier: 'rare', label: 'a bigger great ape', what: 'the next full moon makes a giant: bigger, +15s, +×1, and every tap stomps', ok: () => !!S.ach.ape && !S.bigApe, grant: () => { S.bigApe = 1; nextMoon = Math.min(nextMoon, 8); ui.event('your wish is granted — the next full moon makes a giant'); } },
       { key: 'fortune', label: 'a fortune in power', what: () => '+10 minutes of income', grant: () => { gain(wrate() * 600); ui.event('your wish is granted — +' + fmtShort(wrate() * 600)); } },
       { key: 'skills', tier: 'legendary', label: 'ki talent mastery', what: () => '+1 rank to every ki talent you\'ve learned (training tree)', ok: () => TREE.some(n => lvl(n.id) && lvl(n.id) < nodeMax(n)), grant: () => { for (const n of TREE) if (lvl(n.id) && lvl(n.id) < nodeMax(n)) S.tree[n.id]++; ui.event('your wish is granted — every ki talent +1 rank'); } },
       { key: 'gear', tier: 'epic', label: 'capsule corp delivery', what: () => '+1 level to every shop upgrade you own', ok: () => RESETS.some(r => S[r] > 0), grant: () => { for (const r of RESETS) if (S[r] > 0) S[r]++; ui.event('your wish is granted — every shop upgrade +1 level'); } },
@@ -4266,6 +4274,15 @@ GAMES.push({
       sblit(pose, W / 2 - pose.w * k, hy - pose.h * k * 2, k * 2); halo(W / 2, hy - pose.h * k * 2 - 3 * k, k * 2);
       if (!h.up) { label('FLYING BACK UP... TAP TO GO FASTER', W / 2, H * .1, 0xffffff, 0x5a0a08); if (snk.loss) { sayAt('-' + fmtShort(snk.loss), W / 2, H * .3, 'red'); snk.loss = 0; } }
     }
+    // a giant stomps where you tap; tail training fills a rage meter that roars for a burst and 2s more (10s at most)
+    function apeTap(px, py) {
+      if (apeUntil <= st.t || !(ape.giant || S.tail)) return false;
+      if (st.t < ape.cd) return true; ape.cd = st.t + .2;
+      if (ape.giant) { gain(Math.max(30, wrate() * .55 * (1 + apeX())), px, py - 8, true); shake = Math.max(shake, .6); burst(px, py, [0xffffff, 0xe7e2d4, 0x9a8a70], 14, 150); ui.sfx && ui.sfx('hit'); }
+      if (S.tail) { ape.rage = Math.min(1, ape.rage + (ape.giant ? .04 : .08)); const h = kidScreen(APE[0].h * ape.k * .7); if (!ape.giant) burst(h.x, h.y, [0xffffff, 0xff9a8a], 4, 60);
+        if (ape.rage >= 1) { ape.rage = 0; gain(Math.max(200, wrate() * 3.2 * (1 + apeX())), h.x, h.y - 20, true); apeUntil = Math.min(ape.at + apeLen() + 10, apeUntil + 2); flashT = .6; shake = .9; ui.event('ROAAAR! +2s'); ui.fx && ui.fx('super'); burst(h.x, h.y, [0xffffff, 0xfff27a, 0xe0332b], 40, 240); } }
+      return true;
+    }
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
       const rdt = dt; if (chamberUntil > t && S.world !== 3) dt *= .3;   // no slow-mo on snake way: jumps run on real time and couldn't clear a gap
@@ -4474,6 +4491,8 @@ GAMES.push({
       if (t - lastClick > .9) combo = 1;
       if ((session > 40 || S.world === 2) && S.world !== 3 && !moon && apeUntil < t && (nextMoon -= dt) < 0) { moon = { x: st.W * .2, y: st.H * .22, r: Math.max(9, Math.round(Math.min(st.W, st.H) * .07)), a: 0, born: t }; once('moon', 'a full moon is rising… click it to transform'); }
       { const n = !!moon && !moon.leaving || apeUntil > t; if (n !== night) { night = n; ui.night && ui.night(n); } nightK = Math.max(0, Math.min(1, nightK + (night ? dt : -dt) / .8)); }   // the full moon brings the night
+      if (moon && (S.tail || S.bigApe) && moon.a > .3 && !moon.leaving && t - moon.born > 6 && apeUntil < t) onClick(moon.x, moon.y);   // you stared at the moon too long
+      if (apeUntil > t && S.tail) ape.rage = Math.max(0, ape.rage - dt * .1);
       if (moon) { moon.a = moon.leaving ? moon.a - dt * 1.5 : Math.min(1, moon.a + dt * 1.2); if (!moon.leaving && t - moon.born > 12) moon.leaving = true; if (moon.a <= 0 && moon.leaving) { moon = null; nextMoon = S.world === 2 ? 40 : 180 + Math.random() * 60; } }
 
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
@@ -4500,7 +4519,7 @@ GAMES.push({
       if (senzuUntil > t) fxs.push(`senzu ×1.5 ${Math.ceil(senzuUntil - t)}s`);
       if (riding > 0) fxs.push('nimbus ×1.5');
       if (carUntil > t) fxs.push(`king kai's car ×1.5 ${Math.ceil(carUntil - t)}s`);
-      if (apeUntil > t) fxs.push(`great ape ×3 ${Math.ceil(apeUntil - t)}s`);
+      if (apeUntil > t) fxs.push(`${ape.giant ? 'giant ape' : 'great ape'} ×${1 + apeX()} ${Math.ceil(apeUntil - t)}s`);
       const extra = [S.form ? FORMS[S.form].name + ' ×' + FORMS[S.form].x : (S.pl > 2000 ? 'next form at 20K' : ''), S.orbs7 || S.granted ? `dragon balls ${S.orbs7}/7` : '', S.granted ? `wishes ${S.granted}` : '', S.multi ? `${uniName(S.uni)} · fight ${S.uniStage + 1}/${UNI_STAGES.length}` : S.saga || session > 110 ? `saga ${S.saga + 1}/${VILLAINS.length}` : '', core() > ceiling() ? (S.multi ? 'ki ceiling — it rises with time; clearing universes lifts it too' : 'ki ceiling — reach ultra instinct or finish the sagas: the multiverse lifts it') : '', S.ustars ? `universe stars ${S.ustars} ×${fmtShort(Math.round(STAR_X ** (S.ustars * (ang('stars') ? 2 : 1))))}` : '', S.mastery ? `mastery ${S.mastery}` : '', S.seeds ? `ki seeds ${S.seeds}` : '', S.ascend ? `ki seeds ×${seedBoost().toFixed(1)}` : '', S.godTotal ? `god ki ${S.godki} · ×${fmtShort(godBoostOf(S.godTotal))}` : '', S.zeno ? `zeno's favour ×${fmtShort(ZENO_X ** S.zeno)}` : '', S.krillinAlly ? 'krillin: idle ×1.5' : ''].filter(Boolean).join(' · ');
       const nf = FORMS[S.form + 1] || { name: `mastery ${S.mastery + 1}`, at: FORMS[S.form].at * LATE_STEP ** (S.mastery + 1) }, cf = FORMS[S.form];
       const G = GOALS.find(g => g.id === S.goal.id);
@@ -4565,7 +4584,12 @@ GAMES.push({
       if (apeUntil > t) {
         // giant ape stomps: a little hop each step and a screen shake on landing
         const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for (let k = 0; k < 8; k++) fx.add({ x: kd.x + (Math.random() - .5) * 30, y: kd.y, vx: (Math.random() - .5) * 60, vy: -20 - Math.random() * 30, drag: 2, life: .5, s: 2, c: [0xffffff, 0xe7e2d4], raw: true }); }
-        drawHero(APE[step % 2], lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
+        const ux = Math.sin(kd.ang), uy = -Math.cos(kd.ang), half = Math.min((kd.x + ux * lift) / (1.001 - ux), (st.W - kd.x - ux * lift) / (1.001 + ux), (kd.y + uy * lift) / (1.001 - uy), (st.H - kd.y - uy * lift) / (1.001 + uy)) - 3;
+        ape.k += (Math.max(1.5, Math.min(apeWant(), 2 * half / Math.max(APE[0].w, APE[0].h))) - ape.k) * Math.min(1, dt * 2);   // he grows only into the room the canvas has where he stands, so a big ape does not run off a phone screen
+        drawHero(APE[step % 2], lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, ape.k);
+        if (ape.giant || S.tail) { const hd = kidScreen(APE[0].h * ape.k * .8 + lift), x = Math.max(70, Math.min(st.W - 70, hd.x)), y = Math.max(24, Math.min(st.H - 40, hd.y - 18));   // what his taps do, over him
+          if (S.tail) for (let i = 0; i < 40; i++) for (let j = 0; j < 3; j++) st.px(x - 20 + i, y + j, i < 40 * ape.rage ? 0xe0332b : 0x2a1a14);
+          label(ape.giant ? 'tap to stomp' : 'rage', x, y - 10, 0xffffff, 0x5a0a08); }
       } else if (fused && fused.until > t) drawHero(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, lift, depth, 1.05);
       else drawHero(spr, lift, depth, 1.05);
       if (dance && !dance.done && seen) { const b = dance.beats[dance.i]; if (b !== undefined) { const r = 6 + Math.max(0, b - t) * 26, hx = kd.x + Math.sin(kd.ang) * 14, hy = kd.y - Math.cos(kd.ang) * 14; for (let a = 0; a < 6.28; a += .12) st.px(hx + Math.cos(a) * r, hy + Math.sin(a) * r, Math.abs(b - t) < .32 ? 0xfff27a : 0xffffff); st.text(['fu', 'sion', 'ha!'][dance.i], hx, hy - r - 8, t - dance.ok < .3 ? 0xfff27a : 0xffffff); } }   // the beat ring
@@ -4751,6 +4775,7 @@ GAMES.push({
     useWorld(S.world || 0); ui.world && ui.world(S.world || 0);
     layout(); scenery(); syncShop();
     if (/ape/.test(HASH)) { session = 41; nextMoon = 0; }
+    if (/ozaru/.test(HASH)) { session = 41; nextMoon = 0; S.ach.ape = S.ach.ape || Date.now(); S.best = Math.max(S.best, 5e4); S.tail = Math.max(S.tail, 3); if (/giant/.test(HASH)) S.bigApe = 1; }   // preview hooks: #ozaru (tail training lv 3), #ozaru-giant (and the giant wish)
     if (/ginyu/.test(HASH)) { session = 151; S.best = Math.max(S.best, 5e4); nextGinyu = 0; }   // preview hook: #ginyu
     if (/visitors/.test(HASH)) { session = 61; nextGreg = 0; nextKai = 0; }   // preview hook: #visitors (gregory, king kai)
     if (/raid/.test(HASH)) { session = 111; nextBoss = 0; nextSaiba = 0; }   // preview hook: #raid
