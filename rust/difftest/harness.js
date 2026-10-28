@@ -1,27 +1,12 @@
 // Headless JS planet game for differential testing against planet-core.
-// Loads world.js + shenron.js + game.js from the repo root into a vm with a seeded Math.random (the same LCG planet-core uses),
-// switches off the timeline systems named in `off` (the ones planet-core doesn't have yet), and never draws.
+// Loads world.js + shenron.js + game.js from the repo root into a vm with a seeded Math.random (the same LCG planet-core uses)
+// and never draws, so screen spots game.js sets while drawing (sx/sy, a boss's x/y) stay unset, as in a headless planet-core.
 const fs = require('fs'), vm = require('vm'), path = require('path')
 const ROOT = path.join(__dirname, '..', '..')
 
-// the timeline's spawn points, by system. Each is an anchored `if (` that a gate prefixes with `!off.has(system) &&`
-const GATES = {
-  pods: 'if (session > 12) { if (!star', orbs: 'if (session > 30 && orbs.length < 3', meteors: 'if (session > 50) { if ((nextShower', greg: 'if (!greg && session > 60',
-  roshi: 'if (!roshi && S.world !== 6', krillin: 'if (!kril && !S.krillinDead', kai: 'if (!kai && session > 45', androids: 'if (!ginyu && !tour && !boss && !shen && S.world !== 8',
-  date: 'if (!date && session > 160', gero: 'if (!gero && session > 140', a16: 'if (!a16 && session > 100', ship: 'if (!ship && session > 150', yamcha: 'if (!yam && session > 100',
-  dance: 'if (!dance && !(fused', cling: 'if (!cling && session > 150', car: 'if (!car && carRoad', door: 'if (S.chamber > 0 && !door',
-  ginyu: 'if (!ginyu && !tour && !boss && !shen && session > 150', saiba: 'if (!tour && session > 80 && (nextSaiba', trips: 'if (S.world === home() && (S.runBest >=',
-  fuse: 'if (S.partner >= 3 && S.best >= 50000', tour: 'if (!tour && !shen && !boss && S.world === home() && session > 75', movie: 'if (!movie && S.world === home()',
-  multi: 'if (!S.multi && (S.saga >= VILLAINS.length', saga: 'if (!tour && session > 110 && !boss && !shen && (S.multi ?', uni: 'if (!tour && session > 110 && !boss && !shen && S.multi && (nextBoss',
-  storm: 'if (!storm && session > 120', moon: 'if ((session > 40 || S.world === 2) && S.world !== 3 && !moon', bean: 'if (S.senzu > 0 && !bean', zeno: 'if (!zen && zenoReady()',
-}
-// the one spawn condition that isn't a plain && chain
-const GATE_TO = { nimbus: ['if (session > 75 || S.cloud > 0) {', "if (!globalThis.__off.has('nimbus') && (session > 75 || S.cloud > 0)) {"] }
-const SYSTEMS = [...Object.keys(GATES), ...Object.keys(GATE_TO)]
-
 function patch(src, from, to) { if (!src.includes(from)) throw new Error('harness anchor missing: ' + from.slice(0, 60)); return src.replace(from, to) }
 
-function mount({ seed = 1, W = 600, H = 400, off = [], traceRng = false } = {}) {
+function mount({ seed = 1, W = 600, H = 400, traceRng = false } = {}) {
   let rs = seed >>> 0 || 1, draws = 0
   const sites = new Map()
   const rnd = () => {
@@ -44,12 +29,7 @@ function mount({ seed = 1, W = 600, H = 400, off = [], traceRng = false } = {}) 
   let src = ['world.js', 'shenron.js', 'game.js'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
   src = patch(src, '    return { menu, learn, respec,', '    globalThis.__ev = s => eval(s);\n    return { menu, learn, respec,')
   src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) return; st.clear(); zb.fill(-1e9); ib.fill(0);')
-  for (const k of off) {
-    if (GATE_TO[k]) { src = patch(src, ...GATE_TO[k]); continue }
-    const g = GATES[k]; if (!g) throw new Error('no gate ' + k)
-    src = patch(src, g, `if (!globalThis.__off.has('${k}') && ` + g.slice(4))
-  }
-  ctx.__off = new Set(off); ctx.__skip = true
+  ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
   const ui = new Proxy({}, { get: (_, k) => k === 'event' ? (s => events.push([T, s])) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
   const st = ctx.__makeStage({ querySelector: () => el }); st.resize()
@@ -59,5 +39,4 @@ function mount({ seed = 1, W = 600, H = 400, off = [], traceRng = false } = {}) 
   const step = (dt = 1 / 30) => { T += dt; st.t = T; game.frame(T, dt); runPending() }
   return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), events, errors, sites, get draws() { return draws }, get T() { return T } }
 }
-mount.SYSTEMS = SYSTEMS
 module.exports = mount

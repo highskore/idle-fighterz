@@ -134,15 +134,7 @@ impl Cam {
             (w * 0.28).min(h * 0.24)
         });
         self.cx = js_round(w * fcx);
-        self.cy = js_round(
-            h * if wide {
-                0.5
-            } else if w / h < 0.8 {
-                0.5
-            } else {
-                0.55
-            },
-        );
+        self.cy = js_round(h * if wide || w / h < 0.8 { 0.5 } else { 0.55 });
         if let Some(&(_, zoom, dy)) = W2L.iter().find(|l| l.0 == world) {
             self.r = js_round(self.r * zoom);
             self.cy += js_round(h * dy);

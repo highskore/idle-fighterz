@@ -77,9 +77,6 @@ pub struct Game {
     /// how high the hero is drawn off the road and whether he faces left: the renderer sets these
     pub lift_now: f64,
     pub flip_now: bool,
-    /// difftest only: timeline systems switched off, mirroring the JS harness's gates while the port is partial
-    #[doc(hidden)]
-    pub off: Vec<String>,
 }
 
 impl Game {
@@ -111,7 +108,6 @@ impl Game {
             tl: Tl::default(),
             lift_now: 0.0,
             flip_now: false,
-            off: Vec::new(),
         }
     }
 

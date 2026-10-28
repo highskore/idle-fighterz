@@ -6,6 +6,8 @@
 //! Screen positions game.js writes while drawing (`sx`/`sy`, a boss's `x`/`y`, `piccoloAt`, `monkeyAt`) start unset,
 //! as they do in a headless game.js; the renderer fills them in.
 
+#![allow(clippy::approx_constant)] // game.js turns by 6.28 and laps by 6.283, not by τ
+
 use crate::data::*;
 use crate::game::{Game, WishBuff};
 use crate::geom::{self, Spot, V3};
@@ -670,10 +672,6 @@ impl Game {
         self.rng.skip(2 * n);
     }
 
-    fn on(&self, sys: &str) -> bool {
-        !self.off.iter().any(|s| *s == sys)
-    }
-
     pub(crate) fn once(&mut self, key: &'static str, text: &str) {
         if self.tl.seen.contains(&key) {
             return;
@@ -784,19 +782,19 @@ impl Game {
         let session = self.session;
         let (w, h) = (self.cam.w, self.cam.h);
         // the space pod
-        if self.on("pods") && session > 12.0 && self.tl.star.is_none() && tick(&mut self.tl.next_star, dt) {
+        if session > 12.0 && self.tl.star.is_none() && tick(&mut self.tl.next_star, dt) {
             self.once("stars", "a saiyan space pod — tap it");
             let y = if w / h < 0.8 { self.cam.cy - self.cam.r * (1.12 + self.r() * 0.16) } else { h * (0.08 + self.r() * 0.2) };
             self.tl.star = Some(Star { x: -8.0, y, vx: w / 6.0 });
             self.tl.next_star = (18.0 + self.r() * 14.0) * (1.0 - 0.12 * self.lvl(N_PODS));
         }
-        if self.on("orbs") && session > 30.0 && self.tl.orbs.len() < 3 && self.r() < dt * 0.25 {
+        if session > 30.0 && self.tl.orbs.len() < 3 && self.r() < dt * 0.25 {
             self.once("orbs", "ki orbs on the road");
             let phi = self.phi + 1.5 + self.r() * 2.0;
             let star = session > 60.0 && self.r() < (if self.s.world == 1 { 0.4 } else { 0.2 }) + 0.05 * self.lvl(N_BALLS);
             self.tl.orbs.push(Orb { phi, star, done: false });
         }
-        if self.on("meteors") && session > 50.0 && tick(&mut self.tl.next_shower, dt) {
+        if session > 50.0 && tick(&mut self.tl.next_shower, dt) {
             self.once("meteors", "meteor shower — bust them");
             for i in 0..6 {
                 let x = w * (0.15 + self.r() * 0.9);
@@ -804,8 +802,7 @@ impl Game {
             }
             self.tl.next_shower = 45.0 + self.r() * 20.0;
         }
-        if self.on("nimbus")
-            && (session > 75.0 || self.s.lv(Upg::Cloud) > 0)
+        if (session > 75.0 || self.s.lv(Upg::Cloud) > 0)
             && self.tl.cloud_fly.is_none()
             && self.riding <= 0.0
             && tick(&mut self.tl.next_cloud, dt * (1.0 + self.s.lvf(Upg::Cloud) * 0.6))
@@ -819,7 +816,7 @@ impl Game {
             self.event("ki aura unlocked");
         }
         // gregory
-        if self.on("greg") && self.tl.greg.is_none() && session > 60.0 && tick(&mut self.tl.next_greg, dt) {
+        if self.tl.greg.is_none() && session > 60.0 && tick(&mut self.tl.next_greg, dt) {
             let c = self.rand_cap(0.2, 0.9);
             let hop = 0.3f64.max(0.75 - 0.08 * self.s.greg_wins as f64);
             self.tl.greg = Some(Greg { c, from: None, hop_t: t, until: t + 10.0, hop, sx: None });
@@ -858,8 +855,7 @@ impl Game {
             }
         }
         // master roshi
-        if self.on("roshi")
-            && self.tl.roshi.is_none()
+        if self.tl.roshi.is_none()
             && self.s.world != 6
             && session > 90.0
             && self.tl.shen.is_none()
@@ -896,8 +892,7 @@ impl Game {
             }
         }
         // krillin drops by
-        if self.on("krillin")
-            && self.tl.kril.is_none()
+        if self.tl.kril.is_none()
             && !self.s.krillin_dead
             && session > 130.0
             && self.tl.shen.is_none()
@@ -937,15 +932,14 @@ impl Game {
             self.tl.satan = None;
         }
         // king kai's joke
-        if self.on("kai") && self.tl.kai.is_none() && session > 45.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_kai, dt) {
+        if self.tl.kai.is_none() && session > 45.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_kai, dt) {
             let c = self.cap_pt(0.35, 3.6);
             self.tl.kai = Some(Npc { c, t0: t, until: t + 9.0, ..Default::default() });
             let pun = PUNS[(self.r() * PUNS.len() as f64).floor() as usize];
             self.event(format!("king kai: {pun}"));
             self.tl.next_kai = 140.0 + self.r() * 40.0;
         }
-        if self.on("androids")
-            && self.tl.ginyu.is_none()
+        if self.tl.ginyu.is_none()
             && self.tl.tour.is_none()
             && self.tl.boss.is_none()
             && self.tl.shen.is_none()
@@ -966,7 +960,7 @@ impl Game {
             self.tl.next_andro = 340.0 + self.r() * 60.0;
         }
         // android 18 drops by
-        if self.on("date") && self.tl.date.is_none() && session > 160.0 && self.tl.shen.is_none() && self.s.world != 8 && tick(&mut self.tl.next_date, dt) {
+        if self.tl.date.is_none() && session > 160.0 && self.tl.shen.is_none() && self.s.world != 8 && tick(&mut self.tl.next_date, dt) {
             let kr = !self.s.krillin_dead;
             let (c, c2) = (self.cap_pt(0.45, 0.35), self.cap_pt(0.45, 0.55));
             self.tl.date = Some(Date { c, c2, t0: t, until: t + if kr { 10.0 } else { 4.0 }, kr, paid: false, sx2: None });
@@ -977,8 +971,7 @@ impl Game {
             self.tl.date = None;
         }
         // dr. gero / android 19
-        if self.on("gero") && self.tl.gero.is_none() && session > 140.0 && self.tl.shen.is_none() && self.tl.boss.is_none() && tick(&mut self.tl.next_gero, dt)
-        {
+        if self.tl.gero.is_none() && session > 140.0 && self.tl.shen.is_none() && self.tl.boss.is_none() && tick(&mut self.tl.next_gero, dt) {
             self.s.geros += 1;
             let odd = self.s.geros % 2 == 1;
             let (spr, name) = if odd { (A20, "dr. gero") } else { (A19, "android 19") };
@@ -1005,7 +998,7 @@ impl Game {
             }
         }
         // android 16 and the birds
-        if self.on("a16") && self.tl.a16.is_none() && session > 100.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_a16, dt) {
+        if self.tl.a16.is_none() && session > 100.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_a16, dt) {
             let c = self.cap_pt(0.35, 2.2);
             let birds = (0..3).map(|i| Bird { i, free: 0.0, kind: (self.r() * 4.0) as u32, sx: None }).collect();
             self.tl.a16 = Some(A16 { c, t0: t, until: t + 16.0, birds });
@@ -1042,8 +1035,7 @@ impl Game {
             self.sprint = 1.2;
         }
         // frieza's ship
-        if self.on("ship")
-            && self.tl.ship.is_none()
+        if self.tl.ship.is_none()
             && session > 150.0
             && self.tl.tour.is_none()
             && self.tl.shen.is_none()
@@ -1083,7 +1075,7 @@ impl Game {
             }
         }
         // yamcha
-        if self.on("yamcha") && self.tl.yam.is_none() && session > 100.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_yam, dt) {
+        if self.tl.yam.is_none() && session > 100.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_yam, dt) {
             let c = self.rand_cap(0.3, 0.6);
             self.tl.yam = Some(Yamcha { c, boom: t + 2.4, until: t + 16.0, helped: false, sx: None });
             self.event("a saibaman jumps on yamcha…");
@@ -1103,8 +1095,7 @@ impl Game {
             self.tl.yam = None;
         }
         // the fusion dance
-        if self.on("dance")
-            && self.tl.dance.is_none()
+        if self.tl.dance.is_none()
             && !self.b.fused.is_some_and(|(_, until)| until > t)
             && session > 200.0
             && self.s.best >= 2e5
@@ -1164,8 +1155,7 @@ impl Game {
             }
         }
         // a saibaman clings on
-        if self.on("cling")
-            && self.tl.cling.is_none()
+        if self.tl.cling.is_none()
             && session > 150.0
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
@@ -1186,7 +1176,7 @@ impl Game {
         }
         // king kai's car
         let car_road = self.s.world != 6 && self.s.world != 10;
-        if self.on("car") && self.tl.car.is_none() && car_road && session > 70.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_car, dt) {
+        if self.tl.car.is_none() && car_road && session > 70.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_car, dt) {
             self.tl.car = Some(Car { phi: self.phi + std::f64::consts::PI, until: t + 16.0, sx: None });
             self.event("king kai's out for a drive — tap his car");
             self.tl.next_car = 170.0 + self.r() * 60.0;
@@ -1201,7 +1191,7 @@ impl Game {
             self.tl.kai = None;
         }
         // the time chamber door
-        if self.on("door") && self.s.lv(Upg::Chamber) > 0 && self.tl.door.is_none() && self.b.chamber_until < t && tick(&mut self.tl.next_door, dt) {
+        if self.s.lv(Upg::Chamber) > 0 && self.tl.door.is_none() && self.b.chamber_until < t && tick(&mut self.tl.next_door, dt) {
             let c = self.rand_cap(0.25, 0.9);
             self.tl.door = Some(Npc { c, t0: t, until: t + 15.0, ..Default::default() });
             self.once("door", "the time chamber door is open — tap it");
@@ -1223,8 +1213,7 @@ impl Game {
             }
         }
         // the ginyu force
-        if self.on("ginyu")
-            && self.tl.ginyu.is_none()
+        if self.tl.ginyu.is_none()
             && self.tl.tour.is_none()
             && self.tl.boss.is_none()
             && self.tl.shen.is_none()
@@ -1261,7 +1250,7 @@ impl Game {
             self.burst(30);
         }
         // saibamen
-        if self.on("saiba") && self.tl.tour.is_none() && session > 80.0 && tick(&mut self.tl.next_saiba, dt) {
+        if self.tl.tour.is_none() && session > 80.0 && tick(&mut self.tl.next_saiba, dt) {
             self.once("saiba", "saibamen! tap them");
             for i in 0..3 {
                 let c = self.rand_cap(0.25, 0.85);
@@ -1296,8 +1285,7 @@ impl Game {
             self.event(msg);
         }
         let mark = if self.s.namek_at != 0.0 { self.s.namek_at } else { PLANET_EVERY };
-        if self.on("trips")
-            && self.s.world == home
+        if self.s.world == home
             && (self.s.run_best >= mark || session - self.tl.home_since > TRIP_WAIT || self.tl.pod_wish != 0)
             && self.tl.tour.is_none()
             && self.tl.shen.is_none()
@@ -1336,8 +1324,7 @@ impl Game {
         let session = self.session;
         let (w, h) = (self.cam.w, self.cam.h);
         let home = self.home();
-        if self.on("fuse")
-            && self.s.lv(Upg::Partner) >= 3
+        if self.s.lv(Upg::Partner) >= 3
             && self.s.best >= 50000.0
             && self.b.fuse_until < t
             && self.tl.fuse_offer < t
@@ -1348,8 +1335,7 @@ impl Game {
             self.tl.next_fuse = 170.0 + self.r() * 60.0;
             self.event("bubbles wants to fuse — tap him!");
         }
-        if self.on("tour")
-            && self.tl.tour.is_none()
+        if self.tl.tour.is_none()
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
             && self.s.world == home
@@ -1398,8 +1384,7 @@ impl Game {
             }
         }
         // a movie villain
-        if self.on("movie")
-            && self.tl.movie.is_none()
+        if self.tl.movie.is_none()
             && self.s.world == home
             && self.tl.boss.is_none()
             && self.tl.ginyu.is_none()
@@ -1442,7 +1427,7 @@ impl Game {
         }
         // ultra instinct (or the end of the sagas) opens the multiverse
         let sagas = VILLAINS.len() as u32;
-        if self.on("multi") && !self.s.multi && (self.s.saga >= sagas || self.s.form >= UI_FORM) {
+        if !self.s.multi && (self.s.saga >= sagas || self.s.form >= UI_FORM) {
             self.s.multi = true;
             self.s.multi_t = session;
             self.tl.next_boss = self.tl.next_boss.min(20.0);
@@ -1454,8 +1439,7 @@ impl Game {
         if self.s.multi && self.s.saga < sagas {
             self.tl.next_saga -= dt;
         }
-        if self.on("saga")
-            && self.tl.tour.is_none()
+        if self.tl.tour.is_none()
             && session > 110.0
             && self.tl.boss.is_none()
             && self.tl.shen.is_none()
@@ -1485,14 +1469,7 @@ impl Game {
             }
             self.krillin_hit(vname);
         }
-        if self.on("uni")
-            && self.tl.tour.is_none()
-            && session > 110.0
-            && self.tl.boss.is_none()
-            && self.tl.shen.is_none()
-            && self.s.multi
-            && tick(&mut self.tl.next_boss, dt)
-        {
+        if self.tl.tour.is_none() && session > 110.0 && self.tl.boss.is_none() && self.tl.shen.is_none() && self.s.multi && tick(&mut self.tl.next_boss, dt) {
             let (u, k) = (self.s.uni as usize, self.s.uni_stage as usize);
             let who = uni_fighter(u, k);
             let hp = UNI_HP * UNI_STEP.powf(u as f64) * UNI_STAGES[k];
@@ -1507,8 +1484,7 @@ impl Game {
             self.tl.next_boss = 10.0 + self.r() * 6.0;
         }
         // the meteor storm
-        if self.on("storm")
-            && self.tl.storm.is_none()
+        if self.tl.storm.is_none()
             && session > 120.0
             && self.tl.tour.is_none()
             && self.tl.shen.is_none()
@@ -1689,12 +1665,12 @@ impl Game {
         self.tl.kis.retain(|k| !k.done);
     }
 
-    /// After the fights: the wished form wearing off is in game.rs; this is what moves on its own after transforming.
+    /// After the form checks: whis' staff, zeno, the space pod and meteors moving, the nimbus reaching the hero, orbs on the road.
     pub(crate) fn timeline_after(&mut self, t: f64, dt: f64) {
         if self.ang(A_STAFF) && self.tl.bz.is_some() {
             self.b.whis_until = self.b.whis_until.max(t + 1.0);
         }
-        if self.on("zeno") && self.tl.zen.is_none() && self.zeno_ready() && self.playing && self.tl.shen.is_none() && self.s.world == self.home() {
+        if self.tl.zen.is_none() && self.zeno_ready() && self.playing && self.tl.shen.is_none() && self.s.world == self.home() {
             let c = self.cap_pt(0.4, 1.7);
             self.tl.zen = Some(Npc { c, t0: t, ..Default::default() });
             self.event("zeno-sama is here. \"you're strong! let's be friends!\" — tap him for the zeno button");
@@ -1762,13 +1738,7 @@ impl Game {
     pub(crate) fn timeline_moon(&mut self, t: f64, dt: f64) {
         let session = self.session;
         let (w, h) = (self.cam.w, self.cam.h);
-        if self.on("moon")
-            && (session > 40.0 || self.s.world == 2)
-            && self.s.world != 3
-            && self.tl.moon.is_none()
-            && self.b.ape_until < t
-            && tick(&mut self.tl.next_moon, dt)
-        {
+        if (session > 40.0 || self.s.world == 2) && self.s.world != 3 && self.tl.moon.is_none() && self.b.ape_until < t && tick(&mut self.tl.next_moon, dt) {
             let r = 9f64.max(js_round(w.min(h) * 0.07));
             self.tl.moon = Some(Moon { x: w * 0.2, y: h * 0.22, r, a: 0.0, born: t, leaving: false });
             self.once("moon", "a full moon is rising… click it to transform");
@@ -1791,7 +1761,7 @@ impl Game {
                 self.tl.next_moon = if self.s.world == 2 { 40.0 } else { 180.0 + self.r() * 60.0 };
             }
         }
-        if self.on("bean") && self.s.lv(Upg::Senzu) > 0 && self.tl.bean.is_none() && tick(&mut self.tl.next_bean, dt) {
+        if self.s.lv(Upg::Senzu) > 0 && self.tl.bean.is_none() && tick(&mut self.tl.next_bean, dt) {
             let c = geom::mul(self.rand_cap(0.3, 0.9), 1.03);
             self.tl.bean = Some(Npc { c, ..Default::default() });
             self.tl.next_bean = 40.0 / self.s.lvf(Upg::Senzu);

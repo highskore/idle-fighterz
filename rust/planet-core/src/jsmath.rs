@@ -4,6 +4,8 @@
 //! product first) into one rounding, so these use `mul_add` in exactly those places: they match node on arm64 over
 //! 400k random arguments. x86-64 builds have no FMA in their baseline, so V8 there likely differs in the last bit.
 
+#![allow(clippy::excessive_precision, clippy::approx_constant, clippy::eq_op)] // fdlibm as written: its constants digit for digit, x - x for NaN
+
 fn hi(x: f64) -> u32 {
     (x.to_bits() >> 32) as u32
 }
