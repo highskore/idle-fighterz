@@ -72,5 +72,3 @@ Add these to the URL to jump straight to something. They only work off the live 
 
 - **highskore.com** has this repo as a submodule at `games/planet`; its `pnpm build:planet` runs `node build.mjs` and copies `dist/planet.html` to `public/planet.html`.
 - **[powerrr](https://github.com/highskore/powerrr)** has it as a submodule at `game/`, and builds the widget page with `node game/build.mjs --widget`.
-
-A fan project. Dragon Ball and its characters belong to Akira Toriyama and their rights holders.
