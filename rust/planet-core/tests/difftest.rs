@@ -120,6 +120,19 @@ fn scenario(name: &str) {
                 rep.num(st, &format!("lv.{}", u.key()), s["levels"][u.key()].as_f64().unwrap(), g.s.lv(u) as f64, true);
                 rep.num(st, &format!("cost.{}", u.key()), s["cost"][u.key()].as_f64().unwrap(), g.cost(u), false);
             }
+            for (pair, (name, rs)) in s["tl"].as_array().unwrap().iter().zip(timeline_sample(&g)) {
+                assert_eq!(pair[0].as_str().unwrap(), name);
+                match (pair[1].as_f64(), rs) {
+                    (Some(js), Some(rs)) => rep.num(st, name, js, rs, false),
+                    (None, None) => rep.checked += 1,
+                    (js, rs) => {
+                        rep.checked += 1;
+                        if rep.bad.len() < 25 {
+                            rep.bad.push(format!("t={st:.0}s {name}: js {js:?} rust {rs:?}"));
+                        }
+                    }
+                }
+            }
         }
     }
     assert_eq!(si, samples.len());
@@ -132,6 +145,59 @@ fn scenario(name: &str) {
         rep.worst
     );
     assert!(rep.bad.is_empty(), "{name} diverged:\n{}", rep.bad.join("\n"));
+}
+
+/// The timeline's state, in run.js's `tl` order: what's up in the sky and how the run is going.
+fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
+    let (s, tl) = (&g.s, &g.tl);
+    let n = |v: f64| Some(v);
+    let b = |v: bool| Some(if v { 1.0 } else { 0.0 });
+    vec![
+        ("world", n(s.world as f64)),
+        ("saga", n(s.saga as f64)),
+        ("uni", n(s.uni as f64)),
+        ("uniStage", n(s.uni_stage as f64)),
+        ("ustars", n(s.ustars as f64)),
+        ("multi", b(s.multi)),
+        ("granted", n(s.granted as f64)),
+        ("wishes", n(s.wishes as f64)),
+        ("bosses", n(s.bosses as f64)),
+        ("trips", n(s.trips as f64)),
+        ("tourBest", n(s.tour_best as f64)),
+        ("stars", n(s.stars as f64)),
+        ("krillinDead", b(s.krillin_dead)),
+        ("geros", n(s.geros as f64)),
+        ("movies", n(s.movies as f64)),
+        ("boss", tl.boss.as_ref().map(|b| b.hp)),
+        ("bossDead", tl.boss.as_ref().map(|b| if b.dead { 1.0 } else { 0.0 })),
+        ("ginyu", tl.ginyu.as_ref().map(|g| g.members.iter().fold(0.0, |a, m| a + m.hp.max(0.0)))),
+        ("shen", tl.shen.as_ref().map(|s| s.phase as u8 as f64)),
+        ("orbs", n(tl.orbs.len() as f64)),
+        ("meteors", n(tl.meteors.len() as f64)),
+        ("saibas", n(tl.saibas.len() as f64)),
+        ("kis", n(tl.kis.len() as f64)),
+        ("star", tl.star.as_ref().map(|s| s.x)),
+        ("cloud", tl.cloud_fly.map(|c| c.0)),
+        ("moon", tl.moon.as_ref().map(|m| m.a)),
+        ("apeUntil", n(g.b.ape_until)),
+        ("riding", n(g.riding)),
+        ("tour", tl.tour.as_ref().map(|t| t.ko as f64)),
+        ("movie", tl.movie.as_ref().and(tl.boss.as_ref()).map(|b| b.hp)),
+        ("storm", tl.storm.as_ref().map(|s| s.hit as f64)),
+        ("snake", tl.snk.as_ref().map(|s| s.p)),
+        ("greg", tl.greg.as_ref().map(|g| g.c[0])),
+        ("gero", tl.gero.as_ref().map(|g| g.x)),
+        ("dance", tl.dance.as_ref().map(|d| d.hits as f64)),
+        ("struggle", tl.struggle.as_ref().map(|s| s.p)),
+        ("m0", n(g.cam.m[0])),
+        ("m2", n(g.cam.m[2])),
+        ("bob", n(g.cam.bob)),
+        ("namekUntil", n(tl.namek_until)),
+        ("nextBoss", n(tl.next_boss)),
+        ("fused", g.b.fused.map(|f| f.0)),
+        ("preview", tl.preview.map(|p| p.1)),
+        ("jumpH", n(tl.jump_h)),
+    ]
 }
 
 #[test]

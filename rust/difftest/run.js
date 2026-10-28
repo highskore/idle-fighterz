@@ -5,7 +5,7 @@ const fs = require('fs'), path = require('path')
 const mount = require('./harness')
 
 // timeline systems planet-core has: the harness switches the rest off at their spawn points (planet-core mirrors the gates)
-const PORTED = []
+const PORTED = ['pods', 'orbs']
 const OFF = mount.SYSTEMS.filter(s => !PORTED.includes(s))
 
 const DT = 1 / 30
@@ -66,7 +66,14 @@ function apply(g, i) {
 const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest, rate: rate(), wrate: wrate(), mult: mult(), multBare: mult(true),
   laps, lapsTotal: S.lapsTotal || 0, phi, sprint, combo, form: S.form, mastery: S.mastery, seeds: S.seeds, ascend: S.ascend,
   tree: { ...S.tree }, goal: S.goal.id, goalP: S.goal.p, goalsDone: S.goalsDone || 0, orbs7: S.orbs7, cost: Object.fromEntries(${JSON.stringify(LEVELS)}.map(k => [k, cost(k)])),
-  levels: Object.fromEntries(${JSON.stringify(LEVELS)}.map(k => [k, S[k]])) })`
+  levels: Object.fromEntries(${JSON.stringify(LEVELS)}.map(k => [k, S[k]])),
+  tl: [['world', S.world], ['saga', S.saga], ['uni', S.uni], ['uniStage', S.uniStage], ['ustars', S.ustars], ['multi', +!!S.multi], ['granted', S.granted], ['wishes', S.wishes],
+    ['bosses', S.bosses || 0], ['trips', S.trips || 0], ['tourBest', S.tourBest || 0], ['stars', S.stars || 0], ['krillinDead', +!!S.krillinDead], ['geros', S.geros || 0], ['movies', S.movies || 0],
+    ['boss', boss ? boss.hp : null], ['bossDead', boss ? +!!boss.dead : null], ['ginyu', ginyu ? ginyu.members.reduce((a, m) => a + Math.max(0, m.hp), 0) : null],
+    ['shen', shen ? ['rise', 'wish', 'granting', 'leave'].indexOf(shen.phase) : null], ['orbs', orbs.length], ['meteors', meteors.length], ['saibas', saibas.length], ['kis', kis.length],
+    ['star', star ? star.x : null], ['cloud', cloudFly ? cloudFly.x : null], ['moon', moon ? moon.a : null], ['apeUntil', apeUntil], ['riding', riding], ['tour', tour ? tour.ko : null],
+    ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
+    ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH]] })`
 
 function run(name) {
   const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)
