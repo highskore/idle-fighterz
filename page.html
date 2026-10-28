@@ -427,6 +427,7 @@ __WIDGET_CSS__
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
 <script>
 /*widget*/const WIDGET = document.documentElement.classList.contains('widget');
+let BARE = WIDGET;   // the floating widget draws no sky or backdrops; its window mode (a setting) turns them back on
 /*/widget*/__WORLD__
 __PLANET__
 (() => {

@@ -3263,7 +3263,7 @@ GAMES.push({
     function layout() {
       const wide = st.W / st.H >= 1.15, fcx = +(st.el.closest('[data-cx]')?.dataset.cx || (wide ? .56 : .5));
       R = Math.round(st.W / st.H < .8 ? Math.min(st.W * .34, st.H * .22) : wide ? Math.min(st.W * .19, st.H * .3) : Math.min(st.W * .28, st.H * .24));
-      cx = Math.round(st.W * fcx); cy = Math.round(st.H * (wide ? .5 : st.W / st.H < .8 ? .5 : .55));
+      cx = Math.round(st.W * fcx); cy = Math.round(st.H * (wide ? .5 : st.W / st.H < .8 ? .5 : .55));/*widget*/ if (WIDGET) { R = Math.max(56, Math.min(70, Math.round(Math.min(st.W, st.H) * .2))); cy = Math.round(st.H * .5); }   // the widget: the planet at the site's size against the sprites (56-70px, as on phones and desktops), with room round it/*/widget*/
       { const lk = W2L[S.world]; if (lk) { R = Math.round(R * (lk.zoom || 1)); cy += Math.round(st.H * (lk.dy || 0)); } }   // some worlds sit the planet bigger, smaller or higher
       zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H);
     }
@@ -3876,8 +3876,8 @@ GAMES.push({
     function drawVoid(t) {
       const Lk = TOP_LOOK;
       if (!voidBake || voidBake.W !== st.W || voidBake.H !== st.H) bakeVoid();
-      /*widget*/if (!WIDGET) /*/widget*/st.buf.set(voidBake.B);
-      /*widget*/if (!WIDGET) /*/widget*/for (let k = 0; k < 140; k++) {
+      /*widget*/if (!BARE) /*/widget*/st.buf.set(voidBake.B);
+      /*widget*/if (!BARE) /*/widget*/for (let k = 0; k < 140; k++) {
         const x = Math.floor(hash(k * 3.1 + 1) * st.W), y = Math.floor(hash(k * 7.7 + 2) * st.H), big = hash(k * 1.3) > .9, tw = .35 + .65 * Math.max(0, Math.sin(t * (.6 + hash(k) * 2) + k));
         st.px(x, y, Lk.star[k % 2], tw * (big ? 1 : .55));
         if (big && tw > .75) for (const [a, b] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.px(x + a, y + b, Lk.star[1], .45);
@@ -4048,7 +4048,7 @@ GAMES.push({
       return u > .43 && u < .57 && v < .5 ? (u > .51 ? 0x4a2a12 : 0x7a4a24) : -1; };
     function kingKaiPlanet(kx, ky, kr, t, spin, beat) {   // beat: seconds since he landed, when king kai waves and bubbles jumps about
       const W = st.W, H = st.H, tilt = .42, ct = Math.cos(tilt), sn = Math.sin(tilt), k = kr / 42, G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e], at = {};
-      const hr = kr * 1.45 + 8; /*widget*/if (!WIDGET) /*/widget*/for (let y = Math.max(0, ky - hr); y < Math.min(H, ky + hr); y++) for (let x = Math.max(0, kx - hr); x < Math.min(W, kx + hr); x++) { const d = Math.hypot(x - kx, y - ky); if (d >= kr && d <= hr) st.px(x, y, 0xfff4cc, ((1 - (d - kr) / (hr - kr)) ** 2) * .6); }   // a soft gold halo
+      const hr = kr * 1.45 + 8; /*widget*/if (!BARE) /*/widget*/for (let y = Math.max(0, ky - hr); y < Math.min(H, ky + hr); y++) for (let x = Math.max(0, kx - hr); x < Math.min(W, kx + hr); x++) { const d = Math.hypot(x - kx, y - ky); if (d >= kr && d <= hr) st.px(x, y, 0xfff4cc, ((1 - (d - kr) / (hr - kr)) ** 2) * .6); }   // a soft gold halo
       // the globe, lit from the upper left; its pole is tipped toward us so the cap with the house shows, and the grass turns with it
       for (let y = -kr; y <= kr; y++) { const Y = ky + y; if (Y < 0 || Y >= H) continue; for (let x = -kr; x <= kr; x++) { const X = kx + x; if (X < 0 || X >= W) continue; const d = Math.hypot(x, y); if (d > kr + .3) continue;
         if (d > kr - .7) { st.px(X, Y, 0x1f3a1a); continue; }
@@ -4115,7 +4115,7 @@ GAMES.push({
     function tear(gi, g, sAt, u, o, y, t) {   // a torn break in his body: ragged scales, a cut face on the far side, the cloud sea parting on HFIL's glow below; -1 where the road is whole
       const ju = Math.round(u * 9), a = g[0] + .55 * h2(ju + gi * 31, 7), b = g[1] - .55 * h2(ju + gi * 31, 11);
       if (sAt < a || sAt > b) return -1;
-      /*widget*/if (WIDGET && sAt <= b - .5) return -2;/*/widget*/
+      /*widget*/if (BARE && sAt <= b - .5) return -2;/*/widget*/
       if (sAt > b - .5) { const f = (b - sAt) / .5; return f < .22 ? 0xd8901e : f < .55 ? (bayer(o, y) < .5 ? 0x9a5a14 : 0x7a4010) : 0x4a2008; }   // the cut face: scales, flesh, then the dark underside
       const d = Math.min(1, Math.min(sAt - a, b - .5 - sAt) / ((b - .5 - a) / 2), (1 - Math.abs(u)) * 2.2), q = d + Math.sin(o * .35 + t * 7 + y * .9) * .08 + (bayer(o, y) - .5) * .25;
       return q < .1 ? 0x2a0804 : q < .24 ? (bayer(o, y) < .55 ? 0xf0b060 : 0x7a2a10) : q < .45 ? 0x8a1a10 : q < .66 ? 0xd0481e : q < .86 ? 0xff8a30 : 0xffd070;
@@ -4125,10 +4125,10 @@ GAMES.push({
       const lag = tb >= 0 ? 5 - 2.6 * ease(tb / 1.8) : 5 * ease((p - .93) / .07), cam = (tb >= 0 ? END : sH) - lag, zH = 1.6 + lag;   // near the end the camera falls back and he runs on ahead; once he's landed it pushes in
       const hz = Math.round(H * ((ph ? .4 : .36) + ((ph ? .5 : .52) - (ph ? .4 : .36)) * ease((p - .82) / .18))), RW = P.RW, px = (x, y, c) => st.px(x, y, c), base = ph ? Math.round(H * .74) : H - 4;   // the camera tips up toward the planet; portrait phones: clear of the power level card
       const yAt = z => hz + 1.6 / z * (H - hz), xAt = (s, z) => W / 2 + (bendS(s) - bendS(cam) - snk.x) * RW * 1.6 / z;
-      /*widget*/if (!WIDGET) /*/widget*/for (let y = 0; y < hz + 4; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.sky[0], P.sky[1], y / hz + (bayer(x, y) - .5) * .1));
-      /*widget*/if (!WIDGET) /*/widget*/for (let y = hz + 3; y < H; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.floor[0], P.floor[1], (y - hz) / (H - hz) + (bayer(x, y) - .5) * .12));
+      /*widget*/if (!BARE) /*/widget*/for (let y = 0; y < hz + 4; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.sky[0], P.sky[1], y / hz + (bayer(x, y) - .5) * .1));
+      /*widget*/if (!BARE) /*/widget*/for (let y = hz + 3; y < H; y++) for (let x = 0; x < W; x++) px(x, y, mixC(P.floor[0], P.floor[1], (y - hz) / (H - hz) + (bayer(x, y) - .5) * .12));
       const fo = cam * 6 + t * 3;
-      /*widget*/if (!WIDGET) {/*/widget*/puffRow(fo * .3, hz + 3, Math.max(4, W * .03), P.puff, 1); puffRow(fo * .6, hz + (H - hz) * .3, Math.max(6, W * .055), P.puff, 2); puffRow(fo, hz + (H - hz) * .7, Math.max(9, W * .09), P.puff, 3, false, true);/*widget*/}/*/widget*/
+      /*widget*/if (!BARE) {/*/widget*/puffRow(fo * .3, hz + 3, Math.max(4, W * .03), P.puff, 1); puffRow(fo * .6, hz + (H - hz) * .3, Math.max(6, W * .055), P.puff, 2); puffRow(fo, hz + (H - hz) * .7, Math.max(9, W * .09), P.puff, 3, false, true);/*widget*/}/*/widget*/
       // king kai's planet sits where the road ends: a speck at first, filling the sky by the end, never cut off by the frame
       const zE = END - cam, yE = yAt(Math.max(.5, zE)), yP = ph ? Math.min(yE, H * .64) : yE, m = Math.min(W, H * 1.2);   // on a phone the planet stays up clear of the power level card and the road climbs to it
       const kr = Math.round(Math.max(2, Math.min((yP - 5) / 2.25, W * .44, Math.max(3 + m * (.04 * p + .2 * p ** 3), (H - hz) * 2.2 / zE)))), kx = Math.round(Math.max(kr + 2, Math.min(W - kr - 2, xAt(END, Math.max(.5, zE))))), ky = Math.round(yP - kr * .9);
@@ -4181,7 +4181,7 @@ GAMES.push({
       if (tb < .5) { const r = tb / .5 * 40; for (let a = 0; a < 6.28; a += .08) st.px(hx + Math.cos(a) * r, feet - 4 + Math.sin(a) * r * .35, 0xfffbe0, 1 - tb / .5); }   // a ring kicked up where he lands
       if (folk.kk && tb > .6 && tb < BEAT - .5 && (tb < 1.7 || tb > 2.4)) label(tb < 1.7 ? 'YOU MADE IT!' : 'NOW, A JOKE...', Math.max(40, Math.min(st.W - 40, folk.kk.x)), Math.max(6, folk.kk.y - 12), 0x1d1030);
       if (folk.bub && tb > 1.7 && tb < 2.4) label('OOK OOK!', Math.max(30, Math.min(st.W - 30, folk.bub.x)), Math.max(6, folk.bub.y - 10), 0x7a4a24);
-      const f = (tb - (BEAT - .7)) / .7; if (f > 0) for (let y = 0; y < st.H; y++) for (let x = 0; x < st.W; x++) if (/*widget*/(!WIDGET || st.buf[y * st.W + x] >>> 24) && /*/widget*/bayer(x, y) < f * .85) st.px(x, y, 0xffffff);   // the visit's own flash picks up from this white
+      const f = (tb - (BEAT - .7)) / .7; if (f > 0) for (let y = 0; y < st.H; y++) for (let x = 0; x < st.W; x++) if (/*widget*/(!BARE || st.buf[y * st.W + x] >>> 24) && /*/widget*/bayer(x, y) < f * .85) st.px(x, y, 0xffffff);   // the visit's own flash picks up from this white
     }
     const P1 = { hz: 0, RW: 0, sky: [0xfffbe2, 0xffd468], floor: [0xffe48a, 0xe0a030], puff: [0xd99a2a, 0xf4c84a, 0xffe58a, 0xfffbe0], streak: 0xfffbe0, shadow: 0xb07a1a };
     addEventListener('keydown', e => {
@@ -4218,7 +4218,7 @@ GAMES.push({
         if (lead > .45) c = lead > .78 ? 0xfff6d0 : lead > .6 ? 0xffc04a : mixC(c, 0xff7a2a, .6);
         st.px(x + xx, y + yy, c); }
       for (let a = -1.5; a <= 1.5; a += .12) { const ang = Math.atan2(dy, dx) + a, r = rad(ang) + 1 + (Math.sin(a * 7 - t * 25) > .3 ? .6 : 0); st.px(x + Math.cos(ang) * r, y + Math.sin(ang) * r, Math.abs(a) < .6 ? 0xfff3c0 : 0xffa53a); }   // flame licking round the leading edge
-      /*widget*/if (!WIDGET) /*/widget*/if (!m.dead && Math.random() < .9) { const s0 = 16 + Math.random() * 6; fx.add({ x: x - dx * s0 + (Math.random() - .5) * 3, y: y - dy * s0, vx: (Math.random() - .5) * 4, vy: -4, drag: 1.5, life: .7, s: 2, grow: 3, c: [0x9a948e, 0x7e7872, 0x625e5a, 0x4e4b48] }); }   // smoke rolling off the end
+      /*widget*/if (!BARE) /*/widget*/if (!m.dead && Math.random() < .9) { const s0 = 16 + Math.random() * 6; fx.add({ x: x - dx * s0 + (Math.random() - .5) * 3, y: y - dy * s0, vx: (Math.random() - .5) * 4, vy: -4, drag: 1.5, life: .7, s: 2, grow: 3, c: [0x9a948e, 0x7e7872, 0x625e5a, 0x4e4b48] }); }   // smoke rolling off the end
     }
     // a full charge crackles: jagged bolts off the ball and over his body, a faint tremble; once fired, bolts crawl along the beam
     const crackle = (x0, y0, x1, y1, c, put = st.px, core = 0xffffff) => { let px0 = x0, py0 = y0; const n = 6, L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
@@ -4498,11 +4498,11 @@ GAMES.push({
       syncShop();
       }
 
-      shenStep(t);
+      shenStep(t);/*widget*/ if (st.headless) return;/*/widget*/
       // ── draw
       st.clear(); zb.fill(-1e9); ib.fill(0);
       if (S.world === 3 && snk) { drawSnake(t, dt); return; }
-      if (S.world === 9) drawVoid(t); else /*widget*/if (!WIDGET) /*/widget*/drawSea(t, false);
+      if (S.world === 9) drawVoid(t); else /*widget*/if (BARE) { if (st.clouds) drawClouds(t, false); } else /*/widget*/drawSea(t, false);
       if (moon) {
         const { x, y, r } = moon, a = moon.a;
         for (let yy = -r - 6; yy <= r + 6; yy++) for (let xx = -r - 6; xx <= r + 6; xx++) {
@@ -4715,8 +4715,8 @@ GAMES.push({
       fx.step(st, dt);
       if (star) st.blit(POD, star.x - 7, star.y - 7, false, true);   // in front of the planet
       if (gero) { const h = handPos(); if (t - gero.t0 > 1.2) for (let i = 0; i <= 1; i += .02) if ((i * 50 + t * 20) % 4 < 2) st.px(h.x + (gero.x - h.x) * i, h.y + (gero.y - gero.spr.h * .55 - h.y) * i, 0xe0473e); st.blit(gero.spr, gero.x - gero.spr.w / 2, gero.y - gero.spr.h + Math.sin(t * 3) * 2, true, true); }
-      /*widget*/if (!WIDGET) /*/widget*/if (S.world !== 9) drawSea(t, true);
-      if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (/*widget*/(!WIDGET || st.buf[k] >>> 24) && /*/widget*/bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
+      /*widget*/if (BARE) { if (st.clouds && S.world !== 9) drawClouds(t, true); } else /*/widget*/if (S.world !== 9) drawSea(t, true);
+      if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (/*widget*/(!BARE || st.buf[k] >>> 24) && /*/widget*/bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
       for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y), a = Math.min(1, f.life * 2); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(f.s, x + ox, y + oy, 0xffffff, a); st.text(f.s, x, y, f.gold ? 0xd99a1c : 0x111111, a); }
       for (let k = floats.length - 1; k >= 0; k--) if (floats[k].life <= 0) floats.splice(k, 1);
       st.flush();
@@ -4743,7 +4743,97 @@ GAMES.push({
           st.px(x, y, glint && v < -.2 && !((x * 3 + y) & 7) && h2(x * 7 + (t * 4 | 0), y) > .94 ? FUT.fire[2] : pal[v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0]);   // embers glint in the future's smoke
         }
       }
+    }/*widget*/
+    // widget clouds: whole puffs with their own edges (the widget's rim pass outlines them) instead of the screen-wide sea.
+    // five arrangements, st.clouds = 'c' drifting clusters (the default; st.cloudAmt adds more), 'a' bank under the planet,
+    // 'b' halo round it, 'd' a plate, 'e' a band along the bottom of the canvas, like the site's cloud sea
+    // hand-made cumulus outlines for the drifting clouds: lobes [dx, dy, r] in planet radii over a flat base at dy = 0 (a lobe
+    // is cut off at the base). 2-4 lobes overlapping heavily, one merged outline, wider than tall (1.6-3). checked at every
+    // scale and mirror by desktop/scripts/clouds.mjs, which also draws them all on one sheet
+    const CLOUD_TPL = [
+      [[-.18, -.02, .14], [0, -.08, .18], [.18, -.03, .13]],   // classic, tallest in the middle
+      [[-.15, 0, .12], [0, -.09, .17], [.15, 0, .11]],   // small and tall
+      [[-.16, -.08, .17], [.02, -.03, .14], [.17, .01, .11]],   // high at one end
+      [[-.23, -.02, .12], [-.08, -.07, .15], [.08, -.09, .16], [.22, -.03, .13]],   // a long stratocumulus
+      [[-.055, -.01, .1], [.055, -.04, .11]],   // a small double
+      [[-.22, 0, .13], [-.07, -.1, .18], [.11, -.12, .19], [.25, -.01, .12]],   // a big cumulus
+      [[-.18, .01, .1], [-.05, -.04, .14], [.11, -.07, .17]],   // a mound rising to one side
+    ];
+    // a template's lobes in canvas px for one spot: mirrored or not, scaled, each lobe a pixel bigger or smaller, and
+    // sometimes one small lobe on top of the tallest. seeded by k, so a cloud keeps its shape
+    function cloudLobes(tp, k, scale) {
+      const s = (hash(k * 3.1 + 9) < .5 ? -1 : 1) * scale, a = Math.abs(s);
+      const lobes = tp.map(([dx, dy, r], i) => [dx * s, dy * a, r * a + Math.round(hash(k * 11 + i * 1.7) * 2) - 1]);
+      if (tp.length < 4 && hash(k * 2.3 + 4) > .6) { const [dx, dy, r] = tp.reduce((p, q) => q[1] - q[2] < p[1] - p[2] ? q : p); lobes.push([(dx + .07) * s, (dy - r * .55) * a, .09 * a]); }
+      return lobes;
     }
+    // one cloud, lowest lobes first so the higher ones shade over them, the base band darker like the site's cloud sea.
+    // the whole cloud moves to fit inside the canvas, never cut
+    function drawCloud(x, base, lobes, pal, pale = 0) {
+      const m = 1, x0 = Math.min(...lobes.map(([dx, , r]) => dx - r)), x1 = Math.max(...lobes.map(([dx, , r]) => dx + r)), top = Math.min(...lobes.map(([, dy, r]) => dy - r));
+      x = Math.round(Math.max(m - x0, Math.min(st.W - m - x1, x))); base = Math.round(Math.max(m - top, Math.min(st.H - m - 1, base)));
+      const band = -top * .35;
+      for (const [dx, dy, r] of [...lobes].sort((p, q) => q[1] - p[1])) {
+        const lx = x + dx, ly = base + dy;
+        for (let y = Math.floor(ly - r); y <= base; y++) for (let px = Math.floor(lx - r); px <= lx + r; px++) {
+          const ex = px - lx, ey = y - ly; if (ex * ex + ey * ey > r * r) continue;
+          const v = -(ex * .5 + ey * .9) / r + bayer(px, y) * .3 - Math.max(0, y - (base - band)) / band * .9;
+          st.px(px, y, pal[Math.min(3, (v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0) + pale)]);
+        }
+      }
+    }
+    function cloudPuff(x0, y0, r, pal, pale = 0) {
+      for (let y = Math.floor(y0 - r); y <= y0 + r; y++) for (let x = Math.floor(x0 - r); x <= x0 + r; x++) {
+        const dx = x - x0, dy = y - y0; if (dx * dx + dy * dy > r * r) continue;
+        const v = -(dx * .5 + dy * .9) / r + bayer(x, y) * .3;
+        st.px(x, y, pal[Math.min(3, (v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0) + pale)]);   // pale: tones shifted toward the light one
+      }
+    }
+    function cloudPuffs(t) {
+      const P = [], add = (x, y, r, f, pale = 0) => P.push({ x, y, r, f, pale }), bob = (i, k = .02) => Math.sin(t * .4 + i * 1.7) * R * k;
+      if (st.clouds === 'e') {   // like the site's cloud sea: four staggered rows along the dock (400pt wide at most), rising
+        // well above it; back rows smaller and paler, each row swaying at its own pace; the front row passes in front
+        const span = Math.min(st.W, 404 / st.scale), x0 = (st.W - span) / 2;
+        for (let L = 0; L < 4; L++) {
+          const rb = R * (.13 + .05 * L), step = rb * (1.1 + .25 * (3 - L)), n = Math.max(3, Math.ceil((span - 2 * rb) / step) + 1), gap = (span - 2 * rb - 2) / (n - 1);
+          for (let i = 0; i < n; i++) {
+            const h = hash(i * 7.1 + L * 13.3), r = rb * (.7 + .6 * h), sway = Math.sin(t * (.12 + .06 * L) + i * 1.9 + L * 2.1) * rb * .25;
+            add(x0 + rb + 1 + (i + (L % 2 ? .5 * (i < n - 1) : 0)) * gap + sway, st.H - r - 1 - R * .2 * (3 - L) - hash(i * 3.7 + L * 5.9) * rb * (L === 3 ? .5 : .9) + bob(i * 4 + L, .01), r, L === 3, L < 2 ? 1 : 0);
+          }
+        }
+      } else if (st.clouds === 'b') {   // a tilted ring of puffs round the planet: the far half behind it, the near half in front
+        for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + t * .06; add(cx + Math.cos(a) * R * 1.3, cy + R * .12 + Math.sin(a) * R * .36, R * (.11 + .04 * hash(i * 2.1)), Math.sin(a) > 0); }
+      } else if (st.clouds === 'c') {   // loose clusters drifting a little: three at amount 1, then more per step (st.cloudAmt, 1-5)
+        // from a ranked list of spots, all clear of the planet and the hero's path round it: below and beside it first, then
+        // the gaps at the sides, then a few higher up. from amount 4 clouds grow a little
+        const amt = Math.max(1, Math.min(5, st.cloudAmt || 1));
+        const SPOTS = [[[-1.3, .5, false], [1.3, .15, false], [-.15, 1.1, true]], [[1, 1.05, true], [-1.6, -.3, false]],
+          [[1.6, .75, false], [-1.5, 1.05, false], [.5, 1.35, true]], [[1.45, -.75, false], [-1.15, -1.3, false], [-.6, 1.45, true]],
+          [[1.85, .2, false], [-1.9, .45, false], [.3, -1.55, false]]];
+        // every spot its own cloud: one of the templates, seeded by the spot, so it keeps its shape and neighbours differ
+        SPOTS.slice(0, amt).flat().forEach(([u, v, f], k) => {
+          const tp = CLOUD_TPL[Math.floor(hash(k * 7.3 + .5) * CLOUD_TPL.length)];
+          P.push({ cloud: cloudLobes(tp, k, R * (.7 + .6 * hash(k * 5.9 + 2)) * (amt >= 4 ? 1.1 : 1)), x: cx + u * R + Math.sin(t * .15 + k * 2) * R * .08, y: cy + v * R + R * .1, f });
+        });
+      } else if (st.clouds === 'd') {   // a broad flat plate the planet sits on: one row behind its rim, a lower row in front
+        for (let i = 0; i < 9; i++) { const u = i / 8 * 2 - 1; add(cx + u * R * 1.45, cy + R * .9 + bob(i), R * (.19 + .05 * hash(i * 3.7)), false); }
+        for (let i = 0; i < 8; i++) { const u = (i + .5) / 8 * 2 - 1; add(cx + u * R * 1.38, cy + R * 1.12 + bob(i + 9), R * (.17 + .04 * hash(i * 5.3)), true); }
+      } else {   // 'a': an island of puffs the planet sinks into, big in the middle, smaller to the sides
+        for (let i = 0; i < 7; i++) { const u = i / 6 * 2 - 1; add(cx + u * R * 1.05, cy + R * (.8 + .12 * u * u) + bob(i), R * (.17 + .13 * (1 - u * u)), false); }
+        for (let i = 0; i < 6; i++) { const u = (i + .5) / 6 * 2 - 1; add(cx + u * R * .95, cy + R * (1.02 + .06 * u * u) + bob(i + 7), R * (.15 + .09 * (1 - u * u)), true); }
+      }
+      return P;
+    }
+    function drawClouds(t, front) {
+      const pal = seaPal(), m = 1;   // every puff whole inside the canvas
+      for (const p of cloudPuffs(t)) {
+        if (p.f !== front) continue;
+        if (p.cloud) { drawCloud(p.x, p.y, p.cloud, pal); continue; }
+        const r = Math.max(2, Math.round(p.r));
+        cloudPuff(Math.round(Math.min(st.W - m - r, Math.max(m + r, p.x))), Math.round(Math.min(st.H - m - r, Math.max(m + r, p.y))), r, pal, Math.min(1, p.pale));
+      }
+    }
+    /*/widget*/
     useWorld(S.world || 0); ui.world && ui.world(S.world || 0);
     layout(); scenery(); syncShop();
     if (/ape/.test(HASH)) { session = 41; nextMoon = 0; }

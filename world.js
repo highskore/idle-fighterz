@@ -54,7 +54,7 @@ function makeStage(section) {
   let img, buf;
   st.resize = () => {
     const r = el.getBoundingClientRect();
-    st.scale = r.width < 560 ? 2 : 3;
+    st.scale = r.width < 560 ? 2 : 3;/*widget*/ if (WIDGET) st.scale = r.width >= 520 ? 2 : 1;   // the widget: 1× up to medium, 2× at large, so a site-sized planet fits with room round it/*/widget*/
     st.W = Math.ceil(r.width / st.scale); st.H = Math.ceil(r.height / st.scale);
     cv.width = st.W; cv.height = st.H;
     img = ctx.createImageData(st.W, st.H); buf = new Uint32Array(img.data.buffer);
