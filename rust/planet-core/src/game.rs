@@ -1,0 +1,700 @@
+//! The simulation: game.js `frame(t, dt)` and the inputs that change state (training taps, the shop, kaioken, the tree,
+//! ascending), with the economy as methods. Expressions keep game.js's operand order so floats round the same way.
+
+use crate::data::*;
+use crate::num::js_round;
+use crate::rng::Lcg;
+use crate::state::Save;
+
+/// Timed buffs `mult()` reads. Each is the `st.t` it runs out at; stage 3's events set most of them.
+#[derive(Clone, Debug, Default)]
+pub struct Buffs {
+    pub car_until: f64,
+    pub boost_until: f64,
+    pub ape_until: f64,
+    pub senzu_until: f64,
+    pub kaio_until: f64,
+    pub tired_until: f64,
+    pub kaio_ready: f64,
+    pub daily_until: f64,
+    pub fuse_until: f64,
+    pub fused: Option<(f64, f64)>, // (x, until)
+    pub laugh_until: f64,
+    pub chamber_until: f64,
+    pub rage: f64,
+    pub rage_until: f64,
+    pub chi_until: f64,
+    pub roshi_until: f64,
+    pub calm_until: f64,
+    pub gadget_until: f64,
+    pub whis_until: f64,
+    pub pose_until: f64,
+}
+
+/// Shenron's timed wish buffs (`wishBuff`), by key.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WishBuff {
+    Fly,
+    Fast,
+    Taps,
+    Idle,
+    Laps,
+    Crit,
+    Combo,
+}
+
+pub struct Game {
+    pub s: Save,
+    pub rng: Lcg,
+    pub forms: Vec<Form>,
+    pub b: Buffs,
+    pub wish_buff: [f64; 7],
+    /// `st.t`: the time of the last frame
+    pub t: f64,
+    pub session: f64,
+    pub playing: bool,
+    pub phi: f64,
+    pub laps: u32,
+    pub last_lap: f64,
+    pub sprint: f64,
+    pub riding: f64,
+    pub acc: f64,
+    pub auto_acc: f64,
+    pub combo: f64,
+    pub last_click: f64,
+    pub shake: f64,
+    pub ape_giant: bool,
+    /// beerus' planet: Some(awake) while there (stage 3)
+    pub beerus: Option<bool>,
+    /// the dragon is due: seven balls gathered (stage 3 summons him)
+    pub summon_due: bool,
+    /// ui.event text, oldest first; the HUD bridge drains it
+    pub events: Vec<String>,
+}
+
+impl Game {
+    pub fn new(seed: u32) -> Self {
+        let s = Save::new();
+        let forms = ladder_of(s.hero);
+        Game {
+            s,
+            rng: Lcg::new(seed),
+            forms,
+            b: Buffs { rage: 2.0, ..Default::default() },
+            wish_buff: [0.0; 7],
+            t: 0.0,
+            session: 0.0,
+            playing: false,
+            phi: 0.0,
+            laps: 0,
+            last_lap: 0.0,
+            sprint: 0.0,
+            riding: 0.0,
+            acc: 0.0,
+            auto_acc: 0.0,
+            combo: 1.0,
+            last_click: -9.0,
+            shake: 0.0,
+            ape_giant: false,
+            beerus: None,
+            summon_due: false,
+            events: Vec::new(),
+        }
+    }
+
+    /// game.js `start()`; the daily bonus needs a date and waits for the save bridge.
+    pub fn start(&mut self) {
+        self.playing = true;
+    }
+
+    // ── economy
+
+    pub fn lvl(&self, node: usize) -> f64 {
+        self.s.tree[node] as f64
+    }
+
+    pub fn ang(&self, a: usize) -> bool {
+        self.s.angel[a]
+    }
+
+    pub fn wished(&self, k: WishBuff) -> bool {
+        self.wish_buff[k as usize] > self.t
+    }
+
+    /// Producer milestone multiplier.
+    pub fn ms(&self, u: Upg) -> f64 {
+        let l = self.s.lv(u);
+        let hit = MS.iter().filter(|&&n| l >= n).count() as f64;
+        let past = ((l as f64 - 100.0) / 50.0).floor().max(0.0);
+        2f64.powf(hit + past)
+    }
+
+    pub fn seed_boost_of(&self, a: f64) -> f64 {
+        let b = 1.0 + a * (0.1 + 0.02 * self.lvl(N_SEEDX));
+        if b <= SEED_SOFT {
+            b
+        } else {
+            SEED_SOFT * (b / SEED_SOFT).powf(SEED_EXP)
+        }
+    }
+
+    pub fn seed_boost(&self) -> f64 {
+        self.seed_boost_of(self.s.ascend)
+    }
+
+    pub fn combo_cap(&self) -> f64 {
+        if self.lvl(N_PRIDE) > 0.0 {
+            4.0
+        } else {
+            2.0
+        }
+    }
+
+    pub fn tree_open(&self) -> bool {
+        self.s.seeds > 0.0 || self.s.tree.iter().any(|&v| v > 0)
+    }
+
+    pub fn seeds_now(&self) -> f64 {
+        let p = self.s.pl / 1e4;
+        (if self.ang(A_DIVINE) { p.powf(0.55) } else { p.sqrt() }).floor().max(1.0)
+    }
+
+    pub fn god_now(&self) -> u32 {
+        (if self.s.gods > 0 { 0 } else { 1 }).max(self.s.uni) * if self.ang(A_PRIEST) { 2 } else { 1 }
+    }
+
+    pub fn zeno_ready(&self) -> bool {
+        self.s.gods >= ZENO_GODS
+    }
+
+    pub fn god_boost_of(n: f64) -> f64 {
+        1.0 + GOD_X * n
+    }
+
+    /// The ki ceiling: the capped engine shrinks to a small power past it.
+    pub fn ceiling(&self) -> f64 {
+        let time = if self.s.multi { CEIL_T.powf(((self.session - self.s.multi_t) / 60.0).max(0.0)) } else { 1.0 };
+        CEIL0 * time * CEIL_STEP.powf(self.s.uni_best as f64)
+    }
+
+    pub fn capped(&self, m: f64) -> f64 {
+        let c = self.ceiling();
+        if m <= c {
+            m
+        } else {
+            c * (m / c).powf(CEIL_EXP)
+        }
+    }
+
+    pub fn late_boost(&self) -> f64 {
+        let stars = self.s.ustars as f64 * if self.ang(A_STARS) { 2.0 } else { 1.0 };
+        STAR_X.powf(stars) * MASTERY_X.powf(self.s.mastery as f64) * Self::god_boost_of(self.s.god_total as f64) * ZENO_X.powf(self.s.zeno as f64)
+    }
+
+    /// The engine the ceiling caps; forms sit outside it.
+    pub fn core(&self) -> f64 {
+        let w = self.s.wishes as f64;
+        1.15f64.powf(self.s.lvf(Upg::Gravity)) * 1.25f64.powf(w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON
+    }
+
+    pub fn tail_lv(&self) -> f64 {
+        let t = self.s.lvf(Upg::Tail);
+        if t <= 10.0 {
+            t
+        } else {
+            10.0 + 2.0 * (t - 10.0).sqrt()
+        }
+    }
+
+    pub fn ape_x(&self) -> f64 {
+        2.0 + 0.25 * self.tail_lv() + if self.ape_giant { 1.0 } else { 0.0 }
+    }
+
+    pub fn kaio_x(&self) -> f64 {
+        1.25 + 0.25 * self.s.lvf(Upg::Kaio)
+    }
+
+    pub fn chamber_x(&self) -> f64 {
+        1.5 + 0.5 * self.s.lvf(Upg::Chamber)
+    }
+
+    /// Permanent boosts multiply; timed ones add their bonuses. `bare` leaves the timed ones out (windfalls, villain hp).
+    pub fn mult(&self, bare: bool) -> f64 {
+        let t = self.t;
+        let b = &self.b;
+        let on = |until: f64, x: f64| if until > t { x } else { 0.0 };
+        let bonus = if bare {
+            1.0
+        } else {
+            1.0 + on(b.car_until, 0.5)
+                + on(b.boost_until, 1.0)
+                + on(b.ape_until, self.ape_x())
+                + on(b.senzu_until, 0.5)
+                + if self.riding > 0.0 { 0.5 } else { 0.0 }
+                + on(b.kaio_until, self.kaio_x() - 1.0)
+                + on(b.daily_until, 0.25)
+                + on(b.fuse_until, 1.0)
+                + b.fused.map_or(0.0, |(x, until)| on(until, x - 1.0))
+                + on(b.laugh_until, 0.25)
+                + on(b.chamber_until, self.chamber_x() - 1.0)
+                + on(b.rage_until, b.rage - 1.0)
+                + on(b.chi_until, 0.5)
+                + on(b.roshi_until, 0.5)
+                + on(b.calm_until, 0.25)
+                + on(b.gadget_until, 0.5)
+        };
+        let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
+        let awake = if self.beerus == Some(true) { 0.25 } else { 1.0 };
+        self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
+    }
+
+    pub fn lap_value(&self) -> f64 {
+        30.0 * (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots))
+    }
+
+    pub fn passive(&self) -> f64 {
+        let s = &self.s;
+        (s.lvf(Upg::Partner) * 4.0 * self.ms(Upg::Partner)
+            + s.lvf(Upg::House) * 40.0 * self.ms(Upg::House)
+            + s.lvf(Upg::Piccolo) * 60.0 * self.ms(Upg::Piccolo))
+            * (1.0 + 0.5 * self.lvl(N_IDLE))
+            * if self.wished(WishBuff::Idle) { 3.0 } else { 1.0 }
+            * if self.lvl(N_ETERNAL) > 0.0 { 3.0 } else { 1.0 }
+            * if s.krillin_ally { 1.5 } else { 1.0 }
+    }
+
+    /// Power a second, buffs included: what the HUD shows.
+    pub fn rate(&self) -> f64 {
+        js_round((self.lap_value() / 7.0 + self.passive()) * self.mult(false))
+    }
+
+    /// The rate without timed buffs: windfalls and villain hp are sized on it.
+    pub fn wrate(&self) -> f64 {
+        js_round((self.lap_value() / 7.0 + self.passive()) * self.mult(true))
+    }
+
+    pub fn unlocked(&self, u: Upg) -> bool {
+        let best = self.s.best;
+        match u {
+            Upg::Boots | Upg::Partner | Upg::Gravity | Upg::Cloud => true,
+            Upg::Scouter => best >= 150.0,
+            Upg::Galick => best >= 400.0,
+            Upg::Senzu => best >= 1000.0,
+            Upg::House => best >= 2000.0,
+            Upg::Armor => best >= 5000.0,
+            Upg::Tail => self.s.ach.contains("ape"),
+            Upg::Kaio => best >= 8000.0,
+            Upg::Bigbang => best >= 20000.0,
+            Upg::Piccolo => best >= 10000.0,
+            Upg::Chamber => best >= 40000.0,
+        }
+    }
+
+    pub fn ascend_unlocked(&self) -> bool {
+        self.s.best >= 1e6 || self.tree_open()
+    }
+
+    pub fn cost(&self, u: Upg) -> f64 {
+        let it = &SHOP[u as usize];
+        (it.base * it.k.powf(self.s.lvf(u)) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
+    }
+
+    /// Ascending spends all you hold, 1M at least.
+    pub fn ascend_cost(&self) -> f64 {
+        self.s.pl.floor().max(1e6)
+    }
+
+    pub fn god_cost(&self) -> f64 {
+        self.s.pl.floor().max(2e14)
+    }
+
+    // ── state changes
+
+    fn event(&mut self, s: impl Into<String>) {
+        self.events.push(s.into());
+    }
+
+    fn ach(&mut self, id: &'static str) {
+        if self.playing {
+            self.s.ach.insert(id);
+        }
+    }
+
+    pub fn gain(&mut self, n: f64) {
+        let n = js_round(n).max(1.0);
+        self.s.pl += n;
+        if self.s.pl > self.s.best {
+            self.s.best = self.s.pl;
+        }
+        if self.s.pl > self.s.run_best {
+            self.s.run_best = self.s.pl;
+        }
+    }
+
+    fn goal_need(&self, id: &str) -> bool {
+        match id {
+            "beam" => self.s.lv(Upg::Galick) > 0,
+            "tour" => self.s.best >= 3000.0,
+            _ => true,
+        }
+    }
+
+    fn next_goal(&mut self) {
+        let i = GOALS.iter().position(|g| g.id == self.s.goal).unwrap_or(0);
+        for k in 1..=GOALS.len() {
+            let g = &GOALS[(i + k) % GOALS.len()];
+            if self.goal_need(g.id) {
+                self.s.goal = g.id;
+                self.s.goal_p = 0.0;
+                return;
+            }
+        }
+    }
+
+    /// Training goals: progress, and a prize (and every fifth, a dragon ball) when one is done.
+    pub fn goal(&mut self, id: &str, amount: f64, set: bool) {
+        if !self.playing || self.s.goal != id {
+            return;
+        }
+        let g = GOALS.iter().find(|g| g.id == id).unwrap();
+        self.s.goal_p = if set { self.s.goal_p.max(amount) } else { self.s.goal_p + amount };
+        if self.s.goal_p >= g.n {
+            self.s.goals_done += 1;
+            let prize = (self.wrate() * 90.0 * (1.0 + (self.s.goals_done.min(20) as f64) * 0.15)).max(200.0);
+            self.gain(prize);
+            let mut msg = format!("training done: {} — +{}", g.text, crate::num::fmt_short(js_round(prize)));
+            if self.s.goals_done.is_multiple_of(5) {
+                self.s.orbs7 += 1;
+                msg += " and a dragon ball";
+                if self.s.orbs7 >= 7 {
+                    self.s.orbs7 = 0;
+                    self.summon_due = true;
+                }
+            }
+            self.event(msg);
+            self.next_goal();
+        }
+    }
+
+    fn victory(&mut self) {
+        self.b.pose_until = self.t + 1.6;
+    }
+
+    fn transform(&mut self, preview: bool) {
+        self.s.form += 1;
+        self.victory();
+        if !preview {
+            let f = self.s.form;
+            if f >= 1 {
+                self.ach("ss");
+            }
+            if f >= UI_FORM {
+                self.ach("ui");
+            }
+            if f >= MUI_FORM {
+                self.ach("mui");
+            }
+            if f > self.s.form_top {
+                self.s.form_top = f;
+                self.s.form_top_name = self.forms[f].name;
+            }
+        }
+        let f = &self.forms[self.s.form];
+        let msg = format!("{}!  ×{}", f.name, f.x);
+        self.event(msg);
+        self.rng.skip(RNG_TRANSFORM);
+    }
+
+    /// A training tap anywhere on the planet (game.js `train()` / the fall-through of `onClick`).
+    pub fn train(&mut self) {
+        if !self.playing {
+            return;
+        }
+        let t = self.t;
+        let cap = self.combo_cap();
+        self.combo = if self.wished(WishBuff::Combo) {
+            cap
+        } else if t - self.last_click < 0.6 {
+            (self.combo + 0.1).min(cap)
+        } else {
+            1.0
+        };
+        self.last_click = t;
+        if self.combo >= 2.0 {
+            self.goal("combo", 1.0, false);
+        }
+        self.sprint = (self.sprint + 0.5).min(1.2);
+        let crit = self.wished(WishBuff::Crit) || self.rng.random() < self.s.lvf(Upg::Scouter) * 0.1 + self.lvl(N_CRIT) * 0.08;
+        let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots))
+            * self.mult(false)
+            * self.combo
+            * if crit { 2.0 + self.lvl(N_CRITX) } else { 1.0 }
+            * (1.0 + 0.5 * self.lvl(N_FIST))
+            * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
+        self.gain(n);
+        if crit {
+            self.rng.skip(RNG_CRIT);
+        }
+    }
+
+    /// Buys a shop item by its game.js key; false if it can't be afforded.
+    pub fn buy(&mut self, key: &str) -> bool {
+        match key {
+            "ascend" => {
+                if self.s.pl < self.ascend_cost() {
+                    return false;
+                }
+                self.ascend();
+                true
+            }
+            "godki" => {
+                if self.s.pl < self.god_cost() {
+                    return false;
+                }
+                self.god_reset();
+                true
+            }
+            "zeno" => {
+                self.zeno_erase();
+                true
+            }
+            _ => {
+                let Some(u) = Upg::from_key(key) else { return false };
+                let c = self.cost(u);
+                if self.s.pl < c {
+                    return false;
+                }
+                self.s.pl -= c;
+                self.s.levels[u as usize] += 1;
+                for (n, id) in [(10, "tail10"), (25, "tail25"), (50, "tail50")] {
+                    if self.s.lv(Upg::Tail) >= n {
+                        self.ach(id);
+                    }
+                }
+                true
+            }
+        }
+    }
+
+    pub fn kaioken(&mut self) {
+        if !self.playing || self.s.lv(Upg::Kaio) == 0 || self.t < self.b.kaio_ready {
+            return;
+        }
+        self.ach("kaioken");
+        self.b.kaio_until = self.t + 15.0;
+        self.b.tired_until = self.t + 25.0;
+        self.b.kaio_ready = self.t + 45.0;
+        self.shake = 0.5;
+        let msg = format!("kaioken! ×{}", self.kaio_x());
+        self.event(msg);
+        self.rng.skip(RNG_KAIOKEN);
+    }
+
+    fn branch_pts(&self, b: Branch) -> u32 {
+        TREE.iter().enumerate().filter(|(_, n)| n.branch == b).map(|(i, _)| self.s.tree[i]).sum()
+    }
+
+    /// Uncapped nodes cost double every 5 ranks.
+    pub fn rank_cost(n: &Node, r: u32) -> f64 {
+        TIER_COST[n.tier] as f64 * 2f64.powf((r / 5) as f64)
+    }
+
+    pub fn node_open(&self, i: usize) -> bool {
+        self.branch_pts(TREE[i].branch) >= TIER_NEED[TREE[i].tier]
+    }
+
+    pub fn learn(&mut self, id: &str) {
+        let Some(i) = node_ix(id) else { return };
+        let n = &TREE[i];
+        let c = Self::rank_cost(n, self.s.tree[i]);
+        if !self.node_open(i) || self.s.tree[i] >= n.max || self.s.seeds < c {
+            return;
+        }
+        self.s.seeds -= c;
+        self.s.tree[i] += 1;
+    }
+
+    pub fn respec(&mut self) {
+        for (i, n) in TREE.iter().enumerate() {
+            for r in 0..self.s.tree[i] {
+                self.s.seeds += Self::rank_cost(n, r);
+            }
+        }
+        self.s.tree = [0; TREE.len()];
+    }
+
+    pub fn ascend(&mut self) {
+        let gain = self.seeds_now();
+        let keep = (self.s.pl * 0.01 * self.lvl(N_HEAD)).floor();
+        self.s.ascend += gain;
+        self.s.seeds += gain;
+        self.ach("ascend");
+        self.s.pl = keep;
+        self.s.run_best = keep;
+        self.s.namek_at = 0.0;
+        let notes = self.ang(A_NOTES);
+        for l in self.s.levels.iter_mut() {
+            *l = if notes { (*l as f64 * 0.1).floor() as u32 } else { 0 };
+        }
+        self.s.form = if self.ang(A_GOLDEN) { 1 } else { 0 };
+        let msg = format!(
+            "ascended — +{gain} ki seed{} (×{} on everything), back to {}",
+            if gain > 1.0 { "s" } else { "" },
+            crate::num::to_fixed(self.seed_boost(), 1),
+            self.forms[self.s.form].name
+        );
+        self.event(msg);
+    }
+
+    /// God ki: seeds, the tree, forms and universes go; wishes, sagas and mastery stars stay.
+    pub fn god_reset(&mut self) {
+        if self.s.form < MUI_FORM || self.god_now() == 0 {
+            return;
+        }
+        let g = self.god_now();
+        self.s.godki += g;
+        self.s.god_total += g;
+        self.s.gods += 1;
+        self.ach("godki");
+        let s = &mut self.s;
+        s.pl = 0.0;
+        s.run_best = 0.0;
+        s.namek_at = 0.0;
+        s.levels = [0; 14];
+        s.seeds = 0.0;
+        s.ascend = 0.0;
+        s.tree = [0; TREE.len()];
+        s.form = if s.angel[A_GOLDEN] { 1 } else { 0 };
+        s.uni = 0;
+        s.uni_stage = 0;
+        s.ustars = 0;
+    }
+
+    /// The zeno button: everything but his favour (and achievements) is erased.
+    pub fn zeno_erase(&mut self) {
+        if !self.zeno_ready() {
+            return;
+        }
+        let s = &mut self.s;
+        s.levels = [0; 14];
+        (s.pl, s.granted, s.multi, s.multi_t, s.uni_best, s.run_best, s.seeds, s.ascend, s.form, s.wishes, s.saga) =
+            (0.0, 0, false, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0);
+        (s.uni, s.uni_stage, s.ustars, s.mastery, s.godki, s.god_total, s.gods, s.auto_at, s.orbs7, s.namek_at) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0);
+        s.tree = [0; TREE.len()];
+        s.angel = [false; ANGELS.len()];
+        s.zeno += 1;
+        self.ach("zeno");
+    }
+
+    // ── the fixed step
+
+    /// One frame of game.js `frame(t, dt)`: `t` is the new time, `dt` the step. Stage-3 timeline events are not here yet.
+    pub fn frame(&mut self, t: f64, dt: f64) {
+        self.t = t;
+        let rdt = dt;
+        let dt = if self.b.chamber_until > t && self.s.world != 3 { dt * 0.3 } else { dt };
+        if self.playing {
+            self.session += dt;
+        }
+        if self.shake > 0.0 {
+            self.rng.random(); // the screen shake's jitter
+        }
+        self.shake = (self.shake - dt).max(0.0);
+
+        // running: sprint decays; laps pay
+        self.sprint = (self.sprint - dt * 0.8).max(0.0);
+        self.riding = (self.riding - dt).max(0.0);
+        let snake = self.s.world == 3;
+        let pace = (0.42 + self.sprint * if snake { 0.45 } else { 0.9 })
+            * (1.0 + 0.1 * self.lvl(N_STRIDE))
+            * if self.wished(WishBuff::Fast) { 1.5 } else { 1.0 }
+            * if self.riding > 0.0 { 1.6 } else { 1.0 }
+            * if self.wished(WishBuff::Fly) && !snake { 1.8 } else { 1.0 }
+            * if self.b.pose_until > t { 0.0 } else { 1.0 };
+        self.phi += pace * dt;
+        if self.phi - self.last_lap > LAP {
+            self.last_lap += LAP;
+            if self.playing {
+                self.laps += 1;
+                self.s.laps_total += 1;
+                self.ach("lap1");
+                if self.s.laps_total >= 100 {
+                    self.ach("laps100");
+                }
+                self.goal("laps", 1.0, false);
+                let n = self.lap_value()
+                    * 4.0
+                    * self.mult(false)
+                    * (1.0 + 0.5 * self.lvl(N_LEGS))
+                    * if self.wished(WishBuff::Laps) { 3.0 } else { 1.0 }
+                    * if self.beerus.is_some() { 3.0 } else { 1.0 }
+                    * if self.b.whis_until > t { 2.0 } else { 1.0 };
+                self.gain(n);
+            }
+        }
+        if !self.playing {
+            return;
+        }
+        // income: lap steps + passive, once a second
+        self.acc += rdt;
+        if self.acc >= 1.0 {
+            self.acc -= 1.0;
+            let n = (self.lap_value() / 7.0 + self.passive()) * self.mult(false);
+            self.gain(n);
+        }
+        if self.lvl(N_AUTO) > 0.0 {
+            self.auto_acc += dt * self.lvl(N_AUTO);
+            while self.auto_acc > 1.0 {
+                self.auto_acc -= 1.0;
+                let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots)) * self.mult(false) * (1.0 + 0.5 * self.lvl(N_FIST));
+                self.gain(n);
+            }
+        }
+        // a form you hold the power for comes one a frame and stays for the run
+        if self.s.form < self.forms.len() - 1 && self.s.pl >= self.forms[self.s.form + 1].at {
+            self.transform(false);
+        }
+        let last = self.forms.len() - 1;
+        if self.s.form == last && self.s.pl >= self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0) {
+            self.s.mastery += 1;
+            self.ach("mastery");
+        }
+        let home = if self.s.multi { 9 } else { 0 };
+        if self.ang(A_AUTO) && self.s.auto_at > 0 && self.s.pl >= AUTO_AT[self.s.auto_at] && self.s.world == home {
+            self.ascend();
+        }
+        if t - self.last_click > 0.9 {
+            self.combo = 1.0;
+        }
+    }
+
+    /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S`.
+    pub fn debug_set(&mut self, key: &str, v: f64) {
+        let s = &mut self.s;
+        match key {
+            "pl" => s.pl = v,
+            "best" => s.best = v,
+            "wishes" => s.wishes = v as u32,
+            "ascend" => s.ascend = v,
+            "seeds" => s.seeds = v,
+            "multi" => s.multi = v != 0.0,
+            "multiT" => s.multi_t = v,
+            "world" => s.world = v as u32,
+            "uniBest" => s.uni_best = v as u32,
+            "ustars" => s.ustars = v as u32,
+            "godTotal" => s.god_total = v as u32,
+            "zeno" => s.zeno = v as u32,
+            "mastery" => s.mastery = v as u32,
+            "autoAt" => s.auto_at = v as usize,
+            _ => {
+                if let Some(a) = key.strip_prefix("angel.").and_then(angel_ix) {
+                    s.angel[a] = v != 0.0;
+                } else if let Some(u) = Upg::from_key(key) {
+                    s.levels[u as usize] = v as u32;
+                } else {
+                    panic!("debug_set: unknown key {key}");
+                }
+            }
+        }
+    }
+}
