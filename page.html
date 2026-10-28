@@ -347,8 +347,8 @@ body.night .game { background-color: #07070d !important; background-image: radia
 .share-actions button { font: inherit; text-transform: uppercase; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; cursor: pointer; }
 .share-actions .share-go { color: #fff; background: #0b0b0b; border-color: #0b0b0b; }
 
-/* planet vegeta: a dusky red sky */
-body.vegeta:not(.night) .game { background: linear-gradient(#f6d2b0, #e89a72 75%) !important; }
+/* planet vegeta: a hot orange sky over the palace */
+body.vegeta:not(.night) .game { background: linear-gradient(#ffd8a8, #f2804e 75%) !important; }
 /* beerus' planet: a pink-to-violet sky */
 body.beerus:not(.night) .game { background: linear-gradient(#f6d6ec, #b89ae0 75%) !important; }
 /* west city: a clear blue sky */
@@ -359,6 +359,12 @@ body.kame:not(.night) .game { background: linear-gradient(#eafaff, #8fd4f0 75%) 
 body.paozu:not(.night) .game { background: linear-gradient(#eef6f2, #b4d8cc 75%) !important; }
 /* trunks' future: a heavy grey rain sky */
 body.future:not(.night) .game { background: linear-gradient(#7a828c, #4e5866 75%) !important; }
+/* kami's lookout: a violet morning high above the clouds */
+body.lookout:not(.night) .game { background: linear-gradient(#ece4ff, #a2b4f2 60%, #7c98e2) !important; }
+/* the supreme kai's world: a mint sky over green and pink meadows */
+body.kaiworld:not(.night) .game { background: linear-gradient(#eafff4, #9ae0c6 75%) !important; }
+/* yardrat: a pastel pink sky */
+body.yardrat:not(.night) .game { background: linear-gradient(#fff2f8, #eebcda 75%) !important; }
 </style>
 
 <div class="scroller" id="scroller">
@@ -431,7 +437,7 @@ __PLANET__
   };
   let toastT = 0, buyFn = null, shopBuilt = false, titleFx = null;
   let lastPl = 0;
-  const SEAS = ['#e2a93a', '#1e7a7a', '#a83a24', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c'];   // each world's deepest sea tone
+  const SEAS = ['#e2a93a', '#1e7a7a', '#a03a1c', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c', '', '#d2dce8', '#d89ab8', '#c89ab8'];   // each world's deepest sea tone
   const ui = {
     onBuy(fn) { buyFn = fn; },
     update(s) {
@@ -465,7 +471,7 @@ __PLANET__
       box.querySelector('button').focus({ preventScroll: true });
     },
     wishDone() { $('wish').hidden = true; $('game').classList.remove('wishing'); },   // the dragon picked for you
-    world(w) { root.style.setProperty('--sea', SEAS[w] || SEAS[0]); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); document.body.classList.toggle('kame', w === 6); document.body.classList.toggle('paozu', w === 7); document.body.classList.toggle('future', w === 8); },
+    world(w) { root.style.setProperty('--sea', SEAS[w] || SEAS[0]); document.body.classList.toggle('lookout', w === 10); document.body.classList.toggle('kaiworld', w === 11); document.body.classList.toggle('yardrat', w === 12); document.body.classList.toggle('namek', w === 1); document.body.classList.toggle('vegeta', w === 2); document.body.classList.toggle('beerus', w === 4); document.body.classList.toggle('westcity', w === 5); document.body.classList.toggle('kame', w === 6); document.body.classList.toggle('paozu', w === 7); document.body.classList.toggle('future', w === 8); },
     fx(kind, arg) { if (titleFx) titleFx(kind, arg); },
     bump() { const n = $('pl'); n.classList.add('bump'); clearTimeout(ui._b); ui._b = setTimeout(() => n.classList.remove('bump'), 110); },
   };

@@ -1653,16 +1653,6 @@ const NAMEK = Object.assign({}, KAI, {
   leaf: [0x1c4a5e, 0x245f78, 0x2f7f98, 0x4aa2b8, 0x86cfe0],      // ajissa trees: blue-green puffs on tall stems
   trunk: [0x5a5a40, 0x7a7a58, 0x9a9a74, 0xbebe96],
 });
-const VEGETA = Object.assign({}, KAI, {
-  grass: [0x5a1a14, 0x7a2a1c, 0x9a3e24, 0xb85a30, 0xd27a44, 0xeaa06a],     // red rock
-  road: [0x3a2620, 0x52362c, 0x6a4a3a, 0x86624e],
-  dome: [0x8a8a92, 0xaeaeb6, 0xcfcfd6, 0xe8e8ee, 0xffffff],                  // saiyan domes
-  band: [0x6a6a72, 0x8a8a92, 0xaeaeb6, 0xd0d0d6],
-  glass: [0x3a1418, 0x6a2028, 0xa83a3a, 0xe86a5a],
-  trunk: [0x2a1410, 0x3a1c14, 0x4a2618, 0x5a3020],
-  leaf: [0x3a1612, 0x5a2218, 0x7a3220, 0x9a4a2c, 0xc06a40],                  // red boulders where bushes grow
-  stone: [0x3a1a16, 0x5a2a20, 0x7a3e2c, 0x9a5a40],
-});
 // beerus' planet: violet grass, magenta-and-teal puff trees, stone-grey pyramids for houses
 const BEERUSP = Object.assign({}, KAI, {
   grass: [0x2a1f5a, 0x3a2a7a, 0x4e3a9a, 0x6a52b8, 0x8f78d2, 0xbcaaec],
@@ -1724,13 +1714,110 @@ const FUTURE = Object.assign({}, KAI, {
 // puddles mirror the grey sky; a few windows, fires and craters still glow
 const FUT = { sky: [0x4e5866, 0x6a7480, 0x8a929c, 0xc4ccd4], lit: [0xe8a050, 0x9aaab8], fire: [0x5a1a0e, 0xa03a14, 0xe0702a, 0xffb050], fleck: [0xc4d0dc, 0x8a96a2] };
 const TRIP_WAIT = 120;   // seconds at home before a trip happens anyway, so slower players still see every world
-const PLANET_EVERY = 1e6;   // the first trip to another world at 1M best power, then at 4x your best each time: namek, planet vegeta, snake way, beerus' planet, west city, kame house, mount paozu, the future, in turn
-const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, { name: 'planet vegeta', tones: VEGETA, sea: [0x7a2a1c, 0xa83a24, 0xd0603a, 0xf09a6a] }, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }, { name: "beerus' planet", tones: BEERUSP, sea: [0x4a2a7a, 0x6a3ea0, 0x9a6ad0, 0xd8c0f0] }, { name: 'west city', tones: EARTH, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'kame house', tones: KAMEP, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'mount paozu', tones: PAOZU, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }];
+const PLANET_EVERY = 1e6;   // the first trip to another world at 1M best power, then at 4x your best each time: namek, planet vegeta, snake way, beerus' planet, west city, kame house, mount paozu, the future, kami's lookout, the kais' world, yardrat, in turn
+const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, null /* planet vegeta: set with the newer worlds below */, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }, { name: "beerus' planet", tones: BEERUSP, sea: [0x4a2a7a, 0x6a3ea0, 0x9a6ad0, 0xd8c0f0] }, { name: 'west city', tones: EARTH, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'kame house', tones: KAMEP, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'mount paozu', tones: PAOZU, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }];
 function useWorld(w) { for (const [k, v] of Object.entries(WORLDS[w].tones)) TONES[k].splice(0, TONES[k].length, ...v); }
 
 // preview hooks (#raid, #snake, ...) jump straight to things for testing; on the live site they're ignored so nobody can cheat with them
 const HASH = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost|.*-git-.*\.vercel\.app)$/.test(location.hostname) ? location.hash : '';   // preview hooks only on dev hosts and branch previews, never on a live copy of the site
 WORLDS[8] = { name: 'the future', tones: FUTURE, sea: [0x1e242c, 0x323a44, 0x4e5864, 0x7a8692] };
+// planet vegeta's new look (world 2), kami's lookout, the supreme kai's world and yardrat (10–12): their residents, then each world's tones
+const W2S = (() => {
+const ln = (G, pts, w0, w1, c) => { G.line(pts, w0 + 1.4, w1 + 1.4, 'o'); G.line(pts, w0, w1, c); };   // a limb with its own outline, so it reads over the body
+// mr. popo: white turban, big round eyes, red vest open over the chest, baggy white trousers, curled red shoes (blue skin, as the edited dub drew him)
+const POPO = shapeSprite(18, 25, G => {
+  G.ell(6.5, 20.4, 3.6, 2.8, 'w'); G.ell(11.5, 20.4, 3.6, 2.8, 'w');
+  G.poly([[2, 24], [3.4, 22], [8, 22], [8, 24]], 'r'); G.poly([[10, 22], [14.6, 22], [16, 24], [10, 24]], 'r'); G.set(2, 23, 'r'); G.set(15, 23, 'r');
+  G.ell(9, 15.4, 5, 4.2, 's');
+  G.poly([[3.6, 12], [7.4, 12], [6.8, 19], [3.6, 18.4]], 'r'); G.poly([[14.4, 12], [10.6, 12], [11.2, 19], [14.4, 18.4]], 'r');
+  G.rect(4, 18, 10, 1, 'y');
+  ln(G, [[4.4, 13], [3.4, 16], [6.6, 17]], 2, 2, 's'); ln(G, [[13.6, 13], [14.6, 16], [11.4, 17]], 2, 2, 's'); G.rect(8, 16, 2, 2, 's');   // hands folded in front
+  G.ell(9, 8.4, 4.4, 4, 's');
+  G.ell(9, 3.8, 5, 3, 'w'); G.rect(5, 4, 8, 2, 'w'); G.rect(5, 5, 8, 1, 'W'); G.set(9, 1, 'W');
+  G.rect(6, 8, 2, 2, 'w'); G.rect(10, 8, 2, 2, 'w'); G.set(7, 9, 'k'); G.set(10, 9, 'k'); G.rect(8, 11, 2, 1, 'm');
+}, { o: 0x0e1024, s: 0x3a4ab8, S: 0x26307a, w: 0xf6f4ee, W: 0xc8c4b8, r: 0xd03030, R: 0x8e1e22, y: 0xf2c84a, Y: 0xb88a1a, k: 0x111111, m: 0xe87a7a }, { s: 'S', w: 'W', r: 'R', y: 'Y' });
+const NP = { o: 0x0d2a12, g: 0x6cc94e, G: 0x3a8a34, w: 0xf6f4ee, W: 0xc8c4b8, v: 0x5a3aa8, V: 0x3a2478, k: 0x111111, m: 0x8a3a3a, n: 0x7a4a26, N: 0x4a2a14, y: 0xf2c84a, Y: 0xb88a1a, p: 0xe88aa8 };
+const NS = { g: 'G', w: 'W', v: 'V', n: 'N', y: 'Y' };
+// dende as the young guardian: antennae, big pointed ears, the white robe with kami's mark over a purple tunic, the guardian's staff
+const DENDE = shapeSprite(16, 23, G => {
+  G.line([[6.4, 4.6], [5.4, .6]], 1, 1, 'g'); G.line([[8.6, 4.6], [9.6, .6]], 1, 1, 'g');
+  G.line([[14, 4], [14, 22]], 1, 1, 'n'); G.ell(14, 3.4, 1.4, 1.4, 'y');
+  G.poly([[3, 12], [12, 12], [13.4, 21], [1.6, 21]], 'w'); G.rect(6, 12, 3, 9, 'v');
+  G.rect(6, 13, 3, 1, 'w'); G.rect(7, 13, 1, 3, 'w');
+  G.rect(3, 21, 4, 2, 'n'); G.rect(8, 21, 4, 2, 'n');
+  ln(G, [[3.6, 13], [2.8, 16.4], [5, 18]], 1.8, 1.6, 'w'); ln(G, [[11.4, 13], [13.2, 14.6]], 1.8, 1.6, 'w'); G.set(14, 14, 'g'); G.set(13, 15, 'g');
+  G.poly([[4.4, 7.4], [.6, 5.4], [4, 9.6]], 'g'); G.poly([[10.6, 7.4], [14.4, 5.4], [11, 9.6]], 'g'); G.set(2, 6, 'p'); G.set(12, 6, 'p');
+  G.ell(7.5, 8, 3.6, 3.6, 'g');
+  G.rect(5, 7, 2, 2, 'k'); G.rect(8, 7, 2, 2, 'k'); G.set(5, 7, 'w'); G.set(8, 7, 'w'); G.rect(7, 10, 2, 1, 'm');
+}, NP, NS);
+// the supreme kai: lilac skin, white mohawk, potara earrings, a navy tunic over light-blue sleeves, orange sash, baggy white trousers
+const SHIN = shapeSprite(17, 26, G => {
+  G.ell(6, 21.8, 2.8, 2.6, 'w'); G.ell(11, 21.8, 2.8, 2.6, 'w'); G.rect(3, 24, 4, 2, 'b'); G.rect(10, 24, 4, 2, 'b');
+  G.poly([[4, 12.6], [13, 12.6], [13.6, 20.4], [3.4, 20.4]], 'n'); G.poly([[6.4, 12.6], [10.6, 12.6], [8.5, 15.4]], 'c');
+  G.rect(4, 18, 9, 2, 'y'); G.poly([[9.6, 19.4], [11.4, 19.4], [11.6, 22.6], [10, 22]], 'y');
+  ln(G, [[3.8, 13.6], [2.8, 17.4], [3.2, 19.4]], 2, 1.8, 'c'); G.ell(3.2, 20, 1.1, 1.1, 's');
+  ln(G, [[13.2, 13.6], [14.2, 17.4], [13.8, 19.4]], 2, 1.8, 'c'); G.ell(13.8, 20, 1.1, 1.1, 's');
+  G.poly([[5, 8], [2.2, 6.2], [5, 10.2]], 's'); G.poly([[12, 8], [14.8, 6.2], [12, 10.2]], 's');
+  G.ell(8.5, 8.6, 3.8, 3.8, 's');
+  G.set(3, 10, 'e'); G.set(3, 11, 'q'); G.set(13, 10, 'e'); G.set(13, 11, 'q');   // potara
+  G.poly([[7, 5.6], [7.2, .6], [9.8, .6], [10, 5.6]], 'h');
+  G.rect(6, 8, 2, 2, 'k'); G.rect(9, 8, 2, 2, 'k'); G.set(6, 8, 'w'); G.set(9, 8, 'w'); G.rect(8, 11, 2, 1, 'm');
+}, { o: 0x140e24, s: 0xc0a2e8, S: 0x8a6ab8, h: 0xf8f8fc, H: 0xc8c8d8, n: 0x262c66, N: 0x161a40, c: 0x6ab0e8, C: 0x3a7ab8, y: 0xf08a24, Y: 0xb85a14, w: 0xf6f4ee, W: 0xc8c4b8, b: 0x2a3a8a, B: 0x1a2458, k: 0x111111, m: 0x7a3a6a, e: 0xf2d84a, q: 0x4ad86a }, { s: 'S', h: 'H', n: 'N', c: 'C', y: 'Y', w: 'W', b: 'B' });
+// kibito: tall, pink-skinned, white hair tied back in a tail, crimson tunic with a blue sash, arms folded
+const KIBITO = shapeSprite(17, 30, G => {
+  G.poly([[4, 4], [12, 4], [13.6, 15], [11, 11], [6, 11], [3.4, 15]], 'h');
+  G.poly([[3.6, 12.6], [12.4, 12.6], [12.8, 21.6], [3.2, 21.6]], 'r'); G.poly([[6.4, 12.6], [9.6, 12.6], [8, 15]], 'c');
+  G.rect(3, 20, 10, 2, 'c');
+  G.poly([[3.2, 21.6], [12.8, 21.6], [13.2, 26.6], [8.6, 26.6], [8, 24], [7.4, 26.6], [2.8, 26.6]], 'w');
+  G.rect(3, 26, 4, 4, 'b'); G.rect(9, 26, 4, 4, 'b');
+  G.line([[3.6, 14], [4.2, 17.4], [11.6, 17]], 2.4, 2.2, 'r'); G.line([[12.4, 14], [11.8, 17.4], [4.4, 17]], 2.4, 2.2, 'R'); G.set(11, 17, 's'); G.set(4, 17, 's');
+  G.ell(8, 8, 3.4, 3.8, 's'); G.ell(8, 4.6, 3.8, 2.2, 'h'); G.rect(5, 5, 6, 1, 'h');
+  G.rect(5, 7, 2, 1, 'k'); G.rect(9, 7, 2, 1, 'k'); G.set(6, 8, 'k'); G.set(9, 8, 'k'); G.rect(7, 10, 2, 1, 'm');
+}, { o: 0x1a0e14, s: 0xf2a2a8, S: 0xc06a76, h: 0xf8f8fc, H: 0xc8c8d8, r: 0xb0303a, R: 0x701c24, c: 0x4a8ae0, C: 0x2a5aa8, w: 0xf6f4ee, W: 0xc8c4b8, b: 0x3a2a4a, B: 0x22182c, k: 0x111111, m: 0x8a2a3a }, { s: 'S', h: 'H', r: 'R', c: 'C', w: 'W', b: 'B' });
+// king vegeta: flame hair with a widow's peak, a full beard, white armour and gold shoulder guards, the royal crest, a red cape
+const KINGVEG = shapeSprite(22, 30, G => {
+  G.poly([[5, 11.6], [17, 11.6], [20.4, 28], [1.6, 28]], 'r');
+  G.line([[9, 21], [8.6, 26.4]], 3.2, 3, 'b'); G.line([[13, 21], [13.4, 26.4]], 3.2, 3, 'b'); G.rect(6, 26, 4, 3, 'w'); G.rect(12, 26, 4, 3, 'w');
+  G.poly([[6.6, 12], [15.4, 12], [15, 20.6], [7, 20.6]], 'a'); G.rect(7, 19, 8, 2, 'y'); G.ell(11, 15.4, 1.8, 1.6, 'r'); G.set(11, 15, 'y');
+  G.ell(5.8, 13, 3, 2.2, 'y'); G.ell(16.2, 13, 3, 2.2, 'y');
+  ln(G, [[5, 14.6], [4.4, 18], [5.6, 20.4]], 2.4, 2.2, 'b'); G.ell(5.8, 21, 1.4, 1.4, 'w');
+  ln(G, [[17, 14.6], [17.6, 18], [16.4, 20.4]], 2.4, 2.2, 'b'); G.ell(16.2, 21, 1.4, 1.4, 'w');
+  G.ell(11, 8, 3.8, 3.8, 's');
+  G.poly([[6.8, 7], [5.4, 2.4], [7.8, 3.8], [8.6, .2], [10.6, 2.6], [12.4, .2], [13.6, 3.6], [16.4, 2.2], [15.2, 7], [13.6, 5], [8.4, 5]], 'h'); G.poly([[9.4, 5], [12.6, 5], [11, 6.8]], 'h');
+  G.poly([[7.2, 8.4], [7.8, 11.4], [11, 13], [14.2, 11.4], [14.8, 8.4], [13.2, 10.2], [8.8, 10.2]], 'h'); G.rect(9, 10, 4, 1, 'h');
+  G.rect(8, 7, 2, 1, 'k'); G.rect(12, 7, 2, 1, 'k'); G.set(9, 8, 'k'); G.set(12, 8, 'k');
+}, { o: 0x140c0c, s: 0xf0c49a, S: 0xc8946e, h: 0x2a1a14, H: 0x4a3226, r: 0xc02a2a, R: 0x7a1414, b: 0x232a5a, B: 0x141a3a, a: 0xf2f0ea, A: 0xbcb8b0, y: 0xd8b05a, Y: 0x9a7a3a, w: 0xf6f4ee, W: 0xc8c4b8, k: 0x111111 }, { s: 'S', h: 'H', r: 'R', b: 'B', a: 'A', y: 'Y', w: 'W' });
+// yardratians: a bulbous ridged head with a knob on top, huge black eyes, a short body in a dark tunic; the elder has a long robe, whiskers and a staff
+const yardrat = (elder, P) => shapeSprite(16, 21, G => {
+  if (elder) { G.line([[14, 6], [14, 20.4]], 1, 1, 'd'); G.ell(14, 5.4, 1.4, 1.6, 'g'); G.poly([[3.4, 12], [11.6, 12], [13, 20], [2, 20]], 'v'); G.rect(4, 20, 3, 1, 'd'); G.rect(8, 20, 3, 1, 'd'); }
+  else { G.poly([[4, 12], [11, 12], [11.8, 17.4], [3.2, 17.4]], 'v'); G.rect(4, 17, 2, 2, 's'); G.rect(9, 17, 2, 2, 's'); G.rect(3, 19, 4, 2, 'd'); G.rect(8, 19, 4, 2, 'd'); }
+  G.rect(4, 12, 7, 1, 'c'); G.rect(7, 13, 1, 3, 'c');
+  ln(G, [[3.6, 13], [2.6, 16]], 1.6, 1.4, 'v'); G.set(2, 16, 's'); G.set(2, 17, 's');
+  if (elder) { ln(G, [[11.4, 13], [13.4, 14.4]], 1.6, 1.4, 'v'); G.set(13, 14, 's'); } else { ln(G, [[11.4, 13], [12.6, 16]], 1.6, 1.4, 'v'); G.set(12, 16, 's'); G.set(12, 17, 's'); }
+  G.ell(7.5, 7, 5.4, 4.8, 's'); G.ell(7.5, 1.9, 1.6, 1.6, 's'); G.line([[3.6, 4.6], [3.4, 9.4]], 1, 1, 'S'); G.line([[11.4, 4.6], [11.6, 9.4]], 1, 1, 'S');
+  G.set(5, 3, 'p'); G.set(10, 4, 'p'); G.set(9, 2, 'p');
+  G.rect(5, 6, 2, 3, 'k'); G.rect(8, 6, 2, 3, 'k'); G.set(5, 6, 'w'); G.set(8, 6, 'w'); G.set(7, 10, 'm');
+  if (elder) { G.line([[4, 9.6], [1.4, 12.4]], 1, 1, 'h'); G.line([[11, 9.6], [13.4, 11.4]], 1, 1, 'h'); }
+}, P, { s: 'S', v: 'V', d: 'D' });
+const YP = { o: 0x1a1428, s: 0xece4f4, S: 0xb4a6cc, p: 0xc088d8, v: 0x3a2a5a, V: 0x241a3a, c: 0xe8c860, d: 0x5a3a2a, D: 0x3a2418, g: 0x7ae0f4, k: 0x141020, w: 0xffffff, m: 0x8a5a9a, h: 0xffffff };
+const YARD = yardrat(false, YP), YARD2 = yardrat(false, Object.assign({}, YP, { s: 0xf4e2d8, S: 0xc8a698, p: 0xe8907a, v: 0x2a4a5a, V: 0x18303c })), ELDER = yardrat(true, Object.assign({}, YP, { v: 0x6a2a4a, V: 0x441a30, c: 0xf2f2f2 }));
+// the z sword, stuck fast in its rock
+const ZSWORD = shapeSprite(14, 24, G => {
+  G.poly([[5.4, 8], [8.6, 8], [8.6, 19], [7, 20.6], [5.4, 19]], 'b'); G.rect(5, 9, 1, 10, 'l');
+  G.rect(3, 6, 8, 2, 'y'); G.rect(6, 2, 2, 4, 'g'); G.ell(7, 1.4, 1.4, 1.2, 'y');
+  G.ell(7, 21, 6.4, 3, 'r'); G.ell(4.4, 19.4, 3, 2.2, 'r'); G.ell(10, 19.8, 2.6, 1.8, 'r'); G.set(4, 18, 'l'); G.set(9, 19, 'l');
+}, { o: 0x1a1a24, b: 0xc8d4e4, B: 0x8494aa, l: 0xf4f8ff, y: 0xe8b830, Y: 0x9a7414, g: 0xa82a3a, G: 0x6a1622, r: 0x8a8478, R: 0x5a564e }, { b: 'B', y: 'Y', g: 'G', r: 'R' });
+return { popo: POPO, dende: DENDE, shin: SHIN, kibito: KIBITO, king: KINGVEG, yard: YARD, yard2: YARD2, elder: ELDER, zsword: ZSWORD };
+})();
+// each world's tones, its cloud sea, how big the planet sits (zoom) and how high (dy, a fraction of the height); tones beyond the shared names (under, spot, ...) are read straight off the entry
+const W2P = { gold: [0x8a5a10, 0xc08a1a, 0xe8b830, 0xffe07a], pink: [0x9a3a6a, 0xc85a8e, 0xe88ab0, 0xf8bcd4, 0xffe4ee] };
+const W2L = {
+  2: { sea: [0xa03a1c, 0xc85a2c, 0xe88a4a, 0xfcc080], zoom: 1.22, tones: { grass: [0x6a2414, 0x8a341c, 0xa84a26, 0xc46632, 0xdc8848, 0xf0b070], road: [0x4a3020, 0x6a4a34, 0x8a6a4e, 0xac8e70], dome: [0x8e8a8a, 0xb2aeae, 0xd2cece, 0xeceaea, 0xffffff], band: [0x9a7414, 0xc8961e, 0xe8bc3a, 0xffe08a], glass: [0x3a1418, 0x6a2028, 0xa83a3a, 0xe86a5a], stone: [0x4a2418, 0x6a3422, 0x8a4a30, 0xaa6644], leaf: [0x3a1612, 0x5a2218, 0x7a3220, 0x9a4a2c, 0xc06a40], trunk: [0x2a1410, 0x3a1c14, 0x4a2618, 0x5a3020] } },
+  10: { sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff], zoom: .82, dy: -.07, tones: { grass: [0x8a92b0, 0xaab2cc, 0xc8cee2, 0xe2e6f2, 0xf4f6fc, 0xffffff], road: [0x5a6a9a, 0x7686b6, 0x96a4cc, 0xbac4e2], stone: [0x5a6a9a, 0x7686b6, 0x96a4cc, 0xbac4e2], under: [0x6a4a24, 0x8e6a38, 0xb08c50, 0xcaa86a, 0xe2c88e], dome: [0x9aa4b4, 0xc4ccd8, 0xe6eaf0, 0xf8fafc, 0xffffff], band: [0x2a3a8a, 0x3a52b0, 0x5a74d0, 0x8aa4ec], glass: [0x1c2a4a, 0x2a4070, 0x4a6aa0, 0x9ab8e0], leaf: [0x124a3a, 0x1c6a4a, 0x2a8a56, 0x48ac64, 0x84d080], trunk: [0x5a3a1c, 0x7a5228, 0x9a6c36, 0xbe8e4e] } },
+  11: { sea: [0xd89ab8, 0xeab6cc, 0xf6d4e2, 0xfff0f6], flower: [0xff9ac8, 0xffffff], tones: { grass: [0x1e6a2a, 0x2c8a34, 0x44a840, 0x66c450, 0x92dc6e, 0xc4f09a], road: [0x9a7a4a, 0xb8986a, 0xd4b88a, 0xead6ae], leaf: [0x1a5a2a, 0x24783a, 0x34984a, 0x52b85a, 0x8ad87a], trunk: [0x5a3a24, 0x7a5232, 0x9a6c44, 0xbc8e5e], stone: [0x5a5a62, 0x7a7a84, 0x9e9ea6, 0xc4c4ca], pinkg: W2P.pink } },
+  12: { sea: [0xc89ab8, 0xdab4cc, 0xeacede, 0xfaeaf2], tones: { grass: [0x8a7aa8, 0xa898c2, 0xc4b6da, 0xdcd0ec, 0xeee6f6, 0xfaf6fe], road: [0xc89ab0, 0xdcb4c6, 0xecd0dc, 0xf8e8f0], spot: [0x7a6a9a, 0x8e7eae, 0xa494c2, 0xbaaad6], leaf: [0x5a8ac8, 0x7aa6dc, 0x9ec2ee, 0xc4dcf8, 0xe8f2ff], trunk: [0x9a7aa8, 0xb496c2, 0xceb4da, 0xe6d2ee], dome: [0xa898b8, 0xc8b8d6, 0xe2d6ee, 0xf4eefa, 0xffffff], band: [0x6a5a8a, 0x8a7aaa, 0xaa9ac8, 0xcabce2], dot: [0xffffff, 0xfff0f8] } },
+};
+[[2, 'planet vegeta'], [10, "kami's lookout"], [11, "the supreme kai's world"], [12, 'yardrat']].forEach(([w, name]) => { const L = W2L[w]; L.T = Object.assign({}, KAI, Object.fromEntries(Object.entries(L.tones).filter(([n]) => n in KAI))); WORLDS[w] = { name, tones: L.T, sea: L.sea }; });
 let SNV = 1;   // snake way's view: 1 behind the hero down the snake's back, 2 side-on once the road twists halfway
 GAMES.push({
   id: 'planet',
@@ -1893,9 +1980,9 @@ GAMES.push({
       if (S.world === 5) return westcityScenery();
       if (S.world === 6) return kameScenery();
       if (S.world === 8) return futureScenery();
+      if (W2L[S.world]) return w2Scenery();
       const dome = (th, a, r) => { const s = capPt(th, a), door = V.norm(V.cross(s, V.cross(N, s))); solids.push({ c: s, r, kind: 'dome', s, door: V.mul(door, -1) }); for (let i = 1; i <= 5; i++) solids.push({ c: V.mul(s, 1 + r + .018 * i), r: .009, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + r + .11), r: .02, kind: 'knob' }); };
-      const tree = (th, a, k = 1) => S.world === 2 ? spire(th, a, k) : S.world ? ajissa(th, a, k) : kaiTree(th, a, k);
-      const spire = (th, a, k) => { const s = capPt(th, a); for (let i = 0; i <= 8; i++) solids.push({ c: V.mul(s, 1 + .05 * i * k), r: (.1 - .011 * i) * k, kind: 'stone' }); };   // planet vegeta: jagged rock spires
+      const tree = (th, a, k = 1) => S.world ? ajissa(th, a, k) : kaiTree(th, a, k);
       const ajissa = (th, a, k) => { const s = capPt(th, a); for (let i = 1; i <= 7; i++) solids.push({ c: V.mul(s, 1 + .05 * i * k), r: .022 * k, kind: 'trunk' }); solids.push({ c: V.mul(s, 1 + .42 * k), r: .12 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .52 * k), r: .08 * k, kind: 'leaf' }); };
       const kaiTree = (th, a, k = 1) => { const s = capPt(th, a), t1 = V.norm(V.cross(s, N)); for (let i = 1; i <= 4; i++) solids.push({ c: V.mul(s, 1 + .045 * i * k), r: .03 * k, kind: 'trunk' }); solids.push({ c: V.add(V.mul(s, 1 + .26 * k), t1, .05 * k), r: .13 * k, kind: 'leaf' }, { c: V.add(V.mul(s, 1 + .2 * k), t1, -.08 * k), r: .1 * k, kind: 'leaf' }, { c: V.mul(s, 1 + .33 * k), r: .09 * k, kind: 'leaf' }); };
       const bush = (th, a, r) => solids.push({ c: capPt(th, a), r, kind: 'leaf' });
@@ -1990,11 +2077,116 @@ GAMES.push({
       futAndro = [capPt(1.3, 3.55), capPt(1.3, 3.78)];
     }
 
+    // planet vegeta (2), the lookout, the kais' world and yardrat (10–12): props are spheres, residents are upright sprites
+    let w2Res = [], w2Pole = false;   // residents { spr, c, flip, k, hop, blink: [spots], ph }; korin's tower under the lookout
+    function shadeSpot(o, n, x, y) { const q = M3.apT(M, n), g = vnoise3(q[0] * o.f + o.seed, q[1] * o.f, q[2] * o.f); return g > .64 ? tone(o.pal2, light(n) + .25, x, y) : tone(o.pal, light(n) + (o.lift || 0), x, y); }   // a bulb with blotches
+    function w2Scenery() {
+      SHADE.spot = shadeSpot; w2Res = []; w2Pole = false;
+      const T = W2L[S.world].tones, UP = [0, 1, 0];
+      let sd = 31 + S.world * 7; const rnd = () => (sd = sd * 16807 % 2147483647) / 2147483647;
+      const put = (c, r, kind, o) => solids.push(Object.assign({ c, r, kind }, o)), pal = (c, r, p, lift = 0) => put(c, r, 'pal', { pal: p, lift });
+      const tan = s => { const t1 = V.norm(V.cross(s, N)); return [t1, V.cross(s, t1)]; };
+      const res = (spr, th, a, o) => w2Res.push(Object.assign({ spr, c: capPt(th, a), ph: rnd() * 9 }, o));
+      const dome = (th, a, r) => { const s = capPt(th, a); put(s, r, 'dome', { s, door: V.mul(V.norm(V.cross(s, V.cross(N, s))), -1) }); return s; };
+      const rock = (th, a, r) => put(V.mul(capPt(th, a), 1 - r * .3), r, 'stone');
+      const stack = (s, h, r0, r1, kind, p, dir = s) => { const n = Math.ceil(h / (Math.min(r0, r1) * .8)); for (let i = 0; i <= n; i++) { const f = i / n, c = V.add(s, dir, h * f), r = r0 + (r1 - r0) * f; p ? pal(c, r, p) : put(c, r, kind); } return V.add(s, dir, h); };   // a column of spheres, straight up from s unless dir says otherwise
+      if (S.world === 2) {
+        // planet vegeta: the king's palace in a ring of spires and gold-topped pillars, saiyan domes with antennae round the rim
+        const city = (th, a, r) => { const s = dome(th, a, r); for (let i = 1; i <= 4; i++) put(V.mul(s, 1 + r + .018 * i), .009, 'trunk'); put(V.mul(s, 1 + r + .09), .018, 'knob'); };
+        const s = dome(.3, 1.57, .3), [t1, t2] = tan(s); pal(V.mul(s, 1.3), .066, W2P.gold, .1);
+        for (let i = 0; i < 6; i++) { const q = i / 6 * 6.283, b = V.norm(V.add(s, V.add(V.mul(t1, Math.cos(q)), t2, Math.sin(q)), .375)), top = stack(b, .45, .048, .024, 0, T.dome, s); pal(V.mul(top, 1.03), .03, [0x6a1010, 0x9a1c1c, 0xd03030, 0xff6a5a], .1); }
+        for (let i = 0; i < 8; i++) { const a = 2.4 + i * .7; pal(V.mul(capPt(.62, a), 1.06), .02, W2P.gold, .2); stack(capPt(.62, a), .06, .022, .02, 0, T.dome); }
+        res(W2S.king, .42, 4.71, { k: 1.1 }); city(1.1, .4, .12); city(1.1, 2.75, .12); city(.95, 5.6, .1);
+      }
+      if (S.world === 10) {
+        // kami's lookout: the palace dome and its six pointed turrets, a few palms, and the banded bulb tapering to a gold tip underneath
+        const palm = (th, a, k = 1, lean = 0) => { const s = capPt(th, a), [t1, t2] = tan(s);
+          for (let i = 1; i <= 8; i++) { const f = i / 8; put(V.add(V.mul(s, 1 + .34 * k * f), t1, lean * .1 * k * f * f), (.028 - .008 * f) * k, 'trunk'); }
+          const C = V.add(V.mul(s, 1 + .36 * k), t1, lean * .1 * k); put(C, .045 * k, 'leaf');
+          for (let j = 0; j < 6; j++) { const d = V.add(V.mul(t1, Math.cos(j * 1.05 + .3)), t2, Math.sin(j * 1.05 + .3)); for (let m = 1; m <= 4; m++) put(V.add(V.add(C, d, .055 * m * k), s, (.02 * m - .014 * m * m) * k), (.042 - .006 * m) * k, 'leaf'); } };
+        const s = dome(.3, 1.57, .22), [t1, t2] = tan(s); pal(V.mul(s, 1.22), .044, W2P.gold, .1); pal(V.mul(s, 1.28), .02, W2P.gold, .2);
+        for (let i = 0; i < 6; i++) { const q = i / 6 * 6.283 + .4, b = V.norm(V.add(s, V.add(V.mul(t1, Math.cos(q)), t2, Math.sin(q)), .253)), top = stack(b, .2, .037, .031, 0, T.dome); pal(V.mul(top, 1.026), .042, T.band, .1); pal(V.mul(top, 1.07), .022, T.band, .2); pal(V.mul(top, 1.1), .011, T.band, .3); }
+        [[.98, .2], [1.08, .13], [1.17, .085], [1.25, .055], [1.31, .035]].forEach(([d, r], i) => pal(V.mul(UP, -d), r, T.under, (i & 1) * .12 - .04)); pal(V.mul(UP, -1.36), .03, W2P.gold, .2);
+        res(W2S.dende, .5, 4.35, { flip: 1 }); res(W2S.popo, .5, 5.05, { flip: 2 });
+        palm(.82, .3, .85, .5); palm(.82, 2.85, .85, -.5); palm(.86, 3.72, .8, -.3); palm(.86, 5.68, .8, .3); w2Pole = true;
+      }
+      if (S.world === 11) {
+        // the kais' sacred world: the great tree, two mushroom trees, the z sword stuck in its hill
+        const s = capPt(.95, 2.45), [t1, t2] = tan(s); for (let i = 0; i <= 9; i++) put(V.mul(s, 1 + .055 * i), .07 - .004 * i, 'trunk');
+        for (const d of [1, -1]) for (let i = 1; i <= 3; i++) put(V.add(V.mul(s, 1 + .32 + .05 * i), t1, d * .05 * i), .028, 'trunk');
+        const C = V.mul(s, 1.62); put(C, .2, 'leaf'); for (let j = 0; j < 7; j++) { const q = j * .9; put(V.add(V.add(V.add(C, t1, Math.cos(q) * .19), t2, Math.sin(q) * .19), s, -.03), .12 + .03 * (j % 3), 'leaf'); } put(V.mul(s, 1.82), .14, 'leaf');
+        const mush = (th, a, k, p) => { const s = capPt(th, a), [t1, t2] = tan(s), top = stack(s, .3 * k, .024 * k, .02 * k, 'trunk'); pal(V.mul(top, 1.01), .075 * k, p, .05);
+          for (let j = 0; j < 7; j++) { const q = j * .9; pal(V.add(V.add(V.mul(top, 1 - .015 * k), t1, Math.cos(q) * .07 * k), t2, Math.sin(q) * .07 * k), .05 * k, p, -.05); } };
+        for (let i = 0; i < 6; i++) rock(.42 + (rnd() - .5) * .13, 4.15 + (rnd() - .5) * .27, .09 * (.5 + rnd() * .4));
+        put(V.mul(capPt(.42, 4.15), 1.018), .072, 'stone'); w2Res.push({ spr: W2S.zsword, c: V.mul(capPt(.42, 4.15), 1.095), ph: 0 });
+        res(W2S.shin, .45, 4.85, { flip: 1 }); res(W2S.kibito, .4, 5.55, { flip: 1 }); mush(.95, .5, .9, T.pinkg); mush(1.15, 1.1, .7, T.leaf); rock(.6, 3.6, .05);
+      }
+      if (S.world === 12) {
+        // yardrat: onion-domed huts, spotted bulbs on curling stems; the elder meditates while the others blink between spots
+        const bulb = (th, a, k) => { const s = capPt(th, a), [t1] = tan(s), curl = (rnd() - .5) * .16; let c = s;
+          for (let i = 1; i <= 7; i++) { const f = i / 7; c = V.add(V.mul(s, 1 + .32 * k * f), t1, curl * k * Math.sin(f * 2.4)); put(c, (.024 - .008 * f) * k, 'trunk'); }
+          put(V.mul(c, 1 + .05 * k), .07 * k, 'spot', { pal: T.leaf, pal2: T.dot, f: 26, seed: rnd() * 50 });
+          for (const d of [-1, 1]) put(V.add(V.mul(s, 1 + .14 * k), t1, d * .06 * k), .03 * k, 'spot', { pal: T.leaf, pal2: T.dot, f: 30, seed: rnd() * 50 }); };
+        const hut = (th, a, r) => { const s = dome(th, a, r); stack(V.mul(s, 1 + r * .75), r * .7, r * .62, r * .1, 0, T.dome); pal(V.mul(s, 1 + r * 1.55), r * .12, T.band, .2); };   // an onion dome
+        const folk = (spr, spots, o) => w2Res.push(Object.assign({ spr, blink: spots.map(([th, a]) => capPt(th, a)), ph: rnd() * 3, hop: 3 }, o));
+        hut(.55, 1.0, .16); hut(.5, 2.3, .14); hut(.9, 1.65, .12); bulb(.9, .4, .9); bulb(.85, 3.0, .8); bulb(.7, 5.8, .7);
+        folk(W2S.elder, [[.3, 4.71], [.3, 4.71]], { hop: 0 }); folk(W2S.yard, [[.45, 5.5], [.15, 1.0]], { flip: 1 }); folk(W2S.yard2, [[.5, 3.95], [.15, 2.2]], {});
+      }
+    }
+    // the ground: vegeta's cracked red rock and gold forecourt, the lookout's ringed tiles over its banded underside, kai meadows, spotted yardrat soil
+    function shadeW2(nb, dn, lum, x, y) {
+      const T = W2L[S.world].tones, u = V.dot(nb, E1), w = V.dot(nb, E2), road = Math.abs(dn) < .07;
+      const patch = vnoise3(nb[0] * 3 + 9, nb[1] * 3, nb[2] * 3), f = vnoise3(nb[0] * 24, nb[1] * 24 + 4, nb[2] * 24);
+      if (S.world === 2) {
+        if (road) return tone(T.road, lum + .2 - (Math.floor(Math.atan2(w, u) * 20) & 1) * .06, x, y);
+        if (dn > .8) { const ga = u * 14, gb = w * 14; return ga - Math.floor(ga) < .08 || gb - Math.floor(gb) < .08 ? tone(T.road, lum - .1, x, y) : tone(T.band, lum + .15, x, y); }
+        if (Math.abs(vnoise3(nb[0] * 7 + 2, nb[1] * 7, nb[2] * 7) - .5) < .018) return tone(T.stone, lum - .15, x, y);   // cracks
+        if (f > .9 && lum > .45) return tone(T.grass, lum + .3, x, y);
+        return tone(T.grass, lum + (patch - .5) * .3, x, y);
+      }
+      if (S.world === 10) {
+        // the platform is the cap round N, so its rim is a tilted ellipse; everything below it is the inverted dome, banded in rings that follow the rim
+        if (dn < .55) return dn > .52 ? tone(W2P.gold, lum + .2, x, y) : tone(T.under, lum - .1 + (Math.floor((.52 - dn) * 10) & 1) * .14, x, y);
+        if (dn < .57) return tone(T.grass, lum + .45, x, y);
+        const a = Math.acos(Math.min(1, dn)) * 1.2, ga = a * 7, gb = (Math.atan2(w, u) + 3.1416) / 6.2832 * (8 + Math.floor(a * 7) * 4), fa = ga - Math.floor(ga), fb = gb - Math.floor(gb);
+        if (fa < .08 || fb < .08) return tone(T.stone, lum + .1, x, y);
+        if (Math.floor(ga) % 3 === 2) return tone(T.stone, lum + .3, x, y);
+        return tone(T.grass, lum + ((Math.floor(ga) + Math.floor(gb)) & 1 ? .06 : -.02) + (f - .5) * .08, x, y);
+      }
+      if (S.world === 11) {
+        if (road) return tone(T.road, lum + .15 + (f - .5) * .2, x, y);
+        if (f > .88 && lum > .35) return W2L[11].flower[f > .93 ? 0 : 1];
+        if (patch > .68) return tone(T.pinkg, lum + (patch - .5) * .2, x, y);
+        return tone(T.grass, lum + (patch - .5) * .25, x, y);
+      }
+      if (road) return tone(T.road, lum + .2 + (f - .5) * .15, x, y);
+      const g = vnoise3(nb[0] * 8 + 1, nb[1] * 8, nb[2] * 8 + 5);
+      if (g > .64) return tone(T.spot, lum + (g > .67 ? .15 : -.3), x, y);   // soft spots with a dark rim
+      if (f > .9 && lum > .4) return T.dot[0];
+      return tone(T.grass, lum + (patch - .5) * .25, x, y);
+    }
+    // residents stand up on the cap; a yardratian fades out in a shimmer of light and steps in somewhere else
+    const POLE = [0x7a4a2a, 0xa86a3a, 0xcc8e52, 0xe8b880], POLE_RING = [0x8a1a12, 0xb82a1c, 0xe0503a, 0xf88a6a];
+    function drawW2(t, dt) {
+      if (w2Pole) { const y0 = Math.round(cy + R * .98 + st.bob), hw = Math.max(3, Math.round(R * .07));   // korin's tower, running down into the clouds behind everything
+        for (let y = y0; y < st.H; y++) for (let dx = -hw; dx <= hw; dx++) { const x = Math.round(cx) + dx, k = y * st.W + x; if (x < 0 || x >= st.W || zb[k] > -1e8) continue;
+          const l = .62 - dx / hw * .4, ring = (y - y0) % 26 < 3; st.buf[k] = PK(Math.abs(dx) === hw ? 0x3a2014 : tone(ring ? POLE_RING : POLE, l, x, y)); } }
+      for (const r of w2Res) {
+        let c = r.c, vis = 1;
+        if (r.blink) { const per = 4.2, q = t / per + r.ph, f = (q % 1) * per; c = r.blink[Math.floor(q) % r.blink.length]; vis = Math.min(1, f / .4, (per - f) / .4); }
+        const p = M3.ap(M, c); if (p[2] <= .05) continue;
+        const x = cx + p[0] * R, y = cy - p[1] * R + st.bob, k = r.k || 1, hop = r.hop && vis >= 1 ? Math.abs(Math.sin(t * r.hop + r.ph * 3)) * 1.5 : 0;
+        if (vis > .45) blitZ(r.spr, x, y, standAng(p), r.flip === 2 ? Math.floor(t / 3 + r.ph) % 2 === 0 : !!r.flip, hop, p[2] * R + 6, k);
+        if (vis < 1) for (let i = -4; i <= 4; i++) { const h = r.spr.h * k * (1.15 - Math.abs(i) / 6); for (let j = 0; j < h; j++) if (h2(i * 13 + Math.floor(t * 24), j * 7 + i) < (1 - vis) * .8) st.px(x + i * 1.5, y - j, (j + i) % 3 ? 0xbff6ff : 0xffffff, .85); }   // instant transmission
+      }
+      if (S.world === 12 && Math.random() < dt * 4) { const a = Math.random() * 6.28, rr = R * Math.sqrt(Math.random()); fx.add({ x: cx + Math.cos(a) * rr, y: cy + st.bob + Math.sin(a) * rr, vx: 0, vy: -8, life: 1.4, s: 1, c: [0xffffff, 0xbff6ff], raw: true }); }   // a faint shimmer in the air
+    }
     let R = 40, cx = 0, cy = 0, zb = null, ib = null, dm = null;
     function layout() {
       const wide = st.W / st.H >= 1.15, fcx = +(st.el.closest('[data-cx]')?.dataset.cx || (wide ? .56 : .5));
       R = Math.round(st.W / st.H < .8 ? Math.min(st.W * .34, st.H * .22) : wide ? Math.min(st.W * .19, st.H * .3) : Math.min(st.W * .28, st.H * .24));
       cx = Math.round(st.W * fcx); cy = Math.round(st.H * (wide ? .5 : st.W / st.H < .8 ? .5 : .55));
+      { const lk = W2L[S.world]; if (lk) { R = Math.round(R * (lk.zoom || 1)); cy += Math.round(st.H * (lk.dy || 0)); } }   // some worlds sit the planet bigger, smaller or higher
       zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H);
     }
     // view rotation (drag to spin) with inertia, easing home when idle
@@ -2209,9 +2401,9 @@ GAMES.push({
     function travel(w) {
       ui.hell && ui.hell(false);
       if (!playing) return;
-      S.world = w; useWorld(w); scenery(); ui.world && ui.world(w);
+      S.world = w; useWorld(w); layout(); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', '', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) { startSnake(); meteors = []; storm = null; moon = null; } else snk = null;   // no meteors or full moon over snake way and HFIL
       bz = w === 4 ? { c: capPt(.3, 4.4), noise: 0, awake: 0 } : null; pud = null; gadgets = []; nextGadget = 2;
@@ -2331,6 +2523,7 @@ GAMES.push({
       const nb = M3.apT(M, n), lum = light(n) + Math.pow(1 - n[2], 3) * .15;
       if (S.world === 6) return shadeKame(nb, lum, x, y);
       const dn = V.dot(nb, N);
+      if (W2L[S.world]) return shadeW2(nb, dn, lum, x, y);
       if (Math.abs(dn) < .07) return S.world === 5 && Math.abs(dn) < .006 && (Math.atan2(V.dot(nb, E2), V.dot(nb, E1)) * 10 + 99) % 1 < .55 ? 0xf6d84a : tone(TONES.road, lum + .2, x, y);
       for (const q of wcRoads) { const d = V.dot(nb, q.n); if (d < q.lo || d > q.hi) continue; const u = V.dot(nb, q.a), v = V.dot(nb, q.b);
         if (q.pave === 'pool') return tone(TONES.glass, lum + (d - q.lo < .006 ? -.3 : .05), x, y);
@@ -2886,7 +3079,7 @@ GAMES.push({
       // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the eight worlds strictly in turn
       // a trip at the next power mark, or after two minutes at home, whichever comes first
       if (podWish && !S.world && !shen && (tour || boss) && podWish !== 2) { podWish = 2; ui.event(`your space pod is incoming — it lands after the ${tour ? 'tournament' : 'fight'}`); }   // the wished pod waits for the fight, and says so
-      if (!S.world && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT || podWish) && !tour && !shen && !boss && !dance) { podWish = 0; S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8][(S.trips - 1) % 8]); namekUntil = t + (S.world === 3 ? 75 : 45); }
+      if (!S.world && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT || podWish) && !tour && !shen && !boss && !dance) { podWish = 0; S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12][(S.trips - 1) % 11]); namekUntil = t + (S.world === 3 ? 75 : 45); }
       if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
       if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); const hung = t - namekUntil > 120;   // watchdog: whatever is still running, no visit outlasts its timer by two minutes
         if (S.namekLeft <= 0 && (!shen || hung) && (S.world !== 3 || snk?.done || hung)) { if (hung && shen) { shen = null; document.body.classList.remove('shen'); ui.wishDone && ui.wishDone(); } travel(0); namekUntil = 0; homeSince = session; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
@@ -2956,7 +3149,7 @@ GAMES.push({
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
-      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way', 'beerus', 'west city', 'kame house', 'paozu', 'the future'][S.world]; if (bz) fxs.push(bz.awake ? 'beerus AWAKE ×0.25 — find pudding' : `noise ${Math.round(bz.noise * 100)}%`); fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
+      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way', 'beerus', 'west city', 'kame house', 'paozu', 'the future', '', 'lookout', 'kai world', 'yardrat'][S.world]; if (bz) fxs.push(bz.awake ? 'beerus AWAKE ×0.25 — find pudding' : `noise ${Math.round(bz.noise * 100)}%`); fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
       if (storm && t < storm.until) fxs.push(`meteor storm ${Math.ceil(storm.until - t)}s`);
       if (struggle) fxs.push(`struggle ${Math.ceil(struggle.until - t)}s`);
       if (greg) fxs.push(`gregory ${Math.ceil(greg.until - t)}s`);
@@ -3059,6 +3252,7 @@ GAMES.push({
       const npc = (spr, c, flip = false, k = 1) => { const v = M3.ap(M, c); if (v[2] > .05) blitZ(spr, cx + v[0] * R, cy - v[1] * R + st.bob, standAng(v), flip, 0, v[2] * R + 6, k); };   // standing up on the face of the planet, tipping out only near the rim
       if (S.world === 6 && kh) { const v = M3.ap(M, kh.house); if (v[2] > .05) blitZ(KAMEHOUSE, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), false, 0, v[2] * R + 6, 1); npc(ROSHI, kh.roshi, Math.floor(t / 3) % 2 === 0, .95); }   // roshi stays home by his door
       if (S.world === 8) drawFuture(t, dt);
+      if (W2L[S.world]) drawW2(t, dt);
       if (S.world === 5) { const v = M3.ap(M, capPt(.55, 3.2)); if (v[2] > .05) blitZ(BULMA, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), Math.floor(t / 2) % 2 === 0, 0, v[2] * R + 6, 1); }
       if (S.world === 7) drawPaozu(t);
       if (bz) npc(NPCS.whis, WHIS_AT, Math.floor(t / 3) % 2 === 0);
@@ -3228,6 +3422,9 @@ GAMES.push({
     if (/paozu/.test(HASH)) { S.best = Math.max(S.best, 7e6); S.namekAt = 7e6; S.trips = 6; }   // preview hook: #paozu
     if (/westcity/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 4; }   // preview hook: #westcity
     if (/kame/.test(HASH)) { S.best = Math.max(S.best, 6e6); S.namekAt = 6e6; S.trips = 5; }   // preview hook: #kame
+    if (/lookout/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 8; }   // preview hook: #lookout (kami's lookout)
+    if (/kaiworld/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 9; }   // preview hook: #kaiworld (the supreme kai's world)
+    if (/yardrat/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 10; }   // preview hook: #yardrat
     if (/future/.test(HASH)) { S.best = Math.max(S.best, 5e6); S.namekAt = 5e6; S.trips = 7; }   // preview hook: #future (trunks' timeline)
     if (/androids/.test(HASH)) { session = 201; S.best = Math.max(S.best, 2e5); nextAndro = 0; }   // preview hook: #androids (17 and 18)
     if (/date/.test(HASH)) { session = 161; nextDate = 0; }   // preview hook: #date (18 visits krillin)
