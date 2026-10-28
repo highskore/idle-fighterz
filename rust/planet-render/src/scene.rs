@@ -535,6 +535,7 @@ impl Scene {
                 }
             }
         }
+        crate::floats::draw(c.fb, g, dt);
         drop(c);
         self.tones = Some(tones);
     }
