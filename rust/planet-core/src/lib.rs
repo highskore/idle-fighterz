@@ -4,9 +4,13 @@
 pub mod data;
 pub mod game;
 pub mod geom;
+pub mod hud;
+pub mod input;
 pub mod jsmath;
+pub mod json;
 pub mod num;
 pub mod rng;
+pub mod save;
 pub mod state;
 pub mod timeline;
 

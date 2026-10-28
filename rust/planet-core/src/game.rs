@@ -3,6 +3,8 @@
 
 use crate::data::*;
 use crate::geom::{Cam, Frame};
+use crate::hud::Cue;
+use crate::input::Input;
 use crate::num::js_round;
 use crate::rng::Lcg;
 use crate::state::Save;
@@ -68,12 +70,18 @@ pub struct Game {
     pub combo: f64,
     pub last_click: f64,
     pub shake: f64,
-    /// ui.event text, oldest first; the HUD bridge drains it
-    pub events: Vec<String>,
+    /// `ui.event` toasts (text, ms), oldest first; the HUD bridge drains them
+    pub events: Vec<(String, f64)>,
     pub cam: Cam,
     pub frame3: Frame,
     /// the timeline: visitors, raids, trips, the dragon
     pub tl: Tl,
+    /// the pointer: drag and spin, beam charge, the big bang
+    pub inp: Input,
+    /// sounds and title effects (`ui.sfx`, `ui.fx`, ...), oldest first; the HUD bridge drains them
+    pub cues: Vec<Cue>,
+    /// the wall clock at t = 0, in ms (achievements are stamped with it); the host sets it
+    pub epoch_ms: f64,
     /// how high the hero is drawn off the road and whether he faces left: the renderer sets these
     pub lift_now: f64,
     pub flip_now: bool,
@@ -106,6 +114,9 @@ impl Game {
             cam: Cam::new(200.0, 134.0), // the harness's 600×400 canvas in game.js pixels; the HUD bridge resizes it
             frame3: Frame::new(),
             tl: Tl::default(),
+            inp: Input::default(),
+            cues: Vec::new(),
+            epoch_ms: 0.0,
             lift_now: 0.0,
             flip_now: false,
         }
@@ -319,14 +330,33 @@ impl Game {
 
     // ── state changes
 
+    /// `ui.event(text)`: a toast for the default 2.6s.
     pub(crate) fn event(&mut self, s: impl Into<String>) {
-        self.events.push(s.into());
+        self.events.push((s.into(), 2600.0));
     }
 
+    /// `ui.event(text, ms)`: a toast that stays up `ms` milliseconds.
+    pub(crate) fn event_ms(&mut self, s: impl Into<String>, ms: f64) {
+        self.events.push((s.into(), ms));
+    }
+
+    /// `ach(id)`: an achievement, once, stamped with the wall clock; its toast follows 0.9s later.
     pub(crate) fn ach(&mut self, id: &'static str) {
-        if self.playing {
-            self.s.ach.insert(id);
+        if !self.playing || self.s.ach.contains(id) {
+            return;
         }
+        let Some(&(id, name, _)) = ACH.iter().find(|a| a.0 == id) else { return };
+        self.s.ach.insert(id);
+        self.s.ach_at.insert(id, self.now_ms());
+        let unlocks = CHARS.iter().find(|c| c.3 == Some(id)).map_or(String::new(), |c| format!(" · {} unlocked", c.2));
+        self.after(0.9, crate::timeline::Later::Event(format!("achievement — {name}{unlocks}"), 3200.0));
+        self.cue(Cue::Sfx("coin"));
+        self.cue(Cue::Achieved);
+    }
+
+    /// `Date.now()`: the host's wall clock at `t` (`epoch_ms` is the clock at t = 0).
+    pub fn now_ms(&self) -> f64 {
+        self.epoch_ms + (self.t * 1000.0).floor()
     }
 
     pub fn gain(&mut self, n: f64) {
@@ -649,7 +679,7 @@ impl Game {
         }
         self.cam.bob = if self.shake > 0.0 { js_round((self.rng.random() - 0.5) * 5.0 * self.shake) } else { 0.0 };
         self.shake = (self.shake - dt).max(0.0);
-        self.cam.spin(dt);
+        self.spin(dt);
 
         // running: sprint decays; laps pay
         self.sprint = (self.sprint - dt * 0.8).max(0.0);
@@ -749,6 +779,7 @@ impl Game {
             self.timeline_moon(t, dt);
         }
         self.shen_step(t);
+        self.bang_step(t);
         self.run_later();
     }
 
@@ -774,6 +805,7 @@ impl Game {
             "uni" => s.uni = v as u32,
             "krillinDead" => s.krillin_dead = v != 0.0,
             "orbs7" => s.orbs7 = v as u32,
+            "trips" => s.trips = v as u32,
             _ => {
                 if let Some(a) = key.strip_prefix("angel.").and_then(angel_ix) {
                     s.angel[a] = v != 0.0;

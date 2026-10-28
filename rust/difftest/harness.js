@@ -6,7 +6,10 @@ const ROOT = path.join(__dirname, '..', '..')
 
 function patch(src, from, to) { if (!src.includes(from)) throw new Error('harness anchor missing: ' + from.slice(0, 60)); return src.replace(from, to) }
 
-function mount({ seed = 1, W = 600, H = 400, traceRng = false } = {}) {
+// the wall clock the game reads (Date.now() stamps achievements, toDateString() decides the daily bonus): fixed, then simulated time
+const EPOCH = 1793188800000   // 2026-10-28 12:00 UTC
+
+function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = {}) {
   let rs = seed >>> 0 || 1, draws = 0
   const sites = new Map()
   const rnd = () => {
@@ -24,11 +27,16 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false } = {}) {
   const body = { classList: { toggle: noop, add: noop, remove: noop, contains: () => false } }
   const doc = { querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, createElement: () => ({ getContext: () => ctx2d, style: {} }), addEventListener: noop, body }
   let T = 0
-  const ctx = { WIDGET: false, document: doc, addEventListener: (k, f) => { win[k] = f }, location: { hash: '', hostname: 'localhost', protocol: 'http:' }, localStorage: { getItem: () => null, setItem: noop, removeItem: noop }, setTimeout: (f, ms = 0) => pending.push([T + ms / 1000, f]), clearTimeout: noop, console, Math: M, Date, JSON, performance: { now: () => T * 1000 } }
+  const now = () => EPOCH + Math.floor(T * 1000)
+  class FakeDate extends Date { constructor(...a) { if (a.length) super(...a); else super(now()) } static now() { return now() } }
+  const store = { 'hs-power': saved }
+  const localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v) }, removeItem: k => { delete store[k] } }
+  const ctx = { WIDGET: false, document: doc, addEventListener: (k, f) => { win[k] = f }, location: { hash: '', hostname: 'localhost', protocol: 'http:' }, localStorage, setTimeout: (f, ms = 0) => pending.push([T + ms / 1000, f]), clearTimeout: noop, console, Math: M, Date: FakeDate, JSON, performance: { now: () => T * 1000 } }
   ctx.window = ctx; vm.createContext(ctx)
   let src = ['world.js', 'shenron.js', 'game.js'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
   src = patch(src, '    return { menu, learn, respec,', '    globalThis.__ev = s => eval(s);\n    return { menu, learn, respec,')
-  src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) return; st.clear(); zb.fill(-1e9); ib.fill(0);')
+  // headless, the frame stops before drawing; the big bang still lands, as it does while its ball is drawn (snake way draws the road instead)
+  src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) { if (bang && !(S.world === 3 && snk) && Math.min(1, (t - bang.t0) / bang.dur) >= 1) { explode(bang.x1, bang.y1); bang = null; } return; } st.clear(); zb.fill(-1e9); ib.fill(0);')
   ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
   const ui = new Proxy({}, { get: (_, k) => k === 'event' ? (s => events.push([T, s])) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
@@ -37,6 +45,13 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false } = {}) {
   const ev = s => ctx.__ev(s)
   const runPending = () => { pending.sort((a, b) => a[0] - b[0]); while (pending.length && pending[0][0] <= T) { const [, f] = pending.shift(); f() } }
   const step = (dt = 1 / 30) => { T += dt; st.t = T; game.frame(T, dt); runPending() }
-  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), events, errors, sites, get draws() { return draws }, get T() { return T } }
+  // the canvas's pointer listeners and the window's keydown, called the way a browser would (clientX/Y in CSS pixels)
+  const ptr = (k, x, y) => handlers[k]({ clientX: x, clientY: y, pointerId: 1 })
+  const input = {
+    toBuf: (x, y) => st.toBuf({ clientX: x, clientY: y }),
+    down: (x, y) => ptr('pointerdown', x, y), move: (x, y) => ptr('pointermove', x, y), up: (x, y) => ptr('pointerup', x, y), cancel: () => handlers.pointercancel({}),
+    key: k => win.keydown({ key: k, repeat: false, target: { closest: () => null, blur: noop }, preventDefault: noop }),
+  }
+  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), input, store, today: new FakeDate().toDateString(), events, errors, sites, get draws() { return draws }, get T() { return T } }
 }
 module.exports = mount

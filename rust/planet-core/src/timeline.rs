@@ -442,10 +442,12 @@ pub struct Movie {
 }
 
 /// State game.js changes from `setTimeout`, due at a time.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Later {
     Summon,
     NextWish,
+    /// a toast that waits (game.js `setTimeout(() => ui.event(text, ms), …)`)
+    Event(String, f64),
 }
 
 /// The timeline's runtime state: `mount()`'s closure variables that frame() reads and writes.
@@ -663,12 +665,12 @@ fn bend_s(s: f64) -> f64 {
 }
 
 impl Game {
-    fn r(&mut self) -> f64 {
+    pub(crate) fn r(&mut self) -> f64 {
         self.rng.random()
     }
 
     /// `burst()`: n particles, two draws each.
-    fn burst(&mut self, n: u32) {
+    pub(crate) fn burst(&mut self, n: u32) {
         self.rng.skip(2 * n);
     }
 
@@ -704,6 +706,7 @@ impl Game {
             let (_, what) = self.tl.later.remove(0);
             match what {
                 Later::Summon => self.summon(),
+                Later::Event(s, ms) => self.event_ms(s, ms),
                 Later::NextWish => {
                     if let Some(sh) = &self.tl.shen {
                         let n = sh.wishes;
@@ -771,7 +774,7 @@ impl Game {
         }
     }
 
-    fn meteor_pay(&self) -> f64 {
+    pub(crate) fn meteor_pay(&self) -> f64 {
         25.0 * self.mult(false) * (1.0 + (self.laps.min(50) as f64) * 0.1)
     }
 
@@ -1761,6 +1764,7 @@ impl Game {
                 self.tl.next_moon = if self.s.world == 2 { 40.0 } else { 180.0 + self.r() * 60.0 };
             }
         }
+        self.charge(t);
         if self.s.lv(Upg::Senzu) > 0 && self.tl.bean.is_none() && tick(&mut self.tl.next_bean, dt) {
             let c = geom::mul(self.rand_cap(0.3, 0.9), 1.03);
             self.tl.bean = Some(Npc { c, ..Default::default() });
@@ -2118,23 +2122,28 @@ impl Game {
         (bend_s(p * END + 9.0) - bend_s(p * END)).abs() < 0.22
     }
 
-    fn snake_tap(&mut self, px: f64, py: f64) {
+    /// `blastGhost`: a lost soul sent back down to HFIL.
+    pub(crate) fn blast_ghost(&mut self, gi: usize) {
+        let snk = self.tl.snk.as_mut().unwrap();
+        snk.ghosts[gi].dead = true;
+        snk.blasted += 1;
+        self.s.souls += 1;
+        if self.s.souls >= 10 {
+            self.ach("souls10");
+        }
+        self.burst(18);
+        let n = 90f64.max(self.wrate() * 12.0);
+        self.gain(n);
+        self.ach("hfil");
+    }
+
+    pub(crate) fn snake_tap(&mut self, px: f64, py: f64) {
         let Some(snk) = self.tl.snk.as_ref() else { return };
         if snk.done != 0.0 {
             return;
         }
         if let Some(gi) = snk.ghosts.iter().position(|g| !g.dead && g.sx.is_some_and(|(x, y)| hypot(&[px - x, py - y]) < g.r + 8.0)) {
-            let snk = self.tl.snk.as_mut().unwrap();
-            snk.ghosts[gi].dead = true;
-            snk.blasted += 1;
-            self.s.souls += 1;
-            if self.s.souls >= 10 {
-                self.ach("souls10");
-            }
-            self.burst(18);
-            let n = 90f64.max(self.wrate() * 12.0);
-            self.gain(n);
-            self.ach("hfil");
+            self.blast_ghost(gi);
             return;
         }
         let dash = self.straight();
@@ -2521,7 +2530,7 @@ impl Game {
         false
     }
 
-    fn movie_hit(&mut self, i: usize, dmg: f64) {
+    pub(crate) fn movie_hit(&mut self, i: usize, dmg: f64) {
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let h = &mut self.tl.movie.as_mut().unwrap().minions[i];
         if h.dead {
@@ -2550,7 +2559,7 @@ impl Game {
         }
     }
 
-    fn break_web(&mut self, s: &str) {
+    pub(crate) fn break_web(&mut self, s: &str) {
         let m = self.tl.movie.as_mut().unwrap();
         m.web = None;
         m.next_web = self.t + 9.0;

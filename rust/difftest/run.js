@@ -47,6 +47,55 @@ const SCENARIOS = {
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
     },
   },
+  // the pointer and the keyboard: drags that spin the planet and coast, held presses that charge and fire beams (full ones
+  // at beam lv 5 are final flashes), double taps that throw big bangs, single taps, cancels, and space to train; aimed at
+  // whatever is up (bosses, the ginyu force and the androids sit at (0, 0) headless, where game.js leaves them undrawn)
+  input: {
+    seed: 13, minutes: 15,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 4e6], ['best', 4e6], ['galick', 5], ['bigbang', 3], ['scouter', 3], ['kaio', 1], ['partner', 10], ['house', 5], ['boots', 20]]) act({ a: 'set', k, v })
+      const p = f % 300, [tx, ty] = target(g)
+      if (p < 60 && f % 8 === 0) act({ a: 'key', k: ' ' })
+      if (p === 60) press(g, act, 'down', 900, 600)
+      if (p > 60 && p < 67) press(g, act, 'move', 900 + 12 * (p - 60), 600 + 4 * (p - 60))
+      if (p === 67) press(g, act, 'up', 972, 624)
+      if (p === 100) press(g, act, 'down', tx * 3, ty * 3)
+      if (p === 130) press(g, act, 'move', tx * 3 + 1, ty * 3)
+      if (p === 150) press(g, act, 'move', tx * 3 + 20, ty * 3 - 9)
+      if (p === 185) press(g, act, 'up', tx * 3, ty * 3)
+      if (p === 200) press(g, act, 'down', tx * 3, ty * 3)
+      if (p === 215) press(g, act, 'up', tx * 3, ty * 3)
+      if (p === 240 || p === 243) { press(g, act, 'down', tx * 3 + (p - 240), ty * 3); press(g, act, 'up', tx * 3 + (p - 240), ty * 3) }
+      if (p === 280) { press(g, act, 'down', 450, 300); press(g, act, 'up', 450, 300) }
+      if (f % 600 === 290) press(g, act, 'down', 300, 300)
+      if (f % 600 === 291) act({ a: 'cancel' })
+      if (f % 30 === 0) { buyAll(g, act, [...POLICY, 'tail']); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
+      if (f % 3 === 1 && p > 280) clickTargets(g, act)
+      // while a fight is on, more of both: a big bang and a short beam at it every two seconds
+      if (g.ev('!!(boss && !boss.dead || ginyu && !ginyu.done)')) {
+        if (f % 60 === 35 || f % 60 === 38) { press(g, act, 'down', tx * 3, ty * 3); press(g, act, 'up', tx * 3, ty * 3) }
+        if (f % 60 === 5) press(g, act, 'down', tx * 3, ty * 3)
+        if (f % 60 === 25) press(g, act, 'up', tx * 3, ty * 3)
+      }
+    },
+  },
+  // a pod to snake way: presses act on the way down (no drag, charge or double tap), keys hop and dash, and an unhandled key falls through
+  snake: {
+    seed: 17, minutes: 5,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 2e6], ['best', 2e6], ['trips', 2], ['boots', 10], ['galick', 2], ['bigbang', 1]]) act({ a: 'set', k, v })
+      if (f % 10 === 3) { press(g, act, 'down', 300 + (f % 7), 200); press(g, act, 'up', 300 + (f % 7), 200) }
+      if (f % 25 === 0) act({ a: 'key', k: [' ', 'arrowup', 'arrowright', 'w', 'd', 'f', 'x'][(f / 25) % 7] })
+      if (f % 90 === 45) press(g, act, 'down', 500, 120)
+      if (f % 90 === 75) press(g, act, 'up', 500, 120)
+      if (f % 30 === 0) buyAll(g, act)
+    },
+  },
+  // a returning player: yesterday's save (the bonus: ×1.25 for five minutes and a dragon ball), training through it
+  daily: {
+    seed: 4, minutes: 6, saved: JSON.stringify({ pl: 812, best: 9000, boots: 3, daily: 'Tue Oct 27 2026', ach: { lap1: 1793100000000 }, hero: 'vegeta', goal: { id: 'laps', p: 2 } }),
+    script(g, f, act) { if (f % 6 === 0 && f % 300 < 200) act({ a: 'train' }); if (f % 30 === 0) buyAll(g, act) },
+  },
   idle: { seed: 1, minutes: 20, script(g, f, act) { if (f % 30 === 0) buyAll(g, act) } },
   active: {
     seed: 7, minutes: 20,
@@ -85,6 +134,15 @@ function clickTargets(g, act) {
   if (p) act({ a: 'click', x: p[0], y: p[1] })
 }
 
+// where to aim a beam or a big bang, in buffer pixels: the boss, a ginyu fighter, the space pod, a meteor, or open sky
+function target(g) {
+  return g.ev(`boss && !boss.dead ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : ginyu && !ginyu.done ? (m => [m.x, m.y - m.spr.h / 2 * m.k])(ginyu.members.find(m => !m.dead))
+    : star ? [star.x, star.y] : meteors.find(m => !m.dead && m.delay <= 0) ? (m => [m.x, m.y])(meteors.find(m => !m.dead && m.delay <= 0)) : [150, 30]`)
+}
+
+// a pointer event at (x, y) CSS pixels; the trace carries the buffer pixels st.toBuf maps it to, so the replay needn't know the canvas
+function press(g, act, a, x, y) { const [bx, by] = g.input.toBuf(x, y); act({ a, x, y, bx, by }) }
+
 function buyAll(g, act, policy = POLICY) {
   for (;;) {
     const ok = policy.filter(k => g.ev(`(!SHOP['${k}'].unlock || SHOP['${k}'].unlock()) && S.pl >= cost('${k}')`))
@@ -103,6 +161,11 @@ function apply(g, i) {
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
+  else if (i.a === 'down') g.input.down(i.x, i.y)
+  else if (i.a === 'move') g.input.move(i.x, i.y)
+  else if (i.a === 'up') g.input.up(i.x, i.y)
+  else if (i.a === 'cancel') g.input.cancel()
+  else if (i.a === 'key') g.input.key(i.k)
   else throw new Error('unknown input ' + i.a)
 }
 
@@ -116,19 +179,22 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['shen', shen ? ['rise', 'wish', 'granting', 'leave'].indexOf(shen.phase) : null], ['orbs', orbs.length], ['meteors', meteors.length], ['saibas', saibas.length], ['kis', kis.length],
     ['star', star ? star.x : null], ['cloud', cloudFly ? cloudFly.x : null], ['moon', moon ? moon.a : null], ['apeUntil', apeUntil], ['riding', riding], ['tour', tour ? tour.ko : null],
     ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
-    ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH]] })`
+    ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH],
+    ['charging', charging], ['dragged', drag ? drag.moved : null], ['vrx', vrx], ['vry', vry], ['m4', M[4]], ['beam', beam ? beam.c : null], ['beamDx', beam ? beam.dx : null],
+    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil]] })`
 
 function run(name) {
   const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)
-  const g = mount({ seed: sc.seed })
+  const g = mount({ seed: sc.seed, saved: sc.saved })
   const frames = Math.round(sc.minutes * 60 / DT), inputs = [], samples = []
   for (let f = 0; f < frames; f++) {
     sc.script(g, f, i => { inputs.push({ f, ...i }); apply(g, i) })
     g.step(DT)
-    if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE) })
+    // every tenth second also the save, as JSON.stringify(S) writes it to localStorage
+    if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE), ...((f + 1) % 300 === 0 ? { save: JSON.parse(g.ev('JSON.stringify(S)')) } : {}) })
   }
   if (g.errors.length) throw new Error(g.errors.join('\n'))
-  return { name, seed: sc.seed, dt: DT, frames, inputs, samples, events: g.events.map(([t, e]) => [+t.toFixed(2), e]) }
+  return { name, seed: sc.seed, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.map(([t, e]) => [+t.toFixed(2), e]) }
 }
 
 // number formatting: the game's fmtShort, and the HUD's big/short from page.html
@@ -143,5 +209,11 @@ function fmtCases() {
   return ns.map(n => ({ n, short: g.ev(`fmtShort(${n})`), fmt: hud.fmt(n), shop: hud.short(n) }))
 }
 
+// a save written elsewhere (planet-core's, in the round-trip test) loaded by game.js: what the new visit kept
+function load(file) {
+  const g = mount({ seed: 1, saved: fs.readFileSync(file, 'utf8') })
+  return { daily: g.ev('S.daily'), dailyUntil: g.ev('dailyUntil'), orbs7: g.ev('S.orbs7'), pl: g.ev('S.pl'), today: g.today, stored: g.store['hs-power'] }
+}
+
 const which = process.argv[2]
-process.stdout.write(JSON.stringify(which === 'fmt' ? fmtCases() : run(which)))
+process.stdout.write(JSON.stringify(which === 'fmt' ? fmtCases() : which === 'load' ? load(process.argv[3]) : run(which)))

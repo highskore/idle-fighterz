@@ -12,8 +12,13 @@ use std::process::Command;
 const REL: f64 = 1e-9;
 
 fn js(arg: &str) -> Option<Value> {
+    js_args(&[arg])
+}
+
+fn js_args(args: &[&str]) -> Option<Value> {
+    let arg = args[0];
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../difftest");
-    let out = match Command::new("node").arg(dir.join("run.js")).arg(arg).output() {
+    let out = match Command::new("node").arg(dir.join("run.js")).args(args).output() {
         Ok(o) => o,
         Err(_) => {
             eprintln!("node not found: skipping the {arg} difftest");
@@ -65,9 +70,15 @@ fn scenario(name: &str) {
     let samples = tr["samples"].as_array().unwrap();
 
     let mut g = Game::new(seed);
-    g.start();
+    g.epoch_ms = tr["epoch"].as_f64().unwrap();
+    if let Some(saved) = tr["saved"].as_str() {
+        g.load_json(saved);
+    }
+    g.start_on(tr["today"].as_str().unwrap());
     let (mut t, mut ii, mut si) = (0.0f64, 0usize, 0usize);
     let mut rep = Report::default();
+    let n = |i: &Value, k: &str| i[k].as_f64().unwrap();
+    let mut saves = 0;
     for f in 0..frames {
         while ii < inputs.len() && inputs[ii]["f"].as_u64().unwrap() as usize == f {
             let i = &inputs[ii];
@@ -83,6 +94,13 @@ fn scenario(name: &str) {
                 "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 "summon" => g.summon(),
                 "pick" => g.pick(k),
+                "down" => g.pointer_down(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by")),
+                "move" => g.pointer_move(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by")),
+                "up" => g.pointer_up(n(i, "bx"), n(i, "by")),
+                "cancel" => g.pointer_cancel(),
+                "key" => {
+                    g.key(k);
+                }
                 a => panic!("unknown input {a}"),
             }
             ii += 1;
@@ -92,6 +110,10 @@ fn scenario(name: &str) {
         if (f + 1) % 30 == 0 {
             let s = &samples[si];
             si += 1;
+            if !s["save"].is_null() {
+                saves += 1;
+                compare_save(&mut rep, &s["save"], &g);
+            }
             let n = |k: &str| s[k].as_f64().unwrap();
             let st = n("t");
             rep.num(st, "t", st, g.t, true);
@@ -143,8 +165,11 @@ fn scenario(name: &str) {
         }
     }
     assert_eq!(si, samples.len());
+    // what game.js last wrote to localStorage carries the same daily bonus date
+    let stored = serde_json::from_str::<Value>(tr["stored"].as_str().unwrap()).unwrap();
+    assert_eq!(stored["daily"].as_str(), g.s.daily.as_deref(), "the stored daily date");
     eprintln!(
-        "{name}: {} samples, {} values compared, {} mismatches, {} inexact (worst rel {:.1e})",
+        "{name}: {} samples ({saves} with the save), {} values compared, {} mismatches, {} inexact (worst rel {:.1e})",
         samples.len(),
         rep.checked,
         rep.bad.len(),
@@ -155,6 +180,56 @@ fn scenario(name: &str) {
         eprintln!("  inexact {l}");
     }
     assert!(rep.bad.is_empty(), "{name} diverged:\n{}", rep.bad.join("\n"));
+}
+
+/// The save JSON against game.js's `JSON.stringify(S)`: every key game.js has must match; keys game.js hasn't created
+/// yet must hold what game.js reads for a missing one (0, an empty object or list).
+fn compare_save(rep: &mut Report, js: &Value, g: &Game) {
+    let rs: Value = serde_json::from_str(&g.save_json()).expect("save_json is JSON");
+    let t = g.t;
+    let bad = |rep: &mut Report, what: String| {
+        if rep.bad.len() < 25 {
+            rep.bad.push(format!("t={t:.0}s save.{what}"));
+        }
+    };
+    let (js, rs) = (js.as_object().unwrap(), rs.as_object().unwrap());
+    for (k, v) in js {
+        let Some(r) = rs.get(k) else {
+            bad(rep, format!("{k}: missing in rust (js {v})"));
+            continue;
+        };
+        match (v, r) {
+            (Value::Number(a), Value::Number(b)) => rep.num(t, &format!("save.{k}"), a.as_f64().unwrap(), b.as_f64().unwrap(), false),
+            (Value::Object(a), Value::Object(b)) => {
+                rep.checked += 1;
+                if a != b {
+                    bad(rep, format!("{k}: js {v} rust {r}"));
+                }
+            }
+            _ => {
+                rep.checked += 1;
+                if v != r {
+                    bad(rep, format!("{k}: js {v} rust {r}"));
+                }
+            }
+        }
+    }
+    for (k, r) in rs {
+        if js.contains_key(k) {
+            continue;
+        }
+        rep.checked += 1;
+        let unset = match r {
+            Value::Number(n) => n.as_f64() == Some(0.0),
+            Value::Object(o) => o.is_empty(),
+            Value::Array(a) => a.is_empty(),
+            Value::String(s) => s.is_empty(),
+            _ => false,
+        };
+        if !unset {
+            bad(rep, format!("{k}: rust {r}, js has none"));
+        }
+    }
 }
 
 /// The timeline's state, in run.js's `tl` order: what's up in the sky and how the run is going.
@@ -207,6 +282,17 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("fused", g.b.fused.map(|f| f.0)),
         ("preview", tl.preview.map(|p| p.1)),
         ("jumpH", n(tl.jump_h)),
+        ("charging", n(g.inp.charging)),
+        ("dragged", g.inp.drag.map(|d| d.moved)),
+        ("vrx", n(g.inp.vrx)),
+        ("vry", n(g.inp.vry)),
+        ("m4", n(g.cam.m[4])),
+        ("beam", g.inp.beam.map(|b| b.c)),
+        ("beamDx", g.inp.beam.map(|b| b.dx)),
+        ("bang", g.inp.bang.map(|b| b.x1)),
+        ("bangReady", n(g.inp.bang_ready)),
+        ("lastTap", n(g.inp.last_tap.0)),
+        ("daily", n(g.b.daily_until)),
     ]
 }
 
@@ -243,6 +329,54 @@ fn multiverse() {
 #[test]
 fn wishes() {
     scenario("wishes");
+}
+
+#[test]
+fn input() {
+    scenario("input");
+}
+
+#[test]
+fn snake() {
+    scenario("snake");
+}
+
+#[test]
+fn daily() {
+    scenario("daily");
+}
+
+/// planet-core's save, written mid-run, read back by game.js and by planet-core: both keep its daily date, and the
+/// next day's visit gets the bonus on both sides.
+#[test]
+fn save_round_trip() {
+    let mut g = Game::new(3);
+    g.epoch_ms = 1793188800000.0;
+    g.start_on("Mon Oct 26 2026");
+    for i in 1..=600 {
+        if i % 4 == 0 {
+            g.train();
+        }
+        g.frame(i as f64 / 30.0, 1.0 / 30.0);
+    }
+    let saved = g.save_json();
+    let file = std::env::temp_dir().join(format!("planet-save-{}.json", std::process::id()));
+    std::fs::write(&file, &saved).unwrap();
+    let Some(js) = js_args(&["load", file.to_str().unwrap()]) else { return };
+    std::fs::remove_file(&file).ok();
+    assert_eq!(js["daily"].as_str(), Some(js["today"].as_str().unwrap()), "game.js moved the date on");
+    let mut back = Game::new(3);
+    back.load_json(&saved);
+    assert_eq!(back.s.daily.as_deref(), Some("Mon Oct 26 2026"));
+    back.start_on(js["today"].as_str().unwrap());
+    assert_eq!(back.b.daily_until, js["dailyUntil"].as_f64().unwrap());
+    assert_eq!(back.s.orbs7 as f64, js["orbs7"].as_f64().unwrap());
+    assert_eq!(js["dailyUntil"].as_f64(), Some(300.0), "a day later: the bonus");
+    // and what game.js writes back parses as the same daily on our side
+    let mut again = Game::new(3);
+    again.load_json(js["stored"].as_str().unwrap());
+    assert_eq!(again.s.daily.as_deref(), js["today"].as_str());
+    eprintln!("save round trip: {} bytes, daily {:?}", saved.len(), back.s.daily);
 }
 
 #[test]
