@@ -7,7 +7,7 @@ A DBZ-inspired pixel-art idle game on King Kai's planet, under a pearl 3D title.
 - **The title**: "highskore" in 3D pearl (three.js, Bagel Fat One). Letters wave, pop on hover, bounce when tapped, and sweep through each transformation's colour.
 - **The scroll intro**: the page opens on the title alone. Scrolling settles it into place and brings up the game card. On phones the page doesn't scroll: the cue reads "press for fun" and plays the same intro (a swipe up works too), the title starts stacked as high / skore and the letters collide on their way into one line.
 - **The game**: Vegeta runs laps around a draggable planet over a sea of golden clouds. Tap to train, hold to charge a galick gun, drag to spin.
-  - 14 upgrades, from weighted boots to Piccolo, the time chamber and ascension.
+  - 15 upgrades, from weighted boots to Piccolo, the time chamber, instant transmission and ascension.
   - Forms from super saiyan to ultra instinct.
   - Events: dragon balls and Shenron, great ape mode, villain raids (Frieza, Cell, Kid Buu, Beerus), the Ginyu Force, the Tournament of Power, the fusion dance, Gregory, King Kai's jokes, Saibamen and meteor showers.
   - Other worlds: every 1M power, a 45-second trip to Namek (where Porunga grants wishes), Planet Vegeta or Snake Way, in turn.
@@ -62,6 +62,7 @@ Add these to the URL to jump straight to something. They only work off the live 
 | `#snake` | snake way |
 | `#car` | king kai's car |
 | `#kaio` | kaioken already owned |
+| `#itx` | instant transmission owned, every world visited, and its picker open |
 | `#door` | the time chamber door |
 | `#pod` | a saiyan space pod |
 | `#storm` | a meteor storm |

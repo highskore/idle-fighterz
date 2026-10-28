@@ -7,7 +7,7 @@ const mount = require('./harness')
 
 const DT = 1 / 30
 const POLICY = ['boots', 'partner', 'gravity', 'scouter', 'house', 'piccolo', 'cloud', 'armor', 'kaio', 'galick', 'senzu', 'chamber', 'bigbang']
-const LEVELS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber', 'tail']
+const LEVELS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber', 'tail', 'itx']
 
 // each scenario: seed, minutes, and a per-frame script (g: the game, f: frame index, act: records + applies an input)
 const SCENARIOS = {
@@ -49,6 +49,50 @@ const SCENARIOS = {
       if (f % (30 * 50) === 30 * 25) act({ a: 'summon' })
       // every other offer is picked by hand (its last wish), the rest wait out the 20s auto-pick
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
+    },
+  },
+  // kami's lookout turns only round korin's tower; back home, a vertical drag tilts the planet again
+  lookout: {
+    seed: 23, minutes: 2,
+    script(g, f, act) {
+      const pole = () => g.ev('(a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))'), fail = m => { throw new Error('lookout: ' + m) }
+      if (f === 0) for (const [k, v] of [['pl', 5e6], ['best', 5e6], ['trips', 8]]) act({ a: 'set', k, v })
+      // on the lookout: a sideways drag turns it round the tower, a vertical one does nothing
+      if (f === 30 * 20) press(g, act, 'down', 300, 300)
+      if (f > 30 * 20 && f <= 30 * 20 + 10) press(g, act, 'move', 300 + 15 * (f - 30 * 20), 300 + 10 * (f - 30 * 20))
+      if (f === 30 * 20 + 11) press(g, act, 'up', 450, 400)
+      if (f === 30 * 40 && !(g.ev('S.world') === 10 && pole() < 1e-9 && g.ev('vrx') === 0)) fail('it tilted')
+      // home again: the idle spin keeps the screen's up row, and a vertical drag tilts it
+      if (f === 30 * 60) this.m4 = g.ev('M[4]')
+      if (f === 30 * 69 && !(g.ev('S.world') === 0 && Math.abs(g.ev('M[4]') - this.m4) < 1e-9)) fail('home still turns round the pole')
+      if (f === 30 * 70) press(g, act, 'down', 300, 200)
+      if (f > 30 * 70 && f <= 30 * 70 + 10) press(g, act, 'move', 300, 200 + 15 * (f - 30 * 70))
+      if (f === 30 * 70 + 11) press(g, act, 'up', 300, 350)
+      if (f === 30 * 72 && !(Math.abs(g.ev('M[4]') - this.m4) > .05 && pole() > .05)) fail('a vertical drag at home did not tilt it')
+    },
+  },
+  // instant transmission: 30M of power and no unlock until the first trip reaches yardrat; then it's bought and, every
+  // second, opened (right-click, two fingers) and a jump tried to a world you've been, home or away, in a fight or not,
+  // so the cooldown from each jumped trip's end, the at-home rule and the 90s floor (lv 40) all get diffed
+  itx: {
+    seed: 13, minutes: 16,
+    script(g, f, act) {
+      const fail = m => { throw new Error('itx: ' + m) }
+      if (f === 0) { for (const [k, v] of [['pl', 3e7], ['best', 3e7], ['trips', 10]]) act({ a: 'set', k, v }); if (g.ev("SHOP.itx.unlock()")) fail('open before yardrat') }
+      if (f === 30 * 10 && !(g.ev('S.world') === 12 && g.ev("SHOP.itx.unlock()"))) fail('yardrat did not open it')
+      if (f === 30 * 10) act({ a: 'buy', k: 'itx' })
+      if (f === 30 * 600) act({ a: 'set', k: 'itx', v: 40 })
+      if (f % 300 < 150 && f % 6 === 0) act({ a: 'train' })
+      if (f % 3 === 0) clickTargets(g, act)
+      if (f % 30 === 0 && f > 30 * 10) { buyAll(g, act, POLICY); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
+      if (f % 30 === 15 && g.ev('S.itx > 0')) {
+        const n = f / 30 | 0, ws = g.ev('itxWorlds()'), home = g.ev('S.world === home()'), was = g.ev('S.world')
+        if (n % 4 === 1) { press(g, act, 'down', 300, 300, { button: 2 }); press(g, act, 'up', 300, 300) }
+        else if (n % 4 === 3) { press(g, act, 'down', 294, 300); press(g, act, 'down', 306, 300, { id: 2 }); press(g, act, 'up', 294, 300); press(g, act, 'up', 306, 300) }
+        if (ws.length) act({ a: 'jump', k: ws[(n / 7 | 0) % ws.length] })
+        if (!home && g.ev('S.world') !== was) fail('jumped while away')
+      }
+      if (f === 30 * 900 && g.ev('itxReady') - g.ev('st.t') > 90) fail('the floor is past 90s')
     },
   },
   // pointer attacks (see attack()) at whatever is up (a villain, the ginyu force), with and without kaioken and the great ape;
@@ -189,7 +233,7 @@ function attack(g, act, f, x, y) {
 }
 
 // a pointer event at (x, y) CSS pixels; the trace carries the buffer pixels st.toBuf maps it to, so the replay needn't know the canvas
-function press(g, act, a, x, y) { const [bx, by] = g.input.toBuf(x, y); act({ a, x, y, bx, by }) }
+function press(g, act, a, x, y, more) { const [bx, by] = g.input.toBuf(x, y); act({ a, x, y, bx, by, ...more }) }
 
 function buyAll(g, act, policy = POLICY) {
   for (;;) {
@@ -219,7 +263,8 @@ function apply(g, i) {
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
-  else if (i.a === 'down') g.input.down(i.x, i.y)
+  else if (i.a === 'jump') g.ev(`itxJump(${i.k})`)
+  else if (i.a === 'down') g.input.down(i.x, i.y, i.id, i.button)
   else if (i.a === 'move') g.input.move(i.x, i.y)
   else if (i.a === 'up') g.input.up(i.x, i.y)
   else if (i.a === 'cancel') g.input.cancel()
@@ -239,7 +284,7 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
     ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH],
     ['charging', charging], ['dragged', drag ? drag.moved : null], ['vrx', vrx], ['vry', vry], ['m4', M[4]], ['beam', beam ? beam.c : null], ['beamDx', beam ? beam.dx : null],
-    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil]] })`
+    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['itxReady', itxReady], ['itxTrip', +itxTrip], ['been', S.been], ['nextStar', nextStar], ['nextCloud', nextCloud]] })`
 
 function run(name) {
   const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)

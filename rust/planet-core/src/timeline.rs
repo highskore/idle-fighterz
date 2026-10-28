@@ -550,6 +550,11 @@ pub struct Tl {
     pub monkey_at: Option<(f64, f64, f64)>,
     /// `once()` texts already shown
     pub seen: Vec<&'static str>,
+    /// instant transmission: when it's recharged, whether the trip under way was a jump (its end starts the cooldown),
+    /// and where and when the last jump left from (the renderer's shimmer and pose)
+    pub itx_ready: f64,
+    pub itx_trip: bool,
+    pub blink_from: Option<(Spot, f64)>,
     pub later: Vec<(f64, Later)>,
 }
 
@@ -646,6 +651,9 @@ impl Default for Tl {
             piccolo_at: None,
             monkey_at: None,
             seen: Vec::new(),
+            itx_ready: 0.0,
+            itx_trip: false,
+            blink_from: None,
             later: Vec::new(),
         }
     }
@@ -800,7 +808,7 @@ impl Game {
             self.cue(crate::hud::Cue::Notify("pod", String::new()));
             let y = if w / h < 0.8 { self.cam.cy - self.cam.r * (1.12 + self.r() * 0.16) } else { h * (0.08 + self.r() * 0.2) };
             self.tl.star = Some(Star { x: -8.0, y, vx: w / 6.0 });
-            self.tl.next_star = (18.0 + self.r() * 14.0) * (1.0 - 0.12 * self.lvl(N_PODS));
+            self.tl.next_star = (18.0 + self.r() * 14.0) * (1.0 - 0.12 * self.lvl(N_PODS)) * self.soon();
         }
         if session > 30.0 && self.tl.orbs.len() < 3 && self.r() < dt * 0.25 {
             self.once("orbs", "ki orbs on the road");
@@ -823,7 +831,7 @@ impl Game {
         {
             self.once("cloud", "flying nimbus is here");
             self.tl.cloud_fly = Some((-30.0, h * 0.3));
-            self.tl.next_cloud = 60.0 + self.r() * 25.0;
+            self.tl.next_cloud = (60.0 + self.r() * 25.0) * self.soon();
         }
         if session > 140.0 && !self.tl.aura {
             self.tl.aura = true;
@@ -1312,7 +1320,7 @@ impl Game {
         }
         let mark = if self.s.namek_at != 0.0 { self.s.namek_at } else { PLANET_EVERY };
         if self.s.world == home
-            && (self.s.run_best >= mark || session - self.tl.home_since > TRIP_WAIT || self.tl.pod_wish != 0)
+            && (self.s.run_best >= mark || session - self.tl.home_since > TRIP_WAIT * self.soon() || self.tl.pod_wish != 0)
             && self.tl.tour.is_none()
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
@@ -1340,6 +1348,10 @@ impl Game {
                 self.travel(self.home());
                 self.tl.namek_until = 0.0;
                 self.tl.home_since = self.session;
+                if self.tl.itx_trip {
+                    self.tl.itx_trip = false;
+                    self.tl.itx_ready = t + self.itx_cd();
+                }
                 self.s.namek_at = self.s.namek_at.max(self.s.run_best * 2.0);
             }
         }
@@ -2091,7 +2103,11 @@ impl Game {
             return;
         }
         self.s.world = w;
+        if w != 0 && w != 3 && w != 9 {
+            self.s.been |= 1 << w;
+        }
         self.cam.layout(w);
+        self.inp.w2_pole = w == 10; // game.js's scenery() rebuild: korin's tower only under the lookout
         self.shake = 0.5;
         self.burst(40);
         self.event_ms(TRAVEL[w as usize], if w >= 3 { 6000.0 } else { 2600.0 });

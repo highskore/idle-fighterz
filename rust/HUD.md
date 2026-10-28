@@ -74,7 +74,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   `achieved`, `zeno`, `treeGift(text)`, `wishDone`, and `notify(kind, arg)` (the widget's desktop notifications for a
   pod, a trip, a raid and the dragon; the site has no `ui.notify`, so the shim skips it).
 
-Every cue game.js emits is ported, at the same point of the same call (88 sites). None is draw-only: the one site in
+Every cue game.js emits is ported, at the same point of the same call (90 sites). None is draw-only: the one site in
 game.js's drawing code, `explode`'s `boom` when a big bang lands, runs in the block both sides hoist out of the drawing.
 The difftest can't reach the cues on taps at things only the renderer places (king kai, gregory, yamcha, the car, the
 door, satan, roshi, pudding, zeno, krillin's date, gadgets, ginyu members and movie henchmen); those are ported but not
