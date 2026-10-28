@@ -23,6 +23,7 @@ const M3 = {
   apT: (m, v) => [m[0] * v[0] + m[3] * v[1] + m[6] * v[2], m[1] * v[0] + m[4] * v[1] + m[7] * v[2], m[2] * v[0] + m[5] * v[1] + m[8] * v[2]],
   rx: a => { const c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, c, -s, 0, s, c]; },
   ry: a => { const c = Math.cos(a), s = Math.sin(a); return [c, 0, s, 0, 1, 0, -s, 0, c]; },
+  rot: ([x, y, z], a) => { const c = Math.cos(a), s = Math.sin(a), C = 1 - c; return [c + x * x * C, x * y * C - z * s, x * z * C + y * s, y * x * C + z * s, c + y * y * C, y * z * C - x * s, z * x * C - y * s, z * y * C + x * s, c + z * z * C]; },   // about a unit axis
   ortho: m => { let a = V.norm([m[0], m[1], m[2]]); const b0 = [m[3], m[4], m[5]], d = V.dot(a, b0), b = V.norm([b0[0] - a[0] * d, b0[1] - a[1] * d, b0[2] - a[2] * d]); return [...a, ...b, ...V.cross(a, b)]; },
 };
 
@@ -99,7 +100,7 @@ const ACH = [
   ['tournament', 'tournament of power', 'finish a tournament'], ['ascend', 'ascended', 'ascend for the first time'],
   ['vegeta', 'homeworld', 'visit planet vegeta'], ['nappa', 'bald and beaten', 'beat nappa on planet vegeta'],
   ['snakeway', 'one million kilometres', 'run all of snake way'], ['hfil', 'home for infinite losers', 'fall off snake way'],
-  ['pudding', 'pudding diplomacy', 'calm beerus with pudding'], ['androids', 'seventeen and eighteen', 'beat androids 17 and 18'], ['wallet', "krillin's wallet", 'take krillin\'s wallet while 18 visits'], ['gero', 'not my power', 'make dr. gero let go'], ['birds', 'gentle giant', "free one of 16's birds"], ['westcity', 'capsule corp', 'open a gadget capsule in west city'], ['sagas', 'the whole story', 'clear all 8 sagas'], ['satan', 'the champ', "take mr. satan's prize money"], ['roshi', 'max power', 'watch roshi go max power'], ['krillin', 'you monster', 'watch krillin die (again)'],
+  ['pudding', 'pudding diplomacy', 'calm beerus with pudding'], ['androids', 'seventeen and eighteen', 'beat androids 17 and 18'], ['wallet', "krillin's wallet", 'take krillin\'s wallet while 18 visits'], ['gero', 'not my power', 'make dr. gero let go'], ['birds', 'gentle giant', "free one of 16's birds"], ['westcity', 'capsule corp', 'open a gadget capsule in west city'], ['sagas', 'the whole story', 'clear all 8 sagas'], ['satan', 'the champ', "take mr. satan's prize money"], ['roshi', 'max power', 'watch roshi go max power'], ['krillin', 'you monster', 'watch krillin die (again)'], ['coolerdown', 'cooler down', 'beat cooler and his armoured squadron'], ['unwarped', 'janemba unwarped', 'beat janemba, double and all'], ['sealed', 'bojack sealed', 'beat bojack and his gang'],
   ['mui', 'beyond instinct', "reach your hero's first form past ultra instinct"], ['universe', 'universe star', 'clear a universe'], ['multiverse', 'last one standing', 'clear universe 11 in the tournament of power'], ['mastery', 'beyond the forms', 'earn a mastery star'], ['godki', 'god ki', 'reset for god ki'], ['zeno', "zeno's friend", 'push the zeno button'],
 ].map(([id, name, text]) => ({ id, name, text }));
 /* great ape: the full-moon form, giant, armoured, red-eyed */
@@ -2248,6 +2249,157 @@ const VILLAINS = (() => {
     { name: 'gas', spr: GAS },
   ];
 })();
+// the movie villains (picked takes): cooler (final form, mouth guard shut), super janemba (arms folded), bojack; plus
+// salza's armoured squadron and bojack's gang as small henchmen
+const MOVIE = (() => {
+  const fist = (G, x, y, c, r = 1.5) => { G.ell(x, y, r + 1, r + 1, 'o'); G.ell(x, y, r, r, c); };
+  const arm = (G, pts, c, hand, w = 3) => { oline(G, pts, w, w - .4, c); const [x, y] = pts[pts.length - 1]; fist(G, x, y, hand); };
+  const fold = (G, c, c2, hand, dx = 0, dy = 0) => {
+    const l = [[7 + dx, 16.6 + dy], [8.6 + dx, 19.4 + dy], [16.6 + dx, 19 + dy]], r = [[19 + dx, 16.6 + dy], [17.6 + dx, 20.4 + dy], [9.4 + dx, 20.2 + dy]];
+    G.line(l, 5, 4.6, 'o'); G.line(r, 5, 4.6, 'o'); G.line(l, 3, 2.6, c); G.line(r, 3, 2.6, c2);
+    G.ell(9.2 + dx, 19.6 + dy, 1.3, 1.2, hand); G.ell(16.8 + dx, 20.4 + dy, 1.3, 1.2, hand);
+  };
+  const shift = (G0, dy) => ({ ...G0, ell: (x, y, a, b, c) => G0.ell(x, y + dy, a, b, c), rect: (x, y, w, h, c) => G0.rect(x, y + dy, w, h, c), poly: (p, c) => G0.poly(p.map(([x, y]) => [x, y + dy]), c), line: (p, a, b, c) => G0.line(p.map(([x, y]) => [x, y + dy]), a, b, c), set: (x, y, c) => G0.set(x, y + dy, c) });
+  // ---------- cooler, final form: frieza's elder brother. silver-white skin, a crowned purple dome with back-swept spikes,
+  // purple shoulder and chest plates with blue gems, red eyes, the mouth guard, tail ----------
+  const COOL_PAL = { o: 0x100a20, w: 0xeceaf6, W: 0xaca8c8, p: 0x6a48b8, P: 0x3e2680, q: 0xb49af0, g: 0x3a7af0, G: 0x1a40a8, r: 0xe0302a, k: 0x100a18, n: 0xffd0a0, N: 0xf06a20, a: 0xffe2c0, i: 0xf8f8ff, I: 0xd0b0ff };
+  function cooler(o = {}) {
+    const W = 28, pose = o.pose || 'fold';
+    return shapeSprite(W, 38, G0 => {
+      const G = shift(G0, 2);
+      if (pose === 'nova') { G0.ell(14, 4.6, 8, 4.6, 'N'); G0.ell(14, 4.4, 6.2, 3.4, 'n'); G0.ell(12, 3, 2, 1, 'a'); }
+      G.line([[17, 26], [23, 29], [26, 24], [25, 19]], 3, 1.6, 'w'); G.ell(25, 19, 1.4, 1.4, 'p');                  // tail
+      oline(G, [[12, 25], [11, 32]], 3.2, 3, 'w'); oline(G, [[16, 25], [17, 32]], 3.2, 3, 'w');                       // legs
+      G.ell(11.4, 29, 1.6, 1.6, 'p'); G.ell(16.6, 29, 1.6, 1.6, 'p'); G.rect(9, 32, 4, 2, 'p'); G.rect(15, 32, 4, 2, 'p');
+      G.poly([[9.6, 16], [18.4, 16], [17.4, 25], [10.6, 25]], 'w');
+      G.poly([[9.6, 15.4], [18.4, 15.4], [17.6, 20.6], [14, 22], [10.4, 20.6]], 'p'); G.ell(14, 18.6, 1.6, 1.4, 'g');  // chest plate, gem
+      for (const y of [22, 24]) G.rect(12, y, 4, 1, 'W');                                                            // abs
+      G.ell(9, 16.6, 3, 2.3, 'p'); G.ell(19, 16.6, 3, 2.3, 'p'); G.set(8, 16, 'g'); G.set(19, 16, 'g');               // shoulder pads
+      const c = 'w', h = 'w';
+      if (pose === 'fold') fold(G, 'w', 'W', 'p', 1, 0);
+      if (pose === 'beam') { arm(G, [[9, 18], [7, 22], [7.4, 25]], c, h); arm(G, [[19, 18], [23, 18], [25.6, 17.4]], c, h); G.ell(21.6, 18, 1.2, 1.2, 'g'); G.line([[26.6, 16.6], [27.6, 16.6]], 1, 1, 'I'); }
+      if (pose === 'nova') { arm(G, [[9, 18], [6, 13], [7, 8]], c, h); arm(G, [[19, 18], [22, 13], [21, 8]], c, h); }
+      if (pose === 'hips') { arm(G, [[9, 18], [6, 21], [9, 23.6]], c, h); arm(G, [[19, 18], [22, 21], [19, 23.6]], c, h); }
+      // head: purple crowned dome, four spikes swept back and out, silver face
+      for (const [a, b] of [[[9, 6], [4, 1]], [[11, 4], [8.4, -1.4]], [[17, 4], [19.6, -1.4]], [[19, 6], [24, 1]]]) G.line([a, b], 2.6, .8, 'p');
+      G.ell(14, 9, 4.8, 5, 'p'); G.set(12, 5, 'q'); G.set(11, 6, 'q');
+      G.poly([[9.6, 8.4], [18.4, 8.4], [18, 12], [16, 14.6], [12, 14.6], [10, 12]], 'w');                            // face
+      G.ell(9, 10, .9, 1.6, 'p'); G.ell(19, 10, .9, 1.6, 'p');                                                       // purple cheek plates
+      G.poly([[10.4, 9], [13.4, 10], [13.4, 10.6], [10.4, 9.8]], 'k'); G.poly([[17.6, 9], [14.6, 10], [14.6, 10.6], [17.6, 9.8]], 'k');
+      G.rect(11, 10, 2, 1, 'r'); G.rect(15, 10, 2, 1, 'r'); G.set(12, 10, 'k'); G.set(15, 10, 'k');
+      if (o.mask) { G.poly([[10.4, 12], [17.6, 12], [16.4, 14.8], [11.6, 14.8]], 'p'); G.rect(12, 13, 4, 1, 'P'); }  // the mouth guard closed
+      else if (o.mouth === 'smirk') { G.rect(13, 13, 2, 1, 'k'); G.set(15, 12, 'k'); }
+      else G.rect(13, 13, 2, 1, 'W');
+      G.rect(12, 15, 4, 1, 'w');
+    }, COOL_PAL, { w: 'W', p: 'P', g: 'G' });
+  }
+  // ---------- super janemba: a lean red demon, white mane of spines down the back, yellow chest armour,
+  // a horned crest, yellow eyes, a long tail, the dimension sword ----------
+  const JAN_PAL = { o: 0x1c0408, r: 0xd02a2a, R: 0x8a1018, h: 0xf4f0ea, H: 0xbcb4a8, y: 0xf2c440, Y: 0xb0841a, k: 0x100406, e: 0xf8f040, w: 0xffffff, p: 0x6a2a8a, P: 0x44185c, s: 0xf8e8a0, S: 0xc8b060, g: 0xfff0b0, b: 0x9a8ad0, B: 0x6a5aa0 };
+  function janemba(o = {}) {
+    const W = 32, pose = o.pose || 'sword';
+    return shapeSprite(W, 40, G => {
+      G.poly([[11, 6], [21, 6], [26, 14], [27, 26], [23, 22], [21, 28], [16, 22], [11, 28], [9, 22], [5, 26], [6, 14]], 'h');   // mane of spines
+      G.line([[19, 29], [25, 33], [29, 29], [29, 23]], 2.6, 1, 'r'); G.poly([[27.4, 23.4], [29, 20], [30.6, 23.4], [29, 25]], 'y');   // tail, arrow tip
+      oline(G, [[13.6, 28], [12.6, 35]], 3.4, 3, 'r'); oline(G, [[18.4, 28], [19.4, 35]], 3.4, 3, 'r');
+      G.poly([[10, 35], [14, 35], [14, 37], [9, 37]], 'y'); G.poly([[18, 35], [22, 35], [23, 37], [18, 37]], 'y');   // gold feet
+      G.poly([[11, 17], [21, 17], [20, 28], [12, 28]], 'r');
+      G.poly([[10.4, 16.4], [21.6, 16.4], [20.6, 22.6], [16, 24], [11.4, 22.6]], 'y'); G.line([[16, 17], [16, 23]], 1, 1, 'Y');   // yellow chest armour
+      for (const y of [25, 27]) G.rect(13, y, 6, 1, 'R');
+      G.ell(10.4, 17, 3, 2.4, 'y'); G.ell(21.6, 17, 3, 2.4, 'y');
+      const c = 'r', h = 'r';
+      const sword = (x0, y0, x1, y1) => { G.line([[x0, y0], [x1, y1]], 3, 1.4, 'o'); G.line([[x0, y0], [x1, y1]], 1.4, .6, 'g'); G.rect(Math.round(x0) - 1, Math.round(y0), 3, 1, 'Y'); };
+      if (pose === 'sword') { arm(G, [[10, 18], [7.6, 22], [8, 26]], c, h); sword(24.6, 19, 30, 3); arm(G, [[22, 18], [24.6, 20.6], [24.6, 21.4]], c, h); }
+      if (pose === 'fold') fold(G, c, 'R', h, 3, 1);
+      if (pose === 'claw') { arm(G, [[10, 18], [5.6, 16], [4, 11]], c, h); arm(G, [[22, 18], [26.4, 16], [28, 11]], c, h); for (const x of [3, 5, 27, 29]) G.set(x, 8, 'w'); }
+      // head: horned crest, demon face, yellow eyes
+      G.line([[12, 7], [9, 2], [8, 0]], 2.6, .8, 'y'); G.line([[20, 7], [23, 2], [24, 0]], 2.6, .8, 'y'); G.line([[16, 5], [16, .4]], 2.4, .8, 'y');
+      G.ell(16, 10, 4.8, 5.2, 'r');
+      G.poly([[11.6, 8.6], [15, 9.8], [15, 10.6], [11.6, 9.6]], 'k'); G.poly([[20.4, 8.6], [17, 9.8], [17, 10.6], [20.4, 9.6]], 'k');
+      G.rect(12, 10, 3, 1, 'e'); G.rect(17, 10, 3, 1, 'e'); G.set(14, 10, 'k'); G.set(17, 10, 'k');
+      if (o.mouth === 'fang') { G.rect(13, 13, 6, 1, 'k'); G.set(13, 14, 'w'); G.set(18, 14, 'w'); G.rect(13, 12, 6, 1, 'R'); }
+      else { G.rect(14, 13, 4, 1, 'k'); G.set(14, 14, 'w'); G.set(17, 14, 'w'); }
+      G.rect(14, 15, 4, 2, 'r');
+    }, JAN_PAL, { r: 'R', h: 'H', y: 'Y' });
+  }
+  // ---------- bojack: teal skin, a mane of orange hair under a black band with a gold gem, a scar over the eye,
+  // pirate-gypsy rig: open purple vest with gold trim, red sash, white baggy trousers, black boots ----------
+  const BOJ_PAL = { o: 0x061414, s: 0x5ab8a8, S: 0x2e8070, h: 0xf08a2a, H: 0xb0561a, j: 0xffc070, k: 0x0c0c10, K: 0x2a2a32, e: 0x101010, w: 0xffffff, y: 0xf2c840, Y: 0xb08820, v: 0x5a3a8a, V: 0x38225c, r: 0xc82a2a, R: 0x82141a, p: 0xf2ece0, P: 0xbcb4a0, x: 0x9ae84a, X: 0x5aa82a, q: 0xd83a20, Q: 0x8a1a10, g: 0xc8ff8a, G: 0x4ac83a, c: 0x8a4848 };
+  function bojack(o = {}) {
+    const W = 28, pose = o.pose || 'fold', fp = !!o.full, sk = fp ? 'x' : 's', hc = fp ? 'q' : 'h';
+    return shapeSprite(W, 38, G0 => {
+      const G = shift(G0, 1);
+      G.poly([[7, 8], [21, 8], [23.4, 15], [24, 21], [20, 18], [14, 16], [8, 18], [4, 21], [4.6, 15]], hc);           // the mane down the back
+      oline(G, [[11.6, 26], [10.6, 32]], 4, 3.6, 'p'); oline(G, [[16.4, 26], [17.4, 32]], 4, 3.6, 'p');               // baggy trousers
+      G.rect(8, 32, 5, 3, 'k'); G.rect(15, 32, 5, 3, 'k'); G.rect(8, 32, 5, 1, 'K'); G.rect(15, 32, 5, 1, 'K');
+      G.poly([[9, 16], [19, 16], [18.4, 25], [9.6, 25]], sk); G.line([[14, 17], [14, 22]], 1, 1, fp ? 'X' : 'S');
+      if (!fp) { G.poly([[8.6, 15.6], [11.6, 15.6], [12, 25], [9.4, 25]], 'v'); G.poly([[19.4, 15.6], [16.4, 15.6], [16, 25], [18.6, 25]], 'v'); G.line([[11.6, 16], [12, 24.6]], 1, 1, 'y'); G.line([[16.4, 16], [16, 24.6]], 1, 1, 'y'); }
+      else { G.poly([[8.6, 15.6], [10.6, 15.6], [10, 19], [9, 21]], 'v'); G.poly([[19.4, 15.6], [17.4, 15.6], [18.4, 20]], 'v'); }   // vest shredded
+      G.rect(9, 24, 10, 2, 'r'); G.poly([[17, 25], [20, 25], [21, 29], [19, 28]], 'r');                                 // sash and its tail
+      G.ell(8.4, 16.4, 2.6, 2, fp ? sk : 'v'); G.ell(19.6, 16.4, 2.6, 2, fp ? sk : 'v');
+      const c = fp ? sk : 'v';
+      if (pose === 'fold') fold(G, c, fp ? 'X' : 'V', sk, 1, 0);
+      if (pose === 'fist') { arm(G, [[8, 17], [6, 21], [6.6, 24.4]], c, sk); arm(G, [[20, 17], [23, 15], [23.6, 11]], c, sk); }
+      if (pose === 'buster') { arm(G, [[8, 17], [6, 21], [6.6, 24.4]], c, sk); arm(G, [[20, 17], [23, 17.6], [25, 17]], c, sk); G0.ell(25.4, 13.4, 2.4, 2.4, 'G'); G0.ell(25.4, 13.4, 1.4, 1.4, 'g'); }
+      if (pose === 'roar') { arm(G, [[8, 17], [4.6, 14], [4, 10]], c, sk, 3.4); arm(G, [[20, 17], [23.4, 14], [24, 10]], c, sk, 3.4); }
+      // head: wild hair spilling over a black band with a gold gem, teal face, scar
+      G.poly([[6.6, 10], [6, 4], [9, 1.6], [11, 3], [13, .6], [15.4, 2.6], [18, .8], [20, 3.6], [22, 4], [21.4, 10]], hc);
+      G.ell(14, 10, 4.4, 4.6, sk);
+      G.rect(9, 6, 10, 2, 'k'); G.rect(13, 6, 2, 2, 'y'); G.set(13, 6, 'w');                                          // headband, gem
+      G.set(10, 3, 'j'); G.set(11, 4, 'j');
+      G.poly([[10, 8.4], [13.2, 9.4], [13.2, 10], [10, 9.2]], 'e'); G.poly([[18, 8.4], [14.8, 9.4], [14.8, 10], [18, 9.2]], 'e');
+      G.rect(11, 10, 2, 1, 'w'); G.rect(15, 10, 2, 1, 'w'); G.set(12, 10, 'e'); G.set(15, 10, 'e');
+      G.line([[16.4, 8], [17.4, 12]], 1, 1, 'c');                                                                    // the scar
+      if (o.mouth === 'grin') { G.rect(12, 13, 4, 1, 'e'); G.rect(12, 12, 4, 1, 'w'); G.set(11, 12, 'e'); G.set(16, 12, 'e'); }
+      else if (o.mouth === 'roar') { G.rect(12, 12, 4, 2, 'e'); G.rect(12, 12, 4, 1, 'w'); }
+      else G.rect(13, 13, 2, 1, fp ? 'X' : 'S');
+      G.rect(12, 15, 4, 1, sk);
+    }, BOJ_PAL, { s: 'S', x: 'X', h: 'H', q: 'Q', v: 'V', p: 'P', r: 'R' });
+  }
+  // ---------- henchmen: one small chibi build, a head per goon. o.suit/o.trim body colours, o.armor for the squadron's plates ----------
+  function hench(o) {
+    const W = 18;
+    return shapeSprite(W, 26, G => {
+      if (o.hair === 'salza') G.poly([[4, 6], [14, 6], [15, 14], [13, 18], [9, 15], [5, 18], [3, 14]], 'h');       // long silver hair down the back
+      if (o.hair === 'zangya') { G.ell(9, 9, 7.4, 7, 'h'); G.ell(3.4, 14, 2.6, 4, 'h'); G.ell(14.6, 14, 2.6, 4, 'h'); }   // a big cloud of orange curls
+      if (o.hair === 'kogu') G.poly([[4, 5], [14, 5], [15.6, 17], [12, 15], [9, 18], [6, 15], [2.4, 17]], 'h');     // long dark hair
+      if (o.cape) G.poly([[4, 13], [14, 13], [15.4, 23], [2.6, 23]], 'c');
+      if (o.sword) { G.line([[13, 12], [16.6, 3]], 2.4, 1.2, 'o'); G.line([[13, 12], [16.6, 3]], 1, .6, 'w'); G.rect(12, 11, 3, 1, 'y'); }
+      const bulk = o.big ? 1 : 0;
+      oline(G, [[7.4 - bulk, 19], [7, 23]], 2.6 + bulk, 2.4 + bulk, o.legs || 'u'); oline(G, [[10.6 + bulk, 19], [11, 23]], 2.6 + bulk, 2.4 + bulk, o.legs || 'u');
+      G.rect(5 - bulk, 23, 4 + bulk, 2, 'b'); G.rect(9, 23, 4 + bulk, 2, 'b');                                         // boots
+      G.poly([[5 - bulk, 13], [13 + bulk, 13], [12 + bulk, 20], [6 - bulk, 20]], o.suit || 'u');
+      if (o.armor) { G.poly([[5 - bulk, 12.6], [13 + bulk, 12.6], [12.4 + bulk, 17], [9, 18], [5.6 - bulk, 17]], 'a'); G.ell(4.4 - bulk, 13.4, 2.2, 1.8, 'a'); G.ell(13.6 + bulk, 13.4, 2.2, 1.8, 'a'); G.set(9, 15, 'g'); }
+      else if (o.vest) { G.poly([[5 - bulk, 12.6], [7.6, 12.6], [8, 20], [6 - bulk, 20]], 'v'); G.poly([[13 + bulk, 12.6], [10.4, 12.6], [10, 20], [12 + bulk, 20]], 'v'); G.ell(4.6 - bulk, 13.4, 2, 1.6, 'v'); G.ell(13.4 + bulk, 13.4, 2, 1.6, 'v'); }
+      G.rect(6 - bulk, 19, 6 + bulk * 2, 1, 'r');                                                                    // belt or sash
+      const ac = o.vest ? 's' : 'u';                                                                               // bare arms under a vest, sleeves otherwise
+      if (o.pose === 'hips') { oline(G, [[4.4 - bulk, 14], [2.6 - bulk, 17], [5 - bulk, 19]], 2, 1.8, ac); oline(G, [[13.6 + bulk, 14], [15.4 + bulk, 17], [13 + bulk, 19]], 2, 1.8, ac); }
+      else { oline(G, [[4.4 - bulk, 14], [4.6 - bulk, 17.4], [12, 17.4]], 2, 1.8, ac); oline(G, [[13.6 + bulk, 14], [13.4 + bulk, 16], [6, 16]], 2, 1.8, ac); }   // arms folded
+      // head
+      G.ell(9, 8, o.big ? 4.6 : 4.2, 4.4, 's');
+      if (o.hair === 'salza' || o.hair === 'kogu') G.poly([[4.6, 7], [5, 3.6], [9, 2.4], [13, 3.6], [13.4, 7], [11, 5], [7, 5]], 'h');
+      if (o.hair === 'zangya') { G.poly([[4.6, 7.4], [5, 3.6], [9, 2], [13, 3.6], [13.4, 7.4], [11.6, 5], [9, 6], [6.4, 5]], 'h'); }
+      if (o.hair === 'bido') G.rect(4, 1, 10, 4, 'h');                                                             // a flat red top
+      if (o.hair === 'bujin') { G.poly([[6, 5], [12, 5], [10.6, -1], [9, 1.4], [7.4, -1]], 'h'); G.poly([[4.4, 7], [1.4, 4], [5, 9]], 's'); G.poly([[13.6, 7], [16.6, 4], [13, 9]], 's'); }   // white flame tuft, pointed ears
+      if (o.hair === 'neiz') { G.line([[6, 5], [4, 1]], 1.6, .6, 's'); G.line([[9, 4], [9, 0]], 1.6, .6, 's'); G.line([[12, 5], [14, 1]], 1.6, .6, 's'); }   // three horn stubs
+      if (o.hair === 'dore') { G.ell(9, 5, 4.4, 2.4, 's'); G.set(7, 4, 'l'); }                                     // a bald dome
+      G.rect(6, 8, 2, 1, 'k'); G.rect(10, 8, 2, 1, 'k'); G.set(6, 7, 'k'); G.set(11, 7, 'k');                     // scowl
+      if (o.eyes) { G.set(7, 8, o.eyes); G.set(10, 8, o.eyes); }
+      if (o.lips) G.rect(8, 10, 2, 1, o.lips); else G.rect(8, 10, 2, 1, 'S');
+      if (o.hair === 'zangya') { G.set(5, 7, 'h'); G.set(12, 7, 'h'); }
+    }, { o: 0x0e0a16, s: o.skin, S: o.skinD, l: o.skinL || o.skin, h: o.hairC || 0xf4f0ea, H: o.hairD || 0xbcb4a8, k: 0x100a14, u: o.suitC || 0x3a2a6a, U: o.suitD || 0x241848, a: 0xf2f0f6, A: 0xb8b4c8, g: 0x3a7af0, b: 0x1c1a26, r: o.belt || 0x6a48b8, v: o.vestC || 0x5a3a8a, V: 0x38225c, c: o.capeC || 0x3a2a4a, C: 0x241a30, w: 0xe8f0ff, y: 0xf2c840, R: 0xe0302a, Y: 0xf8f040, m: 0xc84a6a }, { s: 'S', h: 'H', u: 'U', a: 'A', c: 'C', v: 'V' });
+  }
+  return {
+    cooler: cooler({ pose: 'hips', mask: true }), janemba: janemba({ pose: 'fold', mouth: 'fang' }), bojack: bojack({ pose: 'fold' }),
+    salza: hench({ hair: 'salza', skin: 0x8ab8e8, skinD: 0x5a84c0, hairC: 0xf4f6fa, hairD: 0xb8c0d0, armor: true, pose: 'hips' }),
+    dore: hench({ hair: 'dore', skin: 0x6ab84a, skinD: 0x3e8a2e, skinL: 0x9ad87a, armor: true, big: true, pose: 'hips' }),
+    neiz: hench({ hair: 'neiz', skin: 0xf2c84a, skinD: 0xc0961a, armor: true, pose: 'hips', eyes: 'R' }),
+    zangya: hench({ hair: 'zangya', skin: 0x7ab0e0, skinD: 0x4a7ab0, hairC: 0xf2902a, hairD: 0xb0561a, suitC: 0xf2ece0, suitD: 0xbcb4a0, vest: true, vestC: 0x8a4ab8, belt: 0xc82a2a, pose: 'hips', lips: 'm' }),
+    bujin: hench({ hair: 'bujin', skin: 0xc8a0e8, skinD: 0x9a6ac0, hairC: 0xf6eef6, hairD: 0xd0a8d8, suitC: 0x3a3a5a, vest: true, vestC: 0x6a2a6a, belt: 0xf2c840, eyes: 'Y' }),
+    bido: hench({ hair: 'bido', skin: 0x4aa878, skinD: 0x2a7a50, hairC: 0xd84a24, hairD: 0x8a2a14, suitC: 0x5a4a3a, vest: true, vestC: 0x8a5a2a, belt: 0x2a2a2a, big: true }),
+    kogu: hench({ hair: 'kogu', skin: 0x8ac88a, skinD: 0x5a9a5a, hairC: 0x2a2a3a, hairD: 0x14141e, suitC: 0x2a3a5a, cape: true, capeC: 0x5a1a2a, sword: true, belt: 0xc8a040 }),
+  };
+})();
 // a senzu bean: kidney-shaped, bright green with a shine, outlined in white so it stands out on the grass
 const SENZU = shapeSprite(12, 8, G => {
   G.ell(6, 4.3, 5.2, 3, 'g'); G.set(5, 1, '.'); G.set(6, 1, '.'); G.set(7, 1, '.'); G.set(6, 2, '.');   // an oval with a shallow dent on top: a bean
@@ -3100,7 +3252,9 @@ GAMES.push({
       zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H);
     }
     // view rotation (drag to spin) with inertia, easing home when idle
-    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99;
+    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99, spinA = 0;
+    // each world idles round its own axis at its own pace: a small tilt off the road's pole keeps the road in view; the lookout turns upright over korin's tower
+    const spinOf = w => { const a = hash(w * 3.7 + 1) * 6.283; return { u: w === 10 ? [0, 1, 0] : V.norm(V.add(N, V.add(V.mul(E1, Math.cos(a)), E2, Math.sin(a)), .03 + .05 * hash(w * 5.1 + 2))), w: (.006 + .008 * hash(w * 2.3 + 3)) * (hash(w * 9.7) < .5 ? -1 : 1) }; };
     const fx = particleSystem(), puff = makePuff(26, 11);
 
     // ── game state
@@ -3145,6 +3299,7 @@ GAMES.push({
       if (!playing) return;
       if (S.world === 3 && snk) { snakeTap(px, py); return; }
       if (dance && !dance.done) { const b = dance.beats[dance.i]; if (b !== undefined && dance.spoil !== dance.i) { if (Math.abs(st.t - b) < .32) { dance.hits++; dance.ok = st.t; dance.i++; } else if (st.t > b - .8) dance.spoil = dance.i; } return; }   // the dance takes every tap; tapping just before a beat spoils it, so mashing fails
+      if (movie) { px = movieX(px); if (movieTap(px, py)) return; }
       const npcHit = (c, r = 12) => { const v = M3.ap(M, c); return v[2] > .05 && Math.hypot(px - (cx + v[0] * R), py - (cy - v[1] * R + st.bob - 10)) < r; };
       if (bz && st.t > whisReady && npcHit(WHIS_AT)) { whisReady = st.t + 45; whisUntil = st.t + 20; ui.event('whis: "ohohoho — a little training?" laps ×2 for 20s, but every tap is twice as loud'); ui.sfx && ui.sfx('buy'); return; }
       if (S.world === 7 && st.t > chiReady && npcHit(CHI_AT)) { chiReady = st.t + 40; chiUntil = st.t + 15; shake = .4; ui.event('chi-chi: "stop slacking and TRAIN!" — a frying pan to the head: ×1.5 for 15s'); ui.sfx && ui.sfx('hit'); return; }
@@ -3213,6 +3368,7 @@ GAMES.push({
       if (bz && !bz.awake) bz.noise += .35;   // a beam is loud
       if (a16 && st.t < a16.until - 1) { a16.until = st.t + 1; ui.event('16: "please… the birds." he walks off'); }
       if (struggle) { struggle.p += .12 * c; return; }   // a charged beam shoves the struggle
+      if (movie) tx = movieX(tx);
       const k = handPos(); let dx = tx - k.x, dy = ty - k.y, dl = Math.hypot(dx, dy);
       if (dl < 4) { dx = Math.sin(k.ang); dy = -Math.cos(k.ang); dl = 1; }
       const dir = [dx / dl, dy / dl];
@@ -3224,6 +3380,7 @@ GAMES.push({
       const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1) * (1 + .15 * (S.galick - 1)); };
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && onLine(sb.sx, sb.sy - 6, 7)) killSaiba(sb);
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && onLine(m.x, m.y - m.spr.h / 2 * m.k, m.spr.w / 2 * m.k)) ginyuHit(m, pts * 2);
+      if (movie) movieBeam(onLine, pts);
       if (boss && !boss.dead && onLine(boss.x, boss.y - boss.spr.h / 2 * boss.k, boss.spr.w / 2 * boss.k)) hitBoss(pts * 4, boss.x, boss.y - boss.spr.h / 2 * boss.k);
       gain(pts, k.x, k.y - 16, true); ui.fx && ui.fx('buy');
       for (const m of meteors) { if (m.dead || m.delay > 0) continue; const rx = m.x - k.x, ry = m.y - k.y, along = rx * dir[0] + ry * dir[1], off = Math.abs(rx * dir[1] - ry * dir[0]); if (along > 0 && off < 6 + c * 3) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); } }
@@ -3285,6 +3442,7 @@ GAMES.push({
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined) killSaiba(sb);
       for (const m of meteors) if (!m.dead) { m.dead = true; goal('meteor'); }
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead) ginyuHit(m, m.hp + 1);
+      if (movie) movieBlast(x, y, 1e9, Infinity);
       if (boss && !boss.dead) hitBoss(finisher(), x, y);
       const g = Math.max(wrate() * 120, lapValue() * mult() * 60) * (1 + .5 * (S.spirit - 1)); gain(g, x, y - 20, true); ui.event(`spirit bomb! +${fmtShort(Math.round(g))}`); victory();
       for (let k = 0; k < 5; k++) burst(x + (Math.random() - .5) * 40, y + (Math.random() - .5) * 40, [0xffffff, 0xd8f0ff, 0x8fd8ff, 0x2f6ae0], 30, 260);
@@ -3306,6 +3464,7 @@ GAMES.push({
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && Math.hypot(sb.sx - x, sb.sy - 6 - y) < r + 6) killSaiba(sb);
       for (const m of meteors) if (!m.dead && m.delay <= 0 && Math.hypot(m.x - x, m.y - y) < r + 4) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); }
       if (ginyu && !ginyu.done) for (const m of ginyu.members) if (!m.dead && Math.hypot(m.x - x, m.y - m.spr.h / 2 * m.k - y) < r + 6) ginyuHit(m, Math.max(rate(), lapValue() * mult()) * 8 * S.bigbang);
+      if (movie) movieBlast(x, y, r, Math.max(rate(), lapValue() * mult()) * 8 * S.bigbang);
       if (boss && !boss.dead && Math.hypot(boss.x - x, boss.y - boss.spr.h / 2 * boss.k - y) < r + boss.spr.w / 2 * boss.k) hitBoss(Math.max(rate(), lapValue() * mult()) * 12 * S.bigbang, x, y);
       if (star && Math.hypot(star.x - x, star.y - y) < r) onClick(star.x, star.y);
       burst(x, y, [0xffffff, 0xbfe9ff, 0x6fb0ff, 0x2f6ae0], 36, 220);
@@ -3313,7 +3472,7 @@ GAMES.push({
     function travel(w) {
       ui.hell && ui.hell(false);
       if (!playing) return;
-      S.world = w; useWorld(w); layout(); scenery(); ui.world && ui.world(w);
+      S.world = w; spinA = 0; useWorld(w); layout(); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
       ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', 'back in the null realm — the tournament of power goes on', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
@@ -3341,9 +3500,10 @@ GAMES.push({
         if (ginyu.members.every(x => x.dead)) { victory(); ach(ginyu.androids ? 'androids' : 'ginyu'); const prize = Math.max(ginyu.max * 2, wrate() * 200) * (1 + .5 * lvl('bounty')); gain(prize, cx, cy - R * 1.3, true); ui.event(`${ginyu.androids ? 'androids 17 and 18 are' : 'the ginyu force is'} defeated! +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); ui.sfx && ui.sfx('boom'); goal('boss'); ginyu.done = st.t; save(); } }
     }
     function hitBoss(dmg, x, y) {
+      if (boss.movie && movieGuard(dmg, x, y)) return;
       boss.hp -= dmg * (1 + .5 * S.armor); boss.flash = .12; boss.hitT = st.t; ui.sfx && ui.sfx('hit'); burst(x, y, [0xffffff, 0xffe08a, 0xff9a3c], 6, 70);
       if (boss.hp <= 0 && !boss.dead) {
-        boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; let prize = boss.uni ? wrate() * 15 : Math.max(boss.max * 1.5, wrate() * 90) * (1 + .5 * lvl('bounty'));   // a universe fight pays little: its star is the prize
+        boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; let prize = boss.uni ? wrate() * 15 : Math.max(boss.movie ? 0 : boss.max * 1.5, wrate() * 90) * (1 + .5 * lvl('bounty'));   // a universe fight pays little: its star is the prize
         if (boss.uni) {   // a stage of the universe ladder; its last fight pays a universe star
           if (++S.uniStage >= UNI_STAGES.length) { const u = S.uni; S.uniStage = 0; S.uni++; S.ustars++; S.uniBest = Math.max(S.uniBest, S.uni); topSync(); ach('universe'); if (S.uni >= LADDER.length) ach('multiverse'); setTimeout(() => ui.event(`${uniName(u)} cleared — a universe star: ×${STAR_X ** (ang('stars') ? 2 : 1)} on everything. next: ${uniName(S.uni)}`, 4500), 2600); }
         }
@@ -3352,6 +3512,111 @@ GAMES.push({
         for (let k = 0; k < 4; k++) burst(boss.x + (Math.random() - .5) * 20, boss.y - boss.spr.h / 2 * boss.k + (Math.random() - .5) * 20, [0xffffff, 0xffe08a, 0xff9a3c, 0xe0473e], 20, 180);
         save();
       }
+    }
+    // ── movie raids: now and then cooler, janemba or bojack drops in, each with his own entrance and gimmicks
+    let movie = null, nextMovie = 480, lastMovie = '', movieForce = '', movieNote = null;
+    const MV = {
+      cooler: { hp: [16, 34], minions: ['salza', 'dore', 'neiz'], nova: 14, intro: "cooler's armoured squadron drops in — beat salza, dore and neiz, then stop his supernova", win: 'cooler: "impossible… not again"' },
+      janemba: { hp: [70, 0], jelly: true, split: true, flip: true, intro: 'reality turns to jelly — janemba! he splits in two and space flips as he does', win: 'janemba bursts like a bubble — the world sets back to normal' },
+      bojack: { hp: [55, 20], earth: true, minions: ['zangya', 'bujin', 'bido', 'kogu'], web: true, intro: "bojack's gang drags the fight to earth — and bujin's psychic web is up: tap him or fire a beam", win: 'bojack and his gang are sealed away again' },
+    };
+    const MV_ACH = { cooler: 'coolerdown', janemba: 'unwarped', bojack: 'sealed' };
+    // janemba's jelly world: candy-pink ground, mint roads, gummy trees
+    const JELLY = Object.assign({}, KAI, {
+      grass: [0xb83a8a, 0xd8569e, 0xf07ab8, 0xff9ccc, 0xffc0de, 0xffe2f0], road: [0x5ac8a8, 0x7ae0c0, 0xa6f2d8, 0xdafff0],
+      dome: [0x7a4ac8, 0x9a6ae0, 0xb890f0, 0xd6b8ff, 0xf0e2ff], band: [0xe0a020, 0xf2c040, 0xffdc6a, 0xfff2b0],
+      leaf: [0x2a9a3a, 0x48c050, 0x78e070, 0xa8f498, 0xdaffc8], trunk: [0xc82a3a, 0xf6f0f0, 0xc82a3a, 0xf6f0f0], stone: [0x6a3a9a, 0x8a5ab8, 0xac80d8, 0xd0b0f2], glass: [0x2a8ae0, 0x5ab0f2, 0x9ad6ff, 0xdaf2ff],
+    });
+    const recolour = P => { for (const [k, v] of Object.entries(P)) TONES[k].splice(0, TONES[k].length, ...v); };
+    const fitSpot = (spr, k, x, y) => ({ x: Math.max((spr.w / 2 + 2) * k + 3, Math.min(st.W - (spr.w / 2 + 2) * k - 3, x)), y: Math.max(spr.h * k + 18, Math.min(st.H * .8, y)) });
+    function startMovie(who, t) {
+      const o = MV[who], arm = 1 + .5 * S.armor, dps = (tapPower() * mult(true) * 6 * 4 * 1.5 * (1 + .5 * lvl('fist')) * (1 + .5 * lvl('brawl')) + (S.bigbang ? Math.max(wrate(), lapValue() * mult(true)) * 12 * S.bigbang / 2.5 : 0)) * arm, hp = Math.max(600, wrate() * 26, dps * o.hp[0]), mh = Math.max(150, wrate() * 5, dps * o.hp[1]);   // sized to how hard you hit, so the fight lasts about a minute; prizes stay on wrate
+      boss = { name: who, spr: MOVIE[who], hp, max: hp, t0: t, until: t + 90, x: 0, y: 0, k: 1, flash: 0, nextKi: 1, movie: who, struggled: true };   // no beam struggle: it would skip the gimmicks
+      movie = { who, o, boss, t0: t, wob: o.jelly ? t + 1.6 : 0, minions: (o.minions || []).map((n, i, a) => ({ name: n, spr: MOVIE[n], hp: mh, max: mh, i, n: a.length, pos: 'row', k: 1, flash: 0, dead: false })), nextSay: 0, flipUntil: 0, flips: 0, web: null, nextWeb: t + 5, nova: null };
+      if (o.jelly || o.earth) { recolour(o.jelly ? JELLY : EARTH); document.body.classList.add(o.jelly ? 'jelly' : 'earth'); }
+      lastMovie = who; krillinHit(who); ui.sfx && ui.sfx('boss'); shake = .5; ui.event(o.intro, 5000);
+    }
+    function endMovie() { if (movie.o.jelly || movie.o.earth) { useWorld(S.world || 0); document.body.classList.remove('jelly', 'earth'); } movie = null; }
+    const say = (s, t) => { if (t > movie.nextSay) { movie.nextSay = t + 4; ui.event(s); } };
+    // true when a hit on the movie villain is turned away
+    function movieGuard(dmg, x, y) {
+      const m = movie; if (!m || boss !== m.boss) return false;
+      const deflect = s => { burst(x, y, [0xffffff, 0xd8c8ff, 0x8a6ad8], 5, 60); say(s, st.t); return true; };
+      if (m.o.minions && m.minions.some(h => !h.dead)) return deflect(m.who === 'cooler' ? 'cooler: "my squadron will deal with you" — take them out first' : 'bojack just laughs behind his gang — beat them first');
+      if (m.twin && !m.twin.dead && boss.hp - dmg * (1 + .5 * S.armor) <= 0) { boss.hp = 1; boss.flash = .12; return deflect('his other half holds him together — beat the double first'); }
+      return false;
+    }
+    function movieHit(h, dmg) {
+      if (h.dead) return; h.hp -= dmg * (1 + .5 * S.armor); h.flash = .12; burst(h.x, h.y - 10, [0xffffff, 0xffe08a, 0xff9a3c], 5, 60);
+      if (h.hp > 0) return;
+      h.dead = true; burst(h.x, h.y - 10, [0xffffff, 0xffe08a, 0xe0473e], 16, 140); if (h.name === 'bujin') movie.web = null;
+      gain(Math.max(100, wrate() * (h.pos === 'twin' ? 20 : 5)), h.x, h.y - h.spr.h * h.k - 6, true);   // a fixed handful of goons, so these can't be farmed
+      if (h.pos === 'twin') ui.event('one janemba down — the real one is open');
+      else if (movie.minions.every(x => x.dead)) ui.event(movie.who === 'cooler' ? 'cooler: "useless. i\'ll do it myself"' : 'the gang is down — bojack steps up');
+    }
+    const breakWeb = s => { movie.web = null; movie.nextWeb = st.t + 9; ui.event(s); const h = handPos(); burst(h.x, h.y, [0xffffff, 0xff9af0, 0x9ae84a], 14, 120); };
+    function movieTap(px, py) {   // true when the tap was used up here
+      const m = movie; if (!m || m.over) return false;
+      if (m.flipUntil > st.t) burst(px, py, [0xf0d0ff, 0xa66ae0], 5, 40);   // shows where a mirrored tap really lands
+      for (const h of m.minions) if (!h.dead && h.x !== undefined && Math.abs(px - h.x) < (h.spr.w / 2 + 2) * h.k && py > h.y - (h.spr.h + 2) * h.k && py < h.y + 3) {
+        combo = st.t - lastClick < .6 ? Math.min(comboCap(), combo + .1) : 1; lastClick = st.t; movieHit(h, tapPower() * mult() * combo * 6 * (1 + .5 * lvl('fist')) * (1 + .5 * lvl('brawl'))); ui.sfx && ui.sfx('hit');
+        if (m.web && h.name === 'bujin' && ++m.web.hits >= 3) breakWeb('you tore through the psychic web'); return true;
+      }
+      if (m.web) { floats.push({ x: px, y: py - 6, s: 'webbed!', life: .7 }); return true; }   // stuck: taps don't train until the web breaks
+      return false;
+    }
+    const movieX = px => movie && movie.flipUntil > st.t ? st.W - px : px;
+    function movieBeam(onLine, pts) { const m = movie; if (!m || m.over) return; if (m.web) breakWeb('your beam burns through the psychic web'); for (const h of m.minions) if (!h.dead && h.x !== undefined && onLine(h.x, h.y - h.spr.h / 2 * h.k, h.spr.w / 2 * h.k)) movieHit(h, pts * 2); }
+    function movieBlast(x, y, r, dmg) { if (!movie || movie.over) return; for (const h of movie.minions) if (!h.dead && h.x !== undefined && Math.hypot(h.x - x, h.y - h.spr.h / 2 * h.k - y) < r + 6) movieHit(h, dmg); }
+    function movieTick(t, dt) {
+      const m = movie, o = m.o, b = m.boss;
+      if (boss !== b) { endMovie(); return; }
+      if (b.dead) {
+        if (!m.over) { m.over = t; m.web = null; m.flipUntil = 0; for (const h of m.minions) h.dead = true;
+          if (!b.fled) { const g = Math.max(500, wrate() * 70) * (1 + .5 * lvl('bounty')); gain(g, cx, cy - R * 1.3, true); ach(MV_ACH[m.who]); movieNote = { at: t + 2.4, s: `${o.win} — movie bonus +${fmtShort(Math.round(g))}` }; } }
+        return;
+      }
+      // cooler: once his squadron is down he raises a supernova; it drops when its time runs out
+      if (o.nova && !m.nova && t > m.t0 + 2 && m.minions.every(h => h.dead)) { m.nova = { t0: t, t1: t + o.nova }; b.until = Math.max(b.until, t + o.nova + 2); ui.event(`cooler raises a supernova — ${o.nova}s to bring him down`, 3500); }
+      if (m.nova && t > m.nova.t1) { flashT = 1; shake = 1; tiredUntil = Math.max(tiredUntil, t + 8); blasts.push({ x: cx, y: cy - R * .6, r: R * 1.2, t0: t }); ui.sfx && ui.sfx('boom'); ui.event('SUPERNOVA — you\'re knocked flat. tired ×0.75 for 8s, and cooler leaves you for dead', 4000); b.dead = true; b.fled = true; b.t1 = t; return; }
+      // janemba: splits in two at half health
+      if (o.split && !m.twin && b.hp < b.max * .5) { const hp = b.max * .35; m.twin = { name: 'janemba', spr: b.spr, hp, max: hp, i: 0, n: 1, pos: 'twin', k: 1, flash: 0, dead: false }; m.minions.push(m.twin); m.wob = t + 1; shake = .5; ui.event('janemba splits in two! the real one won\'t fall while his double stands', 3500); }
+      // janemba: twists space at 75/50/25%, taps land mirrored for a few seconds
+      if (o.flip && m.flips < 3 && b.hp < b.max * (.75 - .25 * m.flips)) { m.flips++; m.flipUntil = t + 6; m.wob = t + .8; ui.event('janemba twists space — left is right for 6s: hit his reflection', 3500); }
+      // bojack: bujin's psychic web sticks your taps until it breaks
+      if (o.web && !m.web && t > m.nextWeb && m.minions.some(h => h.name === 'bujin' && !h.dead) && t - m.t0 > 3) { m.web = { t0: t, hits: 0 }; ui.event("bujin's psychic web! your taps are stuck — tap bujin three times or fire a beam", 3500); }
+      if (m.web && t - m.web.t0 > 10) breakWeb('the web frays and lets go');
+    }
+    function movieFx(t) {
+      const m = movie; if (m.over) return '';
+      if (m.nova) return `supernova ${Math.max(0, Math.ceil(m.nova.t1 - t))}s`;
+      if (m.web) return 'psychic web — tap bujin';
+      if (m.flipUntil > t) return `mirrored ${Math.ceil(m.flipUntil - t)}s`;
+      const left = m.minions.filter(h => !h.dead && h.pos === 'row').length;
+      return left ? `${left} to go before ${m.who}` : `${m.who} ${Math.ceil(m.boss.until - t)}s`;
+    }
+    const mvBlit = (spr, x, y, k, flip, white, a = 1) => { for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const c = spr.col[j * spr.w + (flip ? spr.w - 1 - i : i)]; if (c < 0) continue; for (let yy = 0; yy < k; yy++) for (let xx = 0; xx < k; xx++) st.px(x + (i - spr.ax) * k + xx, y + (j - spr.h) * k + yy, white ? 0xffffff : c, a); } };
+    function movieDraw(t, dt) {
+      const m = movie, b = m.boss, W = st.W;
+      // the henchmen float in a row above the planet; janemba's double mirrors him on the left
+      for (const h of m.minions) {
+        if (h.pos === 'twin') { h.k = b.k; const s = fitSpot(h.spr, h.k, cx - R * 1.45, cy - R * .75 + Math.sin(t * 2 + 1) * 3); h.x = s.x; h.y = s.y; }
+        else { h.k = Math.max(.9, R / 62); const slot = h.i - (h.n - 1) / 2, e = Math.max(0, Math.min(1, (t - m.t0) / 1.2 - h.i * .1)), tx = cx + slot * R * .55, ty = cy - R * 1.12 + Math.abs(slot) * R * .08 + Math.sin(t * 2 + h.i) * 2; h.x = tx + st.W * .6 * (1 - e); h.y = ty; }
+        h.flash = Math.max(0, h.flash - dt); if (h.dead) continue;
+        mvBlit(h.spr, h.x, h.y, h.k, h.pos === 'twin' ? false : (t * 2 + h.i) % 2 < 1, h.flash > 0);
+        const bw = Math.round((h.pos === 'twin' ? 20 : 12) * h.k), bx = Math.round(h.x - bw / 2), by = Math.round(h.y - h.spr.h * h.k - 5), f = Math.max(0, h.hp / h.max);
+        for (let x = -1; x <= bw; x++) for (let y = -1; y <= 1; y++) st.px(bx + x, by + y, x < 0 || x === bw || y !== 0 ? 0x1d1030 : x < bw * f ? 0x34d873 : 0xffffff);
+      }
+      if (m.over) return;
+      // the supernova: a swelling orange sun over his head, or beside him when he's near the top
+      if (m.nova) { const p = Math.min(1, (t - m.nova.t0) / (m.nova.t1 - m.nova.t0)), r = (3 + 11 * p) * b.k, up = b.y - b.spr.h * b.k - 18 - r, ny = Math.max(r + 4, up), nx = up < r + 4 ? b.x - b.spr.w * b.k / 2 - r - 6 : b.x; for (let yy = -r - 3; yy <= r + 3; yy++) for (let xx = -r - 3; xx <= r + 3; xx++) { const d = Math.hypot(xx, yy); if (d <= r) st.px(nx + xx, ny + yy, d < r * .45 ? 0xfff2d0 : d < r * .8 ? 0xffb050 : 0xf06a20); else if (d <= r + 3 && bayer(Math.round(nx + xx), Math.round(ny + yy)) < .5) st.px(nx + xx, ny + yy, 0xffd0a0, .7); } }
+      // the psychic web: strands from bujin to you, and a net around you
+      if (m.web) { const bj = m.minions.find(h => h.name === 'bujin'), hp = handPos(); if (bj) for (let i = 0; i <= 1; i += .015) st.px(bj.x + (hp.x - bj.x) * i + Math.sin(i * 30 + t * 8) * 2, bj.y - bj.spr.h * bj.k / 2 + (hp.y - bj.y + bj.spr.h * bj.k / 2) * i, i * 60 % 4 < 2 ? 0xff9af0 : 0x9ae84a);
+        for (let a = 0; a < 6.28; a += .05) for (const r of [8, 14]) st.px(hp.x + Math.cos(a) * r, hp.y + Math.sin(a) * r, 0xff9af0, .8); for (let a = 0; a < 6.28; a += .785) for (let r = 0; r < 14; r++) st.px(hp.x + Math.cos(a) * r, hp.y + Math.sin(a) * r, 0xffc8f6, .8); }
+      // space flipped: a mirror line down the middle and his reflection where your taps now land
+      if (m.flipUntil > t) { for (let y = 0; y < st.H; y++) if ((y >> 2) % 2) st.px(W / 2, y, 0xc070ff, .7); mvBlit(b.spr, W - b.x, b.y, b.k, false, false, .45); }
+      // the jelly wobble: every row of the world sways for a moment
+      if (m.wob > t) { const B = st.buf, amp = 3 * (m.wob - t), row = new Uint32Array(W); for (let y = 0; y < st.H; y++) { const s = Math.round(Math.sin(y * .12 + t * 14) * amp); if (!s) continue; row.set(B.subarray(y * W, y * W + W)); for (let x = 0; x < W; x++) B[y * W + x] = row[Math.max(0, Math.min(W - 1, x - s))]; } }
     }
     let shen = null;     // { t0, phase: 'rise' | 'wish' | 'leave', t1 }
     let playing = false;
@@ -3653,6 +3918,20 @@ GAMES.push({
         const kk = y * W + x, z = z0 + (t1[2] * u + t2[2] * w) * k; if (zb[kk] > z + 3) continue; st.buf[kk] = PK(c);
       } }
     }
+    // kaioken: the sprite washed red, a pulsing red rim round it and flames licking up off the top, depth-tested like the sprite
+    function kaioAura(spr, bx, by, ang, flip, lift, depth, k, t) {
+      const ux = Math.sin(ang), uy = -Math.cos(ang), rx = Math.cos(ang), ry = Math.sin(ang), ox = bx + ux * lift, oy = by + uy * lift, Rr = (Math.hypot(spr.w, spr.h) + 6) * k, W = st.W, H = st.H, buf = st.buf;
+      const on = (i, j) => i >= 0 && j >= 0 && i < spr.w && j < spr.h && spr.col[j * spr.w + (flip ? spr.w - 1 - i : i)] >= 0, pulse = .5 + .5 * Math.sin(t * 9), f = Math.floor(t * 12), wash = .12 + .08 * pulse;
+      for (let y = Math.floor(oy - Rr); y <= oy + Rr; y++) { if (y < 0 || y >= H) continue; for (let x = Math.floor(ox - Rr); x <= ox + Rr; x++) {
+        if (x < 0 || x >= W) continue; const kk = y * W + x; if (zb[kk] > depth) continue;
+        const dx = x + .5 - ox, dy = y + .5 - oy, i = Math.floor((dx * rx + dy * ry) / k + spr.ax + .5), j = Math.floor(spr.ay + .5 - (dx * ux + dy * uy) / k);
+        if (on(i, j)) { const [r, g, b] = UNPK(buf[kk]); buf[kk] = PK(((r + (255 - r) * wash) << 16) | ((g * (1 - wash)) << 8) | (b * (1 - wash))); continue; }
+        if (on(i - 1, j) || on(i + 1, j) || on(i, j - 1) || on(i, j + 1)) { buf[kk] = PK(pulse > .5 ? 0xff4a3a : 0xe0332b); continue; }
+        const fl = 2 + (h2(i * 13 + f * 7, f) * 4 | 0); let q = 0; for (let n = 2; n <= fl; n++) if (on(i, j + n)) { q = n; break; }
+        if (q) { buf[kk] = PK(q >= fl ? 0xffd0c0 : q > 2 ? 0xff8a6a : 0xff4a3a); continue; }
+        if ((on(i - 2, j) || on(i + 2, j) || on(i, j + 2)) && bayer(x, y) < .25 + .35 * pulse) buf[kk] = PK(0xb0201a);
+      } }
+    }
     function blitZ(spr, bx, by, ang, flip, lift, depth, k = 1, raw = false) {
       const ux = Math.sin(ang), uy = -Math.cos(ang), rx = Math.cos(ang), ry = Math.sin(ang);
       const ox = bx + ux * lift, oy = by + uy * lift, Rr = (Math.hypot(spr.w, spr.h) + 1) * k, W = st.W, H = st.H;
@@ -3822,9 +4101,9 @@ GAMES.push({
     function kaiPlanet(kx, ky, kr, glow = true) {   // king kai's tiny planet: a green ball, a road round it, the red-roofed house
       const px = (x, y, c) => st.px(x, y, c);
       if (glow) for (let y = -kr - 8; y <= kr + 8; y++) for (let x = -kr - 8; x <= kr + 8; x++) { const d = Math.hypot(x, y); if (d > kr && d < kr + 8 && bayer(kx + x, ky + y) < (1 - (d - kr) / 8) * .55) px(kx + x, ky + y, 0xfff6d8); }
-      const G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e];
+      const G5 = [0x2f7a26, 0x3f9330, 0x57ad3c, 0x78c64a, 0xa6de66, 0xd2f28e], Rk = M3.rot(V.norm([.35, 1, .12]), st.t * .18);   // it turns about the road's own axis, so only the meadow drifts past
       for (let y = -kr; y <= kr; y++) for (let x = -kr; x <= kr; x++) { const d = Math.hypot(x, y); if (d > kr + .3) continue; if (d > kr - .7) { px(kx + x, ky + y, 0x1f3a1a); continue; }
-        const nz = Math.sqrt(Math.max(0, 1 - (d / kr) ** 2)), l = (-x * .55 - y * .7) / kr * .8 + nz * .5 + (bayer(kx + x, ky + y) - .5) * .35, band = Math.abs((y + x * .35) - kr * .25) < Math.max(1, kr * .09);
+        const nz = Math.sqrt(Math.max(0, 1 - (d / kr) ** 2)), qa = (Rk[0] * x + Rk[1] * y) / kr + Rk[2] * nz, qb = (Rk[3] * x + Rk[4] * y) / kr + Rk[5] * nz, qc = (Rk[6] * x + Rk[7] * y) / kr + Rk[8] * nz, l = (-x * .55 - y * .7) / kr * .8 + nz * .5 + (bayer(kx + x, ky + y) - .5) * .35 + Math.sin(qa * 5 + Math.sin(qc * 4) * 1.5) * Math.sin(qb * 4.5 + qc * 2) * .3, band = Math.abs((y + x * .35) - kr * .25) < Math.max(1, kr * .09);
         px(kx + x, ky + y, band ? (l > .3 ? 0xfdfaf2 : 0xd8d2c4) : G5[Math.max(0, Math.min(5, Math.round(1 + l * 3.4)))]); }
       if (kr > 9) { const hr = Math.max(2, kr * .28); for (let y = -hr; y <= 0; y++) for (let x = -hr; x <= hr; x++) if (x * x + y * y <= hr * hr) px(kx - kr * .35 + x, ky - kr * .4 + y, x + y < 0 ? 0xf6985a : 0xc04e26); }
     }
@@ -3975,7 +4254,7 @@ GAMES.push({
       sblit(spr, ox, oy, k); if (snk.loss && el > .7) { sayAt('-' + fmtShort(snk.loss), lx, ly - spr.h * k - 10, 'red'); snk.loss = 0; }
     }
     const HFIL_LINES = { raditz: 'KAKAROT!', nappa: 'VEGETA!!', vegeta: 'THIS ISN\'T OVER.', 'past vegeta': 'THIS ISN\'T OVER.', frieza: 'HMPH.', cell: 'I WAS PERFECT.', 'kid buu': 'BUU BORED.', broly: 'KAKAROT!!!', beerus: 'JUST A NAP.', hit: 'CONTRACT PENDING.', 'goku black': 'ZERO MORTALS.', jiren: 'STRENGTH IS ALL.', moro: 'STILL HUNGRY.', gas: 'MORE POWER!' };
-    const foeSpr = n => (VILLAINS.find(v => v.name === (n === 'past vegeta' ? 'vegeta' : n)) || { spr: FRIEZA }).spr;
+    const foeSpr = n => (VILLAINS.find(v => v.name === (n === 'past vegeta' ? 'vegeta' : n)) || (MOVIE[n] ? { spr: MOVIE[n] } : { spr: FRIEZA })).spr;
     const hfilFoes = () => { const p = (S.foes || []).slice().sort(() => Math.random() - .5); return p.length ? p.slice(0, p.length > 2 && Math.random() < .5 ? 3 : 2) : ['frieza']; };   // two or three villains you beat this run, or frieza if none yet
     function hfil3(t, h) {   // v3: HFIL from above, gently: needle mountains, blood pools, the ghosts of villains you beat sulking; he floats back up
       const W = st.W, H = st.H, px = (x, y, c) => st.px(x, y, c), k = Math.max(1, Math.round(Math.min(W, H) / 140)), up = h.up ? Math.min(1, (t - h.up) / .9) : 0;
@@ -4024,7 +4303,7 @@ GAMES.push({
       for (let i = 0; i < 6; i++) { const d = 10 + Math.random() * Math.min(reach, 260), sd = Math.random() < .5 ? -1 : 1, [x0, y0] = at(d, sd * (w + 1)), [x1, y1] = at(d + 8 + Math.random() * 12, sd * (w + 5 + Math.random() * 8)); crackle(x0, y0, x1, y1, 0xffffff, px, bp.edge); }
     }
     // the flight wish: superman pose tipped forward round his middle, a white aura, and a white-blue ki streak along the orbit he just flew
-    function flyDraw(t, spr, kd, flip, lift, depth, seen) {
+    function flyDraw(t, spr, kd, flip, lift, depth, seen, draw) {
       const pal = [0xffffff, 0xcdeeff, 0x7ac8ff], N = 50, W0 = 3.6, dir = flip ? -1 : 1, tilt = 1.2, sh = spr.h * 1.05;
       const at = j => { const v = M3.ap(M, roadPt(phi - j * .013)), r = R + lift + sh * .45; return { x: cx + v[0] * r, y: cy - v[1] * r + st.bob, z: v[2] * r }; };
       for (let j = N; j >= 1; j--) { const p = at(j), q = at(j - 1), dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, k = j / N, w = W0 * (1 - k) + .6, zi = Math.round(p.y) * st.W + Math.round(p.x);
@@ -4032,16 +4311,17 @@ GAMES.push({
         for (let s = 0; s < 1; s += .34) for (let e = -w - 1.5; e <= w + 1.5; e += .5) { const a = Math.abs(e) / w, X = p.x + dx * s + nx * e, Y = p.y + dy * s + ny * e; if (a > 1) { if (bayer(Math.round(X), Math.round(Y)) < (1 - k) * .6) st.px(X, Y, pal[2], .5); continue; } st.px(X, Y, a < .45 ? pal[0] : a < .8 ? pal[1] : pal[2], 1 - k * k * .5); } }
       const ux = Math.sin(kd.ang), uy = -Math.cos(kd.ang), a2 = kd.ang + dir * tilt, mx = kd.x + ux * (lift + sh / 2), my = kd.y + uy * (lift + sh / 2);
       if (seen) for (let i = 0; i < 3; i++) { const r = 5 + Math.random() * 7, a = Math.random() * 6.28; fx.add({ x: mx + Math.cos(a) * r, y: my + Math.sin(a) * r * .7, vx: -Math.cos(a2) * dir * 30, vy: -Math.sin(a2) * dir * 30, life: .4, s: 1, grow: 1, c: pal, raw: true }); }
-      blitZ(spr, mx - Math.sin(a2) * sh / 2, my + Math.cos(a2) * sh / 2, a2, flip, 0, depth, 1.05);
+      draw(spr, 0, depth, 1.05, mx - Math.sin(a2) * sh / 2, my + Math.cos(a2) * sh / 2, a2);
     }
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
       const rdt = dt; if (chamberUntil > t && S.world !== 3) dt *= .3;   // no slow-mo on snake way: jumps run on real time and couldn't clear a gap
       if (playing) session += dt; st.bob = Math.round(Math.sin(t * .7) * 2) + (shake > 0 && !st.calm ? Math.round((Math.random() - .5) * 5 * shake) : 0); shake = Math.max(0, shake - dt);
       idleT += dt;
+      const sp = spinOf(S.world || 0); spinA += sp.w * dt; M = M3.ortho(M3.mul(M, M3.rot(sp.u, sp.w * dt)));   // in the planet's own frame, so it adds to any drag
       if (!drag) {
         if (Math.abs(vrx) + Math.abs(vry) > .001) { M = M3.ortho(M3.mul(M3.mul(M3.rx(vrx * dt), M3.ry(vry * dt)), M)); vrx *= Math.pow(.06, dt); vry *= Math.pow(.06, dt); }
-        if (idleT > 3) { const I = M3.I(), k = Math.min(1, dt * .7); M = M3.ortho(M.map((v, i) => v + (I[i] - v) * k)); }
+        if (idleT > 3) { const I = M3.rot(sp.u, spinA), k = Math.min(1, dt * .7); M = M3.ortho(M.map((v, i) => v + (I[i] - v) * k)); }
       }
       // running: sprint decays; riding the golden cloud triples everything
       sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);
@@ -4170,6 +4450,10 @@ GAMES.push({
           ach('tournament'); tour = null; nextTour = 240 + Math.random() * 60; nextSaiba = 30; save();
         }
       }
+      // a movie villain: rare, home only, never on top of another raid, a trip or a wish
+      if (!movie && S.world === home() && !boss && !ginyu && !tour && !shen && !ship && !storm && !dance && !cling && session > 240 && S.best >= 3e5 && (nextMovie -= dt) < 0) { const pool = ['cooler', 'janemba', 'bojack'].filter(w => w !== lastMovie); startMovie(movieForce || pool[Math.random() * pool.length | 0], t); movieForce = ''; nextMovie = 480 + Math.random() * 180; }
+      if (movie) movieTick(t, dt);
+      if (movieNote && t > movieNote.at) { ui.event(movieNote.s, 3500); movieNote = null; }
       // nappa defends planet vegeta
       if (S.world === 2 && nextNappa > 0 && !boss && !shen && (nextNappa -= dt) <= 0) { nextNappa = 0; const hp = Math.max(800, wrate() * 50); boss = { name: 'nappa', spr: NAPPA, hp, max: hp, t0: t, until: t + 35, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event('nappa: "vegeta, let me handle this!" — tap him'); }
       // ultra instinct (or the end of the sagas) opens the multiverse, for the rest of the run
@@ -4250,6 +4534,7 @@ GAMES.push({
       if (chamberUntil > t) fxs.push(`time chamber ×${chamberX()} ${Math.ceil(chamberUntil - t)}s`);
       if (laughUntil > t) fxs.push(`laughing ×1.25 ${Math.ceil(laughUntil - t)}s`);
       if (ginyu && !ginyu.done) fxs.push(`ginyu force ${Math.ceil(ginyu.until - t)}s`);
+      if (movie) { const s = movieFx(t); if (s) fxs.push(s); }
       if (fuseUntil > t) fxs.push(`fusion ×2 ${Math.ceil(fuseUntil - t)}s`);
       if (whisUntil > t) fxs.push(`whis' training: laps ×2, taps ×2 noise ${Math.ceil(whisUntil - t)}s`);
       if (chiUntil > t) fxs.push(`chi-chi ×1.5 ${Math.ceil(chiUntil - t)}s`);
@@ -4323,13 +4608,14 @@ GAMES.push({
       if (seen && (aura || boostUntil > t || riding > 0 || S.form > 0 || kaioUntil > t || S.aura)) for (let i = 0; i < (S.form > 0 ? 4 : 3); i++) { const a = kd.ang + (Math.random() - .5) * .9, r = 4 + Math.random() * 8; fx.add({ x: kd.x + Math.sin(kd.ang) * (lift + 10) + Math.cos(a) * r, y: kd.y - Math.cos(kd.ang) * (lift + 10) + Math.sin(a) * r * .5, vx: Math.sin(kd.ang) * 20, vy: -Math.cos(kd.ang) * 30, life: .5, s: 1, grow: 1, c: kaioUntil > t ? [0xffffff, 0xff9a8a, 0xe0332b] : !S.form && S.aura ? AURAS[(S.aura - 1) % AURAS.length] : FORMS[S.form].aura, raw: true }); }
       // super saiyan 2+: crackling sparks around him
       if (seen && FORMS[S.form].sparks && Math.random() < .35) { let x = kd.x + (Math.random() - .5) * 22, y = kd.y - Math.cos(kd.ang) * (lift + 14) + (Math.random() - .5) * 26; for (let k = 0; k < 6; k++) { st.px(x, y, FORMS[S.form].sparks); x += (Math.random() - .5) * 4; y += 1 + Math.random() * 2; } }
+      const drawHero = (s, l, d, k, x = kd.x, y = kd.y, a = kd.ang) => { blitZ(s, x, y, a, flip, l, d, k); if (kaioUntil > t) kaioAura(s, x, y, a, flip, l, d, k, t); };   // x, y, a: the flight pose draws him from his own pivot
       if (apeUntil > t) {
         // giant ape stomps: a little hop each step and a screen shake on landing
         const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for (let k = 0; k < 8; k++) fx.add({ x: kd.x + (Math.random() - .5) * 30, y: kd.y, vx: (Math.random() - .5) * 60, vy: -20 - Math.random() * 30, drag: 2, life: .5, s: 2, c: [0xffffff, 0xe7e2d4], raw: true }); }
-        blitZ(APE[step % 2], kd.x, kd.y, kd.ang, flip, lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
-      } else if (fused && fused.until > t) blitZ(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
-      else if (fly) flyDraw(t, spr, kd, flip, lift, depth, seen);
-      else blitZ(spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+        drawHero(APE[step % 2], lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
+      } else if (fused && fused.until > t) drawHero(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, lift, depth, 1.05);
+      else if (fly) flyDraw(t, spr, kd, flip, lift, depth, seen, drawHero);
+      else drawHero(spr, lift, depth, 1.05);
       if (dance && !dance.done && seen) { const b = dance.beats[dance.i]; if (b !== undefined) { const r = 6 + Math.max(0, b - t) * 26, hx = kd.x + Math.sin(kd.ang) * 14, hy = kd.y - Math.cos(kd.ang) * 14; for (let a = 0; a < 6.28; a += .12) st.px(hx + Math.cos(a) * r, hy + Math.sin(a) * r, Math.abs(b - t) < .32 ? 0xfff27a : 0xffffff); st.text(['fu', 'sion', 'ha!'][dance.i], hx, hy - r - 8, t - dance.ok < .3 ? 0xfff27a : 0xffffff); } }   // the beat ring
       if (cling) blitZ(SAIBA, kd.x - Math.cos(kd.ang) * 5, kd.y - Math.sin(kd.ang) * 5, kd.ang, !flip, lift + 6 + (cling.boom - t < 1 && Math.floor(t * 16) % 2 ? 1 : 0), depth + 1, .9);   // hugging his back, shaking before it blows
       // piccolo meditates above the planet; king kai and gregory stand on it
@@ -4461,6 +4747,7 @@ GAMES.push({
           if (boss.badge) { const bx2 = Math.round(boss.x - st.textWidth(boss.badge) / 2); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(boss.badge, bx2 + ox, boss.y + 3 + oy, 0x1d1030); st.text(boss.badge, bx2, boss.y + 3, boss.tc); }   // the universe badge, under his feet
         }
       }
+      if (movie) movieDraw(t, dt);
       if (door) { const v = M3.ap(M, door.c), a = Math.min(1, (t - door.t0) / .5); if (v[2] > .05) { const ang = Math.atan2(v[0], v[1]); door.sx = cx + v[0] * R; door.sy = cy - v[1] * R + st.bob; blitZ(DOOR, door.sx, door.sy, ang, false, (a - 1) * 18, v[2] * R + 6, 1.1); if (Math.random() < .3) { const h = Math.random() * 18; fx.add({ x: door.sx + Math.sin(ang) * h + (Math.random() - .5) * 10, y: door.sy - Math.cos(ang) * h, vx: Math.sin(ang) * 10, vy: -Math.cos(ang) * 10, life: .6, s: 1, c: [0xffffff, 0xf6f4ee], raw: true }); } } else door.sx = undefined; }
       if (zap) { const k = (t - zap.t0) / .3; if (k > 1) zap = null; else { const dx = zap.x1 - zap.x0, dy = zap.y1 - zap.y0, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L; for (let d = 0; d < L; d += .6) { const w = Math.sin(d * .5) * 2.2; st.px(zap.x0 + dx * d / L + nx * w, zap.y0 + dy * d / L + ny * w, 0xc89aff); st.px(zap.x0 + dx * d / L, zap.y0 + dy * d / L, 0xfff6a0); } } }
       if (ginyu) for (const m of ginyu.members) {
@@ -4557,6 +4844,7 @@ GAMES.push({
     if (/spirit/.test(HASH)) { S.spirit = Math.max(1, S.spirit); spirit = .97; }   // preview hook: #spirit (a nearly full spirit bomb)
     if (/struggle/.test(HASH)) { session = 111; nextBoss = 0; S.galick = Math.max(1, S.galick); }   // preview hook: #struggle (a villain who fires back)
     if (/frieza/.test(HASH)) { session = 151; nextShip = 0; }   // preview hook: #frieza (his ship lands)
+    { const mv = HASH.match(/cooler|janemba|bojack/); if (mv) { movieForce = mv[0]; session = 241; homeSince = session; S.best = Math.max(S.best, 3e5); nextMovie = 0; } }   // preview hooks: #cooler, #janemba, #bojack (that movie villain raids now)
     if (/yamcha/.test(HASH)) { session = 101; nextYam = 0; }   // preview hook: #yamcha
     if (/cling/.test(HASH)) { session = 151; nextCling = 0; }   // preview hook: #cling (a saibaman hugs you)
     if (/dance/.test(HASH)) { session = 201; nextDance = 0; S.best = Math.max(S.best, 2e5); }   // preview hook: #dance (the fusion dance)
