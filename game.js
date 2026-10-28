@@ -3260,7 +3260,7 @@ GAMES.push({
     // view rotation (drag to spin) with inertia, easing home when idle
     let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99, spinA = 0;
     // each world idles round its own axis at its own pace: a small tilt off the road's pole keeps the road in view; the lookout turns upright over korin's tower
-    const spinOf = w => { const a = hash(w * 3.7 + 1) * 6.283; return { u: w === 10 ? [0, 1, 0] : V.norm(V.add(N, V.add(V.mul(E1, Math.cos(a)), E2, Math.sin(a)), .03 + .05 * hash(w * 5.1 + 2))), w: (.006 + .008 * hash(w * 2.3 + 3)) * (hash(w * 9.7) < .5 ? -1 : 1) }; };
+    const spinOf = w => ({ u: w === 10 ? [0, 1, 0] : N, w: .012 * (hash(w * 9.7) < .5 ? -1 : 1) });   // a steady turn about the planet's own axis, like a slow drag; a tilted axis made the road wobble
     const fx = particleSystem(), puff = makePuff(26, 11);
 
     // ── game state
