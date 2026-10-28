@@ -424,6 +424,16 @@ fn itx() {
 }
 
 #[test]
+fn attacks() {
+    scenario("attacks");
+}
+
+#[test]
+fn walls() {
+    scenario("walls");
+}
+
+#[test]
 fn input() {
     scenario("input");
 }
