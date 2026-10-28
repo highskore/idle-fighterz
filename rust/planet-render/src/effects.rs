@@ -37,8 +37,30 @@ fn beam_pal(g: &Game) -> (u32, u32) {
     }
 }
 
-pub fn draw(c: &mut Ctx, g: &mut Game, dt: f64) {
+pub fn draw(c: &mut Ctx, g: &mut Game) {
     let t = c.t;
+    // the big bang in flight: an arcing blue ki ball with a trail (it lands in planet-core's draw_step)
+    if let Some(b) = g.inp.bang {
+        let k = 1f64.min((t - b.t0) / b.dur);
+        let x = b.x0 + (b.x1 - b.x0) * k;
+        let y = b.y0 + (b.y1 - b.y0) * k - sin(k * std::f64::consts::PI) * 14.0;
+        let r = 3.0 + k * 2.0;
+        let mut yy = -r - 2.0;
+        while yy <= r + 2.0 {
+            let mut xx = -r - 2.0;
+            while xx <= r + 2.0 {
+                let d = hypot(&[xx, yy]);
+                if d <= r {
+                    c.fb.px(x + xx, y + yy, if d < r * 0.5 { 0xffffff } else { 0x8fd8ff }, 1.0);
+                } else if d <= r + 2.0 && bayer(js_round(x + xx) as i64 as i32, js_round(y + yy) as i64 as i32) < 0.5 {
+                    c.fb.px(x + xx, y + yy, 0x4a9aff, 0.7);
+                }
+                xx += 1.0;
+            }
+            yy += 1.0;
+        }
+        g.fx.push(Particle::new(x, y, &[0xffffff, 0x8fd8ff, 0x2f6ae0]).life(0.25).size(2.0, 0.0));
+    }
     // the spirit bomb: a pale blue ball over his head, motes of energy streaming in from the planet
     if g.s.spirit > 0 && g.tl.spirit_shot.is_none() && g.tl.spirit > 0.04 && g.playing {
         let (bx, by, br) = g.spirit_pos();
@@ -88,18 +110,29 @@ pub fn draw(c: &mut Ctx, g: &mut Game, dt: f64) {
             g.fx.push(Particle::new(qx, qy, &[0xffffff, 0xfff3a0, 0xffb35a]).v(vx, vy).life(0.3));
         }
     }
-    // the capsule a beaten boss drops: it falls to the planet, bobs, and pops open after 8s
-    if let Some(mut cp) = g.tl.capsule.clone() {
-        if cp.y < cp.land {
-            cp.vy += 160.0 * dt;
-            cp.y = cp.land.min(cp.y + cp.vy * dt);
-        } else {
-            cp.y = cp.land + sin((t - cp.t0) * 4.0) * 1.5;
+    // the big bang's blasts, newest first (planet-core's draw_step lets the spent ones go)
+    for b in g.inp.blasts.iter().rev() {
+        let k = (t - b.t0) / 0.45;
+        let rr = b.r * (0.3 + 0.7 * k.sqrt());
+        let mut yy = -rr;
+        while yy <= rr {
+            let mut xx = -rr;
+            while xx <= rr {
+                let d = hypot(&[xx, yy]);
+                if d <= rr {
+                    let edge = d > rr - 2.0;
+                    if edge || bayer(js_round(b.x + xx) as i64 as i32, js_round(b.y + yy) as i64 as i32) <= (1.0 - k) * 0.8 {
+                        c.fb.px(b.x + xx, b.y + yy, if edge { if k < 0.5 { 0xffffff } else { 0x8fd8ff } } else if d < rr * 0.4 { 0xffffff } else { 0xbfe9ff }, 1.0);
+                    }
+                }
+                xx += 1.0;
+            }
+            yy += 1.0;
         }
-        g.tl.capsule = Some(cp.clone());
-        if t - cp.t0 > 8.0 {
-            g.open_capsule();
-        } else {
+    }
+    // the capsule a beaten boss drops (planet-core's draw_step moves it and opens it)
+    if let Some(cp) = g.tl.capsule.clone() {
+        {
             let (x, y) = (js_round(cp.x), js_round(cp.y));
             for yy in -3..=3 {
                 for xx in -6..=6 {

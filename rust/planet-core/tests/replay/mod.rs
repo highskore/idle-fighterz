@@ -1,5 +1,6 @@
 //! The replay behind the differential tests: runs a scenario in game.js (rust/difftest/run.js), replays its inputs
-//! in planet-core, and compares the state samples. Shared by planet-core's difftest and planet-render's drawn one.
+//! in planet-core, and compares the state, the HUD and the save. Shared by planet-core's difftest and planet-render's
+//! drawn one.
 #![allow(dead_code)]
 
 use planet_core::data::{Upg, TREE};
@@ -10,9 +11,14 @@ use std::process::Command;
 
 const REL: f64 = 1e-9;
 
-/// run.js's trace for a scenario. Drawn ones take minutes in game.js, so traces are kept under rust/target/difftest,
-/// keyed by a hash of the JS they came from.
 pub fn js(arg: &str) -> Option<Value> {
+    js_args(&[arg])
+}
+
+/// run.js's output. Drawn traces take game.js minutes, so those are kept under rust/target/difftest, keyed by a hash
+/// of the JS they came from.
+pub fn js_args(args: &[&str]) -> Option<Value> {
+    let arg = args[0];
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../difftest");
     let mut h: u64 = 0xcbf29ce484222325;
     for f in ["../../game.js", "../../world.js", "../../shenron.js", "harness.js", "run.js"] {
@@ -20,11 +26,11 @@ pub fn js(arg: &str) -> Option<Value> {
             h = (h ^ b as u64).wrapping_mul(0x100000001b3);
         }
     }
-    let cache = dir.join("../target/difftest").join(format!("{arg}-{h:016x}.json"));
-    if let Ok(b) = std::fs::read(&cache) {
+    let cache = (args.len() == 1 && arg.ends_with("+draw")).then(|| dir.join("../target/difftest").join(format!("{arg}-{h:016x}.json")));
+    if let Some(b) = cache.as_ref().and_then(|c| std::fs::read(c).ok()) {
         return Some(serde_json::from_slice(&b).expect("cached trace json"));
     }
-    let out = match Command::new("node").arg(dir.join("run.js")).arg(arg).output() {
+    let out = match Command::new("node").arg(dir.join("run.js")).args(args).output() {
         Ok(o) => o,
         Err(_) => {
             eprintln!("node not found: skipping the {arg} difftest");
@@ -32,8 +38,10 @@ pub fn js(arg: &str) -> Option<Value> {
         }
     };
     assert!(out.status.success(), "run.js {arg} failed: {}", String::from_utf8_lossy(&out.stderr));
-    let _ = std::fs::create_dir_all(cache.parent().unwrap());
-    let _ = std::fs::write(&cache, &out.stdout);
+    if let Some(c) = &cache {
+        let _ = std::fs::create_dir_all(c.parent().unwrap());
+        let _ = std::fs::write(c, &out.stdout);
+    }
     Some(serde_json::from_slice(&out.stdout).expect("trace json"))
 }
 
@@ -73,7 +81,7 @@ pub fn scenario(name: &str) {
     scenario_with(name, &mut |_, _| {});
 }
 
-/// A scenario, with `after` run on the game after every frame (planet-render draws it there).
+/// A scenario, with `after` run on the game after each frame's logic and before its timeouts (where game.js draws).
 pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
     let Some(tr) = js(name) else { return };
     let seed = tr["seed"].as_u64().unwrap() as u32;
@@ -83,9 +91,17 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
     let samples = tr["samples"].as_array().unwrap();
 
     let mut g = Game::new(seed);
-    g.start();
+    g.epoch_ms = tr["epoch"].as_f64().unwrap();
+    if let Some(saved) = tr["saved"].as_str() {
+        g.load_json(saved);
+    }
+    g.start_on(tr["today"].as_str().unwrap());
     let (mut t, mut ii, mut si) = (0.0f64, 0usize, 0usize);
     let mut rep = Report::default();
+    let n = |i: &Value, k: &str| i[k].as_f64().unwrap();
+    let mut saves = 0;
+    let mut events: Vec<(f64, String, f64)> = Vec::new();
+    let mut hud = Report::default();
     for f in 0..frames {
         while ii < inputs.len() && inputs[ii]["f"].as_u64().unwrap() as usize == f {
             let i = &inputs[ii];
@@ -101,17 +117,61 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
                 "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 "summon" => g.summon(),
                 "pick" => g.pick(k),
+                "down" => g.pointer_down(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by")),
+                "move" => g.pointer_move(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by")),
+                "up" => g.pointer_up(n(i, "bx"), n(i, "by")),
+                "cancel" => g.pointer_cancel(),
+                "key" => {
+                    g.key(k);
+                }
                 a => panic!("unknown input {a}"),
             }
             ii += 1;
         }
+        events.extend(g.events.drain(..).map(|(s, ms)| (g.t, s, ms)));
         t += dt;
         g.sim(t, dt);
         after(&mut g, dt);
         g.timeouts();
+        events.extend(g.events.drain(..).map(|(s, ms)| (g.t, s, ms)));
         if (f + 1) % 30 == 0 {
             let s = &samples[si];
             si += 1;
+            if !s["save"].is_null() {
+                saves += 1;
+                compare_save(&mut rep, &s["save"], &g);
+                let m = &s["menus"];
+                for (what, rs) in [
+                    ("menu", g.menu_json()),
+                    ("angels", g.angels_json()),
+                    ("ascendInfo", g.ascend_info_json()),
+                    ("godInfo", g.god_info_json()),
+                    ("zenoInfo", g.zeno_info_json()),
+                    ("card", g.card_json()),
+                ] {
+                    deep(&mut hud, g.t, what, &m[what], &serde_json::from_str(&rs).unwrap());
+                }
+            }
+            if !s["hud"].is_null() {
+                let mut js = s["hud"].clone();
+                js["time"] = js["time"].as_f64().unwrap().floor().into();
+                deep(&mut hud, g.t, "hud", &js, &serde_json::from_str(&g.hud().to_json()).unwrap());
+            }
+            // the wish box while the dragon waits
+            match (s["offer"].is_null(), g.wish_offer()) {
+                (true, None) => hud.checked += 1,
+                (false, Some((_, rs))) => deep(&mut hud, g.t, "offer", &s["offer"], &serde_json::from_str(&rs).unwrap()),
+                (_, rs) => hud.bad.push(format!("t={:.0}s offer: js {} rust {:?}", g.t, s["offer"], rs)),
+            }
+            if !s["shop"].is_null() {
+                let rs: Value = serde_json::from_str(&g.shop_at_hud).unwrap();
+                let keys = |v: &Value| v.as_object().unwrap().keys().cloned().collect::<Vec<_>>();
+                hud.checked += 1;
+                if keys(&s["shop"]) != keys(&rs) && hud.bad.len() < 25 {
+                    hud.bad.push(format!("t={:.0}s shop rows: js {:?} rust {:?}", g.t, keys(&s["shop"]), keys(&rs)));
+                }
+                deep(&mut hud, g.t, "shop", &s["shop"], &rs);
+            }
             let n = |k: &str| s[k].as_f64().unwrap();
             let st = n("t");
             rep.num(st, "t", st, g.t, true);
@@ -163,8 +223,24 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
         }
     }
     assert_eq!(si, samples.len());
+    // every toast, in order, with its time and how long it stays up
+    let jev = tr["events"].as_array().unwrap();
+    for (i, (je, re)) in jev.iter().zip(&events).enumerate() {
+        hud.checked += 1;
+        let (jt, js, jms) = (je[0].as_f64().unwrap(), je[1].as_str().unwrap(), je[2].as_f64().unwrap());
+        if ((jt - re.0).abs() > 0.006 || js != re.1 || jms != re.2) && hud.bad.len() < 25 {
+            hud.bad.push(format!("event {i}: js {jt} {js:?} {jms}ms, rust {:.2} {:?} {}ms", re.0, re.1, re.2));
+        }
+    }
+    hud.checked += 1;
+    if jev.len() != events.len() && hud.bad.len() < 25 {
+        hud.bad.push(format!("{} toasts in js, {} in rust", jev.len(), events.len()));
+    }
+    // what game.js last wrote to localStorage carries the same daily bonus date
+    let stored = serde_json::from_str::<Value>(tr["stored"].as_str().unwrap()).unwrap();
+    assert_eq!(stored["daily"].as_str(), g.s.daily.as_deref(), "the stored daily date");
     eprintln!(
-        "{name}: {} samples, {} values compared, {} mismatches, {} inexact (worst rel {:.1e})",
+        "{name}: {} samples ({saves} with the save), {} values compared, {} mismatches, {} inexact (worst rel {:.1e})",
         samples.len(),
         rep.checked,
         rep.bad.len(),
@@ -174,7 +250,90 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
     for l in &rep.loose {
         eprintln!("  inexact {l}");
     }
+    eprintln!("{name} hud: {} values compared (snapshot, shop, menus, toasts), {} mismatches, {} inexact", hud.checked, hud.bad.len(), hud.inexact);
     assert!(rep.bad.is_empty(), "{name} diverged:\n{}", rep.bad.join("\n"));
+    assert!(hud.bad.is_empty(), "{name}: the HUD differs:\n{}", hud.bad.join("\n"));
+}
+
+/// A JSON value from game.js against planet-core's: every key game.js has, numbers within tolerance, the rest exact.
+fn deep(rep: &mut Report, t: f64, path: &str, js: &Value, rs: &Value) {
+    match (js, rs) {
+        (Value::Object(a), Value::Object(b)) => {
+            for (k, v) in a {
+                match b.get(k) {
+                    Some(r) => deep(rep, t, &format!("{path}.{k}"), v, r),
+                    None => {
+                        rep.checked += 1;
+                        if rep.bad.len() < 25 {
+                            rep.bad.push(format!("t={t:.0}s {path}.{k}: js {v}, missing in rust"));
+                        }
+                    }
+                }
+            }
+        }
+        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => {
+            for (i, (v, r)) in a.iter().zip(b).enumerate() {
+                deep(rep, t, &format!("{path}[{i}]"), v, r);
+            }
+        }
+        (Value::Number(a), Value::Number(b)) => rep.num(t, path, a.as_f64().unwrap(), b.as_f64().unwrap(), false),
+        _ => {
+            rep.checked += 1;
+            if js != rs && rep.bad.len() < 25 {
+                rep.bad.push(format!("t={t:.0}s {path}: js {js} rust {rs}"));
+            }
+        }
+    }
+}
+
+/// The save JSON against game.js's `JSON.stringify(S)`: every key game.js has must match; keys game.js hasn't created
+/// yet must hold what game.js reads for a missing one (0, an empty object or list).
+fn compare_save(rep: &mut Report, js: &Value, g: &Game) {
+    let rs: Value = serde_json::from_str(&g.save_json()).expect("save_json is JSON");
+    let t = g.t;
+    let bad = |rep: &mut Report, what: String| {
+        if rep.bad.len() < 25 {
+            rep.bad.push(format!("t={t:.0}s save.{what}"));
+        }
+    };
+    let (js, rs) = (js.as_object().unwrap(), rs.as_object().unwrap());
+    for (k, v) in js {
+        let Some(r) = rs.get(k) else {
+            bad(rep, format!("{k}: missing in rust (js {v})"));
+            continue;
+        };
+        match (v, r) {
+            (Value::Number(a), Value::Number(b)) => rep.num(t, &format!("save.{k}"), a.as_f64().unwrap(), b.as_f64().unwrap(), false),
+            (Value::Object(a), Value::Object(b)) => {
+                rep.checked += 1;
+                if a != b {
+                    bad(rep, format!("{k}: js {v} rust {r}"));
+                }
+            }
+            _ => {
+                rep.checked += 1;
+                if v != r {
+                    bad(rep, format!("{k}: js {v} rust {r}"));
+                }
+            }
+        }
+    }
+    for (k, r) in rs {
+        if js.contains_key(k) {
+            continue;
+        }
+        rep.checked += 1;
+        let unset = match r {
+            Value::Number(n) => n.as_f64() == Some(0.0),
+            Value::Object(o) => o.is_empty(),
+            Value::Array(a) => a.is_empty(),
+            Value::String(s) => s.is_empty(),
+            _ => false,
+        };
+        if !unset {
+            bad(rep, format!("{k}: rust {r}, js has none"));
+        }
+    }
 }
 
 /// The timeline's state, in run.js's `tl` order: what's up in the sky and how the run is going.
@@ -227,6 +386,17 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("fused", g.b.fused.map(|f| f.0)),
         ("preview", tl.preview.map(|p| p.1)),
         ("jumpH", n(tl.jump_h)),
+        ("charging", n(g.inp.charging)),
+        ("dragged", g.inp.drag.map(|d| d.moved)),
+        ("vrx", n(g.inp.vrx)),
+        ("vry", n(g.inp.vry)),
+        ("m4", n(g.cam.m[4])),
+        ("beam", g.inp.beam.map(|b| b.c)),
+        ("beamDx", g.inp.beam.map(|b| b.dx)),
+        ("bang", g.inp.bang.map(|b| b.x1)),
+        ("bangReady", n(g.inp.bang_ready)),
+        ("lastTap", n(g.inp.last_tap.0)),
+        ("daily", n(g.b.daily_until)),
     ]
 }
 

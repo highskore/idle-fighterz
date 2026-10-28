@@ -5,7 +5,7 @@ One Rust codebase built two ways:
 - **Web:** compiled to WebAssembly. It draws into the existing canvas on highskore.com, and the HTML HUD stays.
 - **Widget:** compiled natively inside the Powerrr Tauri app. It draws through wgpu (or softbuffer) instead of a web view's canvas.
 
-The JS game (`game.js`, `world.js`, `shenron.js`, `page.html`) stays the live game until the port reaches parity. Nothing under `rust/` is wired into `build.mjs` yet.
+The JS game (`game.js`, `world.js`, `shenron.js`, `page.html`) stays the live game until the port reaches parity. `node build.mjs --rust` builds a page where planet-core runs the game behind the HTML HUD (stage 4, [HUD.md](HUD.md)); the default build doesn't touch `rust/`.
 
 ## Workspace
 
@@ -43,9 +43,9 @@ Dependencies only point downward: `web` and `native` depend on `render`, and `re
 
 ### planet-web
 
-- At first it is a thin wasm-bindgen layer: `step(elapsed)`, `tap()`, `buy(key)`, `pixels()` (a view into the framebuffer for `putImageData`), and `hud()`.
-- page.html keeps its HUD, menus and shop. Its `tick()` calls `step` and then copies the pixels, instead of calling `game.frame`. A small JS shim maps today's `ui.*` callbacks (`update`, `event`, `shop`, `fx`, `sfx`, `wish`, `confirm`) onto the snapshot and event queue the core exposes.
-- Saves stay in `localStorage` under the same `hs-power` key and JSON shape (serde, stage 4), so a returning player keeps their daily-bonus date.
+- `Planet` is planet-core's `Bridge` exported with wasm-bindgen: inputs, the shop, tree and angels in; the HUD's per-frame delta message and the menus out, as JSON in game.js's shapes. [HUD.md](HUD.md) has the API; the native widget uses the same one over Tauri IPC.
+- page.html keeps its HUD, menus and shop. `rust/planet-web/shim.js` hands it a `game` object with game.js's API and maps the bridge's messages onto its `ui.*` callbacks. Until stage 1, game.js draws, running in lockstep with the Rust game (HUD.md); afterwards the shim's frame becomes `step()` and `putImageData` of `pixels()`.
+- Saves stay in `localStorage` under the same `hs-power` key and JSON shape, so a returning player keeps their daily-bonus date.
 
 ### planet-native
 
@@ -63,9 +63,11 @@ Dependencies only point downward: `web` and `native` depend on `render`, and `re
 
 Stage 3 split the harness's timeline patch into a gate per system (31 spawn points), mirrored them in planet-core, and removed them one commit at a time, each diffing bit-identical. Now the whole of `frame()` is diffed with no patches. The sample also covers the timeline: the world, sagas, universes, wishes, bosses, trips, the boss's and the ginyu force's hp, the dragon's phase, how many orbs, meteors, saibamen and ki blasts are out, the space pod, the nimbus, the moon, the great ape, the tournament, movies, the storm, snake way, gregory, dr. gero, the dance, the struggle, the view matrix and the screen shake.
 
-Scenarios: `idle`, `active`, `ascend` and `late` from stage 2, and three that drive the timeline. `events` is 45 minutes of active play that also taps whatever game.js can hit-test without drawing (the space pod, meteors, the moon, dr. gero) and trains its tail. `multiverse` opens the tournament of power through ultra instinct, clears universe 9, takes god ki to bring zeno, and erases. `wishes` summons the dragon every 50 seconds (porunga on namek), wishes krillin back, and picks every other offer by hand, leaving the rest to the 20-second auto-pick. Inputs: `train`, `buy`, `kaio`, `learn`, `set`, `click` (x, y), `summon`, `pick` (a wish key).
+Scenarios: `idle`, `active`, `ascend` and `late` from stage 2, and three that drive the timeline. `events` is 45 minutes of active play that also taps whatever game.js can hit-test without drawing (the space pod, meteors, the moon, dr. gero) and trains its tail. `multiverse` opens the tournament of power through ultra instinct, clears universe 9, takes god ki to bring zeno, and erases. `wishes` summons the dragon every 50 seconds (porunga on namek), wishes krillin back, and picks every other offer by hand, leaving the rest to the 20-second auto-pick. Stage 4 added three: `input` drags the planet (and lets it coast), charges and fires beams (final flashes at beam lv 5) and throws big bangs at whatever fights, taps, cancels and trains with space; `snake` takes a pod to snake way and presses and keys through it; `daily` starts from yesterday's save. Inputs: `train`, `buy`, `kaio`, `learn`, `set`, `click` (x, y), `summon`, `pick` (a wish key), `down`/`move`/`up` (CSS and buffer pixels), `cancel`, `key`.
 
-The harness never draws, so the screen spots game.js writes while drawing stay unset: npcs' `sx`/`sy`, a boss's `x`/`y`/`k`, movie henchmen, the capsule's fall, `piccoloAt`, `monkeyAt`, `liftNow`/`flipNow`. planet-core keeps them as fields the renderer fills (`Seen`, `Boss::x`, `Game::lift_now` and so on), unset headless, so the two agree. The flip side: taps on things only the renderer places (king kai, gregory, yamcha, the car, the door, senzu beans, satan, roshi, pudding, gadgets, the birds, zeno, saibamen, bosses, ginyu members, movie henchmen) are ported but not diffed, and a boss's ki blasts fly at (0, 0) as they do in a headless game.js.
+Every scenario also checks what reaches the HUD: the `ui.update` snapshot and the shop every second, the dragon's offer while it waits, the menu, angels, confirm boxes and share card every ten seconds, every toast (text, time and duration) in order, and the save (`JSON.stringify(S)`) every ten seconds. `save_round_trip` writes a save from planet-core, loads it in game.js and back.
+
+The harness never draws, so the screen spots game.js writes while drawing stay unset: npcs' `sx`/`sy`, a boss's `x`/`y`/`k`, movie henchmen, the capsule's fall, `piccoloAt`, `monkeyAt`, `liftNow`/`flipNow`. planet-core keeps them as fields the renderer fills (`Seen`, `Boss::x`, `Game::lift_now` and so on), unset headless, so the two agree. game.js also changes the game in four places while drawing: the big bang lands, a great ape's stomp shakes the screen, and a boss's capsule falls and opens itself after 8s. The harness runs those headless too, and planet-core runs them in `Game::draw_step` after the frame, so they're diffed. The renderer should leave them there. The flip side: taps on things only the renderer places (king kai, gregory, yamcha, the car, the door, senzu beans, satan, roshi, pudding, gadgets, the birds, zeno, saibamen, bosses, ginyu members, movie henchmen) are ported but not diffed, and a boss's ki blasts fly at (0, 0) as they do in a headless game.js.
 
 Framebuffer diffing (stage 1): `difftest/frame.js` mounts game.js with a preview hook at a canvas size (site or widget, with its cloud shape), runs it headless, clears the cosmetic state headless game.js never steps (particles, the flash), and draws the last frames (`__skip = false`). `planet-render/tests/framediff.rs` does the same in Rust and compares the RGBA bytes; `FRAMEDIFF=<name>` filters cases, `FRAMEDIFF_PNG=1` writes the JS, Rust and diff images of failing ones. `--px` loads px.wasm into the harness, to check its kernels against the JS loops. `planet-render/tests/drawn.rs` runs the state difftest's scenarios with drawing on, on both sides (`run.js <scenario>+draw`); drawn, the script also taps what only drawing places, so the renderer-placed taps are diffed there. The scenarios' replay is shared from `planet-core/tests/replay`.
 
@@ -75,10 +77,10 @@ Estimates are in focused working days for one person or agent, assuming the perf
 
 | Stage | Scope | Estimate |
 |---|---|---|
-| 1. Renderer and world | **Mostly done** (below). Still to do: snake way's view, the beam charge, the beam, the big bang and its blasts (with stage 4's inputs), the floating gain numbers, the time chamber's afterimage, the rest of the timeline's bursts as real particles. | 2–3 days remaining |
-| 2. Hero, laps and economy | **Done** (below). Still to do: the save/load JSON (serde, `hs-power` shape) and the daily bonus. (The wish-preview form path landed with stage 3.) | 1 day remaining |
-| 3. Events and bosses | **Done**. Still to do: the beam and big bang inputs (`fireBeam`, `throwBang`/`explode`, double-tap detection). The renderer-placed taps are diffed now (planet-render's drawn difftest). | 0.5 day remaining |
-| 4. HUD bridge and menus | wasm-bindgen exports, the page.html shim for `ui.*`, the shop, tree, angels and confirm boxes, saves, input (taps, drag, beam charge, double-tap). A flag in `build.mjs` to ship the wasm build behind a query param, then cut over. | 3–4 days |
+| 1. Renderer and world | **Mostly done** (below). Still to do: snake way's view, the beam charge and the beam, the floating gain numbers, the time chamber's afterimage, the rest of the timeline's bursts as real particles. | 2–3 days remaining |
+| 2. Hero, laps and economy | **Done** (below), the save and the daily bonus with stage 4. | |
+| 3. Events and bosses | **Done**. The renderer-placed taps are diffed now (planet-render's drawn difftest). | |
+| 4. HUD bridge and menus | **Done** (below): input, the save, the HUD as data, wasm-bindgen exports, the shim, `build.mjs --rust`. Still to do: cut over (after stage 1). | |
 | 5. Native wgpu widget | `planet-native` on wgpu (softbuffer fallback) in Powerrr, the overlay web view for the HUD and menubar power. The widget's drawing (no backdrop, its five cloud shapes and amount, the rim) is in planet-render and diffed already. Pixel-diff the native build against the web one. | 2–4 days |
 
 That leaves about 8–12 days. Stages 1 and 3 can run in parallel once the core API has settled (it has now).
@@ -118,8 +120,16 @@ All of `frame()`'s timeline, in game.js order and with its short-circuits (a cou
 - `onClick` in full, in game.js's order of what takes a tap; `train()` taps just off the hero, like game.js's.
 - `setTimeout`s that change state (the summon after a goal's seventh ball, follow-up wishes) run after the frame, as the harness runs them.
 
+## Stage 4: what's ported
+
+- Input (`input.rs`): pointer down, move, up and cancel, in CSS and buffer pixels; drag to spin with inertia, paused while pressed; the hold that charges a beam and `fireBeam` (struggles, beerus' noise, 16's birds, the space pod, saibamen, the ginyu force, movie henchmen and bujin's web, bosses, meteors; the final flash); `tap` with the double tap that throws a big bang (2.5s cooldown) and `explode`; snake way's presses; the keyboard (space trains; on snake way space, arrows, w and d hop, f blasts a ghost).
+- The save (`save.rs`, `json.rs`): `JSON.stringify(S)` key for key, numbers as JS prints them; `load_json` keeps what game.js keeps; `start_on(today)` gives the daily bonus. Achievements carry their time (`epoch_ms`, from the host).
+- The HUD (`hud.rs`): the `ui.update` snapshot (`Hud`, rebuilt where game.js calls it), the buffs line and the run's standing, the shop rows, the dragon's offer, the menu, the angels (`learn_angel`, `auto_next`), the hero pick, the confirm boxes and the share card; toasts with their durations, game.js's delayed ones included; cues for `ui.sfx`, `ui.fx`, `bump`, `achieved`, `zeno`, `treeGift`, `wishDone` and the widget's `notify`.
+- The bridge (`bridge.rs`): the fixed-step owner the web and native hosts drive, with a delta message per frame. `spots.rs` takes screen spots from a renderer that isn't planet-render.
+- The web build (`planet-web`, `shim.js`, `assemble.mjs`, `build.sh`) and `node build.mjs --rust`; the default build is byte-identical. `node rust/planet-web/test.mjs` plays the shipped code with drawing on and checks the Rust game against the drawing every frame.
+
 ## Next
 
 1. Snake way's view (`drawSnake`: the road in 3D, the cloud rows, ghosts, the arrival at king kai's), then run the drawn difftest through every scenario (it stops at the first trip to snake way for now).
-2. The beam, its charge and the big bang with stage 4's input layer; the floating gain numbers (planet-core has to keep where each gain lands); the time chamber's afterimage; the remaining bursts as real particles.
-3. Stage 4.
+2. The beam and its charge; the floating gain numbers (planet-core has to keep where each gain lands); the time chamber's afterimage; the remaining bursts as real particles.
+3. The cut-over: the `--rust` page draws with planet-render instead of the game.js twin (HUD.md), then stage 5 on the bridge.

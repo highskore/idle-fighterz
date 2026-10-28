@@ -494,7 +494,7 @@ impl B<'_> {
     fn w2(&mut self) {
         let world = self.g.s.world;
         let t = tones::tones(world);
-        let up = [0.0, 1.0, 0.0];
+
         let nn = self.n();
         let mut rnd = Pm(31.0 + world as f64 * 7.0);
         let tan = |s: V3| {
@@ -586,9 +586,9 @@ impl B<'_> {
                 self.pal(mul(top, 1.1), 0.011, &t.band, 0.3);
             }
             for (i, [d, r]) in [[0.98, 0.2], [1.08, 0.13], [1.17, 0.085], [1.25, 0.055], [1.31, 0.035]].into_iter().enumerate() {
-                self.pal(mul(up, -d), r, &t.under, (i & 1) as f64 * 0.12 - 0.04);
+                self.pal(mul(nn, -d), r, &t.under, (i & 1) as f64 * 0.12 - 0.04);
             }
-            self.pal(mul(up, -1.36), 0.03, W2P.0, 0.2);
+            self.pal(mul(nn, -1.36), 0.03, W2P.0, 0.2);
             res(self, &mut rnd, "W2S.dende", 0.5, 4.35, 1, 1.0);
             res(self, &mut rnd, "W2S.popo", 0.5, 5.05, 2, 1.0);
             palm(self, 0.82, 0.3, 0.85, 0.5);

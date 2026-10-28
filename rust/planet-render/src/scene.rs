@@ -42,11 +42,13 @@ pub struct Scene {
     pub(crate) built: Built,
     /// the arena's baked void, for its canvas size
     void: Option<(usize, usize, Vec<u32>)>,
-    /// the great ape's last step (`apeStep`)
-    ape_step: f64,
+    
     /// shenron's track per look, built on first use
     tracks: std::collections::HashMap<usize, crate::shenron::Track>,
     key: Option<(u32, u32, u32)>,
+    /// Where the drawing's random numbers come from: `None` shares the game's stream, as game.js does (the diffs need
+    /// that); `Some` keeps the game's stream as it is headless, as the `--rust` page's game.js twin did
+    pub own_rng: Option<planet_core::rng::Lcg>,
     tones_key: Option<(u32, u8)>,
     pub tones: Option<Tones>,
 }
@@ -354,6 +356,17 @@ impl Scene {
 
     /// One frame's drawing, after `Game::frame(t, dt)` has run: game.js's `frame()` from `// ── draw` to `st.flush()`.
     pub fn draw(&mut self, fb: &mut Framebuffer, g: &mut Game, view: &View, dt0: f64) {
+        // with its own generator, the drawing's random draws (particles) leave the game's stream alone
+        if let Some(r) = self.own_rng.as_mut() {
+            std::mem::swap(&mut g.rng, r);
+        }
+        self.draw_frame(fb, g, view, dt0);
+        if let Some(r) = self.own_rng.as_mut() {
+            std::mem::swap(&mut g.rng, r);
+        }
+    }
+
+    fn draw_frame(&mut self, fb: &mut Framebuffer, g: &mut Game, view: &View, dt0: f64) {
         self.sync(g);
         let t = g.t;
         let dt = if g.b.chamber_until > t && g.s.world != 3 { dt0 * 0.3 } else { dt0 };
@@ -478,8 +491,8 @@ impl Scene {
         }
         let hero = self.draw_hero(&mut c, g, dt);
         self.draw_visitors(&mut c, g, &hero, dt);
-        // not ported yet: the beam charge and the big bang (inputs stage 4 brings), their blasts, the beam
-        crate::effects::draw(&mut c, g, dt);
+        // not ported yet: the beam charge and the beam
+        crate::effects::draw(&mut c, g);
         if g.sprint > 0.3 && g.rng.random() < 0.6 {
             let kd = g.kid_screen(0.0);
             let vx = (g.rng.random() - 0.5) * 30.0;
@@ -550,6 +563,7 @@ impl Scene {
             let y = js_round(kd.y - cos(kd.ang) * (lift + 8.0));
             x < 0.0 || y < 0.0 || x >= c.w || y >= c.h || c.fb.zb[(y * c.w + x) as usize] as f64 <= depth + 4.0
         };
+        g.hero_seen = seen;
         if g.riding > 0.0 {
             c.blit_z(sprite::get("puff"), kd.x, kd.y, kd.ang, flip, lift - 9.0, depth + 1.0, 1.25);
         }
@@ -603,10 +617,9 @@ impl Scene {
         };
         if g.b.ape_until > t {
             // the great ape stomps: a little hop each step, a screen shake on landing
+            // (the step and its shake are planet-core's: Game::draw_step)
             let step = (t * 3.2).floor();
-            if step != self.ape_step {
-                self.ape_step = step;
-                g.shake = g.shake.max(0.35);
+            if g.inp.stomp {
                 for _ in 0..8 {
                     let x = kd.x + (g.rng.random() - 0.5) * 30.0;
                     let vx = (g.rng.random() - 0.5) * 60.0;
