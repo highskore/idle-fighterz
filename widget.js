@@ -1,6 +1,4 @@
-    // clouds under the floating planet (settings: always, while awake, or never; and their shape). window mode has the
-    // full cloud sea instead
-    const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'a'); };  // desktop widget: play at once, with the hud in one of five layouts (a setting) that wakes while the pointer is
+  // desktop widget: play at once, with the hud in one of five layouts (a setting) that wakes while the pointer is
   // about. a press on empty sky (or ⌥/⌘-press anywhere) drags the window instead of training. settings live in the
   // app (desktop/src-tauri); notifications for big moments go out through it too
   if (WIDGET) {
@@ -77,7 +75,7 @@
     const keep = () => $('shop').classList.contains('open') || !$('menu').hidden || !$('ascBox').hidden || !$('shareBox').hidden;
     // clouds under the floating planet (settings: always, while awake, or never, and their shape). window mode has the
     // full cloud sea instead
-    const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'a'); };
+    const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'e'); };
     const sleep = () => { if (keep()) idle = setTimeout(sleep, 1000); else { root.classList.remove('awake'); clouds(); } };
     const wake = ms => { root.classList.add('awake'); clouds(); clearTimeout(idle); idle = setTimeout(sleep, ms); };
     addEventListener('pointermove', () => wake(2500)); addEventListener('pointerdown', () => wake(2500), true);

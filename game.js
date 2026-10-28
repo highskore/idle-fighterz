@@ -4731,17 +4731,28 @@ GAMES.push({
       }
     }/*widget*/
     // widget clouds: whole puffs with their own edges (the widget's rim pass outlines them) instead of the screen-wide sea.
-    // four arrangements, st.clouds = 'a' bank under the planet, 'b' halo round it, 'c' drifting clusters, 'd' a plate
-    function cloudPuff(x0, y0, r, pal) {
+    // five arrangements, st.clouds = 'a' bank under the planet, 'b' halo round it, 'c' drifting clusters, 'd' a plate,
+    // 'e' a band along the bottom of the canvas, which ends just above the dock, like the site's cloud sea
+    function cloudPuff(x0, y0, r, pal, pale = 0) {
       for (let y = Math.floor(y0 - r); y <= y0 + r; y++) for (let x = Math.floor(x0 - r); x <= x0 + r; x++) {
         const dx = x - x0, dy = y - y0; if (dx * dx + dy * dy > r * r) continue;
         const v = -(dx * .5 + dy * .9) / r + bayer(x, y) * .3;
-        st.px(x, y, pal[v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0]);
+        st.px(x, y, pal[Math.min(3, (v > .65 ? 3 : v > .2 ? 2 : v > -.4 ? 1 : 0) + pale)]);   // pale: tones shifted toward the light one
       }
     }
     function cloudPuffs(t) {
-      const P = [], add = (x, y, r, f) => P.push({ x, y, r, f }), bob = (i, k = .02) => Math.sin(t * .4 + i * 1.7) * R * k;
-      if (st.clouds === 'b') {   // a tilted ring of puffs round the planet: the far half behind it, the near half in front
+      const P = [], add = (x, y, r, f, pale = 0) => P.push({ x, y, r, f, pale }), bob = (i, k = .02) => Math.sin(t * .4 + i * 1.7) * R * k;
+      if (st.clouds === 'e') {   // like the site's cloud sea: four staggered rows along the dock (400pt wide at most), rising
+        // well above it; back rows smaller and paler, each row swaying at its own pace; the front row passes in front
+        const span = Math.min(st.W, 404 / st.scale), x0 = (st.W - span) / 2;
+        for (let L = 0; L < 4; L++) {
+          const rb = R * (.13 + .05 * L), step = rb * (1.1 + .25 * (3 - L)), n = Math.max(3, Math.ceil((span - 2 * rb) / step) + 1), gap = (span - 2 * rb - 2) / (n - 1);
+          for (let i = 0; i < n; i++) {
+            const h = hash(i * 7.1 + L * 13.3), r = rb * (.7 + .6 * h), sway = Math.sin(t * (.12 + .06 * L) + i * 1.9 + L * 2.1) * rb * .25;
+            add(x0 + rb + 1 + (i + (L % 2 ? .5 * (i < n - 1) : 0)) * gap + sway, st.H - r - 1 - R * .2 * (3 - L) - hash(i * 3.7 + L * 5.9) * rb * (L === 3 ? .5 : .9) + bob(i * 4 + L, .01), r, L === 3, L < 2 ? 1 : 0);
+          }
+        }
+      } else if (st.clouds === 'b') {   // a tilted ring of puffs round the planet: the far half behind it, the near half in front
         for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + t * .06; add(cx + Math.cos(a) * R * 1.3, cy + R * .12 + Math.sin(a) * R * .36, R * (.11 + .04 * hash(i * 2.1)), Math.sin(a) > 0); }
       } else if (st.clouds === 'c') {   // three loose clusters, one in front, drifting a little
         [[-1, .5, false], [1.02, .18, false], [-.1, 1.02, true]].forEach(([u, v, f], k) => {
@@ -4758,11 +4769,11 @@ GAMES.push({
       return P;
     }
     function drawClouds(t, front) {
-      const pal = seaPal(), m = Math.round(Math.min(st.W, st.H) * .13);   // every puff whole, clear of the window's feathered edge
+      const pal = seaPal(), m = 1;   // every puff whole inside the canvas
       for (const p of cloudPuffs(t)) {
         if (p.f !== front) continue;
         const r = Math.max(2, Math.round(p.r));
-        cloudPuff(Math.round(Math.min(st.W - m - r, Math.max(m + r, p.x))), Math.round(Math.min(st.H - m - r, p.y)), r, pal);
+        cloudPuff(Math.round(Math.min(st.W - m - r, Math.max(m + r, p.x))), Math.round(Math.min(st.H - m - r, p.y)), r, pal, Math.min(1, p.pale));
       }
     }
     /*/widget*/
