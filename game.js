@@ -4287,7 +4287,7 @@ GAMES.push({
         if (lead > .45) c = lead > .78 ? 0xfff6d0 : lead > .6 ? 0xffc04a : mixC(c, 0xff7a2a, .6);
         st.px(x + xx, y + yy, c); }
       for (let a = -1.5; a <= 1.5; a += .12) { const ang = Math.atan2(dy, dx) + a, r = rad(ang) + 1 + (Math.sin(a * 7 - t * 25) > .3 ? .6 : 0); st.px(x + Math.cos(ang) * r, y + Math.sin(ang) * r, Math.abs(a) < .6 ? 0xfff3c0 : 0xffa53a); }   // flame licking round the leading edge
-      if (!m.dead && Math.random() < .9) { const s0 = 16 + Math.random() * 6; fx.add({ x: x - dx * s0 + (Math.random() - .5) * 3, y: y - dy * s0, vx: (Math.random() - .5) * 4, vy: -4, drag: 1.5, life: .7, s: 2, grow: 3, c: [0x9a948e, 0x7e7872, 0x625e5a, 0x4e4b48] }); }   // smoke rolling off the end
+      /*widget*/if (!WIDGET) /*/widget*/if (!m.dead && Math.random() < .9) { const s0 = 16 + Math.random() * 6; fx.add({ x: x - dx * s0 + (Math.random() - .5) * 3, y: y - dy * s0, vx: (Math.random() - .5) * 4, vy: -4, drag: 1.5, life: .7, s: 2, grow: 3, c: [0x9a948e, 0x7e7872, 0x625e5a, 0x4e4b48] }); }   // smoke rolling off the end
     }
     // a full charge crackles: jagged bolts off the ball and over his body, a faint tremble; once fired, bolts crawl along the beam
     const crackle = (x0, y0, x1, y1, c, put = st.px, core = 0xffffff) => { let px0 = x0, py0 = y0; const n = 6, L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
