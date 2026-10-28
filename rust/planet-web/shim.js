@@ -13,16 +13,20 @@ const RUST = (() => {
 })();
 
 // the twin's world: its randomness (planet-core's LCG while it simulates, Math.random while it draws), timers on
-// simulated time, a save that is never written, no preview hooks, no body classes, and its listeners kept for us
+// simulated time, a save that is never written, no preview hooks, no body classes, its listeners kept for us, and a
+// clock the shim can pin (so start() reads the same date planet-core got)
 const TWIN = (() => {
   const real = Math.random, M = Object.create(Math);
-  let state = 1, sim = false, draws = 0, T = 0;
+  let state = 1, sim = false, draws = 0, T = 0, pinned = null;
+  const RealDate = Date;
+  class TwinDate extends RealDate { constructor(...a) { if (a.length) super(...a); else super(pinned ?? RealDate.now()); } static now() { return pinned ?? RealDate.now(); } }
   M.random = () => sim ? (draws++, (state = (state * 1664525 + 1013904223) >>> 0) / 4294967296) : real();
   const pending = [], listeners = {};
   const env = {
     Math: M,
     setTimeout: (f, ms = 0) => { pending.push([T + ms / 1000, f]); return 0; },
     clearTimeout: () => {},
+    Date: TwinDate,
     localStorage: { getItem: k => { try { return localStorage.getItem(k); } catch (_) { return null; } }, setItem: () => {}, removeItem: () => {} },
     location: { protocol: 'https:', hostname: 'highskore.com', hash: '' },
     document: { body: { classList: { add() {}, remove() {}, toggle() {}, contains: () => false } }, createElement: t => document.createElement(t) },
@@ -32,6 +36,8 @@ const TWIN = (() => {
   return {
     env, listeners,
     seed(s) { state = s >>> 0 || 1; draws = 0; },
+    // runs f with the twin's clock stopped at now (ms)
+    pin(now, f) { pinned = now; try { return f(); } finally { pinned = null; } },
     get draws() { return draws; },
     // runs f as the twin's simulation: its randomness is the LCG until it starts drawing
     run(f) { sim = true; try { return f(); } finally { sim = false; } },
@@ -49,10 +55,12 @@ __TWIN__
     const seed = (Math.random() * 4294967296) >>> 0 || 1;
     const P = TWIN.planet = new RUST.Planet(seed, st.W, st.H, st.scale);   // TWIN.planet: a handle for the console
     try { P.load(localStorage.getItem('hs-power') || ''); } catch (_) {}
+    P.set_calm(!!st.calm);
 
-    // the twin, mounted on the same stage with its canvas listeners kept back, and a ui that only remembers its buy and wish callbacks
+    // the twin, mounted on the same stage with its canvas listeners kept back, and a ui that only remembers its buy and
+    // wish callbacks and its last ui.update (TWIN.update, for test.mjs and the console)
     let twinBuy = null, twinPick = null;
-    const twinUi = new Proxy({}, { get: (_, k) => k === 'onBuy' ? (f => { twinBuy = f; }) : k === 'wish' ? ((_o, pick) => { twinPick = pick; }) : () => {} });
+    const twinUi = new Proxy({}, { get: (_, k) => k === 'onBuy' ? (f => { twinBuy = f; }) : k === 'wish' ? ((_o, pick) => { twinPick = pick; }) : k === 'update' ? (u => { TWIN.update = u; }) : () => {} });
     const cv = st.cv, held = {};
     st.cv = new Proxy(cv, { get: (o, k) => k === 'addEventListener' ? ((type, f) => { held[type] = f; }) : typeof o[k] === 'function' ? o[k].bind(o) : o[k], set: (o, k, v) => { o[k] = v; return true; } });
     TWIN.seed(seed);
@@ -137,7 +145,12 @@ __TWIN__
       thumb: (id, k) => twin.thumb(id, k),
       kaioken: () => { both(() => P.kaioken(), () => twin.kaioken()); deliver(); },
       train: () => { both(() => P.train(), () => twin.train()); deliver(); },
-      start: () => { both(() => P.start(new Date().toDateString(), Date.now()), () => twin.start()); deliver(); save(); },
+      start: () => {
+        // one reading of the clock for both, so a start across midnight can't give them different days
+        const now = Date.now();
+        both(() => P.start(new Date(now).toDateString(), now), () => TWIN.pin(now, () => twin.start()));
+        deliver(); save();
+      },
       resize: () => { twin.resize(); P.resize(st.W, st.H, st.scale); },
     };
   };

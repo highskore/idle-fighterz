@@ -1,7 +1,8 @@
 // End-to-end check of the --rust page's game: the exact code build.mjs --rust ships (wasm glue, shim, game.js as the
 // lockstep renderer) mounted in a vm with a stub DOM, drawing on, played for a while through the page's own entry
 // points (pointer events on the canvas, keys, the shop, wishes, the menu). It fails if the drawing drifts from the Rust
-// game or the HUD's power differs from game.js's. Needs a wasm build: sh rust/planet-web/build.sh
+// game (power and random draws, every frame) or the HUD the Rust side sends differs from the twin's ui.update. The game
+// starts a moment before midnight, so the shim and the twin must agree on the day. Needs a wasm build: sh rust/planet-web/build.sh
 // Usage: node rust/planet-web/test.mjs [minutes] [seed]
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -18,6 +19,12 @@ let rs = seed >>> 0 || 1
 const rand = () => (rs = (rs * 1664525 + 1013904223) >>> 0) / 4294967296   // the test's own choices, and the page's Math.random
 const W = 600, H = 400, noop = () => {}
 const canvasHandlers = {}, winHandlers = {}, warnings = [], store = {}
+// the page's clock: 2ms before a midnight, a millisecond a reading, so starting the game crosses into the next day. The
+// save was stamped with that next day: only a start that reads one date for both sides gives both the daily bonus
+const midnight = new Date(2026, 9, 29).getTime()
+let clock = midnight - 2
+class PageDate extends Date { constructor(...a) { if (a.length) super(...a); else super(clock++) } static now() { return clock++ } }
+store['hs-power'] = JSON.stringify({ daily: new Date(midnight).toDateString() })
 const ctx2d = { createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: noop, fillRect: noop, drawImage: noop }
 const rect = () => ({ left: 0, top: 0, width: W, height: H })
 const cv = { width: 0, height: 0, style: {}, addEventListener: (k, f) => { canvasHandlers[k] = f }, setPointerCapture: noop, releasePointerCapture: noop, getBoundingClientRect: rect, getContext: () => ctx2d }
@@ -30,7 +37,7 @@ const document = {
 }
 const M = Object.create(Math); M.random = rand
 const ctx = {
-  WIDGET: false, document, location: { hash: '', hostname: 'localhost', protocol: 'http:', href: 'http://localhost/' }, Math: M, Date, JSON, console: { ...console, warn: (...a) => warnings.push(a.join(' ')) },
+  WIDGET: false, document, location: { hash: '', hostname: 'localhost', protocol: 'http:', href: 'http://localhost/' }, Math: M, Date: PageDate, JSON, console: { ...console, warn: (...a) => warnings.push(a.join(' ')) },
   ImageData: class { constructor(data, w, h) { Object.assign(this, { data, width: w, height: h }) } },
   addEventListener: (k, f) => { winHandlers[k] = f }, setTimeout, clearTimeout, performance, atob, WebAssembly, TextEncoder, TextDecoder, URL,
   localStorage: { getItem: k => store[k] ?? null, setItem: (k, v) => { store[k] = String(v) }, removeItem: k => { delete store[k] } },
@@ -64,7 +71,16 @@ const target = () => twin(`(() => { const p = o => o && o.sx !== undefined ? [o.
     || (boss && !boss.dead ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : null) || (star ? [star.x, star.y] : null) || null })()`)
 const SHOP = ['boots', 'partner', 'gravity', 'scouter', 'house', 'piccolo', 'cloud', 'armor', 'kaio', 'galick', 'senzu', 'chamber', 'bigbang', 'tail']
 
-let T = 0, worst = 0, checks = 0, menus = 0, gap = ''
+let T = 0, worst = 0, checks = 0, menus = 0, gap = '', hudGap = ''
+// the HUD the Rust side sent against the twin's last ui.update: every field game.js has (the clock in whole seconds)
+const hudDiff = (rs, js) => {
+  if (!rs || !js) return rs === js ? '' : 'hud missing'
+  for (const k of Object.keys(js)) {
+    const a = k === 'time' ? Math.floor(js[k]) : js[k], b = rs[k]
+    if (JSON.stringify(a) !== JSON.stringify(b)) return `hud.${k}: twin ${JSON.stringify(a)} rust ${JSON.stringify(b)}`
+  }
+  return ''
+}
 const frames = Math.round(minutes * 60 * 30)
 for (let f = 0; f < frames; f++) {
   const p = f % 300, tg = f % 3 === 0 ? target() : null
@@ -88,9 +104,10 @@ for (let f = 0; f < frames; f++) {
   const pr = JSON.parse(ctx.__TWIN.planet.probe()), js = twin('S.pl')
   checks++; worst = Math.max(worst, Math.abs(js - pr.pl) / Math.max(1, js))
   if (pr.draws !== ctx.__TWIN.draws && !gap) gap = `draws ${pr.draws} vs ${ctx.__TWIN.draws} at t=${pr.t.toFixed(2)}`
+  if (!hudGap) { const d = hudDiff(hud, ctx.__TWIN.update); if (d) hudGap = `${d} at t=${pr.t.toFixed(2)}` }
 }
-const lockstep = !warnings.length && worst === 0 && !gap
-console.log(`${minutes} minutes (seed ${seed}): ${checks} frames checked, worst power gap ${worst}${gap ? ', ' + gap : ''}, ${warnings.length} drift warnings${warnings.length ? ': ' + warnings[0] : ''}`)
+const lockstep = !warnings.length && worst === 0 && !gap && !hudGap
+console.log(`${minutes} minutes (seed ${seed}): ${checks} frames checked, worst power gap ${worst}${gap ? ', ' + gap : ''}${hudGap ? ', ' + hudGap : ''}, ${warnings.length} drift warnings${warnings.length ? ': ' + warnings[0] : ''}`)
 console.log(`  hud power ${hud && hud.pl}, form ${hud && hud.form.name}, world ${twin('S.world')}, ${events.length} toasts, ${offers} wish offers, ${menus} menu reads, sounds ${JSON.stringify(cues)}`)
-console.log(`  saved: ${(store['hs-power'] || '').length} bytes, daily ${JSON.parse(store['hs-power'] || '{}').daily}`)
+console.log(`  saved: ${(store['hs-power'] || '').length} bytes, daily ${JSON.parse(store['hs-power'] || '{}').daily}, daily bonus ${twin('dailyUntil') > 0 ? 'on' : 'off'} in the twin`)
 if (!lockstep) process.exit(1)
