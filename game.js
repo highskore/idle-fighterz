@@ -2691,7 +2691,7 @@ GAMES.push({
       bigbang: { base: 60000, k: 2.5, label: 'big bang attack', what: 'double-tap: an exploding ki ball', unlock: () => S.best >= 20000 },
       piccolo: { base: 30000, k: 2.4, label: 'piccolo', what: '+60/s, zaps meteors', unlock: () => S.best >= 10000 },
       chamber: { base: 150000, k: 2.8, label: 'time chamber', what: 'a door appears: train ×2 for 15s inside', unlock: () => S.best >= 40000 },
-      ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for ki seeds', unlock: () => S.best >= 1e6 },
+      ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for ki seeds', unlock: () => S.best >= 1e6 || treeOpen() },   // a wish of seeds or ranks opens the way to the tree before the first ascend
       godki: { base: 2e14, k: 1, label: 'god ki', what: 'reset for god ki', unlock: () => S.form >= MUI_FORM && godNow() > 0 },
       zeno: { base: 1, k: 1, label: 'zeno button', what: 'erase everything for zeno\'s favour', unlock: () => zenoReady() },
     };
@@ -2733,6 +2733,7 @@ GAMES.push({
     const SEED_SOFT = 10, SEED_EXP = .5, seedBoostOf = a => { const b = 1 + a * (.1 + .02 * lvl('seedx')); return b <= SEED_SOFT ? b : SEED_SOFT * (b / SEED_SOFT) ** SEED_EXP; };   // linear up to ×10, then the square root, so seed spam can't skip the walls
     const seedBoost = () => seedBoostOf(S.ascend), comboCap = () => lvl('pride') ? 4 : 2;
     const tapPower = () => 1 + S.boots * ms('boots') + passive() / 10;   // villain taps keep pace with idle builds
+    const treeOpen = () => S.seeds > 0 || Object.values(S.tree || {}).some(v => v > 0);   // seeds to spend or ranks learned: the tree has something to show
     const seedsNow = () => Math.max(1, Math.floor(ang('divine') ? (S.pl / 1e4) ** .55 : Math.sqrt(S.pl / 1e4)));   // 1M → 10, 100M → 100, 10B → 1000
     // the multiverse: the tournament of power's universes in the order zeno erased them, then an endless ∞ remix. fixed walls, never scaled from your rate
     const LADDER = [
@@ -2806,7 +2807,7 @@ GAMES.push({
     function ascend() {
       // seeds grow with the square root of the power you give up; forms and trips start over from base
       const gainA = seedsNow(), keep = Math.floor(S.pl * .01 * lvl('head')); S.ascend += gainA; S.seeds += gainA; ach('ascend'); S.pl = keep; S.runBest = keep; S.namekAt = 0; S.foes = []; for (const r of RESETS) S[r] = ang('notes') ? Math.floor(S[r] * .1) : 0; S.form = ang('golden') ? 1 : 0; preview = null; ui.fx && ui.fx('form', S.form); scenery();
-      ui.event(`ascended — +${gainA} ki seed${gainA > 1 ? 's' : ''} (×${seedBoost().toFixed(1)} on everything), back to ${FORMS[S.form].name}: spend seeds in menu → training`, 4500); ui.fx && ui.fx('super'); save(); syncShop();
+      ui.event(`ascended — +${gainA} ki seed${gainA > 1 ? 's' : ''} (×${seedBoost().toFixed(1)} on everything), back to ${FORMS[S.form].name}`, 4500); ui.fx && ui.fx('super'); save(); syncShop();
     }
     const dropUniBoss = () => { if (boss && boss.uni && !boss.dead) { boss.dead = boss.fled = true; boss.t1 = st.t; } };
     function godReset() {
@@ -2844,7 +2845,7 @@ GAMES.push({
       save(); syncShop();
     });
     const what = k => k === 'ascend' ? `reset for +${seedsNow()} ki seeds` : k === 'godki' ? `reset for +${godNow()} god ki` : k === 'zeno' ? `erase it all: zeno's favour ×${fmtShort(ZENO_X ** (S.zeno + 1))}` : MILES[k] && S[k] && nextMile(k) ? `${SHOP[k].what} · ×2 at lv ${nextMile(k)}${S[k] >= 100 ? ' (every 50)' : ''}` : k === 'chamber' && S.chamber ? `train ×${chamberX()} inside · next ×${chamberX(S.chamber + 1)}` : k === 'kaio' && S.kaio ? `×${KAIO()} for 15s, then ×0.75` : k === 'bigbang' && S.bigbang ? `blast radius +${S.bigbang * 25}%` : k === 'galick' && S.galick ? (S.galick === 4 ? `beam ×1.6 · next: ${kame() ? 'super kamehameha' : 'final flash'}` : S.galick >= 5 ? `beam ×1.6 (now ×${fmtShort(Math.round(1.6 ** S.galick))}) · full charge ×3` : 'beam ×1.6') : SHOP[k].what;
-    const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0 && k !== 'godki' && k !== 'zeno').map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : k === 'godki' ? S.gods : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k), special: k === 'ascend' || k === 'godki' || k === 'zeno' }])));
+    const syncShop = () => ui.shop(Object.fromEntries(Object.keys(SHOP).filter(k => !SHOP[k].unlock || SHOP[k].unlock() || S[k] > 0 && k !== 'godki' && k !== 'zeno').map(k => [k, { cost: cost(k), level: k === 'ascend' ? S.ascend : k === 'godki' ? S.gods : S[k], label: SHOP[k].label, what: what(k), can: S.pl >= cost(k) && (k !== 'ascend' || S.best >= 1e6), open: k === 'ascend' && treeOpen(), special: k === 'ascend' || k === 'godki' || k === 'zeno' }])));
 
     // the planet: a road ring near the rim, a cap of scenery facing the viewer
     const N = V.norm([0, .38, .92]);
@@ -3218,7 +3219,7 @@ GAMES.push({
       beam = { t0: st.t, c, x: k.x, y: k.y, dx: dir[0], dy: dir[1], z: kidScreen().v[2] * (R + 12) }; ui.sfx && ui.sfx('beam'); shake = Math.max(shake, .2 + c * .15);
       if (star) { const rx = star.x - k.x, ry = star.y - k.y; if (rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < 8 + c * 3) onClick(star.x, star.y); }
       if (c >= 2.4) goal('beam');
-      const ff = S.galick >= 5 && c >= 2.4; beam.ff = ff;   // galick lv 5: a full charge fires a final flash
+      const ff = S.galick >= 5 && c >= 2.4; beam.ff = ff; beam.full = c >= 2.4;   // galick lv 5: a full charge fires a final flash
       const pts = Math.pow(1.6, S.galick) * lapValue() * 2.5 * c * mult() * (ff ? 3 : 1) * (1 + .5 * lvl('beam'));   // each level hits ×1.6 harder
       const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1) * (1 + .15 * (S.galick - 1)); };
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && onLine(sb.sx, sb.sy - 6, 7)) killSaiba(sb);
@@ -3369,10 +3370,11 @@ GAMES.push({
     const WISHES = [
       { key: 'power', tier: 'epic', label: 'eternal power', what: () => '×1.25 to everything, forever, even after ascending', grant: () => { S.wishes++; ui.event('your wish is granted — ×1.25 forever'); } },
       { key: 'form', tier: 'rare', label: () => 'a taste of ' + FORMS[S.form + 1].name, what: () => `×${FORMS[S.form + 1].x} for 60 seconds`, ok: () => S.form < FORMS.length - 1, grant: () => { preview = { from: preview ? preview.from : S.form, until: st.t + 60 }; transform(true); } },   // a second taste still falls back to where you started
-      { key: 'seeds', tier: 'rare', label: 'the seeds of power', what: () => `+${wishSeeds()} ki seeds, kept forever`, grant: () => { const g = wishSeeds(); S.seeds += g; S.ascend += g; ui.event(`your wish is granted — +${g} ki seeds (×${seedBoost().toFixed(1)} on everything)`); } },
+      { key: 'seeds', tier: 'rare', label: 'the seeds of power', what: () => `+${wishSeeds()} ki seeds, kept forever`, grant: () => { const g = wishSeeds(); S.seeds += g; S.ascend += g; ui.event(`your wish is granted — +${g} ki seeds (×${seedBoost().toFixed(1)} on everything)`); ui.treeGift && ui.treeGift(`+${g} ki seeds from shenron`); } },
       { key: 'fortune', label: 'a fortune in power', what: () => '+10 minutes of income', grant: () => { gain(wrate() * 600); ui.event('your wish is granted — +' + fmtShort(wrate() * 600)); } },
-      { key: 'skills', tier: 'legendary', label: 'ki talent mastery', what: () => '+1 rank to every ki talent you\'ve learned (training tree)', ok: () => TREE.some(n => lvl(n.id) && lvl(n.id) < nodeMax(n)), grant: () => { for (const n of TREE) if (lvl(n.id) && lvl(n.id) < nodeMax(n)) S.tree[n.id]++; ui.event('your wish is granted — every ki talent +1 rank'); } },
+      { key: 'skills', tier: 'legendary', label: 'ki talent mastery', what: () => '+1 rank to every ki talent you\'ve learned (training tree)', ok: () => TREE.some(n => lvl(n.id) && lvl(n.id) < nodeMax(n)), grant: () => { for (const n of TREE) if (lvl(n.id) && lvl(n.id) < nodeMax(n)) S.tree[n.id]++; ui.event('your wish is granted — every ki talent +1 rank'); ui.treeGift && ui.treeGift('+1 rank on every talent from shenron'); } },
       { key: 'gear', tier: 'epic', label: 'capsule corp delivery', what: () => '+1 level to every shop upgrade you own', ok: () => RESETS.some(r => S[r] > 0), grant: () => { for (const r of RESETS) if (S[r] > 0) S[r]++; ui.event('your wish is granted — every shop upgrade +1 level'); } },
+      { key: 'fly', tier: 'rare', label: 'the power of flight', what: () => 'fly your laps for 30s: laps ×1.8', ok: () => !wished('fly'), grant: () => buff('fly', 30, 'flying for 30s — laps ×1.8') },
       { key: 'fast', label: 'flying nimbus legs', what: () => 'run 50% faster for 3 minutes', grant: () => buff('fast', 180, 'running 50% faster for 3 minutes') },
       { key: 'taps', label: 'golden fists', what: () => 'taps ×3 for 3 minutes', grant: () => buff('taps', 180, 'taps ×3 for 3 minutes') },
       { key: 'idle', tier: 'rare', label: 'a hundred clones', what: () => 'idle income ×3 for 3 minutes', ok: () => passive() > 0, grant: () => buff('idle', 180, 'idle income ×3 for 3 minutes') },
@@ -3987,6 +3989,51 @@ GAMES.push({
       sblit(pose, W / 2 - pose.w * k, hy - pose.h * k * 2, k * 2); halo(W / 2, hy - pose.h * k * 2 - 3 * k, k * 2);
       if (!h.up) { label('FLYING BACK UP... TAP TO GO FASTER', W / 2, H * .1, 0xffffff, 0x5a0a08); if (snk.loss) { sayAt('-' + fmtShort(snk.loss), W / 2, H * .3, 'red'); snk.loss = 0; } }
     }
+    // a meteor: a lumpy cratered rock with a dark outline, tumbling as it falls, its leading face burning white-hot, a wide fire tail and grey smoke behind
+    const METEOR = { o: 0x24160c, t: [0x4a3020, 0x6b4a32, 0x8a6446, 0xa8835e], cr: 0x3a2618 };
+    function drawMeteor(m, t) {
+      m.sd ??= Math.random() * 9;
+      const sp = Math.hypot(m.vx, m.vy) || 1, dx = m.vx / sp, dy = m.vy / sp, nx = -dy, ny = dx, x = Math.round(m.x), y = Math.round(m.y), spin = t * 1.6 + m.sd, P = METEOR;
+      const rad = a => 4.6 * (1 + .16 * Math.sin(3 * (a - spin) + m.sd) + .09 * Math.sin(5 * (a - spin) + 2 * m.sd)), inside = (xx, yy) => Math.hypot(xx, yy) < rad(Math.atan2(yy, xx));
+      // the fire tail, behind the rock: white at the root, flickering through yellow and orange to red, dissolving at the end
+      const cols = [0xfff6d0, 0xffd24a, 0xffa53a, 0xf0662a, 0xc83a22], L = 20;
+      for (let s = L; s >= 1; s -= .5) { const k = s / L, w = 4.2 * Math.pow(1 - k, .6) * (1 + .25 * Math.sin(s * .9 - t * 30 + m.sd * 7));
+        for (let o = -w; o <= w; o += .5) { const X = x - dx * s + nx * o, Y = y - dy * s + ny * o; if (k > .6 && bayer(Math.round(X), Math.round(Y)) >= 1 - (k - .6) / .4) continue; st.px(X, Y, cols[Math.min(4, Math.floor((k * .8 + Math.abs(o) / (w || 1) * .4) * 5))]); } }
+      // the rock: outline, shading lit from the upper left, three craters turning with it, the face it falls into glowing
+      for (let yy = -6; yy <= 6; yy++) for (let xx = -6; xx <= 6; xx++) { if (!inside(xx, yy)) continue;
+        const edge = !inside(xx + 1, yy) || !inside(xx - 1, yy) || !inside(xx, yy + 1) || !inside(xx, yy - 1), lead = (xx * dx + yy * dy) / 4.6;
+        if (edge && lead < .35) { st.px(x + xx, y + yy, P.o); continue; }
+        const lx = Math.cos(spin) * xx + Math.sin(spin) * yy, ly = -Math.sin(spin) * xx + Math.cos(spin) * yy, cr = [[1.4, -1, 1.2], [-1.6, 1.2, .9], [.4, 2, .7]].find(([a, b, r]) => Math.hypot(lx - a, ly - b) < r);
+        let c = cr ? (Math.hypot(lx - cr[0], ly - cr[1]) > cr[2] - .6 && lx - cr[0] + ly - cr[1] > 0 ? P.t[3] : P.cr) : P.t[Math.max(0, Math.min(3, Math.round(1.4 + ((-xx * .6 - yy * .8) / 4.6 + (bayer(x + xx, y + yy) - .5) * .5) * 1.6)))];
+        if (lead > .45) c = lead > .78 ? 0xfff6d0 : lead > .6 ? 0xffc04a : mixC(c, 0xff7a2a, .6);
+        st.px(x + xx, y + yy, c); }
+      for (let a = -1.5; a <= 1.5; a += .12) { const ang = Math.atan2(dy, dx) + a, r = rad(ang) + 1 + (Math.sin(a * 7 - t * 25) > .3 ? .6 : 0); st.px(x + Math.cos(ang) * r, y + Math.sin(ang) * r, Math.abs(a) < .6 ? 0xfff3c0 : 0xffa53a); }   // flame licking round the leading edge
+      if (!m.dead && Math.random() < .9) { const s0 = 16 + Math.random() * 6; fx.add({ x: x - dx * s0 + (Math.random() - .5) * 3, y: y - dy * s0, vx: (Math.random() - .5) * 4, vy: -4, drag: 1.5, life: .7, s: 2, grow: 3, c: [0x9a948e, 0x7e7872, 0x625e5a, 0x4e4b48] }); }   // smoke rolling off the end
+    }
+    // a full charge crackles: jagged bolts off the ball and over his body, a faint tremble; once fired, bolts crawl along the beam
+    const crackle = (x0, y0, x1, y1, c, put = st.px, core = 0xffffff) => { let px0 = x0, py0 = y0; const n = 6, L = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / L, ny = (x1 - x0) / L;
+      for (let i = 1; i <= n; i++) { const j = i === n ? 0 : (Math.random() - .5) * L * .35, qx = x0 + (x1 - x0) * i / n + nx * j, qy = y0 + (y1 - y0) * i / n + ny * j, m = Math.hypot(qx - px0, qy - py0);
+        for (let d = 0; d <= m; d += .5) { const X = px0 + (qx - px0) * d / m, Y = py0 + (qy - py0) * d / m; put(X, Y, core); put(X + 1, Y, c, .7); } px0 = qx; py0 = qy; } };
+    function chargeCrackle(hx, hy, r, kd) {
+      const sp = BEAM().spark, ux = Math.sin(kd.ang), uy = -Math.cos(kd.ang); shake = Math.max(shake, .06);
+      for (let i = 0; i < 3; i++) { const a = Math.random() * 6.28, L = r + 8 + Math.random() * 14; crackle(hx + Math.cos(a) * r, hy + Math.sin(a) * r, hx + Math.cos(a) * L, hy + Math.sin(a) * L, sp); }
+      if (Math.random() < .6) { const h = 4 + Math.random() * 22, s = (Math.random() - .5) * 12; crackle(hx, hy, kd.x + ux * (liftNow + h) + Math.cos(kd.ang) * s, kd.y + uy * (liftNow + h) + Math.sin(kd.ang) * s, sp); }
+    }
+    function beamCrackle(w, reach, px, bp) {   // dark-cored bolts, so they read against the pale glow
+      const nx = -beam.dy, ny = beam.dx, at = (d, o) => [beam.x + beam.dx * d + nx * o, beam.y + beam.dy * d + ny * o];
+      for (let i = 0; i < 6; i++) { const d = 10 + Math.random() * Math.min(reach, 260), sd = Math.random() < .5 ? -1 : 1, [x0, y0] = at(d, sd * (w + 1)), [x1, y1] = at(d + 8 + Math.random() * 12, sd * (w + 5 + Math.random() * 8)); crackle(x0, y0, x1, y1, 0xffffff, px, bp.edge); }
+    }
+    // the flight wish: superman pose tipped forward round his middle, a white aura, and a white-blue ki streak along the orbit he just flew
+    function flyDraw(t, spr, kd, flip, lift, depth, seen) {
+      const pal = [0xffffff, 0xcdeeff, 0x7ac8ff], N = 50, W0 = 3.6, dir = flip ? -1 : 1, tilt = 1.2, sh = spr.h * 1.05;
+      const at = j => { const v = M3.ap(M, roadPt(phi - j * .013)), r = R + lift + sh * .45; return { x: cx + v[0] * r, y: cy - v[1] * r + st.bob, z: v[2] * r }; };
+      for (let j = N; j >= 1; j--) { const p = at(j), q = at(j - 1), dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, k = j / N, w = W0 * (1 - k) + .6, zi = Math.round(p.y) * st.W + Math.round(p.x);
+        if (p.x >= 0 && p.y >= 0 && p.x < st.W && p.y < st.H && zb[zi] > p.z + 4) continue;   // behind the planet
+        for (let s = 0; s < 1; s += .34) for (let e = -w - 1.5; e <= w + 1.5; e += .5) { const a = Math.abs(e) / w, X = p.x + dx * s + nx * e, Y = p.y + dy * s + ny * e; if (a > 1) { if (bayer(Math.round(X), Math.round(Y)) < (1 - k) * .6) st.px(X, Y, pal[2], .5); continue; } st.px(X, Y, a < .45 ? pal[0] : a < .8 ? pal[1] : pal[2], 1 - k * k * .5); } }
+      const ux = Math.sin(kd.ang), uy = -Math.cos(kd.ang), a2 = kd.ang + dir * tilt, mx = kd.x + ux * (lift + sh / 2), my = kd.y + uy * (lift + sh / 2);
+      if (seen) for (let i = 0; i < 3; i++) { const r = 5 + Math.random() * 7, a = Math.random() * 6.28; fx.add({ x: mx + Math.cos(a) * r, y: my + Math.sin(a) * r * .7, vx: -Math.cos(a2) * dir * 30, vy: -Math.sin(a2) * dir * 30, life: .4, s: 1, grow: 1, c: pal, raw: true }); }
+      blitZ(spr, mx - Math.sin(a2) * sh / 2, my + Math.cos(a2) * sh / 2, a2, flip, 0, depth, 1.05);
+    }
     function frame(t, dt) {
       // the hyperbolic time chamber: a year inside is a day outside — the world crawls while your power keeps real time
       const rdt = dt; if (chamberUntil > t && S.world !== 3) dt *= .3;   // no slow-mo on snake way: jumps run on real time and couldn't clear a gap
@@ -3998,7 +4045,7 @@ GAMES.push({
       }
       // running: sprint decays; riding the golden cloud triples everything
       sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);
-      const pace = (.42 + sprint * .9) * (1 + .1 * lvl('stride')) * (wished('fast') ? 1.5 : 1) * (riding > 0 ? 1.6 : 1) * (poseUntil > t || struggle ? 0 : 1);   // he stops to pose, and to hold a beam struggle
+      const pace = (.42 + sprint * .9) * (1 + .1 * lvl('stride')) * (wished('fast') ? 1.5 : 1) * (riding > 0 ? 1.6 : 1) * (wished('fly') ? 1.8 : 1) * (poseUntil > t || struggle ? 0 : 1);   // he stops to pose, and to hold a beam struggle
       phi += pace * dt;
       if (phi - lastLap > 6.283) { lastLap += 6.283; if (playing) { laps++; S.lapsTotal = (S.lapsTotal || 0) + 1; ach('lap1'); if (S.lapsTotal >= 100) ach('laps100'); goal('laps'); ui.fx && ui.fx('lap'); const k = kidScreen(20); gain(lapValue() * 4 * mult() * (1 + .5 * lvl('legs')) * (wished('laps') ? 3 : 1) * (bz ? 3 : 1) * (whisUntil > t ? 2 : 1), k.x, k.y - 14, true); } }
       if (jumpH > 0 || jumpV > 0) { jumpV -= 520 * dt; jumpH = Math.max(0, jumpH + jumpV * dt); if (jumpH === 0) jumpV = 0; }
@@ -4182,7 +4229,7 @@ GAMES.push({
       if (ang('staff') && bz) whisUntil = Math.max(whisUntil, t + 1);
       if (!zen && zenoReady() && playing && !shen && S.world === home()) { zen = { c: capPt(.4, 1.7), t0: t }; ui.event('zeno-sama is here. "you\'re strong! let\'s be friends!" — tap him for the zeno button', 5000); ui.sfx && ui.sfx('dragon'); }
       if (star) { star.x += star.vx * dt; star.y += Math.sin(t * 3) * .3; if (Math.random() < .9) fx.add({ x: star.x - 7, y: star.y + (Math.random() - .5) * 4, vx: -30, vy: 0, life: .45, s: 2, c: [0xffffff, 0xffd84a, 0xff8a3a], raw: true }); if (star.x > st.W + 12) star = null; }
-      for (const m of meteors) { if (m.delay > 0) { m.delay -= dt; continue; } m.x += m.vx * dt; m.y += m.vy * dt; if (!m.dead && Math.random() < .9) fx.add({ x: m.x + 2, y: m.y - 2, vx: -m.vx * .1, vy: -m.vy * .1, life: .5, s: 2, grow: 1, c: [0xfff1c0, 0xffb35a, 0xe0473e, 0x8a8f98], raw: true }); }
+      for (const m of meteors) { if (m.delay > 0) { m.delay -= dt; continue; } m.x += m.vx * dt; m.y += m.vy * dt; }
       meteors = meteors.filter(m => !m.dead && m.y < st.H + 10);
       if (cloudFly) { const k = kidScreen(10); cloudFly.x += (k.x - cloudFly.x) * dt * 1.8; cloudFly.y += (k.y - 10 - cloudFly.y) * dt * 1.8; if (Math.hypot(k.x - cloudFly.x, k.y - 10 - cloudFly.y) < 6) { cloudFly = null; riding = 10 + S.cloud * 2; ui.event('riding flying nimbus — ×1.5'); } }
       if (S.world !== 3) for (const o of orbs) { let d = Math.atan2(Math.sin(o.phi - phi), Math.cos(o.phi - phi)); if (Math.abs(d) < .06 && !o.done) { o.done = true; const k = kidScreen(16); gain(lapValue() * mult() * (o.star ? 3 : 1), k.x, k.y - 12, true); if (o.star) { goal('ball'); S.orbs7++; if (S.orbs7 >= 7) { S.orbs7 = 0; summon(); } else ui.event(`dragon ball ${S.orbs7}/7`); save(); } for (let i = 0; i < 12; i++) fx.add({ x: k.x, y: k.y - 10, vx: (Math.random() - .5) * 90, vy: (Math.random() - .5) * 90, drag: 3, life: .6, c: [0xffffff, 0xffd84a, 0xff9a3c], raw: true }); } }
@@ -4206,7 +4253,7 @@ GAMES.push({
       if (fuseUntil > t) fxs.push(`fusion ×2 ${Math.ceil(fuseUntil - t)}s`);
       if (whisUntil > t) fxs.push(`whis' training: laps ×2, taps ×2 noise ${Math.ceil(whisUntil - t)}s`);
       if (chiUntil > t) fxs.push(`chi-chi ×1.5 ${Math.ceil(chiUntil - t)}s`);
-      for (const [k, name] of [['fast', 'nimbus legs'], ['taps', 'golden fists ×3'], ['idle', 'clones ×3 idle'], ['laps', 'laps ×3'], ['crit', 'all crits'], ['combo', 'max combo']]) if (wished(k)) fxs.push(`${name} ${Math.ceil(wishBuff[k] - t)}s`);   // wishes still running
+      for (const [k, name] of [['fly', 'flight laps ×1.8'], ['fast', 'nimbus legs'], ['taps', 'golden fists ×3'], ['idle', 'clones ×3 idle'], ['laps', 'laps ×3'], ['crit', 'all crits'], ['combo', 'max combo']]) if (wished(k)) fxs.push(`${name} ${Math.ceil(wishBuff[k] - t)}s`);   // wishes still running
       if (preview) fxs.push(`${FORMS[S.form].name} (wish) ${Math.ceil(preview.until - t)}s`);
       if (dailyUntil > t) fxs.push(`daily ×1.25 ${Math.ceil((dailyUntil - t) / 60)}m`);
       if (tour) fxs.push(`tournament ${Math.ceil(tour.until - t)}s · ${tour.ko} KO`);
@@ -4266,8 +4313,8 @@ GAMES.push({
       const kd = kidScreen(), set = fuseUntil > t ? HERO().fused : HERO().forms[FORMS[S.form].i];
       const ahead = M3.ap(M, roadPt(phi + .05)), ax = cx + ahead[0] * R, flip = ax < kd.x;
       const surf = S.world === 6;
-      const spr = poseUntil > t || struggle ? set.pose : jumpH > 1 || surf ? set.run[0] : set.run[Math.floor(t * (9 + sprint * 10)) % 4];
-      const lift = jumpH + (riding > 0 ? 9 : 0) + (surf && !riding ? 3 + Math.sin(t * 4) : 0), depth = kd.v[2] * R + 6; flipNow = flip; liftNow = lift;
+      const fly = wished('fly') && !surf && apeUntil <= t, spr = poseUntil > t || struggle ? set.pose : jumpH > 1 || surf || fly ? set.run[0] : set.run[Math.floor(t * (9 + sprint * 10)) % 4];
+      const lift = jumpH + (riding > 0 ? 9 : 0) + (surf && !riding ? 3 + Math.sin(t * 4) : 0) + (fly ? 18 : 0), depth = kd.v[2] * R + 6; flipNow = flip; liftNow = lift;
       // auras and sparks only while he's in view: behind the planet the depth buffer hides him, and must hide them too
       const seen = (() => { const x = Math.round(kd.x + Math.sin(kd.ang) * (lift + 8)), y = Math.round(kd.y - Math.cos(kd.ang) * (lift + 8)); return x < 0 || y < 0 || x >= st.W || y >= st.H || zb[y * st.W + x] <= depth + 4; })();
       if (riding > 0) blitZ(puff, kd.x, kd.y, kd.ang, flip, lift - 9, depth + 1, 1.25, true);
@@ -4281,6 +4328,7 @@ GAMES.push({
         const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for (let k = 0; k < 8; k++) fx.add({ x: kd.x + (Math.random() - .5) * 30, y: kd.y, vx: (Math.random() - .5) * 60, vy: -20 - Math.random() * 30, drag: 2, life: .5, s: 2, c: [0xffffff, 0xe7e2d4], raw: true }); }
         blitZ(APE[step % 2], kd.x, kd.y, kd.ang, flip, lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, 2.3);
       } else if (fused && fused.until > t) blitZ(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+      else if (fly) flyDraw(t, spr, kd, flip, lift, depth, seen);
       else blitZ(spr, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
       if (dance && !dance.done && seen) { const b = dance.beats[dance.i]; if (b !== undefined) { const r = 6 + Math.max(0, b - t) * 26, hx = kd.x + Math.sin(kd.ang) * 14, hy = kd.y - Math.cos(kd.ang) * 14; for (let a = 0; a < 6.28; a += .12) st.px(hx + Math.cos(a) * r, hy + Math.sin(a) * r, Math.abs(b - t) < .32 ? 0xfff27a : 0xffffff); st.text(['fu', 'sion', 'ha!'][dance.i], hx, hy - r - 8, t - dance.ok < .3 ? 0xfff27a : 0xffffff); } }   // the beat ring
       if (cling) blitZ(SAIBA, kd.x - Math.cos(kd.ang) * 5, kd.y - Math.sin(kd.ang) * 5, kd.ang, !flip, lift + 6 + (cling.boom - t < 1 && Math.floor(t * 16) % 2 ? 1 : 0), depth + 1, .9);   // hugging his back, shaking before it blows
@@ -4344,6 +4392,7 @@ GAMES.push({
         if (drag) { let ax = drag.ax - hx, ay = drag.ay - hy; const al = Math.hypot(ax, ay) || 1; ax /= al; ay /= al; for (let d = r + 4; d < Math.min(al, 400); d += 4) if (((d / 4 | 0) + (t * 12 | 0)) % 2) st.px(hx + ax * d, hy + ay * d, BEAM().aim); }
         for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y) / r; if (d > 1) continue; if (d > .7 && bayer(Math.round(hx + x), Math.round(hy + y)) > .5) continue; st.px(hx + x, hy + y, d < .4 ? 0xffffff : d < .75 ? BEAM().ball : BEAM().ballEdge); }
         if (Math.random() < .9) { const a = Math.random() * 6.28, rr = r + 6 + Math.random() * 8; fx.add({ x: hx + Math.cos(a) * rr, y: hy + Math.sin(a) * rr, vx: -Math.cos(a) * rr * 3, vy: -Math.sin(a) * rr * 3, life: .3, c: [0xffffff, BEAM().spark], raw: true }); }
+        if (charging >= 2.4) chargeCrackle(hx, hy, r, kd);   // full: lightning crackles off the ball and over him
       }
       if (bang) {
         const k = Math.min(1, (t - bang.t0) / bang.dur), x = bang.x0 + (bang.x1 - bang.x0) * k, y = bang.y0 + (bang.y1 - bang.y0) * k - Math.sin(k * Math.PI) * 14, r = 3 + k * 2;
@@ -4390,6 +4439,7 @@ GAMES.push({
           }
           // the charged ball stays lit in his hands while the beam pours out
           const bw = w * 1.4; for (let y = -bw; y <= bw; y++) for (let x = -bw; x <= bw; x++) { const q = Math.hypot(x, y) / bw; if (q <= 1) px(beam.x + x, beam.y + y, q < .55 ? 0xffffff : ff ? 0xfff3a0 : bp.ball); }
+          if (beam.full) beamCrackle(w, reach, px, bp);
           if (beam.z > 0 && Math.random() < .8) fx.add({ x: beam.x + beam.dx * Math.random() * 80, y: beam.y + beam.dy * Math.random() * 80, vx: (Math.random() - .5) * 60, vy: (Math.random() - .5) * 60, life: .4, c: [0xffffff, bp.spark, bp.edge], raw: true });
         }
       }
@@ -4428,7 +4478,7 @@ GAMES.push({
       } else echo = null;
       for (const kb of kis) if (kb.disc) { for (let x = -5; x <= 5; x++) st.px(kb.x + x, kb.y, Math.abs(x) < 3 ? 0xfff6c0 : 0xffd23a); for (let x = -3; x <= 3; x++) { st.px(kb.x + x, kb.y - 1, 0xffe880); st.px(kb.x + x, kb.y + 1, 0xffe880); } }   // destructo disc, flat and spinning
       else for (let y = -2; y <= 2; y++) for (let x = -2; x <= 2; x++) { const d = Math.hypot(x, y); if (d <= 2.2) st.px(kb.x + x, kb.y + y, d < 1.2 ? 0xffffff : 0x8fd8ff); }
-      for (const m of meteors) if (m.delay <= 0) for (let yy = -4; yy <= 4; yy++) for (let xx = -4; xx <= 4; xx++) { const d = Math.hypot(xx + .5, yy + .5); if (d < 4.2) st.px(m.x + xx, m.y + yy, d > 3.3 ? 0x7a2a14 : xx + yy < -2 ? 0xfff6d0 : xx + yy < 1 ? 0xffc04a : 0xe0602a); else if (d < 5.6) st.px(m.x + xx, m.y + yy, 0xffb040, .35); }   // a glowing rock big enough to tap
+      for (const m of meteors) if (m.delay <= 0) drawMeteor(m, t);
       fx.step(st, dt);
       if (star) st.blit(POD, star.x - 7, star.y - 7, false, true);   // in front of the planet
       if (gero) { const h = handPos(); if (t - gero.t0 > 1.2) for (let i = 0; i <= 1; i += .02) if ((i * 50 + t * 20) % 4 < 2) st.px(h.x + (gero.x - h.x) * i, h.y + (gero.y - gero.spr.h * .55 - h.y) * i, 0xe0473e); st.blit(gero.spr, gero.x - gero.spr.w / 2, gero.y - gero.spr.h + Math.sin(t * 3) * 2, true, true); }
@@ -4483,6 +4533,8 @@ GAMES.push({
     if (/beerus/.test(HASH)) { S.best = Math.max(S.best, 4e6); S.namekAt = 4e6; S.trips = 3; }   // preview hook: #beerus (his planet)
     if (/krillin/.test(HASH)) { session = 131; nextKril = 0; }   // preview hook: #krillin
     if (/seeds/.test(HASH)) S.seeds = 40;   // preview hook: #seeds (40 ki seeds to spend)
+    if (/galick/.test(HASH)) S.galick = Math.max(/galick5/.test(HASH) ? 5 : 1, S.galick);   // preview hooks: #galick (hold to charge a beam), #galick5 (the final flash)
+    if (/flight/.test(HASH)) setTimeout(() => { wishBuff.fly = st.t + 120; }, 800);   // preview hook: #flight (the flight wish, for two minutes)
     { const uh = HASH.match(/universe(\d+)/); if (uh) { S.saga = VILLAINS.length; S.multi = 1; S.uni = Math.max(0, LADDER.findIndex(l => l.n === +uh[1])); S.uniStage = UNI_STAGES.length - 1; S.ustars = S.uni; session = 111; nextBoss = 0; } }   // preview hook: #universe3 (that universe's boss raids now)
     if (/mui/.test(HASH)) { S.pl = S.best = 2.1e14; S.form = MUI_FORM - 1; }   // preview hook: #mui (the first form past ultra instinct; #hero-goku#mui for mastered ultra instinct)
     { const fh = HASH.match(/form(\d+)/); if (fh) { S.pl = S.best = FORMS[Math.min(+fh[1], FORMS.length - 1)].at * 1.05; S.form = Math.max(0, Math.min(+fh[1], FORMS.length - 1) - 1); } }   // preview hook: #form12 (any form by index)
@@ -4531,7 +4583,7 @@ GAMES.push({
     // what the share card shows: the exact power level, the form, and the hero as he looks right now
     const card = () => ({ ach: ACH.filter(a => S.ach[a.id]).sort((a, b) => S.ach[b.id] - S.ach[a.id]).map(a => a.name), achN: ACH.length, laps, time: session, best: Math.floor(S.best), pl: Math.floor(S.pl), form: FORMS[S.form].name, hero: (CHARS.find(c => c.id === S.hero) || CHARS[0]).name, spr: (fuseUntil > st.t ? HERO().fused : HERO().forms[S.form]).idle, world: S.world, scene: st.cv,
       worldName: WORLDS[S.world].name, wishes: S.granted, orbs: S.orbs7, seeds: S.ascend, sagas: VILLAINS.length, saga: S.saga });
-    const ascendInfo = () => { const g = seedsNow(); return { pl: fmtShort(Math.floor(S.pl)), seeds: g, now: seedBoost().toFixed(1), next: seedBoostOf(S.ascend + g).toFixed(1), keep: lvl('head') }; };   // what the ascend confirm box spells out
+    const ascendInfo = () => { const g = seedsNow(); return { ok: S.pl >= cost('ascend') && S.best >= 1e6, pl: fmtShort(Math.floor(S.pl)), seeds: g, now: seedBoost().toFixed(1), next: seedBoostOf(S.ascend + g).toFixed(1), keep: lvl('head') }; };   // what the ascend confirm box spells out
     return { menu, learn, respec, ascendInfo, angels, learnAngel, autoNext, godInfo, zenoInfo, pick, thumb, card, frame, kaioken, start: () => {
       playing = true; syncShop();
       // first visit of the day: ×1.25 for five minutes and a dragon ball

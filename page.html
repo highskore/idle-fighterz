@@ -306,6 +306,9 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
 .menu-body.tree { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .menu-body.tree.angels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 560px) { .menu-body.tree .node { padding: 8px; } .menu-body.tree .node span { font-size: 10px; } }
+#menu.tree-only .menu-tabs button { display: none; }
+#menu.tree-only .menu-tabs::before { content: 'ki training'; text-transform: uppercase; padding: 5px 12px; color: var(--ink); }   /* opened from the ascend box: the tree on its own, titled */
+.tree-new { flex: 1 0 100%; margin: 0 0 8px; padding: 9px 12px; border-radius: 12px; background: #fff7e6; border: 1px solid #f2d79a; color: #8a5a08; text-transform: uppercase; display: flex; justify-content: space-between; gap: 8px; }
 .tree-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin: 0 0 4px; color: var(--muted); text-transform: uppercase; }
 .tree-head b { color: var(--gold); font-weight: inherit; }
 .tree-head button { font: inherit; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
@@ -392,7 +395,7 @@ body.yardrat:not(.night) .game { background: linear-gradient(#fff2f8, #eebcda 75
   </section>
   <div class="rule r2"><span>(02) elsewhere</span><span></span></div>
   <div class="menu" id="menu" hidden><div class="menu-card" role="dialog" aria-modal="true" aria-label="achievements and characters">
-    <header><nav class="menu-tabs"><button type="button" data-mt="ach" class="on">achievements <b data-achn></b></button><button type="button" data-mt="chars">characters</button><button type="button" data-mt="tree">training <b data-seeds></b></button><button type="button" data-mt="angels" id="angelsTab" hidden>angels <b data-godki></b></button></nav><button type="button" class="menu-x" id="menuX" aria-label="close">×</button></header>
+    <header><nav class="menu-tabs"><button type="button" data-mt="ach" class="on">achievements <b data-achn></b></button><button type="button" data-mt="chars">characters</button><button type="button" data-mt="angels" id="angelsTab" hidden>angels <b data-godki></b></button></nav><button type="button" class="menu-x" id="menuX" aria-label="close">×</button></header>
     <div class="menu-body" id="menuBody"></div>
   </div></div>
   <div class="menu" id="shareBox" hidden><div class="menu-card share-card" role="dialog" aria-modal="true" aria-label="share your power level">
@@ -401,7 +404,7 @@ body.yardrat:not(.night) .game { background: linear-gradient(#fff2f8, #eebcda 75
   </div></div>
   <div class="menu" id="ascBox" hidden><div class="menu-card asc-card" role="dialog" aria-modal="true" aria-labelledby="ascTitle">
     <header><span class="share-title" id="ascTitle">ascend?</span><button type="button" class="menu-x" id="ascX" aria-label="close">×</button></header>
-    <div class="asc-body"><p id="ascLose"></p><p id="ascKeep"></p><div class="share-actions"><button type="button" class="share-go" id="ascGo">ascend</button><button type="button" id="ascNo">not yet</button></div></div>
+    <div class="asc-body"><p id="ascLose"></p><p id="ascKeep"></p><div class="share-actions"><button type="button" class="share-go" id="ascGo">ascend and train</button><button type="button" id="ascNo">not yet</button><button type="button" id="ascTree">ki training</button></div></div>
   </div></div>
   <div class="menu" id="godBox" hidden><div class="menu-card asc-card" role="dialog" aria-modal="true" aria-labelledby="godTitle">
     <header><span class="share-title" id="godTitle">god ki?</span><button type="button" class="menu-x" id="godX" aria-label="close">×</button></header>
@@ -462,7 +465,7 @@ __PLANET__
       const keys = Object.keys(items).join();
       if (shopBuilt !== keys) { goalKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => { b.addEventListener('click', () => buyFn && (b.dataset.buy === 'ascend' ? askAscend() : b.dataset.buy === 'godki' ? askGod() : b.dataset.buy === 'zeno' ? askZeno() : buyFn(b.dataset.buy))); if (!['ascend', 'godki', 'zeno'].includes(b.dataset.buy)) hold(b, () => buyFn && buyFn(b.dataset.buy), () => !b.disabled); }); shopBuilt = keys; ui.achieved && ui.achieved(); }
       $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
-      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + v.level : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
+      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can && !v.open; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + v.level : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
     },
     night(on) { document.body.classList.toggle('night', on); },
     hell(on) { document.body.classList.toggle('hell', on); },
@@ -573,9 +576,12 @@ __PLANET__
   // a held enter or space doesn't repeat-click buttons (the train button, the wish box): one press, one tap
   addEventListener('keydown', e => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); }, true);
   // ascending wipes the run, so it asks first and says exactly what goes and what stays
-  const askAscend = () => { const a = game.ascendInfo(); $('ascLose').innerHTML = `<b>you lose</b> all ${a.pl} power, every upgrade, and your form (back to base).`; $('ascKeep').innerHTML = `<b>you keep</b> ki seeds and the training tree, achievements, characters, wishes and saga progress. you get <b>+${a.seeds} ki seeds</b>: everything goes from ×${a.now} to <b>×${a.next}</b>${a.keep ? `, and head start keeps ${a.keep}% of your power` : ''}.`; $('ascBox').hidden = false; $('ascGo').focus(); };
+  const askAscend = () => { const a = game.ascendInfo(); $('ascGo').disabled = !a.ok; $('ascGo').textContent = a.ok ? 'ascend and train' : 'ascend at 1M power';
+    if (!a.ok) { $('ascLose').innerHTML = '<b>not yet</b>: ascending takes 1M power.'; $('ascKeep').innerHTML = `your ki seeds and talents live here: open <b>ki training</b> to spend them.`; $('ascBox').hidden = false; $('ascTree').focus(); return; }
+    $('ascLose').innerHTML = `<b>you lose</b> all ${a.pl} power, every upgrade, and your form (back to base).`; $('ascKeep').innerHTML = `<b>you keep</b> ki seeds and the training tree, achievements, characters, wishes and saga progress. you get <b>+${a.seeds} ki seeds</b>: everything goes from ×${a.now} to <b>×${a.next}</b>${a.keep ? `, and head start keeps ${a.keep}% of your power` : ''}. <b>the training tree opens next</b> so you can spend them.`; $('ascBox').hidden = false; $('ascGo').focus(); };
   const closeAsc = () => { $('ascBox').hidden = true; };
-  $('ascGo').addEventListener('click', () => { closeAsc(); buyFn && buyFn('ascend'); });
+  $('ascGo').addEventListener('click', () => { const got = game.ascendInfo().seeds; closeAsc(); buyFn && buyFn('ascend'); setTimeout(() => openTree(`+${got} ki seeds from ascending`), 650); });
+  $('ascTree').addEventListener('click', () => { closeAsc(); openTree(); });
   $('ascNo').addEventListener('click', closeAsc); $('ascX').addEventListener('click', closeAsc);
   $('ascBox').addEventListener('click', e => { if (e.target === $('ascBox')) closeAsc(); });
   addEventListener('keydown', e => { if (e.key === 'Escape') closeAsc(); });
@@ -625,7 +631,6 @@ __PLANET__
   const renderMenu = () => {
     const m = game.menu(), body = $('menuBody'); achCount();
     document.querySelectorAll('[data-mt]').forEach(b => b.classList.toggle('on', b.dataset.mt === menuTab));
-    document.querySelectorAll('[data-seeds]').forEach(e => { e.textContent = m.seeds || ''; });
     const an = game.angels(); $('angelsTab').hidden = !an.gods; document.querySelectorAll('[data-godki]').forEach(e => { e.textContent = an.godki || ''; });
     if (menuTab === 'angels' && !an.gods) menuTab = 'ach';
     body.classList.toggle('chars', menuTab === 'chars'); body.classList.toggle('tree', menuTab === 'tree' || menuTab === 'angels'); body.classList.toggle('angels', menuTab === 'angels'); body.innerHTML = '';
@@ -638,6 +643,7 @@ __PLANET__
     if (menuTab === 'tree') {   // ki seeds from ascending buy levels here; reset hands them all back
       const head = document.createElement('p'); head.className = 'tree-head'; head.innerHTML = `<span><b>${m.seeds}</b> ki seeds${m.seeds || m.spent ? ` · ×${m.boost} on everything` : ' — ascend to earn some'}</span>`;
       if (m.spent) { const rs = document.createElement('button'); rs.type = 'button'; rs.textContent = 'reset'; rs.addEventListener('click', () => { game.respec(); renderMenu(); }); head.append(rs); }
+      if (treeNote) { const n = document.createElement('span'); n.className = 'tree-new'; n.innerHTML = `<span>${treeNote}</span><span>spend them below</span>`; head.style.flexWrap = 'wrap'; head.prepend(n); }
       body.append(head);
       m.branches.forEach((br, col) => m.tree.filter(x => x.branch === br.name).forEach((n, row) => {   // a column per branch, tiers top to bottom
         const tier = n.tier;
@@ -668,9 +674,12 @@ __PLANET__
     }
   };
   const openMenu = () => { renderMenu(); $('menu').hidden = false; };
-  document.addEventListener('click', e => { if (e.target.closest('[data-menu]')) openMenu(); });
+  let treeNote = '';
+  const openTree = (note = '') => { treeNote = note; menuTab = 'tree'; $('menu').classList.add('tree-only'); openMenu(); };
+  ui.treeGift = note => setTimeout(() => openTree(note), 900);   // a wish of seeds or ranks opens the tree, even before the first ascend
+  document.addEventListener('click', e => { if (e.target.closest('[data-menu]')) { if (menuTab === 'tree') menuTab = 'ach'; $('menu').classList.remove('tree-only'); openMenu(); } });
   document.querySelectorAll('[data-mt]').forEach(b => b.addEventListener('click', () => { menuTab = b.dataset.mt; renderMenu(); }));
-  $('menuX').addEventListener('click', () => { $('menu').hidden = true; });
+  $('menuX').addEventListener('click', () => { $('menu').hidden = true; treeNote = ''; });
   $('menu').addEventListener('click', e => { if (e.target === $('menu')) $('menu').hidden = true; });
   addEventListener('keydown', e => { if (e.key === 'Escape') $('menu').hidden = true; });
   ui.achieved = achCount; achCount();
