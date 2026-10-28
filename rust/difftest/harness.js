@@ -31,6 +31,7 @@ function mount({ seed = 1, W = 600, H = 400, off = [], traceRng = false } = {}) 
   }
   const M = Object.create(Math); M.random = rnd
   const noop = () => {}, handlers = {}, win = {}, events = [], pending = [], errors = []
+  let wish = null
   const rect = () => ({ left: 0, top: 0, width: W, height: H })
   const ctx2d = { createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: noop }
   const cv = { width: 0, height: 0, style: {}, addEventListener: (k, f) => { handlers[k] = f }, setPointerCapture: noop, releasePointerCapture: noop, getBoundingClientRect: rect, getContext: () => ctx2d }
@@ -50,13 +51,13 @@ function mount({ seed = 1, W = 600, H = 400, off = [], traceRng = false } = {}) 
   }
   ctx.__off = new Set(off); ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
-  const ui = new Proxy({}, { get: (_, k) => k === 'event' ? (s => events.push([T, s])) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : noop })
+  const ui = new Proxy({}, { get: (_, k) => k === 'event' ? (s => events.push([T, s])) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
   const st = ctx.__makeStage({ querySelector: () => el }); st.resize()
   const game = ctx.__G.find(g => g.id === 'planet').mount(st, ui); game.start()
   const ev = s => ctx.__ev(s)
   const runPending = () => { pending.sort((a, b) => a[0] - b[0]); while (pending.length && pending[0][0] <= T) { const [, f] = pending.shift(); f() } }
   const step = (dt = 1 / 30) => { T += dt; st.t = T; game.frame(T, dt); runPending() }
-  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), events, errors, sites, get draws() { return draws }, get T() { return T } }
+  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), events, errors, sites, get draws() { return draws }, get T() { return T } }
 }
 mount.SYSTEMS = SYSTEMS
 module.exports = mount

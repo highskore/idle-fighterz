@@ -81,6 +81,9 @@ fn scenario(name: &str) {
                 "kaio" => g.kaioken(),
                 "learn" => g.learn(k),
                 "set" => g.debug_set(k, i["v"].as_f64().unwrap()),
+                "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
+                "summon" => g.summon(),
+                "pick" => g.pick(k),
                 a => panic!("unknown input {a}"),
             }
             ii += 1;
@@ -226,6 +229,21 @@ fn ascend() {
 #[test]
 fn late() {
     scenario("late");
+}
+
+#[test]
+fn events() {
+    scenario("events");
+}
+
+#[test]
+fn multiverse() {
+    scenario("multiverse");
+}
+
+#[test]
+fn wishes() {
+    scenario("wishes");
 }
 
 #[test]

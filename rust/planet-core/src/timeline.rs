@@ -2262,7 +2262,8 @@ impl Game {
 
     // ── the dragon
 
-    pub(crate) fn summon(&mut self) {
+    /// `summon()`: the dragon rises (or waits until you're off snake way and the fight is over).
+    pub fn summon(&mut self) {
         if self.tl.shen.is_some() {
             return;
         }

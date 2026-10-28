@@ -774,6 +774,10 @@ impl Game {
             "zeno" => s.zeno = v as u32,
             "mastery" => s.mastery = v as u32,
             "autoAt" => s.auto_at = v as usize,
+            "gods" => s.gods = v as u32,
+            "uni" => s.uni = v as u32,
+            "krillinDead" => s.krillin_dead = v != 0.0,
+            "orbs7" => s.orbs7 = v as u32,
             _ => {
                 if let Some(a) = key.strip_prefix("angel.").and_then(angel_ix) {
                     s.angel[a] = v != 0.0;
