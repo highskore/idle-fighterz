@@ -4247,7 +4247,7 @@ GAMES.push({
       if (apeUntil <= st.t || !(ape.giant || S.tail)) return false;
       if (st.t < ape.cd) return true; ape.cd = st.t + .2;
       if (ape.giant) { gain(Math.max(30, wrate() * .55 * (1 + apeX())), px, py - 8, true); shake = Math.max(shake, .6); burst(px, py, [0xffffff, 0xe7e2d4, 0x9a8a70], 14, 150); ui.sfx && ui.sfx('hit'); }
-      if (S.tail) { ape.rage = Math.min(1, ape.rage + (ape.giant ? .04 : .08)); const h = kidScreen(APE[0].h * ape.k * .7); if (!ape.giant) burst(h.x, h.y, [0xffffff, 0xff9a8a], 4, 60);
+      if (S.tail) { ape.rage = Math.min(1, ape.rage + (ape.giant ? .04 : .08)); const h = kidScreen(APE[0].h * ape.k * .7); if (!ape.giant) { shake = Math.max(shake, .35); burst(px, py, [0xffffff, 0xe7e2d4, 0x9a8a70], 8, 110); }   // every tap lands as a stomp where you tapped, so no label or meter is needed
         if (ape.rage >= 1) { ape.rage = 0; gain(Math.max(200, wrate() * 3.2 * (1 + apeX())), h.x, h.y - 20, true); apeUntil = Math.min(ape.at + apeLen() + 10, apeUntil + 2); flashT = .6; shake = .9; ui.event('ROAAAR! +2s'); ui.fx && ui.fx('super'); burst(h.x, h.y, [0xffffff, 0xfff27a, 0xe0332b], 40, 240); } }
       return true;
     }
@@ -4555,9 +4555,6 @@ GAMES.push({
         const ux = Math.sin(kd.ang), uy = -Math.cos(kd.ang), half = Math.min((kd.x + ux * lift) / (1.001 - ux), (st.W - kd.x - ux * lift) / (1.001 + ux), (kd.y + uy * lift) / (1.001 - uy), (st.H - kd.y - uy * lift) / (1.001 + uy)) - 3;
         ape.k += (Math.max(1.5, Math.min(apeWant(), 2 * half / Math.max(APE[0].w, APE[0].h))) - ape.k) * Math.min(1, dt * 2);   // he grows only into the room the canvas has where he stands, so a big ape does not run off a phone screen
         drawHero(APE[step % 2], lift + Math.abs(Math.sin(t * 3.2 * Math.PI)) * 3, depth + 30, ape.k);
-        if (ape.giant || S.tail) { const hd = kidScreen(APE[0].h * ape.k * .8 + lift), x = Math.max(70, Math.min(st.W - 70, hd.x)), y = Math.max(24, Math.min(st.H - 40, hd.y - 18));   // what his taps do, over him
-          if (S.tail) for (let i = 0; i < 40; i++) for (let j = 0; j < 3; j++) st.px(x - 20 + i, y + j, i < 40 * ape.rage ? 0xe0332b : 0x2a1a14);
-          label(ape.giant ? 'tap to stomp' : 'rage', x, y - 10, 0xffffff, 0x5a0a08); }
       } else if (fused && fused.until > t) drawHero(fused.fat ? fused.spr[Math.floor(t * 4) % 4] : fused.spr, lift, depth, 1.05);
       else if (fly) flyDraw(t, spr, kd, flip, lift, depth, seen, drawHero);
       else drawHero(spr, lift, depth, 1.05);
