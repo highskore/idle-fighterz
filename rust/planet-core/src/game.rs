@@ -969,7 +969,7 @@ impl Game {
         self.run_later();
     }
 
-    /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S`.
+    /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S` (`world` also lays it out).
     pub fn debug_set(&mut self, key: &str, v: f64) {
         let s = &mut self.s;
         match key {
@@ -1001,6 +1001,11 @@ impl Game {
                     panic!("debug_set: unknown key {key}");
                 }
             }
+        }
+        if key == "world" {
+            // as the harness's poke does: the world's layout and scenery, without the trip
+            self.cam.layout(self.s.world);
+            self.inp.w2_pole = self.s.world == 10;
         }
     }
 }

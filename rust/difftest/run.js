@@ -276,7 +276,7 @@ function apply(g, i) {
   else if (i.a === 'auto') g.game.autoNext()
   else if (i.a === 'hero') g.game.pick(i.k)
   // a poked world is where the page opened: game.js's mount hands it to ui.world
-  else if (i.a === 'set') { g.ev(`S.${i.k} = ${JSON.stringify(i.v)}`); if (i.k === 'world') g.ev('ui.world(S.world)') }
+  else if (i.a === 'set') { g.ev(`S.${i.k} = ${JSON.stringify(i.v)}`); if (i.k === 'world') g.ev('useWorld(S.world); layout(); scenery(); ui.world(S.world)') }   // the world as a trip leaves it, so the drawing matches
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
