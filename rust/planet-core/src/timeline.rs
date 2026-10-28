@@ -11,6 +11,7 @@
 use crate::data::*;
 use crate::game::{Game, WishBuff};
 use crate::geom::{self, Spot, V3};
+use crate::hud::Cue;
 use crate::jsmath::{atan2, cos, hypot, sin};
 use crate::num::{fmt_short, js_round, to_fixed};
 
@@ -869,6 +870,7 @@ impl Game {
                 if bz.noise >= 1.0 {
                     bz.awake = t;
                     self.shake = 0.8;
+                    self.cue(Cue::Sfx("boss"));
                     self.event_ms("beerus is AWAKE — \"who dares?!\" everything ×0.25 until you find him pudding", 5000.0);
                     let c = self.rand_cap(0.4, 0.7);
                     self.tl.pud = Some(Npc { c, t0: t, ..Default::default() });
@@ -894,6 +896,7 @@ impl Game {
                 self.b.roshi_until = t + 20.0;
                 self.shake = 0.6;
                 self.ach("roshi");
+                self.cue(Cue::Sfx("beam"));
                 self.event("kamehameha! roshi clears the sky — ×1.5 for 20s");
                 for i in 0..self.tl.meteors.len() {
                     let m = &mut self.tl.meteors[i];
@@ -935,6 +938,7 @@ impl Game {
                 self.b.rage_until = t + 20.0;
                 self.shake = 0.9;
                 self.ach("krillin");
+                self.cue(Cue::Sfx("boom"));
                 let msg = format!("KRILLIN!!! — rage ×{} for 20s", self.b.rage);
                 self.event_ms(msg, 4000.0);
                 if k.sx.is_some() {
@@ -978,6 +982,7 @@ impl Game {
                 .collect();
             self.tl.ginyu = Some(Ginyu { androids: true, members, max: hp * 2.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0 });
             self.event("androids 17 and 18 drop in — \"we're just bored\"");
+            self.cue(Cue::Sfx("boss"));
             self.tl.next_andro = 340.0 + self.r() * 60.0;
         }
         // android 18 drops by
@@ -998,6 +1003,7 @@ impl Game {
             let (spr, name) = if odd { (A20, "dr. gero") } else { (A19, "android 19") };
             self.tl.gero = Some(Gero { name, spr, x: w + 20.0, y: h * 0.28, t0: t, drained: 0.0 });
             self.event(format!("{name} is absorbing your power — tap him!"));
+            self.cue(Cue::Sfx("boss"));
             self.tl.next_gero = 230.0 + self.r() * 80.0;
         }
         if self.tl.gero.is_some() {
@@ -1067,6 +1073,7 @@ impl Game {
             let c = self.rand_cap(0.35, 0.5);
             self.tl.ship = Some(Ship { c, t0: t, until: t + 28.0, out: 0, ko: 0, next: t + 1.6, left: 0.0 });
             self.event("frieza's ship has landed — take out his soldiers!");
+            self.cue(Cue::Sfx("boss"));
             self.tl.next_ship = 220.0 + self.r() * 60.0;
         }
         if let Some(sh) = self.tl.ship.clone() {
@@ -1109,6 +1116,7 @@ impl Game {
                 if y.sx.is_some() {
                     self.burst(30);
                 }
+                self.cue(Cue::Sfx("boom"));
                 self.event("BOOM. yamcha got wrecked again — tap him");
             }
         }
@@ -1158,6 +1166,7 @@ impl Game {
                 };
                 self.b.fused = Some((x, t + if ok || sat { 25.0 } else { 15.0 }));
                 self.shake = 0.6;
+                self.cue(Cue::Sfx("form"));
                 self.ach("dance");
                 let msg = if sat {
                     "fusion ha! …mr. satan takes all the credit. ×1.5 for 25s".to_string()
@@ -1192,6 +1201,7 @@ impl Game {
             self.burst(30);
             self.shake = 0.8;
             self.b.tired_until = self.b.tired_until.max(t + 6.0);
+            self.cue(Cue::Sfx("boom"));
             self.event("BOOM — you got yamcha'd. tired ×0.75 for 6s");
             self.tl.cling = None;
         }
@@ -1231,6 +1241,7 @@ impl Game {
                 let n = self.meteor_pay();
                 self.gain(n);
                 self.burst(12);
+                self.cue(Cue::Sfx("beam"));
             }
         }
         // the ginyu force
@@ -1247,6 +1258,7 @@ impl Game {
             let members = GINYU.iter().enumerate().map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false }).collect();
             self.tl.ginyu = Some(Ginyu { androids: false, members, max: hp * 5.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0 });
             self.event("the ginyu force strikes a pose!");
+            self.cue(Cue::Sfx("boss"));
             self.tl.next_ginyu = 300.0 + self.r() * 60.0;
         }
         if let Some(g) = self.tl.ginyu.as_mut() {
@@ -1268,6 +1280,7 @@ impl Game {
             self.b.boost_until = self.b.boost_until.max(t + 20.0);
             self.shake = 0.6;
             self.event("it's over 9000!!  ×2 for 20s");
+            self.cue(Cue::Fx("star"));
             self.burst(30);
         }
         // saibamen
@@ -1371,6 +1384,7 @@ impl Game {
         {
             self.tl.tour = Some(Tour { t0: t, until: t + 60.0, ko: 0, next: 1.5, villain: false });
             self.event("the tournament of power begins — 60s!");
+            self.cue(Cue::Fx("star"));
         }
         if self.tl.tour.is_some() {
             let tr = self.tl.tour.as_mut().unwrap();
@@ -1403,6 +1417,7 @@ impl Game {
                 } else {
                     format!("tournament over — {ko} KO (best {best}) +{p}")
                 });
+                self.cue(Cue::Fx("star"));
                 self.ach("tournament");
                 self.tl.tour = None;
                 self.tl.next_tour = 240.0 + self.r() * 60.0;
@@ -1509,6 +1524,7 @@ impl Game {
             b.tag = format!("{}{}", uni_name(u), if last { " boss".to_string() } else { format!(" {}/{}", k + 1, UNI_STAGES.len()) });
             self.new_boss(b);
             self.event_ms(format!("{}{}: {who} steps up. {ut}s to win — tap!", uni_name(u), if last { " — its strongest" } else { "" }), 3500.0);
+            self.cue(Cue::Sfx("boss"));
             self.tl.next_boss = 10.0 + self.r() * 6.0;
         }
         // the meteor storm
@@ -1521,6 +1537,7 @@ impl Game {
         {
             self.tl.storm = Some(Storm { until: t + 12.0, next: t, hit: 0 });
             self.event("meteor storm! bust as many as you can");
+            self.cue(Cue::Sfx("boss"));
             self.tl.next_storm = 260.0 + self.r() * 60.0;
         }
         if let Some(s) = self.tl.storm.clone() {
@@ -1567,6 +1584,7 @@ impl Game {
                 let b = self.tl.boss.as_mut().unwrap();
                 b.until = b.until.max(t + 10.0);
                 self.event("beam struggle! tap fast to push it back");
+                self.cue(Cue::Sfx("beam"));
             }
         }
         if let Some(s) = self.tl.struggle.as_mut() {
@@ -1702,6 +1720,7 @@ impl Game {
             let c = self.cap_pt(0.4, 1.7);
             self.tl.zen = Some(Npc { c, t0: t, ..Default::default() });
             self.event_ms("zeno-sama is here. \"you're strong! let's be friends!\" — tap him for the zeno button", 5000.0);
+            self.cue(Cue::Sfx("dragon"));
         }
         let w = self.cam.w;
         if let Some(s) = self.tl.star.as_mut() {
@@ -1856,6 +1875,8 @@ impl Game {
                 self.gain(prize);
                 let who = if androids { "androids 17 and 18 are" } else { "the ginyu force is" };
                 self.event(format!("{who} defeated! +{}", fmt_short(js_round(prize))));
+                self.cue(Cue::Fx("star"));
+                self.cue(Cue::Sfx("boom"));
                 self.goal("boss", 1.0, false);
                 self.tl.ginyu.as_mut().unwrap().done = self.t;
             }
@@ -1872,7 +1893,7 @@ impl Game {
         let b = self.tl.boss.as_mut().unwrap();
         b.hp -= dmg * arm;
         b.hit_t = Some(t);
-        self.cues.push(crate::hud::Cue::Sfx("hit"));
+        self.cue(Cue::Sfx("hit"));
         self.burst(6);
         let b = self.tl.boss.clone().unwrap();
         if b.hp <= 0.0 && !b.dead {
@@ -1955,6 +1976,7 @@ impl Game {
             } else {
                 format!("{} defeated — +{p}", b.name)
             });
+            self.cue(Cue::Fx("star"));
             self.shake = 0.7;
             for _ in 0..4 {
                 self.rng.skip(2);
@@ -1981,9 +2003,11 @@ impl Game {
         self.tl.spirit = 0.0;
         self.tl.spirit_ready = false;
         self.ach("spirit");
+        self.cue(Cue::Sfx("beam"));
     }
 
     fn spirit_blast(&mut self) {
+        self.cue(Cue::Sfx("boom"));
         self.shake = 1.0;
         for i in 0..self.tl.saibas.len() {
             if !self.tl.saibas[i].dead && self.tl.saibas[i].sx.is_some() {
@@ -2055,6 +2079,7 @@ impl Game {
     fn open_gadget(&mut self) {
         self.ach("westcity");
         self.burst(18);
+        self.cue(Cue::Sfx("coin"));
         let roll = self.r();
         let t = self.t;
         if roll < 0.3 {
@@ -2181,6 +2206,7 @@ impl Game {
         self.burst(18);
         let n = 90f64.max(self.wrate() * 12.0);
         self.gain(n);
+        self.cue(Cue::Sfx("beam"));
         self.ach("hfil");
     }
 
@@ -2203,6 +2229,8 @@ impl Game {
         }
         let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots)) * self.mult(false) * (1.0 + 0.5 * self.lvl(N_FIST));
         self.gain(n);
+        self.cue(Cue::Sfx("tap"));
+        self.cue(Cue::Bump);
     }
 
     pub(crate) fn update_snake(&mut self, t: f64, dt: f64) {
@@ -2228,6 +2256,7 @@ impl Game {
                 self.tl.snk.as_mut().unwrap().got += 1;
                 let n = 5f64.max(self.wrate() * 1.5);
                 self.gain(n);
+                self.cue(Cue::Sfx("coin"));
             }
         }
         for g in self.tl.snk.as_mut().unwrap().ghosts.iter_mut() {
@@ -2249,6 +2278,7 @@ impl Game {
                     }
                     let n = 40f64.max(self.wrate() * 8.0 * (1.0 + streak as f64 * 0.25));
                     self.gain(n);
+                    self.cue(Cue::Sfx("coin"));
                 } else {
                     let snk = self.tl.snk.as_mut().unwrap();
                     snk.sky[i].miss = true;
@@ -2282,6 +2312,7 @@ impl Game {
             self.gain(g);
             self.event(format!("made it to king kai's planet at {}s! +{}", to_fixed(t - t0, 0), fmt_short(js_round(g))));
             self.victory();
+            self.cue(Cue::Sfx("form"));
             self.burst(36);
         }
     }
@@ -2361,6 +2392,11 @@ impl Game {
 
     /// Grants a wish by key (the HUD's pick, or the rarest of the three after 20s).
     pub fn pick(&mut self, key: &str) {
+        self.pick_as(key, false);
+    }
+
+    /// game.js's `pick(k, auto)`: `auto` is the dragon choosing for you after 20s.
+    fn pick_as(&mut self, key: &str, auto: bool) {
         let t = self.t;
         let Some(sh) = self.tl.shen.as_mut().filter(|s| s.phase == Phase::Wish) else { return };
         sh.phase = Phase::Granting;
@@ -2368,7 +2404,14 @@ impl Game {
         if let Some(&w) = sh.offer.iter().find(|&&w| WISHES[w].0 == key) {
             self.grant(WISHES[w].0);
             self.s.granted += 1;
+            if auto {
+                // the label as game.js reads it, after the grant
+                let (_, label, _, tier) = self.wish_text(w);
+                self.cue(Cue::WishDone);
+                self.event_ms(format!("20s and no answer — the dragon grants the rarest: {label} ({tier})"), 4500.0);
+            }
         }
+        self.cue(Cue::Fx("super"));
         let sh = self.tl.shen.as_mut().unwrap();
         sh.wishes -= 1;
         if sh.wishes > 0 {
@@ -2509,12 +2552,7 @@ impl Game {
                 // no answer: the rarest of the three (the first offered wins a tie)
                 let three = &sh.offer[..sh.offer.len().min(3)];
                 let best = three.iter().copied().reduce(|a, w| if WISHES[w].1 > WISHES[a].1 { w } else { a }).unwrap();
-                let key = WISHES[best].0;
-                self.pick(key);
-                // the label as game.js reads it, after the grant
-                let (_, label, _, tier) = self.wish_text(best);
-                self.cue(crate::hud::Cue::WishDone);
-                self.event_ms(format!("20s and no answer — the dragon grants the rarest: {label} ({tier})"), 4500.0);
+                self.pick_as(WISHES[best].0, true);
             }
             Phase::Granting if in_phase > 6.0 => self.open_wish(),
             Phase::Leave if t - sh.t1 > 1.7 => self.tl.shen = None,
@@ -2556,6 +2594,7 @@ impl Game {
         });
         self.tl.last_movie = who;
         self.krillin_hit(who);
+        self.cue(Cue::Sfx("boss"));
         self.shake = 0.5;
         self.event_ms(o.intro, 5000.0);
     }
@@ -2651,6 +2690,7 @@ impl Game {
             self.last_click = t;
             let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
             self.movie_hit(i, dmg);
+            self.cue(Cue::Sfx("hit"));
             let m = self.tl.movie.as_mut().unwrap();
             if m.minions[i].name == "bujin" {
                 if let Some(web) = m.web.as_mut() {
@@ -2720,6 +2760,7 @@ impl Game {
         if m.nova.is_some_and(|n| t > n.1) {
             self.shake = 1.0;
             self.b.tired_until = self.b.tired_until.max(t + 8.0);
+            self.cue(Cue::Sfx("boom"));
             self.event_ms("SUPERNOVA — you're knocked flat. tired ×0.75 for 8s, and cooler leaves you for dead", 4000.0);
             let bm = self.tl.boss.as_mut().unwrap();
             bm.dead = true;
@@ -2792,6 +2833,7 @@ impl Game {
             self.tl.whis_ready = t + 45.0;
             self.b.whis_until = t + 20.0;
             self.event("whis: \"ohohoho — a little training?\" laps ×2 for 20s, but every tap is twice as loud");
+            self.cue(Cue::Sfx("buy"));
             return;
         }
         if self.s.world == 7 && t > self.tl.chi_ready && npc_hit(self, self.cap_pt(0.45, 3.2), 12.0) {
@@ -2799,6 +2841,7 @@ impl Game {
             self.b.chi_until = t + 15.0;
             self.shake = 0.4;
             self.event("chi-chi: \"stop slacking and TRAIN!\" — a frying pan to the head: ×1.5 for 15s");
+            self.cue(Cue::Sfx("hit"));
             return;
         }
         if self.s.world == 6 && t > self.tl.kame_ready && (npc_hit(self, self.cap_pt(0.5, 5.2), 14.0) || npc_hit(self, self.cap_pt(0.62, 4.1), 12.0)) {
@@ -2829,6 +2872,7 @@ impl Game {
         }
         if let Some(s) = self.tl.struggle.as_mut() {
             s.p += 0.055;
+            self.cue(Cue::Sfx("tap"));
             self.shake = self.shake.max(0.08);
             return;
         }
@@ -2846,6 +2890,7 @@ impl Game {
                 self.ach("fusion");
                 self.shake = 0.6;
                 self.event("fusion ha! vegebubs — ×2 for 30s");
+                self.cue(Cue::Fx("super"));
                 self.burst(50);
                 return;
             }
@@ -2854,6 +2899,7 @@ impl Game {
             if hypot(&[px - x, py - (y - 6.0)]) < 16.0 {
                 self.b.car_until = t + 15.0;
                 self.event("riding with king kai — ×1.5 for 15s");
+                self.cue(Cue::Sfx("coin"));
                 self.burst(16);
                 self.tl.car = None;
                 return;
@@ -2869,6 +2915,7 @@ impl Game {
                 let g = 200f64.max(self.wrate() * 40.0);
                 self.gain(g);
                 self.event("yamcha: \"i'm fine!\" — senzu ×1.5 for 10s");
+                self.cue(Cue::Sfx("coin"));
                 return;
             }
         }
@@ -2884,6 +2931,7 @@ impl Game {
                 self.gain(g);
                 let msg = format!("you caught gregory! +{} — race {} won", fmt_short(js_round(g)), self.s.greg_wins);
                 self.event(msg);
+                self.cue(Cue::Sfx("coin"));
                 self.burst(18);
                 self.tl.greg = None;
                 return;
@@ -2894,6 +2942,7 @@ impl Game {
                 self.tl.kai.as_mut().unwrap().flag = 1.0;
                 self.b.laugh_until = t + 10.0;
                 self.event("ha! ha! ha! — ×1.25 for 10s");
+                self.cue(Cue::Sfx("coin"));
                 self.burst(14);
                 return;
             }
@@ -2905,6 +2954,7 @@ impl Game {
                 self.ach("gero");
                 self.event(format!("{} lets go — you take it all back, twice over: +{}", g.name, fmt_short(js_round(n))));
                 self.burst(20);
+                self.cue(Cue::Sfx("hit"));
                 self.tl.gero = None;
                 return;
             }
@@ -2918,6 +2968,7 @@ impl Game {
                 self.gain(g);
                 self.ach("wallet");
                 self.event(format!("krillin hands over his whole wallet without looking: +{}", fmt_short(js_round(g))));
+                self.cue(Cue::Sfx("coin"));
                 return;
             }
         }
@@ -2946,6 +2997,7 @@ impl Game {
                 self.tl.pud = None;
                 self.ach("pudding");
                 self.event(format!("pudding! beerus dozes off happy — +{}", fmt_short(js_round(g))));
+                self.cue(Cue::Sfx("coin"));
                 return;
             }
         }
@@ -2956,6 +3008,7 @@ impl Game {
                 r.until = t + 5.0;
                 self.shake = 0.5;
                 self.event("roshi: \"MAX POWER!\"");
+                self.cue(Cue::Sfx("form"));
                 return;
             }
         }
@@ -2973,6 +3026,7 @@ impl Game {
                     self.gain(s.n);
                     self.ach("satan");
                     self.event_ms(format!("hercule cash prize! +{} — \"keep it between us, kid\"", fmt_short(js_round(s.n))), 3500.0);
+                    self.cue(Cue::Sfx("coin"));
                     self.burst(18);
                     self.tl.satan = None;
                     return;
@@ -2986,6 +3040,7 @@ impl Game {
                 self.ach("chamber");
                 let msg = format!("hyperbolic time chamber — time slows, training ×{} for 15s", self.chamber_x());
                 self.event(msg);
+                self.cue(Cue::Sfx("form"));
                 self.tl.door = None;
                 return;
             }
@@ -2998,6 +3053,7 @@ impl Game {
                 self.last_click = t;
                 let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
                 self.ginyu_hit(mi, dmg);
+                self.cue(Cue::Sfx("hit"));
                 return;
             }
         }
@@ -3052,6 +3108,7 @@ impl Game {
                     if tail { format!(", tap to {}", if giant { "stomp" } else { "build rage" }) } else { String::new() }
                 );
                 self.event(msg);
+                self.cue(Cue::Fx("super"));
                 self.rng.skip(160);
                 return;
             }
@@ -3101,6 +3158,7 @@ impl Game {
             self.gain(g);
             self.shake = self.shake.max(0.6);
             self.burst(14);
+            self.cue(Cue::Sfx("hit"));
         }
         if self.s.lv(Upg::Tail) > 0 {
             let giant = self.tl.ape.giant;
@@ -3116,6 +3174,7 @@ impl Game {
                 self.b.ape_until = (self.tl.ape.at + self.ape_len() + 10.0).min(self.b.ape_until + 2.0);
                 self.shake = 0.9;
                 self.event("ROAAAR! +2s");
+                self.cue(Cue::Fx("super"));
                 self.burst(40);
             }
         }

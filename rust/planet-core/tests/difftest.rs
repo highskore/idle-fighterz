@@ -71,6 +71,7 @@ fn scenario(name: &str) {
 
     let mut g = Game::new(seed);
     g.epoch_ms = tr["epoch"].as_f64().unwrap();
+    g.calm = tr["calm"].as_bool().unwrap();
     if let Some(saved) = tr["saved"].as_str() {
         g.load_json(saved);
     }
@@ -80,6 +81,11 @@ fn scenario(name: &str) {
     let n = |i: &Value, k: &str| i[k].as_f64().unwrap();
     let mut saves = 0;
     let mut events: Vec<(f64, String, f64)> = Vec::new();
+    let mut cues: Vec<(f64, Value)> = Vec::new();
+    let drain_cues = |g: &mut Game, cues: &mut Vec<(f64, Value)>| {
+        let t = g.t;
+        cues.extend(g.cues.drain(..).map(|c| (t, serde_json::from_str(&c.to_json()).unwrap())));
+    };
     let mut hud = Report::default();
     for f in 0..frames {
         while ii < inputs.len() && inputs[ii]["f"].as_u64().unwrap() as usize == f {
@@ -92,6 +98,11 @@ fn scenario(name: &str) {
                 }
                 "kaio" => g.kaioken(),
                 "learn" => g.learn(k),
+                "angel" => g.learn_angel(k),
+                "auto" => g.auto_next(),
+                "hero" => {
+                    g.pick_hero(k);
+                }
                 "set" => g.debug_set(k, i["v"].as_f64().unwrap()),
                 "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 "summon" => g.summon(),
@@ -111,9 +122,11 @@ fn scenario(name: &str) {
             ii += 1;
         }
         events.extend(g.events.drain(..).map(|(s, ms)| (g.t, s, ms)));
+        drain_cues(&mut g, &mut cues);
         t += dt;
         g.frame(t, dt);
         events.extend(g.events.drain(..).map(|(s, ms)| (g.t, s, ms)));
+        drain_cues(&mut g, &mut cues);
         if (f + 1) % 30 == 0 {
             let s = &samples[si];
             si += 1;
@@ -135,7 +148,12 @@ fn scenario(name: &str) {
             if !s["hud"].is_null() {
                 let mut js = s["hud"].clone();
                 js["time"] = js["time"].as_f64().unwrap().floor().into();
-                deep(&mut hud, g.t, "hud", &js, &serde_json::from_str(&g.hud().to_json()).unwrap());
+                let rs: Value = serde_json::from_str(&g.hud().to_json()).unwrap();
+                deep(&mut hud, g.t, "hud", &js, &rs);
+                // the fields game.js sets elsewhere, as they stood when it called ui.update
+                for k in ["night", "world", "shen", "look"] {
+                    deep(&mut hud, g.t, &format!("hud.{k}"), &s["side"][k], &rs[k]);
+                }
             }
             // the wish box while the dragon waits
             match (s["offer"].is_null(), g.wish_offer()) {
@@ -144,7 +162,7 @@ fn scenario(name: &str) {
                 (_, rs) => hud.bad.push(format!("t={:.0}s offer: js {} rust {:?}", g.t, s["offer"], rs)),
             }
             if !s["shop"].is_null() {
-                let rs: Value = serde_json::from_str(&g.shop_at_hud).unwrap();
+                let rs: Value = serde_json::from_str(&g.shop).unwrap();
                 let keys = |v: &Value| v.as_object().unwrap().keys().cloned().collect::<Vec<_>>();
                 hud.checked += 1;
                 if keys(&s["shop"]) != keys(&rs) && hud.bad.len() < 25 {
@@ -216,6 +234,29 @@ fn scenario(name: &str) {
     if jev.len() != events.len() && hud.bad.len() < 25 {
         hud.bad.push(format!("{} toasts in js, {} in rust", jev.len(), events.len()));
     }
+    // every other one-shot ui call (sounds, title effects, the bump, ...), in order, with its time and arguments
+    let jcues = tr["cues"].as_array().unwrap();
+    let mut first_bad_cue = None;
+    for (i, (jc, (rt, rc))) in jcues.iter().zip(&cues).enumerate() {
+        hud.checked += 1;
+        let (jt, jc) = (jc[0].as_f64().unwrap(), Value::Array(jc.as_array().unwrap()[1..].to_vec()));
+        if ((jt - rt).abs() > 0.006 || &jc != rc) && hud.bad.len() < 25 {
+            first_bad_cue.get_or_insert(i);
+            hud.bad.push(format!("cue {i}: js {jt} {jc}, rust {rt:.2} {rc}"));
+        }
+    }
+    hud.checked += 1;
+    if jcues.len() != cues.len() && hud.bad.len() < 25 {
+        hud.bad.push(format!("{} cues in js, {} in rust", jcues.len(), cues.len()));
+    }
+    if let Some(i) = first_bad_cue {
+        let ctx = |v: Vec<String>| v.join(" ");
+        eprintln!(
+            "{name} cues around {i}:\n  js   {}\n  rust {}",
+            ctx(jcues.iter().skip(i.saturating_sub(3)).take(8).map(|c| c.to_string()).collect()),
+            ctx(cues.iter().skip(i.saturating_sub(3)).take(8).map(|c| format!("[{:.2},{}]", c.0, c.1)).collect())
+        );
+    }
     // what game.js last wrote to localStorage carries the same daily bonus date
     let stored = serde_json::from_str::<Value>(tr["stored"].as_str().unwrap()).unwrap();
     assert_eq!(stored["daily"].as_str(), g.s.daily.as_deref(), "the stored daily date");
@@ -230,7 +271,7 @@ fn scenario(name: &str) {
     for l in &rep.loose {
         eprintln!("  inexact {l}");
     }
-    eprintln!("{name} hud: {} values compared (snapshot, shop, menus, toasts), {} mismatches, {} inexact", hud.checked, hud.bad.len(), hud.inexact);
+    eprintln!("{name} hud: {} values compared (snapshot, shop, menus, toasts, cues), {} mismatches, {} inexact", hud.checked, hud.bad.len(), hud.inexact);
     assert!(rep.bad.is_empty(), "{name} diverged:\n{}", rep.bad.join("\n"));
     assert!(hud.bad.is_empty(), "{name}: the HUD differs:\n{}", hud.bad.join("\n"));
 }
@@ -387,6 +428,11 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("nextStar", n(tl.next_star)),
         ("nextCloud", n(tl.next_cloud)),
     ]
+}
+
+#[test]
+fn calm() {
+    scenario("calm");
 }
 
 #[test]

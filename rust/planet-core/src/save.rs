@@ -115,5 +115,7 @@ impl Game {
                 self.after(0.9, Later::Event("daily bonus: ×1.25 for 5 min + a dragon ball".into(), 2600.0));
             }
         }
+        // what the HUD shows until the first frame, so a page drawing it right away doesn't show an empty goal
+        self.hud = self.hud_now();
     }
 }

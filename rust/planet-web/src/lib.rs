@@ -28,6 +28,11 @@ impl Planet {
         self.0.load(saved);
     }
 
+    /// prefers-reduced-motion (`st.calm`): no screen shake. Set it before the first step.
+    pub fn set_calm(&mut self, calm: bool) {
+        self.0.set_calm(calm);
+    }
+
     pub fn start(&mut self, today: &str, now_ms: f64) {
         self.0.start(today, now_ms);
     }
@@ -169,7 +174,7 @@ impl Planet {
         self.0.spots(json);
     }
 
-    /// `{t, pl, draws}`, to check a lockstep renderer hasn't drifted.
+    /// `{t, pl, draws, mult, passive}`, to check a lockstep renderer hasn't drifted.
     pub fn probe(&self) -> String {
         self.0.probe_json()
     }
