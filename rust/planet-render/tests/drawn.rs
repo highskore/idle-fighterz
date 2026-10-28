@@ -31,11 +31,13 @@ fn drawn(name: &str) {
     let mut fb = Framebuffer::new(200, 134);
     let mut sc = Scene::new();
     let view = View::site(3.0);
-    let (mut f, mut bad, mut first) = (0usize, 0usize, Vec::new());
+    let (mut f, mut bad, mut first, mut floats) = (0usize, 0usize, Vec::new(), 0usize);
     let dump = Path::new(env!("CARGO_MANIFEST_DIR")).join("../target/difftest");
     replay::scenario_with(&full, &mut |g, dt| {
         sc.draw(&mut fb, g, &view, dt);
-        if fnv(&fb.buf) != want[f] {
+        if fnv(&fb.buf) == want[f] {
+            floats += usize::from(!g.floats.is_empty());
+        } else {
             bad += 1;
             if first.len() < 5 {
                 first.push(format!("frame {f} (t={:.2}s)", g.t));
@@ -45,7 +47,7 @@ fn drawn(name: &str) {
         }
         f += 1;
     });
-    eprintln!("{full}: {f} frames drawn, {} identical to game.js's, {bad} differ", f - bad);
+    eprintln!("{full}: {f} frames drawn, {} identical to game.js's ({floats} with gain numbers up), {bad} differ", f - bad);
     assert_eq!(f, want.len());
     assert!(bad == 0, "{full}: {bad} of {f} frames differ, first {first:?}");
 }
