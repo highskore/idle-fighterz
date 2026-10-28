@@ -10,7 +10,7 @@ import { open, start, play } from './page.mjs'
 
 const SHOTS_ONLY = !!process.env.PLANET_SHOTS_ONLY
 // the WebGL title is stubbed out (see hooks.spec.mjs), so its no-WebGL fallback heading is hidden too
-const STYLE = '#brand { visibility: hidden !important; }'
+const HIDE_TITLE = '#brand, #brand * { visibility: hidden !important; }'
 
 const playUntil = async (page, selector, max = 20000) => {
   for (let t = 0; t < max && !(await page.locator(selector).isVisible()); t += 250) await play(page, 250)
@@ -39,16 +39,17 @@ for (const [name, hash, act] of STATES) {
     const errors = await open(page, hash, { title: false })
     await start(page)
     await act(page)
-    const shot = await page.screenshot({ animations: 'disabled', caret: 'hide', style: STYLE })
+    await page.addStyleTag({ content: HIDE_TITLE })
+    const shot = await page.screenshot({ animations: 'disabled', caret: 'hide' })
     // the canvas's own pixels, at its size, before the page scales it up
     const canvas = Buffer.from((await page.evaluate(() => document.querySelector('.stage canvas').toDataURL('image/png'))).split(',')[1], 'base64')
     const dir = `shots/${info.project.name}`
     mkdirSync(dir, { recursive: true })
     writeFileSync(`${dir}/${name}.png`, shot)
-    writeFileSync(`${dir}/${name}.canvas.png`, canvas)
+    writeFileSync(`${dir}/${name}-canvas.png`, canvas)
     expect(errors).toEqual([])
     if (SHOTS_ONLY) return
-    expect(canvas).toMatchSnapshot(`${name}.canvas.png`, { threshold: 0, maxDiffPixels: 0 })
-    await expect(page).toHaveScreenshot(`${name}.png`, { animations: 'disabled', caret: 'hide', style: STYLE, threshold: 0.02, maxDiffPixels: 0 })
+    expect(canvas).toMatchSnapshot(`${name}-canvas.png`, { threshold: 0, maxDiffPixels: 0 })
+    await expect(page).toHaveScreenshot(`${name}.png`, { animations: 'disabled', caret: 'hide', threshold: 0.02, maxDiffPixels: 0 })
   })
 }
