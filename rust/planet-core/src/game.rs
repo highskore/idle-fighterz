@@ -70,6 +70,8 @@ pub struct Game {
     pub combo: f64,
     pub last_click: f64,
     pub shake: f64,
+    /// prefers-reduced-motion (`st.calm`): the screen doesn't shake, and the shake's random draw isn't made
+    pub calm: bool,
     /// `ui.event` toasts (text, ms), oldest first; the HUD bridge drains them
     pub events: Vec<(String, f64)>,
     pub cam: Cam,
@@ -82,8 +84,8 @@ pub struct Game {
     pub cues: Vec<Cue>,
     /// the HUD as game.js hands it to `ui.update`, rebuilt at that point of every frame while playing
     pub hud: Hud,
-    /// the shop as game.js hands it to `ui.shop` right after (`shop_json` is the shop as it stands)
-    pub shop_at_hud: String,
+    /// `ui.shop`'s last argument: rebuilt where game.js calls `syncShop` (the HUD point of a frame, buys, the tree)
+    pub shop: String,
     /// the wall clock at t = 0, in ms (achievements are stamped with it); the host sets it
     pub epoch_ms: f64,
     /// how high the hero is drawn off the road and whether he faces left: the renderer sets these
@@ -97,7 +99,7 @@ impl Game {
     pub fn new(seed: u32) -> Self {
         let s = Save::new();
         let forms = ladder_of(s.hero);
-        Game {
+        let mut g = Game {
             s,
             rng: Lcg::new(seed),
             forms,
@@ -116,6 +118,7 @@ impl Game {
             combo: 1.0,
             last_click: -9.0,
             shake: 0.0,
+            calm: false,
             events: Vec::new(),
             cam: Cam::new(200.0, 134.0), // the harness's 600×400 canvas in game.js pixels; the HUD bridge resizes it
             frame3: Frame::new(),
@@ -123,17 +126,25 @@ impl Game {
             inp: Input::default(),
             cues: Vec::new(),
             hud: Hud::default(),
-            shop_at_hud: String::new(),
+            shop: String::new(),
             epoch_ms: 0.0,
             lift_now: 0.0,
             flip_now: false,
             hero_seen: false,
-        }
+        };
+        g.sync_shop();
+        g
     }
 
     /// game.js `start()`; the daily bonus needs a date and waits for the save bridge.
     pub fn start(&mut self) {
         self.playing = true;
+        self.sync_shop();
+    }
+
+    /// `syncShop()`: what `ui.shop` gets now.
+    pub(crate) fn sync_shop(&mut self) {
+        self.shop = self.shop_json();
     }
 
     // ── economy
@@ -425,6 +436,7 @@ impl Game {
                 }
             }
             self.event(msg);
+            self.cue(Cue::Fx("buy"));
             self.next_goal();
         }
     }
@@ -563,6 +575,7 @@ impl Game {
                 if !note.is_empty() {
                     self.event(note);
                 }
+                self.sync_shop();
                 true
             }
         }
@@ -604,6 +617,8 @@ impl Game {
         }
         self.s.seeds -= c;
         self.s.tree[i] += 1;
+        self.cue(Cue::Sfx("buy"));
+        self.sync_shop();
     }
 
     pub fn respec(&mut self) {
@@ -613,6 +628,7 @@ impl Game {
             }
         }
         self.s.tree = [0; TREE.len()];
+        self.sync_shop();
     }
 
     pub fn ascend(&mut self) {
@@ -639,6 +655,8 @@ impl Game {
             self.forms[self.s.form].name
         );
         self.event_ms(msg, 4500.0);
+        self.cue(Cue::Fx("super"));
+        self.sync_shop();
     }
 
     /// God ki: seeds, the tree, forms and universes go; wishes, sagas and mastery stars stay.
@@ -677,6 +695,7 @@ impl Game {
         if self.zeno_ready() {
             self.after(5.2, crate::timeline::Later::Event("something tiny and very powerful is watching…".into(), 3500.0));
         }
+        self.sync_shop();
     }
 
     /// The zeno button: everything but his favour (and achievements) is erased.
@@ -721,6 +740,7 @@ impl Game {
             6000.0,
         );
         self.after(6.2, crate::timeline::Later::Event("villains line up to meet zeno's friend — the sagas come 4× as often".into(), 4000.0));
+        self.sync_shop();
     }
 
     // ── the fixed step
@@ -733,7 +753,7 @@ impl Game {
         if self.playing {
             self.session += dt;
         }
-        self.cam.bob = if self.shake > 0.0 { js_round((self.rng.random() - 0.5) * 5.0 * self.shake) } else { 0.0 };
+        self.cam.bob = if self.shake > 0.0 && !self.calm { js_round((self.rng.random() - 0.5) * 5.0 * self.shake) } else { 0.0 };
         self.shake = (self.shake - dt).max(0.0);
         self.spin(dt);
 
@@ -803,6 +823,7 @@ impl Game {
                 }
                 if f < self.s.form {
                     self.s.form = f;
+                    self.cue(Cue::Form(f));
                     let msg = format!("the wish wears off — back to {}", self.forms[f].name);
                     self.event(msg);
                 } else {
@@ -838,7 +859,7 @@ impl Game {
             }
             self.timeline_moon(t, dt);
             self.hud = self.hud_now();
-            self.shop_at_hud = self.shop_json();
+            self.sync_shop();
         }
         self.shen_step(t);
         self.draw_step(t, dt);

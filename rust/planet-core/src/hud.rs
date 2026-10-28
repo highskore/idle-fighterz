@@ -44,6 +44,7 @@ impl Cue {
             Cue::Zeno => "[\"zeno\"]".into(),
             Cue::TreeGift(s) => arr(["\"treeGift\"".into(), json::str(s)]),
             Cue::WishDone => "[\"wishDone\"]".into(),
+            Cue::Notify(k, a) if a.is_empty() => arr(["\"notify\"".into(), json::str(k)]),
             Cue::Notify(k, a) => arr(["\"notify\"".into(), json::str(k), json::str(a)]),
         }
     }
@@ -651,6 +652,7 @@ impl Game {
         self.s.angel[i] = true;
         self.ach("whis");
         self.cue(Cue::Sfx("buy"));
+        self.sync_shop();
     }
 
     /// `autoNext()`: steps self-ascension's threshold (off, 1B, 1T, ...).

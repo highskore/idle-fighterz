@@ -31,6 +31,11 @@ impl Bridge {
         self.game.load_json(saved);
     }
 
+    /// prefers-reduced-motion (page.html's `st.calm`): no screen shake. Set it before stepping, as game.js reads it every frame.
+    pub fn set_calm(&mut self, calm: bool) {
+        self.game.calm = calm;
+    }
+
     /// Starts play on the day `today` (`new Date().toDateString()`); `now_ms` is `Date.now()`.
     pub fn start(&mut self, today: &str, now_ms: f64) {
         self.clock(now_ms);
@@ -67,25 +72,22 @@ impl Bridge {
 
     /// What the HUD needs since the last call, as `{hud?, shop?, wish?, world?, events, cues}`:
     /// - `hud`: `ui.update`'s argument (plus `night`, `world`, `shen`, `look`), when anything on it changed
-    /// - `shop`: `ui.shop`'s argument, when a row changed
+    /// - `shop`: `ui.shop`'s last argument (`Game::shop`, the copy the difftest checks), when a row changed
     /// - `wish`: `ui.wish`'s list, when the dragon makes an offer
     /// - `world`: the world, when it changed (the page's `ui.hell(false)` and `ui.world(w)`)
     /// - `events`: `[[text, ms], ...]` for `ui.event`; `cues`: `[[call, arg?], ...]` for the other `ui` calls
     ///
-    /// The HUD and the shop only come while playing, as game.js only sends them then.
+    /// The HUD only comes while playing, as game.js only calls `ui.update` then.
     pub fn frame_json(&mut self) -> String {
         let g = &mut self.game;
         let mut o = Obj::new();
-        if g.playing {
-            if self.sent_hud.as_ref() != Some(&g.hud) {
-                o = o.raw("hud", g.hud.to_json());
-                self.sent_hud = Some(g.hud.clone());
-            }
-            let shop = g.shop_json();
-            if shop != self.sent_shop {
-                o = o.raw("shop", &shop);
-                self.sent_shop = shop;
-            }
+        if g.playing && self.sent_hud.as_ref() != Some(&g.hud) {
+            o = o.raw("hud", g.hud.to_json());
+            self.sent_hud = Some(g.hud.clone());
+        }
+        if g.shop != self.sent_shop {
+            o = o.raw("shop", &g.shop);
+            self.sent_shop.clone_from(&g.shop);
         }
         match g.wish_offer() {
             Some((at, list)) if at != self.sent_offer => {
@@ -116,7 +118,7 @@ impl Bridge {
         Obj::new().num("t", self.t).num("pl", g.s.pl).num("draws", g.rng.draws() as f64).num("mult", g.mult(false)).num("passive", g.passive()).end()
     }
 
-    /// Applies a renderer's screen spots (`spots.rs`); ignores anything that isn't JSON.
+    /// Applies a renderer's screen spots (`spots.rs`); ignores anything `json::parse` refuses.
     pub fn spots(&mut self, s: &str) {
         if let Some(v) = json::parse(s) {
             self.game.set_spots(&v);
@@ -141,5 +143,58 @@ mod tests {
         assert!(tap.contains("[\"sfx\",\"tap\"]") && tap.contains("[\"bump\"]"), "{tap}");
         b.step(0.1, 1.7e12);
         assert!(b.frame_json().contains("\"hud\":"), "the tap's power shows on the next frame");
+    }
+
+    #[test]
+    fn the_first_frame_shows_the_goal() {
+        let mut b = Bridge::new(1, 200.0, 134.0, 3.0);
+        b.start("Wed Oct 28 2026", 1.7e12);
+        let first = b.frame_json();
+        assert!(first.contains(r#""goal":{"text":"hit a ×2 combo","p":0,"n":1}"#), "{first}");
+        assert!(first.contains(r#""form":{"name":"base""#), "{first}");
+    }
+
+    #[test]
+    fn the_shop_sent_is_the_one_built_with_the_hud() {
+        let mut b = Bridge::new(1, 200.0, 134.0, 3.0);
+        b.start("Wed Oct 28 2026", 1.7e12);
+        b.game.s.pl = 1e6;
+        b.step_one();
+        let m: String = b.frame_json();
+        assert!(m.contains(&format!(r#""shop":{}"#, b.game.shop)), "{m}");
+        // what changes after the HUD point (drawing, timeouts) waits for the next syncShop, as in game.js: the frame
+        // ships the shop the difftest compared, not a second copy built later
+        b.game.s.pl = 0.0;
+        let m = b.frame_json();
+        assert!(!m.contains("\"shop\""), "{m}");
+    }
+
+    #[test]
+    fn hostile_text_is_ignored() {
+        let mut b = Bridge::new(1, 200.0, 134.0, 3.0);
+        for bad in ["[".repeat(100_000), "{\"a\":".repeat(100_000), r#"{"lift":1e999}"#.into()] {
+            b.load(&bad);
+            b.spots(&bad);
+        }
+        b.load(&format!(r#"{{"daily":"Tue Oct 27 2026","pad":"{}"}}"#, "x".repeat(json::MAX_LEN)));
+        b.spots(&format!(r#"{{"lift":7,"pad":"{}"}}"#, "x".repeat(json::MAX_LEN)));
+        assert_eq!(b.game.s.daily, None);
+        assert_eq!(b.game.lift_now, 0.0);
+        b.spots(r#"{"lift":7}"#);
+        assert_eq!(b.game.lift_now, 7.0);
+    }
+
+    #[test]
+    fn calm_skips_the_shake_and_its_draw() {
+        let run = |calm: bool| {
+            let mut b = Bridge::new(1, 200.0, 134.0, 3.0);
+            b.set_calm(calm);
+            b.start("Wed Oct 28 2026", 1.7e12);
+            b.game.shake = 1.0;
+            b.step_one();
+            (b.game.cam.bob, b.game.rng.draws())
+        };
+        let (shaken, d) = (run(false), run(true));
+        assert_eq!(d, (0.0, shaken.1 - 1));
     }
 }
