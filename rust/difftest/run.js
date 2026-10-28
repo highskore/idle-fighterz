@@ -152,6 +152,12 @@ function buyAll(g, act, policy = POLICY) {
   }
 }
 
+// what page.html asks the game for: the menu, the angels, the three confirm boxes and the share card (less its pictures)
+function menus(g) {
+  const card = g.game.card(); delete card.spr; delete card.scene
+  return JSON.parse(JSON.stringify({ menu: g.game.menu(), angels: g.game.angels(), ascendInfo: g.game.ascendInfo(), godInfo: g.game.godInfo(), zenoInfo: g.game.zenoInfo(), card }))
+}
+
 function apply(g, i) {
   if (i.a === 'train') g.train()
   else if (i.a === 'buy') g.buy(i.k)
@@ -191,10 +197,11 @@ function run(name) {
     sc.script(g, f, i => { inputs.push({ f, ...i }); apply(g, i) })
     g.step(DT)
     // every tenth second also the save, as JSON.stringify(S) writes it to localStorage
-    if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE), ...((f + 1) % 300 === 0 ? { save: JSON.parse(g.ev('JSON.stringify(S)')) } : {}) })
+    // and the HUD: what ui.update and ui.shop last got, every second; the menus and confirm boxes every tenth
+    if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE), hud: g.update, shop: g.shop, offer: g.ev("!!shen && shen.phase === 'wish'") ? g.offer() : null, ...((f + 1) % 300 === 0 ? { save: JSON.parse(g.ev('JSON.stringify(S)')), menus: menus(g) } : {}) })
   }
   if (g.errors.length) throw new Error(g.errors.join('\n'))
-  return { name, seed: sc.seed, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.map(([t, e]) => [+t.toFixed(2), e]) }
+  return { name, seed: sc.seed, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.map(([t, e, ms]) => [+t.toFixed(2), e, ms]) }
 }
 
 // number formatting: the game's fmtShort, and the HUD's big/short from page.html

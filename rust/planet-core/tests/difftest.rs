@@ -79,6 +79,8 @@ fn scenario(name: &str) {
     let mut rep = Report::default();
     let n = |i: &Value, k: &str| i[k].as_f64().unwrap();
     let mut saves = 0;
+    let mut events: Vec<(f64, String, f64)> = Vec::new();
+    let mut hud = Report::default();
     for f in 0..frames {
         while ii < inputs.len() && inputs[ii]["f"].as_u64().unwrap() as usize == f {
             let i = &inputs[ii];
@@ -105,14 +107,47 @@ fn scenario(name: &str) {
             }
             ii += 1;
         }
+        events.extend(g.events.drain(..).map(|(s, ms)| (g.t, s, ms)));
         t += dt;
         g.frame(t, dt);
+        events.extend(g.events.drain(..).map(|(s, ms)| (g.t, s, ms)));
         if (f + 1) % 30 == 0 {
             let s = &samples[si];
             si += 1;
             if !s["save"].is_null() {
                 saves += 1;
                 compare_save(&mut rep, &s["save"], &g);
+                let m = &s["menus"];
+                for (what, rs) in [
+                    ("menu", g.menu_json()),
+                    ("angels", g.angels_json()),
+                    ("ascendInfo", g.ascend_info_json()),
+                    ("godInfo", g.god_info_json()),
+                    ("zenoInfo", g.zeno_info_json()),
+                    ("card", g.card_json()),
+                ] {
+                    deep(&mut hud, g.t, what, &m[what], &serde_json::from_str(&rs).unwrap());
+                }
+            }
+            if !s["hud"].is_null() {
+                let mut js = s["hud"].clone();
+                js["time"] = js["time"].as_f64().unwrap().floor().into();
+                deep(&mut hud, g.t, "hud", &js, &serde_json::from_str(&g.hud().to_json()).unwrap());
+            }
+            // the wish box while the dragon waits
+            match (s["offer"].is_null(), g.wish_offer()) {
+                (true, None) => hud.checked += 1,
+                (false, Some((_, rs))) => deep(&mut hud, g.t, "offer", &s["offer"], &serde_json::from_str(&rs).unwrap()),
+                (_, rs) => hud.bad.push(format!("t={:.0}s offer: js {} rust {:?}", g.t, s["offer"], rs)),
+            }
+            if !s["shop"].is_null() {
+                let rs: Value = serde_json::from_str(&g.shop_json()).unwrap();
+                let keys = |v: &Value| v.as_object().unwrap().keys().cloned().collect::<Vec<_>>();
+                hud.checked += 1;
+                if keys(&s["shop"]) != keys(&rs) && hud.bad.len() < 25 {
+                    hud.bad.push(format!("t={:.0}s shop rows: js {:?} rust {:?}", g.t, keys(&s["shop"]), keys(&rs)));
+                }
+                deep(&mut hud, g.t, "shop", &s["shop"], &rs);
             }
             let n = |k: &str| s[k].as_f64().unwrap();
             let st = n("t");
@@ -165,6 +200,19 @@ fn scenario(name: &str) {
         }
     }
     assert_eq!(si, samples.len());
+    // every toast, in order, with its time and how long it stays up
+    let jev = tr["events"].as_array().unwrap();
+    for (i, (je, re)) in jev.iter().zip(&events).enumerate() {
+        hud.checked += 1;
+        let (jt, js, jms) = (je[0].as_f64().unwrap(), je[1].as_str().unwrap(), je[2].as_f64().unwrap());
+        if ((jt - re.0).abs() > 0.006 || js != re.1 || jms != re.2) && hud.bad.len() < 25 {
+            hud.bad.push(format!("event {i}: js {jt} {js:?} {jms}ms, rust {:.2} {:?} {}ms", re.0, re.1, re.2));
+        }
+    }
+    hud.checked += 1;
+    if jev.len() != events.len() && hud.bad.len() < 25 {
+        hud.bad.push(format!("{} toasts in js, {} in rust", jev.len(), events.len()));
+    }
     // what game.js last wrote to localStorage carries the same daily bonus date
     let stored = serde_json::from_str::<Value>(tr["stored"].as_str().unwrap()).unwrap();
     assert_eq!(stored["daily"].as_str(), g.s.daily.as_deref(), "the stored daily date");
@@ -179,7 +227,40 @@ fn scenario(name: &str) {
     for l in &rep.loose {
         eprintln!("  inexact {l}");
     }
+    eprintln!("{name} hud: {} values compared (snapshot, shop, menus, toasts), {} mismatches, {} inexact", hud.checked, hud.bad.len(), hud.inexact);
     assert!(rep.bad.is_empty(), "{name} diverged:\n{}", rep.bad.join("\n"));
+    assert!(hud.bad.is_empty(), "{name}: the HUD differs:\n{}", hud.bad.join("\n"));
+}
+
+/// A JSON value from game.js against planet-core's: every key game.js has, numbers within tolerance, the rest exact.
+fn deep(rep: &mut Report, t: f64, path: &str, js: &Value, rs: &Value) {
+    match (js, rs) {
+        (Value::Object(a), Value::Object(b)) => {
+            for (k, v) in a {
+                match b.get(k) {
+                    Some(r) => deep(rep, t, &format!("{path}.{k}"), v, r),
+                    None => {
+                        rep.checked += 1;
+                        if rep.bad.len() < 25 {
+                            rep.bad.push(format!("t={t:.0}s {path}.{k}: js {v}, missing in rust"));
+                        }
+                    }
+                }
+            }
+        }
+        (Value::Array(a), Value::Array(b)) if a.len() == b.len() => {
+            for (i, (v, r)) in a.iter().zip(b).enumerate() {
+                deep(rep, t, &format!("{path}[{i}]"), v, r);
+            }
+        }
+        (Value::Number(a), Value::Number(b)) => rep.num(t, path, a.as_f64().unwrap(), b.as_f64().unwrap(), false),
+        _ => {
+            rep.checked += 1;
+            if js != rs && rep.bad.len() < 25 {
+                rep.bad.push(format!("t={t:.0}s {path}: js {js} rust {rs}"));
+            }
+        }
+    }
 }
 
 /// The save JSON against game.js's `JSON.stringify(S)`: every key game.js has must match; keys game.js hasn't created

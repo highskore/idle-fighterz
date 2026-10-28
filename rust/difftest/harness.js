@@ -19,7 +19,7 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = 
   }
   const M = Object.create(Math); M.random = rnd
   const noop = () => {}, handlers = {}, win = {}, events = [], pending = [], errors = []
-  let wish = null
+  let wish = null, update = null, shop = null
   const rect = () => ({ left: 0, top: 0, width: W, height: H })
   const ctx2d = { createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: noop }
   const cv = { width: 0, height: 0, style: {}, addEventListener: (k, f) => { handlers[k] = f }, setPointerCapture: noop, releasePointerCapture: noop, getBoundingClientRect: rect, getContext: () => ctx2d }
@@ -39,7 +39,8 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = 
   src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) { if (bang && !(S.world === 3 && snk) && Math.min(1, (t - bang.t0) / bang.dur) >= 1) { explode(bang.x1, bang.y1); bang = null; } return; } st.clear(); zb.fill(-1e9); ib.fill(0);')
   ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
-  const ui = new Proxy({}, { get: (_, k) => k === 'event' ? (s => events.push([T, s])) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
+  // what the HUD gets: toasts with their time and duration, and the last ui.update / ui.shop arguments
+  const ui = new Proxy({}, { get: (_, k) => k === 'event' ? ((s, ms = 2600) => events.push([T, s, ms])) : k === 'update' ? (u => { update = u }) : k === 'shop' ? (s => { shop = s }) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
   const st = ctx.__makeStage({ querySelector: () => el }); st.resize()
   const game = ctx.__G.find(g => g.id === 'planet').mount(st, ui); game.start()
   const ev = s => ctx.__ev(s)
@@ -52,6 +53,6 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = 
     down: (x, y) => ptr('pointerdown', x, y), move: (x, y) => ptr('pointermove', x, y), up: (x, y) => ptr('pointerup', x, y), cancel: () => handlers.pointercancel({}),
     key: k => win.keydown({ key: k, repeat: false, target: { closest: () => null, blur: noop }, preventDefault: noop }),
   }
-  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), input, store, today: new FakeDate().toDateString(), events, errors, sites, get draws() { return draws }, get T() { return T } }
+  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), input, store, get update() { return update }, get shop() { return shop }, today: new FakeDate().toDateString(), events, errors, sites, get draws() { return draws }, get T() { return T } }
 }
 module.exports = mount

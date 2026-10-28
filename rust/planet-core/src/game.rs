@@ -3,7 +3,7 @@
 
 use crate::data::*;
 use crate::geom::{Cam, Frame};
-use crate::hud::Cue;
+use crate::hud::{Cue, Hud};
 use crate::input::Input;
 use crate::num::js_round;
 use crate::rng::Lcg;
@@ -80,6 +80,8 @@ pub struct Game {
     pub inp: Input,
     /// sounds and title effects (`ui.sfx`, `ui.fx`, ...), oldest first; the HUD bridge drains them
     pub cues: Vec<Cue>,
+    /// the HUD as game.js hands it to `ui.update`, rebuilt at that point of every frame while playing
+    pub hud: Hud,
     /// the wall clock at t = 0, in ms (achievements are stamped with it); the host sets it
     pub epoch_ms: f64,
     /// how high the hero is drawn off the road and whether he faces left: the renderer sets these
@@ -116,6 +118,7 @@ impl Game {
             tl: Tl::default(),
             inp: Input::default(),
             cues: Vec::new(),
+            hud: Hud::default(),
             epoch_ms: 0.0,
             lift_now: 0.0,
             flip_now: false,
@@ -341,7 +344,7 @@ impl Game {
     }
 
     /// `ach(id)`: an achievement, once, stamped with the wall clock; its toast follows 0.9s later.
-    pub(crate) fn ach(&mut self, id: &'static str) {
+    pub(crate) fn ach(&mut self, id: &str) {
         if !self.playing || self.s.ach.contains(id) {
             return;
         }
@@ -446,9 +449,11 @@ impl Game {
                 self.s.form_top_name = self.forms[f].name;
             }
         }
+        self.cue(Cue::Sfx("form"));
         let f = &self.forms[self.s.form];
         let msg = format!("{}!  ×{}{}", f.name, f.x, if preview { " — a taste, for 60s" } else { "" });
         self.event(msg);
+        self.cue(Cue::Form(self.s.form));
         self.rng.skip(RNG_TRANSFORM);
     }
 
@@ -489,9 +494,11 @@ impl Game {
             * (1.0 + 0.5 * self.lvl(N_FIST))
             * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
         self.gain(n);
+        self.cue(Cue::Sfx("tap"));
         if crit {
             self.rng.skip(RNG_CRIT);
         }
+        self.cue(Cue::Bump);
     }
 
     /// Buys a shop item by its game.js key; false if it can't be afforded.
@@ -523,10 +530,32 @@ impl Game {
                 }
                 self.s.pl -= c;
                 self.s.levels[u as usize] += 1;
+                self.cue(Cue::Fx("buy"));
                 for (n, id) in [(10, "tail10"), (25, "tail25"), (50, "tail50")] {
                     if self.s.lv(Upg::Tail) >= n {
                         self.ach(id);
                     }
+                }
+                let first = self.s.lv(u) == 1;
+                let note = match u {
+                    Upg::Partner if first => "bubbles wants to train with you",
+                    Upg::Galick if first => {
+                        if self.kame() {
+                            "hold anywhere to charge a kamehameha"
+                        } else {
+                            "hold anywhere to charge a galick gun"
+                        }
+                    }
+                    Upg::House => "a new capsule house lands",
+                    Upg::Piccolo if first => "piccolo lands to meditate",
+                    Upg::Chamber if first => "the time chamber door will appear — tap it",
+                    Upg::Kaio if first => "kaioken unlocked — hit the red button",
+                    Upg::Bigbang if first => "big bang attack — double-tap anywhere",
+                    Upg::Armor if first => "saiyan armor on — hit villains harder",
+                    _ => "",
+                };
+                if !note.is_empty() {
+                    self.event(note);
                 }
                 true
             }
@@ -596,13 +625,14 @@ impl Game {
         }
         self.s.form = if self.ang(A_GOLDEN) { 1 } else { 0 };
         self.tl.preview = None;
+        self.cue(Cue::Form(self.s.form));
         let msg = format!(
             "ascended — +{gain} ki seed{} (×{} on everything), back to {}",
             if gain > 1.0 { "s" } else { "" },
             crate::num::to_fixed(self.seed_boost(), 1),
             self.forms[self.s.form].name
         );
-        self.event(msg);
+        self.event_ms(msg, 4500.0);
     }
 
     /// God ki: seeds, the tree, forms and universes go; wishes, sagas and mastery stars stay.
@@ -634,6 +664,13 @@ impl Game {
             b.fled = true;
             b.t1 = self.t;
         }
+        self.cue(Cue::Form(self.s.form));
+        let boost = crate::num::fmt_short(Self::god_boost_of(self.s.god_total as f64));
+        self.event_ms(format!("whis: \"ohoho, not bad.\" — +{g} god ki (×{boost} on everything). back to universe 9: spend god ki in menu → angels"), 5000.0);
+        self.cue(Cue::Fx("super"));
+        if self.zeno_ready() {
+            self.after(5.2, crate::timeline::Later::Event("something tiny and very powerful is watching…".into(), 3500.0));
+        }
     }
 
     /// The zeno button: everything but his favour (and achievements) is erased.
@@ -641,6 +678,7 @@ impl Game {
         if !self.zeno_ready() {
             return;
         }
+        let erased = self.tl.boss.as_ref().filter(|b| !b.dead).map(|b| b.name.clone());
         if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead) {
             b.dead = true;
             b.fled = true;
@@ -665,6 +703,18 @@ impl Game {
             self.tl.namek_until = 0.0;
         }
         self.shake = 1.0;
+        self.cue(Cue::Form(self.s.form));
+        self.cue(Cue::Fx("super"));
+        self.cue(Cue::Sfx("boom"));
+        let favour = crate::num::fmt_short(ZENO_X.powf(self.s.zeno as f64));
+        self.event_ms(
+            match erased {
+                Some(v) => format!("zeno: \"{v}? he's no fun.\" — {v} is erased. then so is everything else. zeno's favour ×{favour}"),
+                None => format!("zeno: \"friend! let's play again!\" — the whole universe is erased. zeno's favour ×{favour}"),
+            },
+            6000.0,
+        );
+        self.after(6.2, crate::timeline::Later::Event("villains line up to meet zeno's friend — the sagas come 4× as often".into(), 4000.0));
     }
 
     // ── the fixed step
@@ -702,6 +752,7 @@ impl Game {
                     self.ach("laps100");
                 }
                 self.goal("laps", 1.0, false);
+                self.cue(Cue::Fx("lap"));
                 let n = self.lap_value()
                     * 4.0
                     * self.mult(false)
@@ -762,6 +813,9 @@ impl Game {
             if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0) {
                 self.s.mastery += 1;
                 self.ach("mastery");
+                let next = crate::num::fmt_short(self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0));
+                self.event_ms(format!("mastery star {} — ×{MASTERY_X} on everything, kept through god ki. next at {next}", self.s.mastery), 3500.0);
+                self.cue(Cue::Fx("star"));
             }
             if self.ang(A_AUTO)
                 && self.s.auto_at > 0
@@ -777,6 +831,7 @@ impl Game {
                 self.combo = 1.0;
             }
             self.timeline_moon(t, dt);
+            self.hud = self.hud_now();
         }
         self.shen_step(t);
         self.bang_step(t);
