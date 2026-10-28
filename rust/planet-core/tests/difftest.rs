@@ -141,7 +141,7 @@ fn scenario(name: &str) {
                 (_, rs) => hud.bad.push(format!("t={:.0}s offer: js {} rust {:?}", g.t, s["offer"], rs)),
             }
             if !s["shop"].is_null() {
-                let rs: Value = serde_json::from_str(&g.shop_json()).unwrap();
+                let rs: Value = serde_json::from_str(&g.shop_at_hud).unwrap();
                 let keys = |v: &Value| v.as_object().unwrap().keys().cloned().collect::<Vec<_>>();
                 hud.checked += 1;
                 if keys(&s["shop"]) != keys(&rs) && hud.bad.len() < 25 {

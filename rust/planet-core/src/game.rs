@@ -82,11 +82,15 @@ pub struct Game {
     pub cues: Vec<Cue>,
     /// the HUD as game.js hands it to `ui.update`, rebuilt at that point of every frame while playing
     pub hud: Hud,
+    /// the shop as game.js hands it to `ui.shop` right after (`shop_json` is the shop as it stands)
+    pub shop_at_hud: String,
     /// the wall clock at t = 0, in ms (achievements are stamped with it); the host sets it
     pub epoch_ms: f64,
     /// how high the hero is drawn off the road and whether he faces left: the renderer sets these
     pub lift_now: f64,
     pub flip_now: bool,
+    /// whether the hero was in view the last time he was drawn (a full beam charge makes the screen tremble then)
+    pub hero_seen: bool,
 }
 
 impl Game {
@@ -119,9 +123,11 @@ impl Game {
             inp: Input::default(),
             cues: Vec::new(),
             hud: Hud::default(),
+            shop_at_hud: String::new(),
             epoch_ms: 0.0,
             lift_now: 0.0,
             flip_now: false,
+            hero_seen: false,
         }
     }
 
@@ -832,9 +838,10 @@ impl Game {
             }
             self.timeline_moon(t, dt);
             self.hud = self.hud_now();
+            self.shop_at_hud = self.shop_json();
         }
         self.shen_step(t);
-        self.bang_step(t);
+        self.draw_step(t, dt);
         self.run_later();
     }
 
@@ -871,5 +878,13 @@ impl Game {
                 }
             }
         }
+    }
+}
+
+impl Game {
+    /// `layout()` for a new canvas: `w`×`h` buffer pixels at `scale` CSS pixels each.
+    pub fn resize(&mut self, w: f64, h: f64, scale: f64) {
+        (self.cam.w, self.cam.h, self.cam.scale) = (w, h, scale);
+        self.cam.layout(self.s.world);
     }
 }

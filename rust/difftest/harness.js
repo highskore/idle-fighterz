@@ -35,8 +35,11 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null } = 
   ctx.window = ctx; vm.createContext(ctx)
   let src = ['world.js', 'shenron.js', 'game.js'].map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n')
   src = patch(src, '    return { menu, learn, respec,', '    globalThis.__ev = s => eval(s);\n    return { menu, learn, respec,')
-  // headless, the frame stops before drawing; the big bang still lands, as it does while its ball is drawn (snake way draws the road instead)
-  src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) { if (bang && !(S.world === 3 && snk) && Math.min(1, (t - bang.t0) / bang.dur) >= 1) { explode(bang.x1, bang.y1); bang = null; } return; } st.clear(); zb.fill(-1e9); ib.fill(0);')
+  // headless, the frame stops before drawing; what game.js does to the game while drawing still happens (snake way draws
+  // the road instead, so none of it there): the big bang lands, a great ape's stomp shakes the screen (so does a full beam
+  // charge, if the hero is in view: never, headless), the capsule falls and opens itself after 8s. planet-core runs the
+  // same after the frame (Game::draw_step)
+  src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'if (globalThis.__skip) { let __stomp, __heroSeen = false; if (!(S.world === 3 && snk)) { if (bang && Math.min(1, (t - bang.t0) / bang.dur) >= 1) { explode(bang.x1, bang.y1); bang = null; } if (apeUntil > t && Math.floor(t * 3.2) !== apeStep) { apeStep = Math.floor(t * 3.2); shake = Math.max(shake, .35); __stomp = true; } if (charging >= 2.4 && __heroSeen) shake = Math.max(shake, .06); if (capsule) { const c = capsule; if (c.y < c.land) { c.vy += 160 * dt; c.y = Math.min(c.land, c.y + c.vy * dt); } else c.y = c.land + Math.sin((t - c.t0) * 4) * 1.5; if (t - c.t0 > 8) openCapsule(); } } return; } st.clear(); zb.fill(-1e9); ib.fill(0);')
   ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
   // what the HUD gets: toasts with their time and duration, and the last ui.update / ui.shop arguments

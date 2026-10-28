@@ -796,6 +796,7 @@ impl Game {
         // the space pod
         if session > 12.0 && self.tl.star.is_none() && tick(&mut self.tl.next_star, dt) {
             self.once("stars", "a saiyan space pod — tap it");
+            self.cue(crate::hud::Cue::Notify("pod", String::new()));
             let y = if w / h < 0.8 { self.cam.cy - self.cam.r * (1.12 + self.r() * 0.16) } else { h * (0.08 + self.r() * 0.2) };
             self.tl.star = Some(Star { x: -8.0, y, vx: w / 6.0 });
             self.tl.next_star = (18.0 + self.r() * 14.0) * (1.0 - 0.12 * self.lvl(N_PODS));
@@ -1465,7 +1466,9 @@ impl Game {
             let twin = vname == "goku black" && self.s.hero == Hero::Goku;
             let mut b = Boss::new(0, if me { "past vegeta".into() } else { vname.into() }, spr, hp, t, t + 40.0);
             b.saga = true;
+            let name = b.name.clone();
             self.new_boss(b);
+            self.cue(crate::hud::Cue::Notify("raid", name));
             let what = if me {
                 "your younger self shows up, scouter and all — \"that's MY hair!\" tap him".to_string()
             } else if twin {
@@ -2007,7 +2010,7 @@ impl Game {
         }
     }
 
-    fn open_capsule(&mut self) {
+    pub(crate) fn open_capsule(&mut self) {
         self.tl.capsule = None;
         let roll = self.r();
         self.burst(22);
@@ -2067,6 +2070,9 @@ impl Game {
         self.shake = 0.5;
         self.burst(40);
         self.event_ms(TRAVEL[w as usize], if w >= 3 { 6000.0 } else { 2600.0 });
+        if w != 0 {
+            self.cue(crate::hud::Cue::Notify("trip", crate::hud::WORLD_FULL[w as usize].into()));
+        }
         if let Some(&(_, a)) = WORLD_ACH.iter().find(|x| x.0 == w) {
             self.ach(a);
         }
@@ -2295,6 +2301,7 @@ impl Game {
         });
         self.ach(if porunga { "porunga" } else { "shenron" });
         self.cue(crate::hud::Cue::Sfx("dragon"));
+        self.cue(crate::hud::Cue::Notify("shenron", if porunga { "porunga" } else { "shenron" }.into()));
         self.event(if porunga { "porunga awakens — three wishes…" } else { "the eternal dragon awakens…" });
     }
 
@@ -2938,7 +2945,9 @@ impl Game {
         }
         if let Some((x, y)) = self.tl.zen.as_ref().and_then(|z| z.sx) {
             if hypot(&[px - x, py - (y - 9.0)]) < 13.0 {
+                self.cue(crate::hud::Cue::Sfx("coin"));
                 self.event("zeno: \"want to push my button? it's fun!\"");
+                self.cue(crate::hud::Cue::Zeno);
                 return;
             }
         }

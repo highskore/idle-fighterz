@@ -74,6 +74,8 @@ pub struct Input {
     /// the last tap's time and spot, for double-tap detection (`t` is -9 once a pair has fired)
     pub last_tap: (f64, f64, f64),
     pub blasts: Vec<Blast>,
+    /// the great ape's step (`floor(t·3.2)`): each new one stomps
+    pub ape_step: f64,
 }
 
 impl Default for Input {
@@ -89,6 +91,7 @@ impl Default for Input {
             bang_ready: 0.0,
             last_tap: (-9.0, 0.0, 0.0),
             blasts: Vec::new(),
+            ape_step: 0.0,
         }
     }
 }
@@ -310,9 +313,12 @@ impl Game {
         self.inp.bang = Some(Bang { x0: hx, y0: hy, x1: x, y1: y, t0: self.t, dur: 0.38 });
     }
 
-    /// The big bang lands. game.js does this while drawing the ball, after the frame's logic; so does this, every
-    /// frame but on snake way (where game.js draws the road instead and the ball waits).
-    pub(crate) fn bang_step(&mut self, t: f64) {
+    /// What game.js does to the game while it draws, after the frame's logic: the big bang lands, a great ape's
+    /// stomp shakes the screen (and a full beam charge, while the renderer sees the hero), the capsule a boss drops
+    /// falls and opens itself after 8s. None of it on snake way, where
+    /// game.js draws the road instead. `dt` is the frame's (time-chamber) step.
+    pub(crate) fn draw_step(&mut self, t: f64, dt: f64) {
+        self.inp.blasts.retain(|b| (t - b.t0) / 0.45 <= 1.0);
         if self.s.world == 3 && self.tl.snk.is_some() {
             return;
         }
@@ -322,7 +328,24 @@ impl Game {
                 self.inp.bang = None;
             }
         }
-        self.inp.blasts.retain(|b| (t - b.t0) / 0.45 <= 1.0);
+        if self.b.ape_until > t && (t * 3.2).floor() != self.inp.ape_step {
+            self.inp.ape_step = (t * 3.2).floor();
+            self.shake = self.shake.max(0.35);
+        }
+        if self.inp.charging >= 2.4 && self.hero_seen {
+            self.shake = self.shake.max(0.06);
+        }
+        if let Some(c) = self.tl.capsule.as_mut() {
+            if c.y < c.land {
+                c.vy += 160.0 * dt;
+                c.y = c.land.min(c.y + c.vy * dt);
+            } else {
+                c.y = c.land + crate::jsmath::sin((t - c.t0) * 4.0) * 1.5;
+            }
+            if t - c.t0 > 8.0 {
+                self.open_capsule();
+            }
+        }
     }
 
     /// `explode(x, y)`: a blast that pays a bit more than a full beam, plus whatever it hits.

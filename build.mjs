@@ -2,21 +2,26 @@
 // Run: node build.mjs (highskore.com copies the result to its public/planet.html).
 // With --widget it builds the desktop widget's page instead, into dist/index.html under the directory it runs from
 // (the root of highskore/powerrr, which has this repo as its game/ submodule)
+// With --rust the planet runs on the Rust core (rust/planet-web, built first with sh rust/planet-web/build.sh) behind the
+// same HTML HUD; game.js stays in the page only to draw, in lockstep, until the Rust renderer lands (rust/HUD.md)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { rustPlanet } from './rust/planet-web/assemble.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const read = f => readFileSync(join(here, f), 'utf8')
 
 const widget = process.argv.includes('--widget')
+const rust = process.argv.includes('--rust')
+if (rust && widget) throw new Error('--rust builds the site page; the widget gets the Rust core natively (stage 5)')
 // widget-only code is fenced by /*widget*/…/*/widget*/: the site build drops it whole, so its output is unchanged
 const fence = s => s.replace(/\/\*widget\*\/([\s\S]*?)\/\*\/widget\*\//g, widget ? '$1' : '')
 
 let page = fence(read('page.html'))
   .replace('__BAGEL__', () => read('bagel.typeface.json'))
   .replace('__WORLD__', () => fence(read('world.js')).replace('__PX__', () => readFileSync(join(here, 'wasm', 'px.wasm')).toString('base64')))
-  .replace('__PLANET__', () => read('shenron.js') + fence(read('game.js')))
+  .replace('__PLANET__', () => rust ? rustPlanet(read, fence) : read('shenron.js') + fence(read('game.js')))
 if (widget) page = widgetPage(page)
 const split = page.indexOf('</style>') + '</style>'.length
 
@@ -57,7 +62,7 @@ if (widget) {
 } else {
   mkdirSync(join(here, 'dist'), { recursive: true })
   writeFileSync(join(here, 'dist', 'planet.html'), head + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
-  console.log('dist/planet.html written')
+  console.log(rust ? 'dist/planet.html written (the Rust core)' : 'dist/planet.html written')
 }
 
 // the widget runs offline: no CDN three.js (only the title used it, and the widget has no title), and the

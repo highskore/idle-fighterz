@@ -28,6 +28,8 @@ pub enum Cue {
     TreeGift(String),
     /// `ui.wishDone()`: the dragon chose (or left) without the player; the page closes the wish box
     WishDone,
+    /// `ui.notify(kind, arg)`: the widget's desktop notifications (a pod, a trip, a raid, the dragon); the site has none
+    Notify(&'static str, String),
 }
 
 impl Cue {
@@ -42,6 +44,7 @@ impl Cue {
             Cue::Zeno => "[\"zeno\"]".into(),
             Cue::TreeGift(s) => arr(["\"treeGift\"".into(), json::str(s)]),
             Cue::WishDone => "[\"wishDone\"]".into(),
+            Cue::Notify(k, a) => arr(["\"notify\"".into(), json::str(k), json::str(a)]),
         }
     }
 }
@@ -76,6 +79,10 @@ pub struct Hud {
     pub busy: bool,
     pub night: bool,
     pub world: u32,
+    /// the dragon is up (game.js puts `shen` on the body)
+    pub shen: bool,
+    /// a movie that recolours the world: "jelly", "earth" or "" (game.js's body classes)
+    pub look: &'static str,
 }
 
 impl Hud {
@@ -100,6 +107,8 @@ impl Hud {
             .bool("busy", self.busy)
             .bool("night", self.night)
             .num("world", self.world as f64)
+            .bool("shen", self.shen)
+            .str("look", self.look)
             .end()
     }
 }
@@ -404,6 +413,16 @@ impl Game {
             busy: s.world == 3 || self.boss_up() || tl.ginyu.as_ref().is_some_and(|g| g.done == 0.0) || tl.moon.is_some() || tl.storm.is_some(),
             night: tl.moon.as_ref().is_some_and(|m| !m.leaving) || self.b.ape_until > t,
             world: s.world,
+            shen: tl.shen.is_some(),
+            look: tl.movie.as_ref().map_or("", |m| {
+                if m.o.jelly {
+                    "jelly"
+                } else if m.o.earth {
+                    "earth"
+                } else {
+                    ""
+                }
+            }),
         }
     }
 
