@@ -57,6 +57,31 @@ const SCENARIOS = {
       if (f % 30 === 0) buyAll(g, act)
     },
   },
+  // pointer attacks (see attack()) at whatever is up (a villain, the ginyu force), with and without kaioken and the great ape;
+  // kaioken and the moon wait for a target, so the buffs land on villains
+  attacks: {
+    seed: 3, minutes: 14,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 4e5], ['best', 4e5], ['partner', 30], ['house', 15], ['piccolo', 5], ['boots', 4], ['scouter', 3], ['kaio', 3], ['galick', 5], ['bigbang', 1], ['zeno', 1], ['world', 2]]) act({ a: 'set', k, v })
+      const p = g.ev(`boss && !boss.dead ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : ginyu && !ginyu.done ? (m => m && [m.x, m.y - m.spr.h / 2 * m.k])(ginyu.members.find(m => !m.dead)) : null`)
+      if (f % 6 === 0 && f % 600 < 300) act({ a: 'train' })
+      if (f % 3 === 0 && (p || !g.ev('!!moon'))) clickTargets(g, act)
+      if (f % 30 === 0 && p && g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' })
+      attack(g, act, f, ...(p || [300, 60]))
+    },
+  },
+  // the same against the multiverse's walls, where a buff adds at most a quarter of a wall a hit
+  walls: {
+    seed: 17, minutes: 8,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 5e20], ['best', 5e20], ['gravity', 60], ['wishes', 12], ['ascend', 400], ['seeds', 30], ['multi', 1], ['multiT', 0], ['world', 9], ['uniBest', 2], ['ustars', 3], ['godTotal', 2], ['zeno', 1], ['house', 40], ['partner', 60], ['piccolo', 25], ['boots', 70], ['scouter', 4], ['kaio', 8], ['galick', 20], ['bigbang', 3]]) act({ a: 'set', k, v })
+      const p = g.ev('boss && !boss.dead ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : null')
+      if (f % 5 === 0 && f % 600 < 300) act({ a: 'train' })
+      if (f % 3 === 0 && (p || !g.ev('!!moon'))) clickTargets(g, act)
+      if (f % 30 === 0 && p && g.ev('st.t >= kaioReady')) act({ a: 'kaio' })
+      attack(g, act, f, ...(p || [300, 60]))
+    },
+  },
   // the pointer and the keyboard: drags that spin the planet and coast, held presses that charge and fire beams (full ones
   // at beam lv 5 are final flashes), double taps that throw big bangs, single taps, cancels, and space to train; aimed at
   // whatever is up (bosses, the ginyu force and the androids sit at (0, 0) headless, where game.js leaves them undrawn)
@@ -155,6 +180,14 @@ function clickTargets(g, act) {
 function target(g) {
   return g.ev(`boss && !boss.dead ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : ginyu && !ginyu.done ? (m => [m.x, m.y - m.spr.h / 2 * m.k])(ginyu.members.find(m => !m.dead))
     : star ? [star.x, star.y] : meteors.find(m => !m.dead && m.delay <= 0) ? (m => [m.x, m.y])(meteors.find(m => !m.dead && m.delay <= 0)) : [150, 30]`)
+}
+
+// every ten seconds at (x, y) buffer pixels: four short beams, a full one and two big bangs (double taps)
+function attack(g, act, f, x, y) {
+  const p = f % 300, at = a => press(g, act, a, x * 3, y * 3)
+  if ([0, 60, 100, 200, 240].includes(p)) at('down')
+  if ([18, 78, 190, 218, 258].includes(p)) at('up')
+  if (p === 40 || p === 43 || p === 270 || p === 273) { at('down'); at('up') }
 }
 
 // a pointer event at (x, y) CSS pixels; the trace carries the buffer pixels st.toBuf maps it to, so the replay needn't know the canvas

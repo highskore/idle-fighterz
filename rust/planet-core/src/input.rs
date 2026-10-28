@@ -5,7 +5,7 @@
 
 use crate::data::{Upg, N_BEAM};
 use crate::game::Game;
-use crate::jsmath::{cos, hypot, sin};
+use crate::jsmath::{cos, hypot, log, sin};
 
 /// A press in progress (game.js's `drag`).
 #[derive(Clone, Copy, Debug)]
@@ -35,6 +35,9 @@ pub struct Beam {
     /// a full charge at beam lv 5: the final flash
     pub ff: bool,
     pub full: bool,
+    /// fired under kaioken (drawn red) or as the great ape (drawn 1.5× wider)
+    pub kaio: bool,
+    pub ape: bool,
 }
 
 /// The big bang ball in flight: it explodes at (x1, y1) after `dur` seconds.
@@ -53,8 +56,11 @@ pub struct Bang {
 pub struct Blast {
     pub x: f64,
     pub y: f64,
+    /// drawn 1.6× wider under the great ape (its hit radius doesn't change)
     pub r: f64,
     pub t0: f64,
+    /// under kaioken: drawn red
+    pub kaio: bool,
 }
 
 /// The input state game.js keeps in `mount()`'s closure.
@@ -210,7 +216,23 @@ impl Game {
 
     /// A full charge, in seconds of rate: levels add a little, never compound.
     pub fn beam_pay(&self) -> f64 {
-        self.wrate() * 4.0 * (1.0 + 0.25 * 1f64.max(self.s.lvf(Upg::Galick)).ln()) * (1.0 + 0.25 * self.lvl(N_BEAM))
+        self.wrate() * 4.0 * (1.0 + 0.25 * log(1f64.max(self.s.lvf(Upg::Galick)))) * (1.0 + 0.25 * self.lvl(N_BEAM))
+    }
+
+    /// Kaioken times the great ape, on beam and big bang damage (never on what they pay).
+    pub fn atk_buff(&self) -> f64 {
+        let t = self.t;
+        (if self.b.kaio_until > t { self.kaio_x() } else { 1.0 }) * (if self.b.ape_until > t { 1.0 + self.ape_x() } else { 1.0 })
+    }
+
+    /// On a universe's wall a buff adds at most up to a quarter of it a hit, like a spirit bomb.
+    fn wall_cap(&self, d: f64, bare: f64) -> f64 {
+        let b = self.tl.boss.as_ref().unwrap();
+        if b.uni {
+            bare.max(d.min(b.max * 0.25 / (1.0 + 0.5 * self.s.lvf(Upg::Armor))))
+        } else {
+            d
+        }
     }
 
     /// `fireBeam(c, tx, ty)`: a beam of charge `c` toward (tx, ty) hits whatever is on its line, and pays.
@@ -244,7 +266,19 @@ impl Game {
             dl = 1.0;
         }
         let dir = [dx / dl, dy / dl];
-        self.inp.beam = Some(Beam { t0: t, c, x: kx, y: ky, dx: dir[0], dy: dir[1], z: kd.v[2] * (self.cam.r + 12.0), ff: false, full: false });
+        self.inp.beam = Some(Beam {
+            t0: t,
+            c,
+            x: kx,
+            y: ky,
+            dx: dir[0],
+            dy: dir[1],
+            z: kd.v[2] * (self.cam.r + 12.0),
+            ff: false,
+            full: false,
+            kaio: self.b.kaio_until > t,
+            ape: self.b.ape_until > t,
+        });
         self.cue(crate::hud::Cue::Sfx("beam"));
         self.shake = self.shake.max(0.2 + c * 0.15);
         if let Some(s) = self.tl.star.as_ref() {
@@ -266,6 +300,7 @@ impl Game {
             self.ach("flash");
         }
         let pts = self.beam_pay() * c / 2.5 * if ff { 1.25 } else { 1.0 };
+        let dmg = pts * self.atk_buff();
         let galick = self.s.lvf(Upg::Galick);
         let on_line = |x: f64, y: f64, w: f64| {
             let (rx, ry) = (x - kx, y - ky);
@@ -281,7 +316,7 @@ impl Game {
             for mi in 0..self.tl.ginyu.as_ref().unwrap().members.len() {
                 let m = &self.tl.ginyu.as_ref().unwrap().members[mi];
                 if !m.dead && on_line(m.x, m.y - m.spr.h / 2.0 * m.k, m.spr.w / 2.0 * m.k) {
-                    self.ginyu_hit(mi, pts * 2.0);
+                    self.ginyu_hit(mi, dmg * 2.0);
                 }
             }
         }
@@ -292,14 +327,15 @@ impl Game {
             for i in 0..self.tl.movie.as_ref().unwrap().minions.len() {
                 let h = &self.tl.movie.as_ref().unwrap().minions[i];
                 if !h.dead && h.x.is_some_and(|x| on_line(x, h.y - h.spr.h / 2.0 * h.k, h.spr.w / 2.0 * h.k)) {
-                    self.movie_hit(i, pts * 2.0);
+                    self.movie_hit(i, dmg * 2.0);
                 }
             }
         }
         if let Some(b) = self.tl.boss.as_ref().filter(|b| !b.dead) {
             let s = b.spr();
             if on_line(b.x, b.y - s.h / 2.0 * b.k, s.w / 2.0 * b.k) {
-                self.hit_boss(pts * 4.0);
+                let d = self.wall_cap(dmg * 4.0, pts * 4.0);
+                self.hit_boss(d);
             }
         }
         self.gain(pts);
@@ -369,7 +405,7 @@ impl Game {
         self.cue(crate::hud::Cue::Sfx("boom"));
         let bb = self.s.lvf(Upg::Bigbang);
         let r = 18.0 * (1.0 + 0.25 * (bb - 1.0)) * 1f64.max(self.cam.r / 50.0);
-        self.inp.blasts.push(Blast { x, y, r, t0: self.t });
+        self.inp.blasts.push(Blast { x, y, r: r * if self.b.ape_until > self.t { 1.6 } else { 1.0 }, t0: self.t, kaio: self.b.kaio_until > self.t });
         self.shake = self.shake.max(0.45);
         let n = self.beam_pay() * (1.3 + 0.05 * bb.log2());
         self.gain(n);
@@ -388,7 +424,8 @@ impl Game {
                 self.gain(n);
             }
         }
-        let hit = |g: &Game| g.rate().max(g.lap_value() * g.mult(false));
+        // rate() already adds kaioken and the ape; the bare hit times atk_buff lets them stack as on a beam
+        let hit = |g: &Game| g.rate().max(g.lap_value() * g.mult(false)).max(g.wrate().max(g.lap_value() * g.mult(true)) * g.atk_buff());
         if self.tl.ginyu.as_ref().is_some_and(|g| g.done == 0.0) {
             for mi in 0..self.tl.ginyu.as_ref().unwrap().members.len() {
                 let m = &self.tl.ginyu.as_ref().unwrap().members[mi];
@@ -410,7 +447,7 @@ impl Game {
         if let Some(b) = self.tl.boss.as_ref().filter(|b| !b.dead) {
             let s = b.spr();
             if hypot(&[b.x - x, b.y - s.h / 2.0 * b.k - y]) < r + s.w / 2.0 * b.k {
-                let dmg = hit(self) * 12.0 * bb;
+                let dmg = self.wall_cap(hit(self) * 12.0 * bb, self.rate().max(self.lap_value() * self.mult(false)) * 12.0 * bb);
                 self.hit_boss(dmg);
             }
         }
