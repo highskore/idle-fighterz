@@ -102,6 +102,14 @@ const ACH = [
   ['snakeway', 'one million kilometres', 'run all of snake way'], ['hfil', 'home for infinite losers', 'send a lost soul back to HFIL'],
   ['pudding', 'pudding diplomacy', 'calm beerus with pudding'], ['androids', 'seventeen and eighteen', 'beat androids 17 and 18'], ['wallet', "krillin's wallet", 'take krillin\'s wallet while 18 visits'], ['gero', 'not my power', 'make dr. gero let go'], ['birds', 'gentle giant', "free one of 16's birds"], ['westcity', 'capsule corp', 'open a gadget capsule in west city'], ['sagas', 'the whole story', 'clear all 8 sagas'], ['satan', 'the champ', "take mr. satan's prize money"], ['roshi', 'max power', 'watch roshi go max power'], ['krillin', 'you monster', 'watch krillin die (again)'], ['coolerdown', 'cooler down', 'beat cooler and his armoured squadron'], ['unwarped', 'janemba unwarped', 'beat janemba, double and all'], ['sealed', 'bojack sealed', 'beat bojack and his gang'],
   ['mui', 'beyond instinct', "reach your hero's first form past ultra instinct"], ['universe', 'universe star', 'clear a universe'], ['multiverse', 'last one standing', 'clear universe 11 in the tournament of power'], ['mastery', 'beyond the forms', 'earn a mastery star'], ['godki', 'god ki', 'reset for god ki'], ['zeno', "zeno's friend", 'push the zeno button'],
+  ['u10', 'obuni goes quiet', 'clear universe 10'], ['u4', 'now you see me', 'clear universe 4'], ['u3', 'anilaza unplugged', 'clear universe 3'], ['u2', 'love lost', 'clear universe 2'], ['u6', 'kefla, split', 'clear universe 6'],
+  ['inf1', 'to infinity', 'clear universe ∞'], ['inf5', 'off the edge of the multiverse', 'clear universe ∞ 5'], ['inf10', 'the grand priest is impressed', 'clear universe ∞ 10'], ['whis', "whis's homework", 'learn a rule from the angels'],
+  ['f_mui', 'the body moves on its own', 'reach mastered ultra instinct'], ['f_ssbe', 'blue, evolved', 'reach super saiyan blue evolved'], ['f_beast', 'the beast awakens', 'reach beast'], ['f_tue', 'pride of the saiyans', 'reach true ultra ego'], ['f_rage', 'rage of the future', 'reach super saiyan rage'],
+  ['giantape', 'oozaru rampage', 'go giant great ape'], ['tail10', 'tail of steel', 'train your tail to lv 10'], ['tail25', 'king of the apes', 'train your tail to lv 25'], ['tail50', 'golden great ape', 'train your tail to lv 50'],
+  ['flight', 'bukujutsu', 'wish for the power of flight'], ['flash', 'final flash!', 'fire a fully charged beam at beam lv 5'], ['movies3', 'triple feature', 'beat cooler, janemba and bojack'],
+  ['namek', 'namekian holiday', 'visit namek'], ['kame', 'turtle school', 'visit kame house'], ['paozu', 'dinosaur country', 'visit mount paozu'], ['future', 'hope of the future', "visit trunks' future"],
+  ['lookout', "mr. popo's tiles", "visit kami's lookout"], ['kaiworld', 'sacred world of the kais', "visit the supreme kai's world"], ['yardrat', 'instant transmission', 'visit yardrat'],
+  ['streak', 'golden hop', 'hit a ×3 orb streak on snake way'], ['souls10', 'ghost buster', 'send 10 lost souls back to HFIL'],
 ].map(([id, name, text]) => ({ id, name, text }));
 /* great ape: the full-moon form, giant, armoured, red-eyed */
 const APE = (() => {
@@ -2793,7 +2801,7 @@ GAMES.push({
   id: 'planet',
   mount(st, ui) {
     const SAVE = 'hs-power';
-    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, piccolo: 0, chamber: 0, spirit: 0, world: 0, orbs7: 0, wishes: 0, granted: 0, ascend: 0, form: 0, seeds: 0, tree: {}, saga: 0, runBest: 0, uni: 0, uniStage: 0, multi: 0, multiT: 0, uniBest: 0, ustars: 0, mastery: 0, godki: 0, godTotal: 0, gods: 0, angel: {}, autoAt: 0, zeno: 0 };
+    const S = { pl: 0, best: 0, boots: 0, partner: 0, gravity: 0, cloud: 0, scouter: 0, galick: 0, senzu: 0, house: 0, armor: 0, kaio: 0, bigbang: 0, piccolo: 0, chamber: 0, spirit: 0, world: 0, orbs7: 0, wishes: 0, granted: 0, ascend: 0, form: 0, seeds: 0, tree: {}, saga: 0, runBest: 0, uni: 0, uniStage: 0, multi: 0, multiT: 0, uniBest: 0, ustars: 0, mastery: 0, godki: 0, godTotal: 0, gods: 0, angel: {}, autoAt: 0, zeno: 0, formTop: 0, formTopName: '', movies: 0, souls: 0 };
     // every visit starts from zero, achievements and heroes included; only the date of the last daily bonus carries over
     const KEEP = ['daily'];
     try { const saved = JSON.parse(localStorage.getItem(SAVE) || '{}'); for (const k of KEEP) if (k in saved) S[k] = saved[k]; } catch (_) {}
@@ -2822,6 +2830,7 @@ GAMES.push({
       { name: 'true ultra ego', aura: [0xd8c0ff, 0x7a3ad0, 0x2a0a5a], sparks: 0xc9a2ff },
       { name: 'super saiyan rage', aura: [0xffffff, 0xfff4b0, 0x6ab8f0], sparks: 0xd8f2ff },
     ].map((f, i) => ({ ...f, i }));   // i: the hero sprite set
+    const LATE_ACH = { 'mastered ultra instinct': 'f_mui', 'super saiyan blue evolved': 'f_ssbe', beast: 'f_beast', 'true ultra ego': 'f_tue', 'super saiyan rage': 'f_rage' };
     const UI_FORM = 8, MUI_FORM = 9, LATE_STEP = 1000, LATE = { vegeta: [10, 12], goku: [9], gohan: [11], trunks: [13] };
     // the first late form ×1000 past ultra instinct, every one after it (and every mastery star) ×1000 further
     const ladderOf = h => [...ALL_FORMS.slice(0, 9), ...(LATE[h] || LATE.vegeta).map((i, j) => ({ ...ALL_FORMS[i], at: 2e14 * LATE_STEP ** j, x: [24, 40][j] }))];
@@ -2986,12 +2995,13 @@ GAMES.push({
       ui.event(v ? `zeno: "${v}? he's no fun." — ${v} is erased. then so is everything else. zeno's favour ×${fmtShort(ZENO_X ** S.zeno)}` : `zeno: "friend! let's play again!" — the whole universe is erased. zeno's favour ×${fmtShort(ZENO_X ** S.zeno)}`, 6000);
       setTimeout(() => ui.event('villains line up to meet zeno\'s friend — the sagas come 4× as often', 4000), 6200); save(); syncShop();
     }
+    const tailAch = () => { for (const n of [10, 25, 50]) if (S.tail >= n) ach('tail' + n); };
     ui.onBuy(k => {
       const c = cost(k); if (S.pl < c) return;
       if (k === 'ascend') { ascend(); return; }
       if (k === 'godki') { godReset(); return; }
       if (k === 'zeno') { zenoErase(); return; }
-      S.pl -= c; S[k]++; ui.fx && ui.fx('buy');
+      S.pl -= c; S[k]++; ui.fx && ui.fx('buy'); tailAch();
       if (k === 'partner' && S.partner === 1) ui.event('bubbles wants to train with you');
       if (k === 'galick' && S.galick === 1) ui.event(`hold anywhere to charge a ${kame() ? 'kamehameha' : 'galick gun'}`);
       if (k === 'house') { scenery(); ui.event('a new capsule house lands'); }
@@ -3340,7 +3350,7 @@ GAMES.push({
       for (const m of meteors) if (!m.dead && m.delay <= 0 && Math.hypot(px - m.x, py - m.y) < 15) { m.dead = true; goal('meteor'); gain(25 * mult() * (1 + Math.min(laps, 50) * .1), m.x, m.y - 6, true); for (let k = 0; k < 16; k++) fx.add({ x: m.x, y: m.y, vx: (Math.random() - .5) * 110, vy: (Math.random() - .5) * 110, drag: 2.5, life: .6, c: [0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], raw: true }); return; }
       // anywhere else: train — a sprint burst and a few points
       if (moon && moon.a > .3 && !moon.leaving && Math.hypot(px - moon.x, py - moon.y) < moon.r + 6) {
-        ape = { cd: 0, rage: 0, giant: !!S.bigApe, at: st.t, k: 2.3 }; S.bigApe = 0; apeUntil = st.t + apeLen(); moon.leaving = true; ach('ape'); flashT = 1; shake = .8; ui.event(`${ape.giant ? 'a giant great ape' : 'great ape mode'} — ×${1 + apeX()}${ape.giant || S.tail ? ', tap to ' + (ape.giant ? 'stomp' : 'build rage') : ''}`); ui.fx && ui.fx('super');
+        ape = { cd: 0, rage: 0, giant: !!S.bigApe, at: st.t, k: 2.3 }; S.bigApe = 0; apeUntil = st.t + apeLen(); moon.leaving = true; ach('ape'); if (ape.giant) ach('giantape'); flashT = 1; shake = .8; ui.event(`${ape.giant ? 'a giant great ape' : 'great ape mode'} — ×${1 + apeX()}${ape.giant || S.tail ? ', tap to ' + (ape.giant ? 'stomp' : 'build rage') : ''}`); ui.fx && ui.fx('super');
         for (let k = 0; k < 80; k++) { const q = kidScreen(20); fx.add({ x: q.x, y: q.y, vx: (Math.random() - .5) * 220, vy: (Math.random() - .5) * 220, drag: 2, life: 1, c: [0xffffff, 0xffd0a0, 0x7a4a2a], raw: true }); }
         return;
       }
@@ -3382,7 +3392,7 @@ GAMES.push({
       beam = { t0: st.t, c, x: k.x, y: k.y, dx: dir[0], dy: dir[1], z: kidScreen().v[2] * (R + 12) }; ui.sfx && ui.sfx('beam'); shake = Math.max(shake, .2 + c * .15);
       if (star) { const rx = star.x - k.x, ry = star.y - k.y; if (rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < 8 + c * 3) onClick(star.x, star.y); }
       if (c >= 2.4) goal('beam');
-      const ff = S.galick >= 5 && c >= 2.4; beam.ff = ff; beam.full = c >= 2.4;   // galick lv 5: a full charge fires a final flash
+      const ff = S.galick >= 5 && c >= 2.4; beam.ff = ff; beam.full = c >= 2.4; if (ff) ach('flash');   // galick lv 5: a full charge fires a final flash
       const pts = Math.pow(1.6, S.galick) * lapValue() * 2.5 * c * mult() * (ff ? 3 : 1) * (1 + .5 * lvl('beam'));   // each level hits ×1.6 harder
       const onLine = (x, y, w) => { const rx = x - k.x, ry = y - k.y; return rx * dir[0] + ry * dir[1] > 0 && Math.abs(rx * dir[1] - ry * dir[0]) < w + c * 3 * (ff ? 2 : 1) * (1 + .15 * (S.galick - 1)); };
       for (const sb of saibas) if (!sb.dead && sb.sx !== undefined && onLine(sb.sx, sb.sy - 6, 7)) killSaiba(sb);
@@ -3432,7 +3442,7 @@ GAMES.push({
     }
     function victory() { poseUntil = st.t + 1.6; }
     function transform(preview) {
-      S.form++; victory(); if (!preview) { if (S.form >= 1) ach('ss'); if (S.form >= UI_FORM) ach('ui'); if (S.form >= MUI_FORM) ach('mui'); } const F = FORMS[S.form]; ui.sfx && ui.sfx('form'); ui.event(F.name + '!  ×' + F.x + (preview ? ' — a taste, for 60s' : '')); ui.fx && ui.fx('form', S.form); flashT = 1;
+      S.form++; victory(); if (!preview) { if (S.form >= 1) ach('ss'); if (S.form >= UI_FORM) ach('ui'); if (S.form >= MUI_FORM) ach('mui'); if (LATE_ACH[FORMS[S.form].name]) ach(LATE_ACH[FORMS[S.form].name]); if (S.form > S.formTop) { S.formTop = S.form; S.formTopName = FORMS[S.form].name; } } const F = FORMS[S.form]; ui.sfx && ui.sfx('form'); ui.event(F.name + '!  ×' + F.x + (preview ? ' — a taste, for 60s' : '')); ui.fx && ui.fx('form', S.form); flashT = 1;
       for (let k = 0; k < 90; k++) { const q = kidScreen(10); fx.add({ x: q.x, y: q.y, vx: (Math.random() - .5) * 200, vy: (Math.random() - .5) * 200, drag: 2, life: 1.1, c: F.aura, raw: true }); }
       save();
     }
@@ -3476,12 +3486,14 @@ GAMES.push({
       if (star && Math.hypot(star.x - x, star.y - y) < r) onClick(star.x, star.y);
       burst(x, y, [0xffffff, 0xbfe9ff, 0x6fb0ff, 0x2f6ae0], 36, 220);
     }
+    const WORLD_ACH = { 1: 'namek', 6: 'kame', 7: 'paozu', 8: 'future', 10: 'lookout', 11: 'kaiworld', 12: 'yardrat' };
     function travel(w) {
       ui.hell && ui.hell(false);
       if (!playing) return;
       S.world = w; useWorld(w); layout(); scenery(); ui.world && ui.world(w);/*widget*/ if (w) ui.notify('trip', WORLDS[w].name);/*/widget*/
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
       ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', 'back in the null realm — the tournament of power goes on', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
+      if (WORLD_ACH[w]) ach(WORLD_ACH[w]);
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) { startSnake(); meteors = []; storm = null; moon = null; } else snk = null;   // no meteors or full moon over snake way and HFIL
       bz = w === 4 ? { c: capPt(.3, 4.4), noise: 0, awake: 0 } : null; pud = null; gadgets = []; nextGadget = 2;
@@ -3512,7 +3524,7 @@ GAMES.push({
       if (boss.hp <= 0 && !boss.dead) {
         boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; let prize = boss.uni ? wrate() * 15 : Math.max(boss.movie ? 0 : boss.max * 1.5, wrate() * 90) * (1 + .5 * lvl('bounty'));   // a universe fight pays little: its star is the prize
         if (boss.uni) {   // a stage of the universe ladder; its last fight pays a universe star
-          if (++S.uniStage >= UNI_STAGES.length) { const u = S.uni; S.uniStage = 0; S.uni++; S.ustars++; S.uniBest = Math.max(S.uniBest, S.uni); topSync(); ach('universe'); if (S.uni >= LADDER.length) ach('multiverse'); setTimeout(() => ui.event(`${uniName(u)} cleared — a universe star: ×${STAR_X ** (ang('stars') ? 2 : 1)} on everything. next: ${uniName(S.uni)}`, 4500), 2600); }
+          if (++S.uniStage >= UNI_STAGES.length) { const u = S.uni; S.uniStage = 0; S.uni++; S.ustars++; S.uniBest = Math.max(S.uniBest, S.uni); topSync(); ach('universe'); if (S.uni >= LADDER.length) ach('multiverse'); if (u < LADDER.length) ach('u' + LADDER[u].n); for (const n of [1, 5, 10]) if (u === LADDER.length + n - 1) ach('inf' + n); setTimeout(() => ui.event(`${uniName(u)} cleared — a universe star: ×${STAR_X ** (ang('stars') ? 2 : 1)} on everything. next: ${uniName(S.uni)}`, 4500), 2600); }
         }
         if (boss.saga) { prize *= 2; S.saga++; if (lvl('saga')) { S.seeds++; S.ascend++; setTimeout(() => ui.event('legend — the villain drops a ki seed'), 5200); } if (S.saga >= VILLAINS.length) ach('sagas'); satan = { c: capPt(.42, 2.9), t0: st.t + 1.2, until: st.t + 9, prize: prize * .5 }; setTimeout(() => ui.event('mr. satan: "i did it! it was all me!" — tap him for the prize money', 4500), 2800); }
         victory(); S.beaten = S.beaten || {}; S.beaten[boss.name] = 1; S.foes = [...new Set([...(S.foes || []), boss.name])]; if (S.bosses >= 10) ach('villains10'); if (boss.name === 'frieza') ach('frieza'); if (boss.name === 'nappa' && S.world === 2) ach('nappa'); if (boss.name === 'cell') ach('cell'); if (boss.name === 'beerus') ach('beerus'); if (['frieza', 'cell', 'kid buu', 'beerus'].every(n => S.beaten[n])) ach('all4'); gain(prize, boss.x, boss.y - (boss.spr.h + 10) * boss.k, true); ui.event(boss.name === 'past vegeta' ? `you beat your younger self — technically you also lost. +${fmtShort(Math.round(prize))}` : `${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
@@ -3580,7 +3592,7 @@ GAMES.push({
       if (boss !== b) { endMovie(); return; }
       if (b.dead) {
         if (!m.over) { m.over = t; m.web = null; m.flipUntil = 0; for (const h of m.minions) h.dead = true;
-          if (!b.fled) { const g = Math.max(500, wrate() * 70) * (1 + .5 * lvl('bounty')); gain(g, cx, cy - R * 1.3, true); ach(MV_ACH[m.who]); movieNote = { at: t + 2.4, s: `${o.win} — movie bonus +${fmtShort(Math.round(g))}` }; } }
+          if (!b.fled) { const g = Math.max(500, wrate() * 70) * (1 + .5 * lvl('bounty')); gain(g, cx, cy - R * 1.3, true); ach(MV_ACH[m.who]); S.movies++; if (Object.values(MV_ACH).every(id => S.ach[id])) ach('movies3'); movieNote = { at: t + 2.4, s: `${o.win} — movie bonus +${fmtShort(Math.round(g))}` }; } }
         return;
       }
       // cooler: once his squadron is down he raises a supernova; it drops when its time runs out
@@ -3646,8 +3658,8 @@ GAMES.push({
       { key: 'bigape', tier: 'rare', label: 'a bigger great ape', what: 'the next full moon makes a giant: bigger, +15s, +×1, and every tap stomps', ok: () => !!S.ach.ape && !S.bigApe, grant: () => { S.bigApe = 1; nextMoon = Math.min(nextMoon, 8); ui.event('your wish is granted — the next full moon makes a giant'); } },
       { key: 'fortune', label: 'a fortune in power', what: () => '+10 minutes of income', grant: () => { gain(wrate() * 600); ui.event('your wish is granted — +' + fmtShort(wrate() * 600)); } },
       { key: 'skills', tier: 'legendary', label: 'ki talent mastery', what: () => '+1 rank to every ki talent you\'ve learned (training tree)', ok: () => TREE.some(n => lvl(n.id) && lvl(n.id) < nodeMax(n)), grant: () => { for (const n of TREE) if (lvl(n.id) && lvl(n.id) < nodeMax(n)) S.tree[n.id]++; ui.event('your wish is granted — every ki talent +1 rank'); ui.treeGift && ui.treeGift('+1 rank on every talent from shenron'); } },
-      { key: 'gear', tier: 'epic', label: 'capsule corp delivery', what: () => '+1 level to every shop upgrade you own', ok: () => RESETS.some(r => S[r] > 0), grant: () => { for (const r of RESETS) if (S[r] > 0) S[r]++; ui.event('your wish is granted — every shop upgrade +1 level'); } },
-      { key: 'fly', tier: 'rare', label: 'the power of flight', what: () => 'fly your laps for 30s: laps ×1.8', ok: () => !wished('fly'), grant: () => buff('fly', 30, 'flying for 30s — laps ×1.8') },
+      { key: 'gear', tier: 'epic', label: 'capsule corp delivery', what: () => '+1 level to every shop upgrade you own', ok: () => RESETS.some(r => S[r] > 0), grant: () => { for (const r of RESETS) if (S[r] > 0) S[r]++; tailAch(); ui.event('your wish is granted — every shop upgrade +1 level'); } },
+      { key: 'fly', tier: 'rare', label: 'the power of flight', what: () => 'fly your laps for 30s: laps ×1.8', ok: () => !wished('fly'), grant: () => { buff('fly', 30, 'flying for 30s — laps ×1.8'); ach('flight'); } },
       { key: 'fast', label: 'flying nimbus legs', what: () => 'run 50% faster for 3 minutes', grant: () => buff('fast', 180, 'running 50% faster for 3 minutes') },
       { key: 'taps', label: 'golden fists', what: () => 'taps ×3 for 3 minutes', grant: () => buff('taps', 180, 'taps ×3 for 3 minutes') },
       { key: 'idle', tier: 'rare', label: 'a hundred clones', what: () => 'idle income ×3 for 3 minutes', ok: () => passive() > 0, grant: () => buff('idle', 180, 'idle income ×3 for 3 minutes') },
@@ -3987,7 +3999,7 @@ GAMES.push({
       if (/nimbus/.test(HASH)) riding = 30;   // preview hook: #snake-nimbus
     }
     function blastGhost(g) {
-      g.dead = true; snk.blasted++; snk.shots.push({ x: g.sx, y: g.sy, t0: st.t }); burst(g.sx, g.sy, [0xffffff, 0xdff4ff, 0xfff3a0], 18, 120);
+      g.dead = true; snk.blasted++; if (++S.souls >= 10) ach('souls10'); snk.shots.push({ x: g.sx, y: g.sy, t0: st.t }); burst(g.sx, g.sy, [0xffffff, 0xdff4ff, 0xfff3a0], 18, 120);
       gain(Math.max(90, wrate() * 12), g.sx, g.sy - 8, true); ui.sfx && ui.sfx('beam'); ach('hfil');   // sent back down to HFIL
     }
     function snakeWin(t) { snk.done = t; ach('snakeway'); const g = Math.max(300, wrate() * 100); gain(g, snk.hx, snk.hy - 16, true); ui.event(`made it to king kai's planet at ${(t - snk.t0).toFixed(0)}s! +${fmtShort(Math.round(g))}`); victory(); ui.sfx && ui.sfx('form'); }
@@ -4010,7 +4022,7 @@ GAMES.push({
       snk.p = Math.min(1, Math.max(snk.p, (phi - snk.phi0) / (6.283 * SN_LAPS)));
       for (const o of snk.orbs) if (!o.got && o.p <= snk.p) { o.got = true; snk.got++; gain(Math.max(5, wrate() * 1.5), snk.hx, snk.hy - 18, true); ui.sfx && ui.sfx('coin'); }
       for (const g of snk.ghosts) if (!g.dead && snk.p > g.p + .1) g.dead = true;   // the ones you leave behind drift off
-      for (const o of snk.sky) if (!o.got && !o.miss && o.p <= snk.p) { if (jumpH > 10) { o.got = true; snk.streak = Math.min(8, snk.streak + 1); snk.streakT = t; gain(Math.max(40, wrate() * 8 * (1 + snk.streak * .25)), snk.hx, snk.hy - 26, true); ui.sfx && ui.sfx('coin'); } else { o.miss = true; snk.streak = 0; } }   // timed hops beat mashing: a low hop misses and breaks the streak
+      for (const o of snk.sky) if (!o.got && !o.miss && o.p <= snk.p) { if (jumpH > 10) { o.got = true; snk.streak = Math.min(8, snk.streak + 1); snk.streakT = t; if (snk.streak >= 8) ach('streak'); gain(Math.max(40, wrate() * 8 * (1 + snk.streak * .25)), snk.hx, snk.hy - 26, true); ui.sfx && ui.sfx('coin'); } else { o.miss = true; snk.streak = 0; } }   // timed hops beat mashing: a low hop misses and breaks the streak
       const here = snk.p * END + 1.6, o = snk.orbs.find(o => !o.got && o.s > here && o.s - here < 14), sp = snk.spikes.find(q => q.s > here && q.s - here < 6);
       const lane = snk.p > .9 ? 0 : o ? o.u : sp ? (sp.u ? 0 : .52) : 0; snk.x += (lane - snk.x) * Math.min(1, dt * 5);   // he steers for the next orb and round the spines, and lines up for the planet at the end
       if (snk.p >= 1) { snakeWin(t); burst(snk.hx, snk.hy, [0xffffff, 0xfff3a0, 0xffd23a, 0x8ad65a], 36, 160); }
@@ -4793,7 +4805,7 @@ GAMES.push({
     const menu = () => ({ seeds: S.seeds, boost: seedBoost().toFixed(1), branches: ['body', 'spirit', 'fate'].map(b => ({ name: b, pts: branchPts(b) })), tree: TREE.map(n => ({ id: n.id, branch: n.branch, tier: n.tier, need: TIER_NEED[n.tier], open: nodeOpen(n), name: n.name, what: n.what, lvl: lvl(n.id), max: nodeMax(n), cost: nodeCost(n), can: nodeOpen(n) && lvl(n.id) < nodeMax(n) && S.seeds >= nodeCost(n) })), spent: TREE.some(n => lvl(n.id)), ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
     // the angels' tab: god ki buys rule changes from whis and vados
     const angels = () => ({ godki: S.godki, gods: S.gods, boost: fmtShort(godBoostOf(S.godTotal)), auto: ang('auto') ? (S.autoAt ? fmtShort(AUTO_AT[S.autoAt]) : 'off') : '', list: ANGELS.map(a => ({ ...a, on: ang(a.id), open: angelOpen(a), need: a.tier, can: !ang(a.id) && angelOpen(a) && S.godki >= a.cost })) });
-    const learnAngel = id => { const a = ANGELS.find(x => x.id === id); if (!a || ang(a.id) || !angelOpen(a) || S.godki < a.cost) return; S.godki -= a.cost; S.angel[id] = 1; ui.sfx && ui.sfx('buy'); save(); syncShop(); };
+    const learnAngel = id => { const a = ANGELS.find(x => x.id === id); if (!a || ang(a.id) || !angelOpen(a) || S.godki < a.cost) return; S.godki -= a.cost; S.angel[id] = 1; ach('whis'); ui.sfx && ui.sfx('buy'); save(); syncShop(); };
     const autoNext = () => { S.autoAt = (S.autoAt + 1) % AUTO_AT.length; save(); };
     const godInfo = () => ({ pl: fmtShort(Math.floor(S.pl)), gain: godNow(), now: fmtShort(godBoostOf(S.godTotal)), next: fmtShort(godBoostOf(S.godTotal + godNow())), seeds: fmtShort(S.ascend), stars: S.ustars });   // what the god ki confirm box spells out
     const zenoInfo = () => ({ now: fmtShort(ZENO_X ** S.zeno), next: fmtShort(ZENO_X ** (S.zeno + 1)), gods: S.gods, stars: S.ustars + S.mastery });
@@ -4803,7 +4815,8 @@ GAMES.push({
     const thumb = (id, k = 4) => { const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k; const x = c.getContext('2d'); for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); } return c; };
     // what the share card shows: the exact power level, the form, and the hero as he looks right now
     const card = () => ({ ach: ACH.filter(a => S.ach[a.id]).sort((a, b) => S.ach[b.id] - S.ach[a.id]).map(a => a.name), achN: ACH.length, laps, time: session, best: Math.floor(S.best), pl: Math.floor(S.pl), form: FORMS[S.form].name, hero: (CHARS.find(c => c.id === S.hero) || CHARS[0]).name, spr: (fuseUntil > st.t ? HERO().fused : HERO().forms[S.form]).idle, world: S.world, scene: st.cv,
-      worldName: WORLDS[S.world].name, wishes: S.granted, orbs: S.orbs7, seeds: S.ascend, sagas: VILLAINS.length, saga: S.saga });
+      worldName: WORLDS[S.world].name, wishes: S.granted, orbs: S.orbs7, seeds: S.ascend, sagas: VILLAINS.length, saga: S.saga,
+      peak: S.formTop > S.form ? S.formTopName : '', uni: S.multi || S.uniBest ? uniBadge(Math.max(S.uni, S.uniBest)) : '', ustars: S.ustars, godki: S.godTotal, zeno: S.zeno ? fmtShort(ZENO_X ** S.zeno) : '', mastery: S.mastery, movies: S.movies, tail: S.tail });
     const ascendInfo = () => { const g = seedsNow(); return { ok: S.pl >= cost('ascend') && S.best >= 1e6, pl: fmtShort(Math.floor(S.pl)), seeds: g, now: seedBoost().toFixed(1), next: seedBoostOf(S.ascend + g).toFixed(1), keep: lvl('head') }; };   // what the ascend confirm box spells out
     return { menu, learn, respec, ascendInfo, angels, learnAngel, autoNext, godInfo, zenoInfo, pick, thumb, card, frame, kaioken, start: () => {
       playing = true; syncShop();

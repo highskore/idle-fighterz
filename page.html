@@ -724,13 +724,17 @@ __PLANET__
     pillAt(d.worldName.toUpperCase(), 24, H - 58, 14, 34);
     x.fillStyle = '#8a8a86'; x.font = MONO(22); x.fillText('POWER LEVEL', 740, 78);
     const big = pl(d.pl); x.fillStyle = '#0b0b0b'; fit(big, SERIF, 420, 104, 40); x.fillText(big, 736, 170);
-    x.font = MONO(20); x.fillStyle = '#d4a017'; x.fillText(`${d.hero} · ${d.form}`.toUpperCase(), 740, 216);
-    x.fillStyle = '#8a8a86'; x.fillText(`BEST ${pl(d.best)}`, 740, 248);
-    const sy = 270, cells = [['WISHES', String(d.wishes)], d.saga < n ? ['SAGA', sagaTxt] : ['VILLAINS', num(d.saga)], ['KI SEEDS', fmt(d.seeds)], ['LAPS', `${fmt(d.laps)}`]];
-    x.fillStyle = '#ececec'; x.fillRect(740, sy, 420, 2); x.fillRect(740, sy + 78, 420, 2);
-    cells.forEach(([l, val], i) => { const cx = 740 + i * 105; if (i) { x.fillStyle = '#ececec'; x.fillRect(cx - 8, sy + 14, 2, 50); } x.fillStyle = '#8a8a86'; x.font = MONO(13); x.fillText(l, cx, sy + 26); x.fillStyle = '#0b0b0b'; fit(val, MONO, 92, 26); x.fillText(val, cx, sy + 60); });
-    x.fillStyle = '#8a8a86'; x.font = MONO(13); x.fillText('DRAGON BALLS', 740, 390); balls(856, 385, 12, 6); x.fillStyle = '#8a8a86'; x.fillText(`${d.orbs}/7`, 856 + 7 * 30, 390);
-    pills(d.ach, 740, 414, 420, 15, 32, 8, 3);
+    const hf = `${d.hero} · ${d.form}`.toUpperCase(); x.fillStyle = '#d4a017'; fit(hf, MONO, 420, 20); x.fillText(hf, 740, 216);
+    const bt = `BEST ${pl(d.best)}` + (d.peak ? ` · PEAK ${d.peak.toUpperCase()}` : ''); x.fillStyle = '#8a8a86'; fit(bt, MONO, 420, 20); x.fillText(bt, 740, 248);
+    // only the stats the player has: early on a row of two or three, late a second row; past eight the plainest go
+    const cells = [d.saga < n ? ['SAGA', sagaTxt] : ['VILLAINS', num(d.saga)], d.wishes && ['WISHES', String(d.wishes)], d.seeds && ['KI SEEDS', fmt(d.seeds)], ['LAPS', fmt(d.laps)], d.tail && ['TAIL', `LV ${d.tail}`], d.movies && ['MOVIES', String(d.movies)],
+      d.uni && ['UNIVERSE', d.uni + (d.ustars ? ` ★${d.ustars}` : '')], d.mastery && ['MASTERY', `★${d.mastery}`], d.godki && ['GOD KI', fmt(d.godki)], d.zeno && ['ZENO', `×${d.zeno}`]].filter(Boolean);
+    for (const l of ['LAPS', 'KI SEEDS', 'SAGA', 'VILLAINS']) { const i = cells.findIndex(c => c[0] === l); if (cells.length > 8 && i >= 0) cells.splice(i, 1); }
+    const sy = 270, rows = Math.ceil(cells.length / 4), per = Math.ceil(cells.length / rows), cw = 420 / per;
+    x.fillStyle = '#ececec'; for (let r = 0; r <= rows; r++) x.fillRect(740, sy + r * 78, 420, 2);
+    cells.forEach(([l, val], i) => { const cx = 740 + (i % per) * cw, cy = sy + Math.floor(i / per) * 78; if (i % per) { x.fillStyle = '#ececec'; x.fillRect(cx - 8, cy + 14, 2, 50); } x.fillStyle = '#8a8a86'; x.font = MONO(13); x.fillText(l, cx, cy + 26); x.fillStyle = '#0b0b0b'; fit(val, MONO, cw - 13, 26); x.fillText(val, cx, cy + 60); });
+    const by = sy + rows * 78 + 42; x.fillStyle = '#8a8a86'; x.font = MONO(13); x.fillText('DRAGON BALLS', 740, by); balls(856, by - 5, 12, 6); x.fillStyle = '#8a8a86'; x.fillText(`${d.orbs}/7`, 856 + 7 * 30, by);
+    pills(d.ach, 740, by + 24, 420, 15, 32, 8, rows > 1 ? 2 : 3);
     x.fillStyle = '#0b0b0b'; x.font = MONO(22); x.fillText('HIGHSKORE.COM', 740, 590);
     x.fillStyle = '#8a8a86'; x.font = MONO(15); right(`${d.ach.length}/${d.achN} · ${clock(d.time)}`, 1160, 590);
     return c;
