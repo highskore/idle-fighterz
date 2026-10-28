@@ -5,7 +5,10 @@
   "scripts": {
     "build": "node build.mjs",
     "build:widget": "node build.mjs --widget",
-    "wasm": "sh wasm/build.sh"
+    "wasm": "sh wasm/build.sh",
+    "build:rust": "node build.mjs --rust",
+    "wasm:rust": "sh rust/planet-web/build.sh",
+    "test:rust": "node rust/planet-web/test.mjs"
   },
   "devDependencies": {
     "@fontsource/fragment-mono": "5.2.8",
