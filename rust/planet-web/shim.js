@@ -51,8 +51,8 @@ __TWIN__
     try { P.load(localStorage.getItem('hs-power') || ''); } catch (_) {}
 
     // the twin, mounted on the same stage with its canvas listeners kept back, and a ui that only remembers its buy and wish callbacks
-    let twinBuy = null, twinPick = null;
-    const twinUi = new Proxy({}, { get: (_, k) => k === 'onBuy' ? (f => { twinBuy = f; }) : k === 'wish' ? ((_o, pick) => { twinPick = pick; }) : () => {} });
+    let twinBuy = null, twinPick = null, twinJump = null;
+    const twinUi = new Proxy({}, { get: (_, k) => k === 'onBuy' ? (f => { twinBuy = f; }) : k === 'wish' ? ((_o, pick) => { twinPick = pick; }) : k === 'itxPick' ? ((_l, jump) => { twinJump = jump; }) : () => {} });
     const cv = st.cv, held = {};
     st.cv = new Proxy(cv, { get: (o, k) => k === 'addEventListener' ? ((type, f) => { held[type] = f; }) : typeof o[k] === 'function' ? o[k].bind(o) : o[k], set: (o, k, v) => { o[k] = v; return true; } });
     TWIN.seed(seed);
@@ -83,7 +83,7 @@ __TWIN__
       }
       if (m.shop) ui.shop(m.shop);
       for (const [text, ms] of m.events) ui.event(text, ms);
-      for (const [call, ...args] of m.cues) if (typeof ui[call] === 'function') ui[call](...args);
+      for (const [call, ...args] of m.cues) if (call === 'itxPick') ui.itxPick(args[0], w => { both(() => P.itx_jump(w), () => twinJump && twinJump(w)); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
       if (m.wish) ui.wish(m.wish, k => { both(() => P.pick_wish(k), () => twinPick && twinPick(k)); deliver(); });
     };
     ui.onBuy(k => { both(() => P.buy(k), () => twinBuy && twinBuy(k)); deliver(); });
@@ -136,6 +136,7 @@ __TWIN__
       pick: id => { let ok = false; both(() => { ok = P.pick_hero(id); }, () => twin.pick(id)); return ok; },
       thumb: (id, k) => twin.thumb(id, k),
       kaioken: () => { both(() => P.kaioken(), () => twin.kaioken()); deliver(); },
+      itx: () => { both(() => P.itx(), () => twin.itx()); deliver(); },
       train: () => { both(() => P.train(), () => twin.train()); deliver(); },
       start: () => { both(() => P.start(new Date().toDateString(), Date.now()), () => twin.start()); deliver(); save(); },
       resize: () => { twin.resize(); P.resize(st.W, st.H, st.scale); },

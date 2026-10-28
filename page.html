@@ -139,6 +139,9 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop, body.shen .br
 .kaio:active:not(:disabled) { transform: translateY(1px); }
 .kaio:disabled { background: #f1b9b4; box-shadow: none; cursor: default; }
 .kaio[hidden], .game:not(.playing) .kaio, .game.wishing .kaio { display: none; }
+/* instant transmission: a blue button above kaioken once it's bought; it counts down after a jump */
+.kaio.itxb { bottom: 58px; background: #2f8ae0; } .kaio.itxb:disabled { background: #b8d6f4; }
+.wish.itxp { display: grid; grid-template-columns: 1fr 1fr; width: min(420px, 92%); } .wish.itxp p, .wish.itxp .stay { grid-column: 1 / -1; } .wish.itxp button { padding: 8px 12px; } .wish .stay { align-items: center; color: var(--muted); }   /* the picker: two columns of worlds */
 @media (max-width: 760px) {
   .kaio { position: static; height: 34px; box-sizing: border-box; padding: 0 14px; white-space: nowrap; flex: none; }   /* the cooldown text stays on one line, to the right of upgrades */ .game:has(.shop.open) .kaio { display: none; }
 }
@@ -391,6 +394,7 @@ __WIDGET_CSS__
     <div class="pair">
       <button type="button" class="shop-toggle" id="shopToggle" aria-expanded="false" aria-controls="shop">upgrades <i id="shopCount"></i></button>
       <button type="button" class="kaio" id="kaio" hidden>kaioken</button>
+      <button type="button" class="kaio itxb" id="itxBtn" hidden>transmission</button>
     </div>
     <button type="button" class="mbtn" id="sndM" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="mbtn" id="shareM" aria-label="share your power level"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11H6v9h12v-9h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="shop" id="shop"></div>
@@ -458,6 +462,7 @@ __PLANET__
       lastPl = s.pl;
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
       const kb = $('kaio'); kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kb.textContent = s.kaio.ready ? 'kaioken' : 'kaioken ' + s.kaio.left + 's';
+      if (s.itx) { const ib = $('itxBtn'); ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; ib.textContent = s.itx.left > 0 ? `transmission ${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}` : 'transmission'; }
       const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
       if (pl.dataset.v !== txt) { pl.dataset.v = txt; pl.innerHTML = num + (suf ? `<small>${suf}</small>` : ''); pl.style.setProperty('--len', Math.max(9, num.length + suf.length * .6)); }
       const mx = $('mx'); mx.textContent = s.combo > 1 ? '×' + s.combo.toFixed(2).replace(/\.?0+$/, '') : ''; mx.classList.toggle('hot', s.combo >= 2);
@@ -482,6 +487,14 @@ __PLANET__
       box.innerHTML = '<p>state your wish</p>' + options.map((o, i) => `<button type="button" class="${o.tier || 'common'}" data-i="${i}"><i>${o.tier || 'common'}</i><b>${o.label}</b><span>${o.what}</span></button>`).join('');
       box.hidden = false; $('game').classList.add('wishing');
       box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { box.hidden = true; $('game').classList.remove('wishing'); done(options[+b.dataset.i].key); }));
+      box.querySelector('button').focus({ preventScroll: true });
+    },
+    // instant transmission's picker: the worlds you've been, in the wish box's place
+    itxPick(worlds, done) {
+      const box = $('wish'), close = () => { box.hidden = true; box.classList.remove('itxp'); $('game').classList.remove('wishing'); };
+      box.classList.add('itxp'); box.innerHTML = '<p>where to?</p>' + worlds.map((w, i) => `<button type="button" data-i="${i}"><b>${w.label}</b></button>`).join('') + '<button type="button" class="stay"><b>stay</b></button>';
+      box.hidden = false; $('game').classList.add('wishing');
+      box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { close(); if (b.dataset.i) done(worlds[+b.dataset.i].key); }));
       box.querySelector('button').focus({ preventScroll: true });
     },
     wishDone() { $('wish').hidden = true; $('game').classList.remove('wishing'); },   // the dragon picked for you
@@ -631,6 +644,7 @@ __PLANET__
   $('play').addEventListener('click', e => { e.stopPropagation(); go(); });
   $('intro').addEventListener('click', go);
   $('kaio').addEventListener('click', () => game.kaioken());
+  $('itxBtn').addEventListener('click', () => game.itx());
 
   // achievements and characters popup
   let menuTab = 'ach';

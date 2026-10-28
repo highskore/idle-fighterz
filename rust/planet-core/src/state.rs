@@ -67,6 +67,8 @@ pub struct Save {
     pub beaten: BTreeSet<String>,
     pub foes: Vec<String>,
     pub ach: BTreeSet<&'static str>,
+    /// the worlds visited, a bit each (`1 << w`): instant transmission's picker
+    pub been: u32,
     /// when each achievement landed (`S.ach[id] = Date.now()`): the share card lists the newest first
     pub ach_at: BTreeMap<&'static str, f64>,
     /// the date of the last daily bonus (`new Date().toDateString()`), the one thing a new visit keeps

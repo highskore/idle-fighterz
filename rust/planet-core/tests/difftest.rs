@@ -96,7 +96,7 @@ fn scenario(name: &str) {
                 "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 "summon" => g.summon(),
                 "pick" => g.pick(k),
-                "blink" => g.blink(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
+                "jump" => g.itx_jump(i["k"].as_u64().unwrap() as u32),
                 "down" => {
                     g.pointer_down(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by"), i["id"].as_i64().unwrap_or(1) as i32, i["button"].as_i64().unwrap_or(0) as i32)
                 }
@@ -381,7 +381,9 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
             let (p, nn) = (planet_core::geom::ap(&g.cam.m, g.frame3.n), g.frame3.n);
             n(planet_core::jsmath::hypot(&[p[0] - nn[0], p[1] - nn[1], p[2] - nn[2]]))
         }),
-        ("blinkReady", n(tl.blink_ready)),
+        ("itxReady", n(tl.itx_ready)),
+        ("itxTrip", b(tl.itx_trip)),
+        ("been", n(s.been as f64)),
         ("nextStar", n(tl.next_star)),
         ("nextCloud", n(tl.next_cloud)),
     ]

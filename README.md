@@ -62,7 +62,7 @@ Add these to the URL to jump straight to something. They only work off the live 
 | `#snake` | snake way |
 | `#car` | king kai's car |
 | `#kaio` | kaioken already owned |
-| `#itx` | instant transmission owned; he blinks ahead every 3s |
+| `#itx` | instant transmission owned, every world visited, and its picker open |
 | `#door` | the time chamber door |
 | `#pod` | a saiyan space pod |
 | `#storm` | a meteor storm |

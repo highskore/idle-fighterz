@@ -64,6 +64,7 @@ impl Game {
             .str("formTopName", s.form_top_name)
             .num("movies", s.movies as f64)
             .num("souls", s.souls as f64)
+            .num("been", s.been as f64)
             .num("tail", level(self, Upg::Tail));
         let ach = s.ach.iter().fold(Obj::new(), |o, id| o.num(id, s.ach_at.get(id).copied().unwrap_or(0.0)));
         let hero = CHARS.iter().find(|c| c.0 == s.hero).map_or("vegeta", |c| c.1);

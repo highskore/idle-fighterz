@@ -72,11 +72,14 @@ pub const SHOP: [ShopItem; 15] = [
     ShopItem { key: "piccolo", base: 30000.0, k: 2.4, label: "piccolo", what: "+60/s, zaps meteors" },
     ShopItem { key: "chamber", base: 150000.0, k: 2.8, label: "time chamber", what: "a door appears: train ×2 for 15s inside" },
     ShopItem { key: "tail", base: 40000.0, k: 2.5, label: "tail training", what: "great ape: +8% size, +2s, +×0.25 (less past lv 10)" },
-    ShopItem { key: "itx", base: 15000.0, k: 2.45, label: "instant transmission", what: "two-finger tap or right-click the road: blink there" },
+    ShopItem { key: "itx", base: 5e6, k: 2.6, label: "instant transmission", what: "two-finger tap or right-click: jump to a world you've been" },
 ];
 
 /// Producer milestones: these levels double output, then every 50 past 100.
-pub const MILES: [Upg; 5] = [Upg::Boots, Upg::Partner, Upg::House, Upg::Piccolo, Upg::Itx];
+/// Where instant transmission can jump: every world but home, snake way and the arena.
+pub const ITX_WORLDS: [u32; 10] = [1, 2, 4, 5, 6, 7, 8, 10, 11, 12];
+
+pub const MILES: [Upg; 4] = [Upg::Boots, Upg::Partner, Upg::House, Upg::Piccolo];
 pub const MS: [u32; 4] = [10, 25, 50, 100];
 
 #[derive(Clone, Debug)]
@@ -608,7 +611,7 @@ pub const ACH: [(&str, &str, &str); 81] = [
     ("lookout", "mr. popo's tiles", "visit kami's lookout"),
     ("kaiworld", "sacred world of the kais", "visit the supreme kai's world"),
     ("yardrat", "instant transmission", "visit yardrat"),
-    ("itx", "we have to go… instantly", "blink with instant transmission"),
+    ("itx", "we have to go… instantly", "jump to another world with instant transmission"),
     ("streak", "golden hop", "hit a ×3 orb streak on snake way"),
     ("souls10", "ghost buster", "send 10 lost souls back to HFIL"),
 ];

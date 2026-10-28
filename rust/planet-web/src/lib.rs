@@ -109,6 +109,15 @@ impl Planet {
         self.0.game.auto_next();
     }
 
+    /// Instant transmission: the gesture or the button opens the picker (a `cues` entry), and a world from it jumps.
+    pub fn itx(&mut self) {
+        self.0.game.itx_open();
+    }
+
+    pub fn itx_jump(&mut self, w: u32) {
+        self.0.game.itx_jump(w);
+    }
+
     /// A wish from the dragon's offer.
     pub fn pick_wish(&mut self, key: &str) {
         self.0.game.pick(key);

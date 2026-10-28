@@ -243,9 +243,9 @@ impl Game {
         1.25 + 0.25 * self.s.lvf(Upg::Kaio)
     }
 
-    /// Instant transmission's cooldown: 6s, down to 2s.
+    /// Instant transmission's cooldown, from the end of a jump's trip: 5 min, down to 90s.
     pub fn itx_cd(&self) -> f64 {
-        (6.0 / (1.0 + 0.1 * (self.s.lvf(Upg::Itx) - 1.0))).max(2.0)
+        (300.0 / (1.0 + 0.1 * (self.s.lvf(Upg::Itx) - 1.0))).max(90.0)
     }
 
     /// How much sooner pods, the nimbus and trips come with instant transmission: up to 30%.
@@ -326,7 +326,7 @@ impl Game {
             Upg::Bigbang => best >= 20000.0,
             Upg::Piccolo => best >= 10000.0,
             Upg::Chamber => best >= 40000.0,
-            Upg::Itx => self.s.ach.contains("yardrat") || best >= PLANET_EVERY,
+            Upg::Itx => self.s.ach.contains("yardrat"),
         }
     }
 
@@ -568,7 +568,7 @@ impl Game {
                     Upg::Chamber if first => "the time chamber door will appear — tap it",
                     Upg::Kaio if first => "kaioken unlocked — hit the red button",
                     Upg::Bigbang if first => "big bang attack — double-tap anywhere",
-                    Upg::Itx if first => "instant transmission — tap the road ahead with two fingers (or right-click it) to blink there",
+                    Upg::Itx if first => "instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you've been",
                     Upg::Armor if first => "saiyan armor on — hit villains harder",
                     _ => "",
                 };
@@ -580,35 +580,61 @@ impl Game {
         }
     }
 
-    /// game.js `blink(px, py)`: instant transmission ahead along the road to the spot under the tap; the road skipped
-    /// counts toward the lap. No random draws.
-    pub fn blink(&mut self, px: f64, py: f64) {
-        if !self.playing || self.s.lv(Upg::Itx) == 0 || self.s.world == 3 || self.t < self.tl.blink_ready || self.tl.struggle.is_some() {
+    /// The worlds instant transmission can reach: every one you've been but snake way and the arena.
+    pub fn itx_worlds(&self) -> Vec<u32> {
+        ITX_WORLDS.into_iter().filter(|w| self.s.been & 1 << w != 0).collect()
+    }
+
+    /// game.js `itxCan()`: owned, recharged, at home, and nothing on (a fight, the dragon, the dance, a struggle).
+    pub fn itx_can(&self) -> bool {
+        let tl = &self.tl;
+        self.playing
+            && self.s.lv(Upg::Itx) > 0
+            && self.t >= tl.itx_ready
+            && self.s.world == self.home()
+            && tl.tour.is_none()
+            && tl.shen.is_none()
+            && tl.boss.is_none()
+            && tl.dance.is_none()
+            && tl.struggle.is_none()
+            && !tl.ginyu.as_ref().is_some_and(|g| g.done == 0.0)
+            && tl.movie.is_none()
+    }
+
+    /// game.js `itxOpen()` (the gesture or the button): the picker, or why it won't open.
+    pub fn itx_open(&mut self) {
+        if self.s.lv(Upg::Itx) == 0 || !self.playing {
             return;
         }
-        let c = &self.cam;
-        let (vx, vy) = ((px - c.cx) / c.r, (c.cy + c.bob - py) / c.r);
-        let q = vx * vx + vy * vy;
-        if q > 1.1 {
+        if self.t < self.tl.itx_ready {
+            let msg = format!("instant transmission recharges in {}s", (self.tl.itx_ready - self.t).ceil());
+            self.event(msg);
             return;
         }
-        let p = crate::geom::ap_t(&c.m, [vx, vy, (1.0 - q).max(0.0).sqrt()]);
-        let tau = 2.0 * std::f64::consts::PI;
-        let d = ((crate::jsmath::atan2(crate::geom::dot(p, self.frame3.e2), crate::geom::dot(p, self.frame3.e1)) - self.phi) % tau + tau) % tau;
-        if d > std::f64::consts::PI {
-            self.once("itxback", "instant transmission only goes forward — pick a spot on the road ahead");
+        if !self.itx_can() {
+            self.event("instant transmission only works from home, with no fight on");
             return;
         }
-        if d < 0.05 {
+        let list = crate::json::arr(
+            self.itx_worlds().into_iter().map(|w| crate::json::Obj::new().num("key", w as f64).str("label", crate::hud::WORLD_FULL[w as usize]).end()),
+        );
+        self.cue(crate::hud::Cue::ItxPick(list));
+    }
+
+    /// game.js `itxJump(w)`: that world's normal trip, starting now; the cooldown starts when it ends.
+    pub fn itx_jump(&mut self, w: u32) {
+        if !self.itx_can() || !self.itx_worlds().contains(&w) {
             return;
         }
         let from = self.kid_screen(0.0);
-        self.tl.blink_from = Some((from, self.t));
-        self.phi += d;
-        self.tl.blink_ready = self.t + self.itx_cd();
+        self.tl.blink_from = Some((from, self.t + 0.35)); // the arrival plays once the trip's flash fades
+        self.tl.pod_wish = 0;
+        self.s.namek_at = self.s.run_best * 4.0;
+        self.travel(w);
+        self.tl.namek_until = self.t + 45.0;
+        self.tl.itx_trip = true;
         self.ach("itx");
-        let n = (self.wrate() * 0.25 * self.ms(Upg::Itx)).max(20.0);
-        self.gain(n);
+        self.cue(crate::hud::Cue::Sfx("blink"));
     }
 
     pub fn kaioken(&mut self) {

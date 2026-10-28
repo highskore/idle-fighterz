@@ -45,11 +45,6 @@ pub fn ap(m: &M3, v: V3) -> V3 {
     [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]]
 }
 
-/// `M3.apT`: the transpose applied, which for the view's rotation maps screen back to the planet.
-pub fn ap_t(m: &M3, v: V3) -> V3 {
-    [m[0] * v[0] + m[3] * v[1] + m[6] * v[2], m[1] * v[0] + m[4] * v[1] + m[7] * v[2], m[2] * v[0] + m[5] * v[1] + m[8] * v[2]]
-}
-
 pub fn rx(a: f64) -> M3 {
     let (c, s) = (cos(a), sin(a));
     [1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c]

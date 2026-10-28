@@ -20,10 +20,8 @@ pub struct Drag {
     /// where the beam aims, in buffer pixels
     pub ax: f64,
     pub ay: f64,
-    /// the pointer, and where it went down in buffer pixels (a second finger landing with it is a two-finger tap)
+    /// the pointer (a second one landing with it is a two-finger tap)
     pub id: i32,
-    pub bx: f64,
-    pub by: f64,
 }
 
 /// A fired beam, for the renderer.
@@ -114,23 +112,23 @@ impl Default for Input {
 
 impl Game {
     /// `pointerdown`: (x, y) in CSS pixels, (bx, by) in buffer pixels, the browser's `pointerId` and `button`. A
-    /// right-click, or a second finger landing with the first, is instant transmission.
+    /// right-click, or a second finger landing with the first, opens instant transmission.
     pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32, button: i32) {
         if self.playing && self.s.world == 3 && self.tl.snk.is_some() {
             self.snake_tap(bx, by);
             return;
         }
         if button == 2 {
-            self.blink(bx, by);
+            self.itx_open();
             return;
         }
-        if let Some(d) = self.inp.drag.filter(|d| d.id != id && self.s.lv(Upg::Itx) > 0 && self.t - d.t < 0.4 && d.moved <= 6.0) {
-            self.blink((d.bx + bx) / 2.0, (d.by + by) / 2.0);
+        if self.inp.drag.is_some_and(|d| d.id != id && self.s.lv(Upg::Itx) > 0 && self.t - d.t < 0.4 && d.moved <= 6.0) {
+            self.itx_open();
             self.inp.drag = None;
             self.inp.charging = 0.0;
             return;
         }
-        self.inp.drag = Some(Drag { x, y, moved: 0.0, t: self.t, ax: bx, ay: by, id, bx, by });
+        self.inp.drag = Some(Drag { x, y, moved: 0.0, t: self.t, ax: bx, ay: by, id });
     }
 
     /// `pointermove`: aims a charging beam, or spins the planet once the press has moved past 6px.
