@@ -377,6 +377,10 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("bangReady", n(g.inp.bang_ready)),
         ("lastTap", n(g.inp.last_tap.0)),
         ("daily", n(g.b.daily_until)),
+        ("pole", {
+            let (p, nn) = (planet_core::geom::ap(&g.cam.m, g.frame3.n), g.frame3.n);
+            n(planet_core::jsmath::hypot(&[p[0] - nn[0], p[1] - nn[1], p[2] - nn[2]]))
+        }),
         ("blinkReady", n(tl.blink_ready)),
         ("nextStar", n(tl.next_star)),
         ("nextCloud", n(tl.next_cloud)),
@@ -416,6 +420,11 @@ fn multiverse() {
 #[test]
 fn wishes() {
     scenario("wishes");
+}
+
+#[test]
+fn lookout() {
+    scenario("lookout");
 }
 
 #[test]

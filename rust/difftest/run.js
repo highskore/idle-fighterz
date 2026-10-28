@@ -47,6 +47,26 @@ const SCENARIOS = {
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
     },
   },
+  // kami's lookout turns only round korin's tower; back home, a vertical drag tilts the planet again
+  lookout: {
+    seed: 23, minutes: 2,
+    script(g, f, act) {
+      const pole = () => g.ev('(a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))'), fail = m => { throw new Error('lookout: ' + m) }
+      if (f === 0) for (const [k, v] of [['pl', 5e6], ['best', 5e6], ['trips', 8]]) act({ a: 'set', k, v })
+      // on the lookout: a sideways drag turns it round the tower, a vertical one does nothing
+      if (f === 30 * 20) press(g, act, 'down', 300, 300)
+      if (f > 30 * 20 && f <= 30 * 20 + 10) press(g, act, 'move', 300 + 15 * (f - 30 * 20), 300 + 10 * (f - 30 * 20))
+      if (f === 30 * 20 + 11) press(g, act, 'up', 450, 400)
+      if (f === 30 * 40 && !(g.ev('S.world') === 10 && pole() < 1e-9 && g.ev('vrx') === 0)) fail('it tilted')
+      // home again: the idle spin keeps the screen's up row, and a vertical drag tilts it
+      if (f === 30 * 60) this.m4 = g.ev('M[4]')
+      if (f === 30 * 69 && !(g.ev('S.world') === 0 && Math.abs(g.ev('M[4]') - this.m4) < 1e-9)) fail('home still turns round the pole')
+      if (f === 30 * 70) press(g, act, 'down', 300, 200)
+      if (f > 30 * 70 && f <= 30 * 70 + 10) press(g, act, 'move', 300, 200 + 15 * (f - 30 * 70))
+      if (f === 30 * 70 + 11) press(g, act, 'up', 300, 350)
+      if (f === 30 * 72 && !(Math.abs(g.ev('M[4]') - this.m4) > .05 && pole() > .05)) fail('a vertical drag at home did not tilt it')
+    },
+  },
   // instant transmission: the first trip goes to yardrat, which opens it before 1M; then it's bought and the hero blinks
   // ahead every half second it can (some taps behind him or off the planet, which don't), and trips, pods and the nimbus come sooner
   itx: {
@@ -242,7 +262,7 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
     ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH],
     ['charging', charging], ['dragged', drag ? drag.moved : null], ['vrx', vrx], ['vry', vry], ['m4', M[4]], ['beam', beam ? beam.c : null], ['beamDx', beam ? beam.dx : null],
-    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['blinkReady', blinkReady], ['nextStar', nextStar], ['nextCloud', nextCloud]] })`
+    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['blinkReady', blinkReady], ['nextStar', nextStar], ['nextCloud', nextCloud]] })`
 
 function run(name) {
   const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)

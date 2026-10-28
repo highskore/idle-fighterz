@@ -2072,9 +2072,7 @@ impl Game {
         }
         self.s.world = w;
         self.cam.layout(w);
-        if W2L.iter().any(|l| l.0 == w) {
-            self.inp.w2_pole = w == 10; // only w2Scenery() resets game.js's w2Pole, so it outlasts the lookout
-        }
+        self.inp.w2_pole = w == 10; // game.js's scenery() rebuild: korin's tower only under the lookout
         self.shake = 0.5;
         self.burst(40);
         self.event_ms(TRAVEL[w as usize], if w >= 3 { 6000.0 } else { 2600.0 });

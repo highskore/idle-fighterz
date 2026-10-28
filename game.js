@@ -3058,7 +3058,7 @@ GAMES.push({
     }
     const slabs = [];                        // the future's skyscrapers: { b: base, t: top, w: half-width, seed }
     function scenery() {
-      solids.length = 0; wcRoads.length = 0; slabs.length = 0;
+      solids.length = 0; wcRoads.length = 0; slabs.length = 0; w2Pole = false;   // only the lookout's scenery puts korin's tower back
       if (S.world === 9) return topScenery();
       if (S.world === 5) return westcityScenery();
       if (S.world === 6) return kameScenery();
@@ -3164,7 +3164,7 @@ GAMES.push({
     let w2Res = [], w2Pole = false;   // residents { spr, c, flip, k, hop, blink: [spots], ph }; korin's tower under the lookout
     function shadeSpot(o, n, x, y) { const q = M3.apT(M, n), g = vnoise3(q[0] * o.f + o.seed, q[1] * o.f, q[2] * o.f); return g > .64 ? tone(o.pal2, light(n) + .25, x, y) : tone(o.pal, light(n) + (o.lift || 0), x, y); }   // a bulb with blotches
     function w2Scenery() {
-      SHADE.spot = shadeSpot; w2Res = []; w2Pole = false;
+      SHADE.spot = shadeSpot; w2Res = [];
       const T = W2L[S.world].tones;
       let sd = 31 + S.world * 7; const rnd = () => (sd = sd * 16807 % 2147483647) / 2147483647;
       const put = (c, r, kind, o) => solids.push(Object.assign({ c, r, kind }, o)), pal = (c, r, p, lift = 0) => put(c, r, 'pal', { pal: p, lift });
