@@ -3164,7 +3164,7 @@ GAMES.push({
     function shadeSpot(o, n, x, y) { const q = M3.apT(M, n), g = vnoise3(q[0] * o.f + o.seed, q[1] * o.f, q[2] * o.f); return g > .64 ? tone(o.pal2, light(n) + .25, x, y) : tone(o.pal, light(n) + (o.lift || 0), x, y); }   // a bulb with blotches
     function w2Scenery() {
       SHADE.spot = shadeSpot; w2Res = []; w2Pole = false;
-      const T = W2L[S.world].tones, UP = [0, 1, 0];
+      const T = W2L[S.world].tones;
       let sd = 31 + S.world * 7; const rnd = () => (sd = sd * 16807 % 2147483647) / 2147483647;
       const put = (c, r, kind, o) => solids.push(Object.assign({ c, r, kind }, o)), pal = (c, r, p, lift = 0) => put(c, r, 'pal', { pal: p, lift });
       const tan = s => { const t1 = V.norm(V.cross(s, N)); return [t1, V.cross(s, t1)]; };
@@ -3188,7 +3188,7 @@ GAMES.push({
           for (let j = 0; j < 6; j++) { const d = V.add(V.mul(t1, Math.cos(j * 1.05 + .3)), t2, Math.sin(j * 1.05 + .3)); for (let m = 1; m <= 4; m++) put(V.add(V.add(C, d, .055 * m * k), s, (.02 * m - .014 * m * m) * k), (.042 - .006 * m) * k, 'leaf'); } };
         const s = dome(.3, 1.57, .22), [t1, t2] = tan(s); pal(V.mul(s, 1.22), .044, W2P.gold, .1); pal(V.mul(s, 1.28), .02, W2P.gold, .2);
         for (let i = 0; i < 6; i++) { const q = i / 6 * 6.283 + .4, b = V.norm(V.add(s, V.add(V.mul(t1, Math.cos(q)), t2, Math.sin(q)), .253)), top = stack(b, .2, .037, .031, 0, T.dome); pal(V.mul(top, 1.026), .042, T.band, .1); pal(V.mul(top, 1.07), .022, T.band, .2); pal(V.mul(top, 1.1), .011, T.band, .3); }
-        [[.98, .2], [1.08, .13], [1.17, .085], [1.25, .055], [1.31, .035]].forEach(([d, r], i) => pal(V.mul(UP, -d), r, T.under, (i & 1) * .12 - .04)); pal(V.mul(UP, -1.36), .03, W2P.gold, .2);
+        [[.98, .2], [1.08, .13], [1.17, .085], [1.25, .055], [1.31, .035]].forEach(([d, r], i) => pal(V.mul(N, -d), r, T.under, (i & 1) * .12 - .04)); pal(V.mul(N, -1.36), .03, W2P.gold, .2);
         res(W2S.dende, .5, 4.35, { flip: 1 }); res(W2S.popo, .5, 5.05, { flip: 2 });
         palm(.82, .3, .85, .5); palm(.82, 2.85, .85, -.5); palm(.86, 3.72, .8, -.3); palm(.86, 5.68, .8, .3); w2Pole = true;
       }
@@ -3272,7 +3272,7 @@ GAMES.push({
       if (PX) { zb = st.zb; ib = st.ib; dm = st.dm; } else { zb = new Float32Array(st.W * st.H); ib = new Uint16Array(st.W * st.H); dm = new Uint8Array(st.W * st.H); }
     }
     // view rotation (drag to spin) with inertia, and a slow automatic turn
-    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99;
+    let M = M3.I(), vrx = 0, vry = 0, drag = null, idleT = 99, yaw = 0;
     // each world idles round its own axis at its own pace: a small tilt off the road's pole keeps the road in view; the lookout turns upright over korin's tower
     const AUTO_SPIN = .06;   // radians a second
     const fx = particleSystem(), puff = makePuff(26, 11);
@@ -3382,7 +3382,7 @@ GAMES.push({
       if (!drag) return;
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
       if (charging > 0) { const [px, py] = st.toBuf(e); drag.ax = px; drag.ay = py; return; }
-      if (drag.moved > 6) { st.cv.style.cursor = 'default'; const k = 1.1 / (R * st.scale); vry = dx * k * 30; vrx = dy * k * 30; M = M3.ortho(M3.mul(M3.mul(M3.rx(dy * k), M3.ry(dx * k)), M)); idleT = 0; }
+      if (drag.moved > 6) { st.cv.style.cursor = 'default'; const k = 1.1 / (R * st.scale); vry = dx * k * 30; vrx = w2Pole ? 0 : dy * k * 30; if (w2Pole) { yaw += dx * k; M = M3.rot(N, yaw); } else M = M3.ortho(M3.mul(M3.mul(M3.rx(dy * k), M3.ry(dx * k)), M)); idleT = 0; }
     });
     st.cv.addEventListener('pointerup', e => {
       if (drag && charging > .15) fireBeam(charging, drag.ax, drag.ay); else if (drag && drag.moved <= 6) { const [px, py] = st.toBuf(e); tap(px, py); } charging = 0; drag = null; st.cv.style.cursor = 'default'; });
@@ -4305,6 +4305,7 @@ GAMES.push({
       if (!drag) {
         if (Math.abs(vrx) + Math.abs(vry) > .001) { M = M3.ortho(M3.mul(M3.mul(M3.rx(vrx * dt), M3.ry(vry * dt)), M)); vrx *= Math.pow(.06, dt); vry *= Math.pow(.06, dt); }
         M = M3.ortho(M3.mul(M3.ry(AUTO_SPIN * dt), M));   // a slow sideways drag that never stops, the same turn the mouse makes
+        if (w2Pole) { if (Math.abs(vry) > .001) yaw += vry * dt; yaw += AUTO_SPIN * dt; M = M3.rot(N, yaw); }   // the lookout sits on korin's tower, so it only ever turns round its own axis
       }
       // running: sprint decays; riding the golden cloud triples everything
       sprint = Math.max(0, sprint - dt * .8); riding = Math.max(0, riding - dt);

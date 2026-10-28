@@ -352,6 +352,8 @@ pub struct Shen {
     pub t1: f64,
     /// the offer on the table: indexes into `WISHES`
     pub offer: Vec<usize>,
+    /// the offer as the wish box shows it, worded when it was made (`ui.wish`'s list)
+    pub offer_json: String,
 }
 
 #[derive(Clone, Debug)]
@@ -442,10 +444,14 @@ pub struct Movie {
 }
 
 /// State game.js changes from `setTimeout`, due at a time.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Later {
     Summon,
     NextWish,
+    /// a toast that waits (game.js `setTimeout(() => ui.event(text, ms), …)`)
+    Event(String, f64),
+    /// snake way's tip, if he's still on it
+    SnakeTip,
 }
 
 /// The timeline's runtime state: `mount()`'s closure variables that frame() reads and writes.
@@ -668,12 +674,12 @@ fn bend_s(s: f64) -> f64 {
 }
 
 impl Game {
-    fn r(&mut self) -> f64 {
+    pub(crate) fn r(&mut self) -> f64 {
         self.rng.random()
     }
 
     /// `burst()`: n particles, two draws each.
-    fn burst(&mut self, n: u32) {
+    pub(crate) fn burst(&mut self, n: u32) {
         self.rng.skip(2 * n);
     }
 
@@ -709,6 +715,12 @@ impl Game {
             let (_, what) = self.tl.later.remove(0);
             match what {
                 Later::Summon => self.summon(),
+                Later::Event(s, ms) => self.event_ms(s, ms),
+                Later::SnakeTip => {
+                    if self.playing && self.s.world == 3 && self.tl.snk.is_some() {
+                        self.event_ms("he runs on his own — tap to hop for the golden orbs and to blast the lost souls", 4200.0);
+                    }
+                }
                 Later::NextWish => {
                     if let Some(sh) = &self.tl.shen {
                         let n = sh.wishes;
@@ -776,7 +788,7 @@ impl Game {
         }
     }
 
-    fn meteor_pay(&self) -> f64 {
+    pub(crate) fn meteor_pay(&self) -> f64 {
         25.0 * self.mult(false) * (1.0 + (self.laps.min(50) as f64) * 0.1)
     }
 
@@ -789,6 +801,7 @@ impl Game {
         // the space pod
         if session > 12.0 && self.tl.star.is_none() && tick(&mut self.tl.next_star, dt) {
             self.once("stars", "a saiyan space pod — tap it");
+            self.cue(crate::hud::Cue::Notify("pod", String::new()));
             let y = if w / h < 0.8 { self.cam.cy - self.cam.r * (1.12 + self.r() * 0.16) } else { h * (0.08 + self.r() * 0.2) };
             self.tl.star = Some(Star { x: -8.0, y, vx: w / 6.0 });
             self.tl.next_star = (18.0 + self.r() * 14.0) * (1.0 - 0.12 * self.lvl(N_PODS)) * self.soon();
@@ -853,7 +866,7 @@ impl Game {
                 if bz.noise >= 1.0 {
                     bz.awake = t;
                     self.shake = 0.8;
-                    self.event("beerus is AWAKE — \"who dares?!\" everything ×0.25 until you find him pudding");
+                    self.event_ms("beerus is AWAKE — \"who dares?!\" everything ×0.25 until you find him pudding", 5000.0);
                     let c = self.rand_cap(0.4, 0.7);
                     self.tl.pud = Some(Npc { c, t0: t, ..Default::default() });
                 }
@@ -920,7 +933,7 @@ impl Game {
                 self.shake = 0.9;
                 self.ach("krillin");
                 let msg = format!("KRILLIN!!! — rage ×{} for 20s", self.b.rage);
-                self.event(msg);
+                self.event_ms(msg, 4000.0);
                 if k.sx.is_some() {
                     for _ in 0..4 {
                         self.rng.skip(2);
@@ -941,7 +954,7 @@ impl Game {
             let c = self.cap_pt(0.35, 3.6);
             self.tl.kai = Some(Npc { c, t0: t, until: t + 9.0, ..Default::default() });
             let pun = PUNS[(self.r() * PUNS.len() as f64).floor() as usize];
-            self.event(format!("king kai: {pun}"));
+            self.event_ms(format!("king kai: {pun}"), 6000.0);
             self.tl.next_kai = 140.0 + self.r() * 40.0;
         }
         if self.tl.ginyu.is_none()
@@ -1123,7 +1136,7 @@ impl Game {
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
-            self.event(format!("{who} wants to do the fusion dance! tap on the beat: fu · sion · ha!"));
+            self.event_ms(format!("{who} wants to do the fusion dance! tap on the beat: fu · sion · ha!"), 3500.0);
             self.tl.next_dance = 300.0 + self.r() * 120.0;
         }
         if let Some(d) = self.tl.dance.as_mut() {
@@ -1152,7 +1165,7 @@ impl Game {
                 } else {
                     "fusion ha… you got the skinny one. ×0.75 for 15s".to_string()
                 };
-                self.event(msg);
+                self.event_ms(msg, 4000.0);
             }
             let d = self.tl.dance.as_ref().unwrap();
             if d.done != 0.0 && t - d.done > 1.0 {
@@ -1314,6 +1327,7 @@ impl Game {
             if self.s.namek_left <= 0.0 && (self.tl.shen.is_none() || hung) && (w != 3 || snake_done || hung) {
                 if hung && self.tl.shen.is_some() {
                     self.tl.shen = None;
+                    self.cue(crate::hud::Cue::WishDone);
                 }
                 self.travel(self.home());
                 self.tl.namek_until = 0.0;
@@ -1418,7 +1432,7 @@ impl Game {
         }
         if self.tl.movie_note.as_ref().is_some_and(|n| t > n.0) {
             let (_, s) = self.tl.movie_note.take().unwrap();
-            self.event(s);
+            self.event_ms(s, 3500.0);
         }
         // nappa defends planet vegeta
         if self.s.world == 2 && self.tl.next_nappa > 0.0 && self.tl.boss.is_none() && self.tl.shen.is_none() && {
@@ -1439,7 +1453,7 @@ impl Game {
             if self.s.world == 0 {
                 self.travel(9);
             }
-            self.event("the grand priest: \"welcome to the tournament of power.\" — universe 9 is up first. beat each universe for a universe star");
+            self.event_ms("the grand priest: \"welcome to the tournament of power.\" — universe 9 is up first. beat each universe for a universe star", 5000.0);
         }
         if self.s.multi && self.s.saga < sagas {
             self.tl.next_saga -= dt;
@@ -1457,7 +1471,9 @@ impl Game {
             let twin = vname == "goku black" && self.s.hero == Hero::Goku;
             let mut b = Boss::new(0, if me { "past vegeta".into() } else { vname.into() }, spr, hp, t, t + 40.0);
             b.saga = true;
+            let name = b.name.clone();
             self.new_boss(b);
+            self.cue(crate::hud::Cue::Notify("raid", name));
             let what = if me {
                 "your younger self shows up, scouter and all — \"that's MY hair!\" tap him".to_string()
             } else if twin {
@@ -1465,7 +1481,7 @@ impl Game {
             } else {
                 format!("{vname} is attacking — tap him!")
             };
-            self.event(format!("saga {}/{n}: {what}", self.s.saga as usize % n + 1));
+            self.event_ms(format!("saga {}/{n}: {what}", self.s.saga as usize % n + 1), 4000.0);
             let z = if self.s.zeno > 0 { 4.0 } else { 1.0 };
             if self.s.multi {
                 self.tl.next_saga = (120.0 + self.r() * 60.0) / z;
@@ -1485,7 +1501,7 @@ impl Game {
             b.uni = true;
             b.tag = format!("{}{}", uni_name(u), if last { " boss".to_string() } else { format!(" {}/{}", k + 1, UNI_STAGES.len()) });
             self.new_boss(b);
-            self.event(format!("{}{}: {who} steps up. {ut}s to win — tap!", uni_name(u), if last { " — its strongest" } else { "" }));
+            self.event_ms(format!("{}{}: {who} steps up. {ut}s to win — tap!", uni_name(u), if last { " — its strongest" } else { "" }), 3500.0);
             self.tl.next_boss = 10.0 + self.r() * 6.0;
         }
         // the meteor storm
@@ -1572,7 +1588,7 @@ impl Game {
                     b.pow = true;
                     self.shake = 0.5;
                     let msg = POWER_UP.iter().find(|p| p.0 == b.name).map_or(format!("{} powers up!", b.name), |p| p.1.to_string());
-                    self.event(msg);
+                    self.event_ms(msg, 3000.0);
                 }
                 let b = self.tl.boss.as_mut().unwrap();
                 b.p = if low {
@@ -1599,7 +1615,7 @@ impl Game {
                     };
                     let msg = format!("{} holds {place} — {}% left. grow, he's back in {next}s", b.name, js_round(b.hp / b.max * 100.0));
                     self.tl.next_boss = next;
-                    self.event(msg);
+                    self.event_ms(msg, 3500.0);
                 } else {
                     let msg = format!("{} got away", b.name);
                     self.event(msg);
@@ -1678,7 +1694,7 @@ impl Game {
         if self.tl.zen.is_none() && self.zeno_ready() && self.playing && self.tl.shen.is_none() && self.s.world == self.home() {
             let c = self.cap_pt(0.4, 1.7);
             self.tl.zen = Some(Npc { c, t0: t, ..Default::default() });
-            self.event("zeno-sama is here. \"you're strong! let's be friends!\" — tap him for the zeno button");
+            self.event_ms("zeno-sama is here. \"you're strong! let's be friends!\" — tap him for the zeno button", 5000.0);
         }
         let w = self.cam.w;
         if let Some(s) = self.tl.star.as_mut() {
@@ -1766,6 +1782,7 @@ impl Game {
                 self.tl.next_moon = if self.s.world == 2 { 40.0 } else { 180.0 + self.r() * 60.0 };
             }
         }
+        self.charge(t);
         if self.s.lv(Upg::Senzu) > 0 && self.tl.bean.is_none() && tick(&mut self.tl.next_bean, dt) {
             let c = geom::mul(self.rand_cap(0.3, 0.9), 1.03);
             self.tl.bean = Some(Npc { c, ..Default::default() });
@@ -1848,6 +1865,7 @@ impl Game {
         let b = self.tl.boss.as_mut().unwrap();
         b.hp -= dmg * arm;
         b.hit_t = Some(t);
+        self.cues.push(crate::hud::Cue::Sfx("hit"));
         self.burst(6);
         let b = self.tl.boss.clone().unwrap();
         if b.hp <= 0.0 && !b.dead {
@@ -1876,7 +1894,18 @@ impl Game {
                     if self.s.uni as usize >= LADDER.len() {
                         self.ach("multiverse");
                     }
-                    let _ = u;
+                    if u < LADDER.len() {
+                        self.ach(&format!("u{}", LADDER[u].0));
+                    }
+                    for n in [1, 5, 10] {
+                        if u == LADDER.len() + n - 1 {
+                            self.ach(&format!("inf{n}"));
+                        }
+                    }
+                    let x = STAR_X.powf(if self.ang(A_STARS) { 2.0 } else { 1.0 });
+                    let msg =
+                        format!("{} cleared — a universe star: ×{} on everything. next: {}", uni_name(u), crate::json::num(x), uni_name(self.s.uni as usize));
+                    self.after(2.6, Later::Event(msg, 4500.0));
                 }
             }
             if b.saga {
@@ -1885,12 +1914,14 @@ impl Game {
                 if self.lvl(N_SAGA) > 0.0 {
                     self.s.seeds += 1.0;
                     self.s.ascend += 1.0;
+                    self.after(5.2, Later::Event("legend — the villain drops a ki seed".into(), 2600.0));
                 }
                 if self.s.saga >= VILLAINS.len() as u32 {
                     self.ach("sagas");
                 }
                 let c = self.cap_pt(0.42, 2.9);
                 self.tl.satan = Some(Npc { c, t0: t + 1.2, until: t + 9.0, n: prize * 0.5, ..Default::default() });
+                self.after(2.8, Later::Event("mr. satan: \"i did it! it was all me!\" — tap him for the prize money".into(), 4500.0));
             }
             self.victory();
             self.s.beaten.insert(b.name.clone());
@@ -1984,7 +2015,7 @@ impl Game {
         }
     }
 
-    fn open_capsule(&mut self) {
+    pub(crate) fn open_capsule(&mut self) {
         self.tl.capsule = None;
         let roll = self.r();
         self.burst(22);
@@ -2041,9 +2072,15 @@ impl Game {
         }
         self.s.world = w;
         self.cam.layout(w);
+        if W2L.iter().any(|l| l.0 == w) {
+            self.inp.w2_pole = w == 10; // only w2Scenery() resets game.js's w2Pole, so it outlasts the lookout
+        }
         self.shake = 0.5;
         self.burst(40);
-        self.event(TRAVEL[w as usize]);
+        self.event_ms(TRAVEL[w as usize], if w >= 3 { 6000.0 } else { 2600.0 });
+        if w != 0 {
+            self.cue(crate::hud::Cue::Notify("trip", crate::hud::WORLD_FULL[w as usize].into()));
+        }
         if let Some(&(_, a)) = WORLD_ACH.iter().find(|x| x.0 == w) {
             self.ach(a);
         }
@@ -2116,6 +2153,7 @@ impl Game {
             hx: w / 2.0,
             hy: h / 2.0,
         });
+        self.after(2.8, Later::SnakeTip);
     }
 
     fn straight(&self) -> bool {
@@ -2123,23 +2161,28 @@ impl Game {
         (bend_s(p * END + 9.0) - bend_s(p * END)).abs() < 0.22
     }
 
-    fn snake_tap(&mut self, px: f64, py: f64) {
+    /// `blastGhost`: a lost soul sent back down to HFIL.
+    pub(crate) fn blast_ghost(&mut self, gi: usize) {
+        let snk = self.tl.snk.as_mut().unwrap();
+        snk.ghosts[gi].dead = true;
+        snk.blasted += 1;
+        self.s.souls += 1;
+        if self.s.souls >= 10 {
+            self.ach("souls10");
+        }
+        self.burst(18);
+        let n = 90f64.max(self.wrate() * 12.0);
+        self.gain(n);
+        self.ach("hfil");
+    }
+
+    pub(crate) fn snake_tap(&mut self, px: f64, py: f64) {
         let Some(snk) = self.tl.snk.as_ref() else { return };
         if snk.done != 0.0 {
             return;
         }
         if let Some(gi) = snk.ghosts.iter().position(|g| !g.dead && g.sx.is_some_and(|(x, y)| hypot(&[px - x, py - y]) < g.r + 8.0)) {
-            let snk = self.tl.snk.as_mut().unwrap();
-            snk.ghosts[gi].dead = true;
-            snk.blasted += 1;
-            self.s.souls += 1;
-            if self.s.souls >= 10 {
-                self.ach("souls10");
-            }
-            self.burst(18);
-            let n = 90f64.max(self.wrate() * 12.0);
-            self.gain(n);
-            self.ach("hfil");
+            self.blast_ghost(gi);
             return;
         }
         let dash = self.straight();
@@ -2254,8 +2297,19 @@ impl Game {
             return;
         }
         let porunga = self.s.world == 1;
-        self.tl.shen = Some(Shen { t0: self.t, phase: Phase::Rise, phase_t: self.t, wishes: if porunga { 3 } else { 1 }, porunga, t1: 0.0, offer: Vec::new() });
+        self.tl.shen = Some(Shen {
+            t0: self.t,
+            phase: Phase::Rise,
+            phase_t: self.t,
+            wishes: if porunga { 3 } else { 1 },
+            porunga,
+            t1: 0.0,
+            offer: Vec::new(),
+            offer_json: String::new(),
+        });
         self.ach(if porunga { "porunga" } else { "shenron" });
+        self.cue(crate::hud::Cue::Sfx("dragon"));
+        self.cue(crate::hud::Cue::Notify("shenron", if porunga { "porunga" } else { "shenron" }.into()));
         self.event(if porunga { "porunga awakens — three wishes…" } else { "the eternal dragon awakens…" });
     }
 
@@ -2289,10 +2343,12 @@ impl Game {
         if self.s.krillin_dead {
             offer.push(KRILLIN_WISH);
         }
+        let text = self.offer_json(&offer);
         let sh = self.tl.shen.as_mut().unwrap();
         sh.phase = Phase::Wish;
         sh.phase_t = t;
         sh.offer = offer;
+        sh.offer_json = text;
     }
 
     /// Grants a wish by key (the HUD's pick, or the rarest of the three after 20s).
@@ -2339,6 +2395,7 @@ impl Game {
                 self.s.ascend += g;
                 let msg = format!("your wish is granted — +{g} ki seeds (×{} on everything)", to_fixed(self.seed_boost(), 1));
                 self.event(msg);
+                self.cue(crate::hud::Cue::TreeGift(format!("+{g} ki seeds from shenron")));
             }
             "bigape" => {
                 self.s.big_ape = true;
@@ -2357,6 +2414,7 @@ impl Game {
                     }
                 }
                 self.event("your wish is granted — every ki talent +1 rank");
+                self.cue(crate::hud::Cue::TreeGift("+1 rank on every talent from shenron".into()));
             }
             "gear" => {
                 for l in self.s.levels.iter_mut() {
@@ -2445,7 +2503,10 @@ impl Game {
                 let best = three.iter().copied().reduce(|a, w| if WISHES[w].1 > WISHES[a].1 { w } else { a }).unwrap();
                 let key = WISHES[best].0;
                 self.pick(key);
-                self.event(format!("20s and no answer — the dragon grants the rarest: {key}"));
+                // the label as game.js reads it, after the grant
+                let (_, label, _, tier) = self.wish_text(best);
+                self.cue(crate::hud::Cue::WishDone);
+                self.event_ms(format!("20s and no answer — the dragon grants the rarest: {label} ({tier})"), 4500.0);
             }
             Phase::Granting if in_phase > 6.0 => self.open_wish(),
             Phase::Leave if t - sh.t1 > 1.7 => self.tl.shen = None,
@@ -2488,7 +2549,7 @@ impl Game {
         self.tl.last_movie = who;
         self.krillin_hit(who);
         self.shake = 0.5;
-        self.event(o.intro);
+        self.event_ms(o.intro, 5000.0);
     }
 
     fn say(&mut self, s: &str) {
@@ -2526,7 +2587,7 @@ impl Game {
         false
     }
 
-    fn movie_hit(&mut self, i: usize, dmg: f64) {
+    pub(crate) fn movie_hit(&mut self, i: usize, dmg: f64) {
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let h = &mut self.tl.movie.as_mut().unwrap().minions[i];
         if h.dead {
@@ -2555,7 +2616,7 @@ impl Game {
         }
     }
 
-    fn break_web(&mut self, s: &str) {
+    pub(crate) fn break_web(&mut self, s: &str) {
         let m = self.tl.movie.as_mut().unwrap();
         m.web = None;
         m.next_web = self.t + 9.0;
@@ -2645,13 +2706,13 @@ impl Game {
             m.nova = Some((t, t + o.nova));
             let bm = self.tl.boss.as_mut().unwrap();
             bm.until = bm.until.max(t + o.nova + 2.0);
-            self.event(format!("cooler raises a supernova — {}s to bring him down", o.nova));
+            self.event_ms(format!("cooler raises a supernova — {}s to bring him down", o.nova), 3500.0);
         }
         let m = self.tl.movie.as_mut().unwrap();
         if m.nova.is_some_and(|n| t > n.1) {
             self.shake = 1.0;
             self.b.tired_until = self.b.tired_until.max(t + 8.0);
-            self.event("SUPERNOVA — you're knocked flat. tired ×0.75 for 8s, and cooler leaves you for dead");
+            self.event_ms("SUPERNOVA — you're knocked flat. tired ×0.75 for 8s, and cooler leaves you for dead", 4000.0);
             let bm = self.tl.boss.as_mut().unwrap();
             bm.dead = true;
             bm.fled = true;
@@ -2663,18 +2724,18 @@ impl Game {
             m.minions.push(Henchman { name: "janemba", spr: b.spr(), hp, max: hp, twin: true, dead: false, x: None, y: 0.0, k: 1.0 });
             m.twin = Some(m.minions.len() - 1);
             self.shake = 0.5;
-            self.event("janemba splits in two! the real one won't fall while his double stands");
+            self.event_ms("janemba splits in two! the real one won't fall while his double stands", 3500.0);
         }
         let m = self.tl.movie.as_mut().unwrap();
         if o.flip && m.flips < 3 && b.hp < b.max * (0.75 - 0.25 * m.flips as f64) {
             m.flips += 1;
             m.flip_until = t + 6.0;
-            self.event("janemba twists space — left is right for 6s: hit his reflection");
+            self.event_ms("janemba twists space — left is right for 6s: hit his reflection", 3500.0);
         }
         let m = self.tl.movie.as_mut().unwrap();
         if o.web && m.web.is_none() && t > m.next_web && m.minions.iter().any(|h| h.name == "bujin" && !h.dead) && t - m.t0 > 3.0 {
             m.web = Some((t, 0));
-            self.event("bujin's psychic web! your taps are stuck — tap bujin three times or fire a beam");
+            self.event_ms("bujin's psychic web! your taps are stuck — tap bujin three times or fire a beam", 3500.0);
         }
         if self.tl.movie.as_ref().unwrap().web.is_some_and(|w| t - w.0 > 10.0) {
             self.break_web("the web frays and lets go");
@@ -2810,6 +2871,7 @@ impl Game {
                 if self.s.greg_wins >= 5 && !self.s.ach.contains("greg5") {
                     self.ach("greg5");
                     self.s.spirit = 1;
+                    self.after(4.2, Later::Event("king kai taught you the spirit bomb — it charges on its own, tap the ball".into(), 2600.0));
                 }
                 self.gain(g);
                 let msg = format!("you caught gregory! +{} — race {} won", fmt_short(js_round(g)), self.s.greg_wins);
@@ -2891,7 +2953,9 @@ impl Game {
         }
         if let Some((x, y)) = self.tl.zen.as_ref().and_then(|z| z.sx) {
             if hypot(&[px - x, py - (y - 9.0)]) < 13.0 {
+                self.cue(crate::hud::Cue::Sfx("coin"));
                 self.event("zeno: \"want to push my button? it's fun!\"");
+                self.cue(crate::hud::Cue::Zeno);
                 return;
             }
         }
@@ -2900,7 +2964,7 @@ impl Game {
                 if hypot(&[px - x, py - (y - 10.0)]) < 13.0 {
                     self.gain(s.n);
                     self.ach("satan");
-                    self.event(format!("hercule cash prize! +{} — \"keep it between us, kid\"", fmt_short(js_round(s.n))));
+                    self.event_ms(format!("hercule cash prize! +{} — \"keep it between us, kid\"", fmt_short(js_round(s.n))), 3500.0);
                     self.burst(18);
                     self.tl.satan = None;
                     return;
@@ -2946,6 +3010,7 @@ impl Game {
                 self.gain(g);
                 self.event("space pod caught — ×2 for 15s");
                 self.goal("star", 1.0, false);
+                self.cue(crate::hud::Cue::Fx("star"));
                 self.rng.skip(48);
                 self.tl.star = None;
                 return;

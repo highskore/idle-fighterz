@@ -50,6 +50,28 @@ pub fn ap_t(m: &M3, v: V3) -> V3 {
     [m[0] * v[0] + m[3] * v[1] + m[6] * v[2], m[1] * v[0] + m[4] * v[1] + m[7] * v[2], m[2] * v[0] + m[5] * v[1] + m[8] * v[2]]
 }
 
+pub fn rx(a: f64) -> M3 {
+    let (c, s) = (cos(a), sin(a));
+    [1.0, 0.0, 0.0, 0.0, c, -s, 0.0, s, c]
+}
+
+/// `M3.rot(axis, a)`: a turn of `a` about a unit axis.
+pub fn rot([x, y, z]: V3, a: f64) -> M3 {
+    let (c, s) = (cos(a), sin(a));
+    let cc = 1.0 - c;
+    [
+        c + x * x * cc,
+        x * y * cc - z * s,
+        x * z * cc + y * s,
+        y * x * cc + z * s,
+        c + y * y * cc,
+        y * z * cc - x * s,
+        z * x * cc - y * s,
+        z * y * cc + x * s,
+        c + z * z * cc,
+    ]
+}
+
 pub fn ry(a: f64) -> M3 {
     let (c, s) = (cos(a), sin(a));
     [c, 0.0, s, 0.0, 1.0, 0.0, -s, 0.0, c]
@@ -107,6 +129,8 @@ pub struct Cam {
     pub cy: f64,
     pub m: M3,
     pub bob: f64,
+    /// CSS pixels per buffer pixel (`st.scale`): a drag turns the planet by its on-screen size
+    pub scale: f64,
 }
 
 /// A point on screen and the angle the planet's surface tilts at there (`kidScreen`).
@@ -121,7 +145,7 @@ pub struct Spot {
 impl Cam {
     /// A view of a `w`×`h` buffer (game.js's `st.W`×`st.H`, in its big pixels).
     pub fn new(w: f64, h: f64) -> Self {
-        let mut c = Cam { w, h, r: 40.0, cx: 0.0, cy: 0.0, m: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], bob: 0.0 };
+        let mut c = Cam { w, h, r: 40.0, cx: 0.0, cy: 0.0, m: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], bob: 0.0, scale: 3.0 };
         c.layout(0);
         c
     }
@@ -149,6 +173,11 @@ impl Cam {
     /// The idle turn, one step (`M = ortho(ry(AUTO_SPIN·dt)·M)`).
     pub fn spin(&mut self, dt: f64) {
         self.m = ortho(&m_mul(&ry(AUTO_SPIN * dt), &self.m));
+    }
+
+    /// A drag's turn, or its inertia: `M = ortho(rx(ax)·ry(ay)·M)`.
+    pub fn turn(&mut self, ax: f64, ay: f64) {
+        self.m = ortho(&m_mul(&m_mul(&rx(ax), &ry(ay)), &self.m));
     }
 
     /// Where a point on the planet lands on screen, `lift` pixels off the surface.

@@ -1,5 +1,5 @@
 use crate::data::{Hero, Upg, ANGELS, TREE};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// The persistent state: game.js's `S`.
 #[derive(Clone, Debug, Default)]
@@ -67,6 +67,10 @@ pub struct Save {
     pub beaten: BTreeSet<String>,
     pub foes: Vec<String>,
     pub ach: BTreeSet<&'static str>,
+    /// when each achievement landed (`S.ach[id] = Date.now()`): the share card lists the newest first
+    pub ach_at: BTreeMap<&'static str, f64>,
+    /// the date of the last daily bonus (`new Date().toDateString()`), the one thing a new visit keeps
+    pub daily: Option<String>,
 }
 
 impl Save {
