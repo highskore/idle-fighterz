@@ -1453,11 +1453,783 @@ const seq = (o, w = 46, h = 30) => [0, 1, 2].map(f => shapeSprite(w, h, G => kam
 const kameD = seq({ cx: 19, head: 1, headDx: 0, buff: .6, shell: 1.25, stance: [9, 6], crouch: [4, 3, 2], lean: [-3, 1, 2], rags: false });
 return kameD;
 })();
-/* zeno-sama: a placeholder until the drawn sprite lands. tiny, round, a big pale head, a purple robe with gold trim */
-const ZENO = makeSprite([
-  '....oooooo....', '..oobbbbbboo..', '.obbbBbbbbbbo.', 'obbbffffffbbbo', 'obffffffffffbo', 'offffffffffffo', 'offkkffffkkffo', 'offkkffffkkffo', 'offffffffffffo', '.offffmmfffffo', '..offffffffoo.',
-  '...oooooooo...', '...oppyyppo...', '..oppppwpppo..', '..oppppwpppo..', '..opppppppPo..', '...oPPPPPPo...', '....oo..oo....',
-], { o: 0x141028, b: 0x8ab4e8, B: 0x5a7cc0, f: 0xeceef8, k: 0x0c0c18, m: 0x8a2a7c, p: 0x8a3ab8, P: 0x5a2080, y: 0xf2c840, w: 0xffffff });
+/* zeno-sama, the omni-king (take A: standing, arms down) */
+const ZENO = (() => {
+const mir = (W, pts) => pts.map(([x, y]) => [W - x, y]);
+const oline = (G, pts, w0, w1, c) => { G.line(pts, w0 + 2, w1 + 2, 'o'); G.line(pts, w0, w1, c); };
+const fist = (G, x, y, c, r = 1.5) => { G.ell(x, y, r + 1, r + 1, 'o'); G.ell(x, y, r, r, c); };
+const arm = (G, pts, c, hand, w = 3) => { oline(G, pts, w, w - .4, c); const [x, y] = pts[pts.length - 1]; fist(G, x, y, hand); };
+const fold = (G, c, c2, hand, dx = 0, dy = 0) => {
+  const l = [[7 + dx, 16.6 + dy], [8.6 + dx, 19.4 + dy], [16.6 + dx, 19 + dy]], r = [[19 + dx, 16.6 + dy], [17.6 + dx, 20.4 + dy], [9.4 + dx, 20.2 + dy]];
+  G.line(l, 5, 4.6, 'o'); G.line(r, 5, 4.6, 'o'); G.line(l, 3, 2.6, c); G.line(r, 3, 2.6, c2);
+  G.ell(9.2 + dx, 19.6 + dy, 1.3, 1.2, hand); G.ell(16.8 + dx, 20.4 + dy, 1.3, 1.2, hand);
+};
+// ---------- zeno: the omni-king. a big round head, pale blue crown over a white face, tiny black eyes,
+// a magenta robe with gold trim and the white 'all' panel, the zeno button ----------
+const ZENO_PAL = { o: 0x141028, b: 0x8ab4e8, B: 0x5a7cc0, f: 0xf2f4fa, F: 0xc4c8dc, k: 0x0c0c18, w: 0xffffff, m: 0xc84ab0, M: 0x8a2a7c, y: 0xf2c840, Y: 0xb08820, c: 0xf6f2e8, C: 0xc8c0a8, p: 0x6a3a9a, P: 0x44265e, r: 0xf08aa0, u: 0x3a8af0, U: 0x1a4ab0, l: 0xc8f0ff, s: 0x9ae0ff };
+function zeno(o = {}) {
+  const W = 24, pose = o.pose || 'stand';
+  return shapeSprite(W, 30, G => {
+    if (o.erase) for (const [x, y] of [[2, 4], [21, 6], [3, 16], [22, 18], [20, 2]]) { G.set(x, y, 's'); G.set(x - 1, y, 'l'); G.set(x + 1, y, 'l'); G.set(x, y - 1, 'l'); G.set(x, y + 1, 'l'); }
+    oline(G, [[10, 24], [9.6, 27]], 3, 3, 'p'); oline(G, [[14, 24], [14.4, 27]], 3, 3, 'p');                       // wide trousers
+    G.rect(7, 27, 5, 2, 'y'); G.rect(12, 27, 5, 2, 'y');                                                         // gold slippers
+    G.poly([[8, 16], [16, 16], [17, 24.6], [7, 24.6]], 'm');                                                     // robe
+    G.poly([[10.4, 16], [13.6, 16], [13.6, 24.6], [10.4, 24.6]], 'c'); G.rect(11, 19, 2, 1, 'M'); G.set(12, 18, 'M'); G.set(12, 20, 'M');   // the 'all' panel
+    G.rect(7, 24, 10, 1, 'y'); G.rect(10, 16, 1, 9, 'y'); G.rect(13, 16, 1, 9, 'y');                             // gold trim
+    const hand = 'b';
+    if (pose === 'stand') { arm(G, [[8, 17], [6.4, 20], [6.8, 22.4]], 'm', hand); arm(G, [[16, 17], [17.6, 20], [17.2, 22.4]], 'm', hand); }
+    if (pose === 'button') { arm(G, [[8, 17], [8, 20.4], [11, 21.4]], 'm', hand); arm(G, [[16, 17], [16, 20.4], [13, 21.4]], 'm', hand); G.rect(10, 19, 4, 3, 'c'); G.rect(11, 19, 2, 1, 'u'); G.set(12, 19, 'U'); }   // holding the button
+    if (pose === 'cheer') { arm(G, [[8, 17], [5, 14], [4, 10]], 'm', hand); arm(G, [[16, 17], [19, 14], [20, 10]], 'm', hand); }
+    if (pose === 'point') { arm(G, [[8, 17], [6.4, 20], [6.8, 22.4]], 'm', hand); arm(G, [[16, 17], [19, 16], [21.4, 15]], 'm', hand); G.set(23, 14, 'l'); }
+    G.rect(8, 15, 8, 2, 'y');                                                                                    // gold collar
+    // head: a wide egg, pale blue crown with a rounded peak at the back, white face, little ears
+    G.ell(12, 8.4, 7, 6.6, 'b'); G.ell(5, 9, 1.4, 1.8, 'b'); G.ell(19, 9, 1.4, 1.8, 'b');
+    G.ell(12, 10.2, 5.6, 4.6, 'f'); G.poly([[7, 9], [17, 9], [12, 6.6]], 'f');
+    G.set(8, 4, 'l'); G.set(9, 3, 'l');
+    const eyes = o.eyes || 'dot';
+    if (eyes === 'dot') { G.rect(9, 9, 2, 3, 'k'); G.rect(13, 9, 2, 3, 'k'); G.set(9, 9, 'w'); G.set(13, 9, 'w'); }
+    if (eyes === 'happy') { G.rect(9, 10, 2, 1, 'k'); G.rect(13, 10, 2, 1, 'k'); G.set(8, 11, 'k'); G.set(11, 11, 'k'); G.set(12, 11, 'k'); G.set(15, 11, 'k'); }
+    if (eyes === 'flat') { G.rect(9, 10, 2, 1, 'k'); G.rect(13, 10, 2, 1, 'k'); }
+    G.set(8, 12, 'r'); G.set(15, 12, 'r');                                                                       // rosy cheeks
+    if (o.mouth === 'open') { G.rect(11, 13, 2, 1, 'k'); G.set(11, 14, 'r'); G.set(12, 14, 'r'); } else G.rect(11, 13, 2, 1, 'F');
+  }, ZENO_PAL, { b: 'B', m: 'M', p: 'P', y: 'Y', c: 'C', f: 'F' });
+}
+  return zeno({ pose: 'stand' });
+})();
+/* the tournament of power fighters: four takes each (A idle, B and C attacking or hit, D powered up), keyed by name */
+const TOP_FIGHTERS = (() => {
+// tournament of power fighters (universes 9, 10, 4, 3, 2, 6, 11) — four takes each, villain scale like hit and jiren
+const mir = (W, pts) => pts.map(([x, y]) => [W - x, y]);
+const oline = (G, pts, w0, w1, c) => { G.line(pts, w0 + 2, w1 + 2, 'o'); G.line(pts, w0, w1, c); };
+const fist = (G, x, y, c, r = 1.5) => { G.ell(x, y, r + 1, r + 1, 'o'); G.ell(x, y, r, r, c); };
+const arm = (G, pts, c, hand, w = 3, r = 1.5) => { oline(G, pts, w, w - .4, c); const [x, y] = pts[pts.length - 1]; fist(G, x, y, hand, r); };
+// arms folded across the chest; l/r are the two forearms, hands at their far ends
+const fold = (G, l, r, c, c2, hand, w = 3, hr = 1.3) => { G.line(l, w + 2, w + 1.6, 'o'); G.line(r, w + 2, w + 1.6, 'o'); G.line(l, w, w - .4, c); G.line(r, w, w - .4, c2); const a = l[l.length - 1], b = r[r.length - 1]; G.ell(b[0], b[1], hr, hr * .9, hand); G.ell(a[0], a[1], hr, hr * .9, hand); };
+const shift = (G, dx, dy) => { const m = p => p.map(([x, y]) => [x + dx, y + dy]); return { ...G, ell: (x, y, a, b, c) => G.ell(x + dx, y + dy, a, b, c), rect: (x, y, w, h, c) => G.rect(x + dx, y + dy, w, h, c), poly: (p, c) => G.poly(m(p), c), line: (p, a, b, c) => G.line(m(p), a, b, c), set: (x, y, c) => G.set(x + dx, y + dy, c) }; };
+// jiren's flame aura, stretched to any canvas
+const AURA_O = [[14, 0], [17, 4], [21, 1], [21.6, 7], [26.6, 6], [24.6, 13], [27.6, 18], [24.6, 24], [27.4, 31], [22, 30], [21, 35.4], [7, 35.4], [6, 30], [.6, 31], [3.4, 24], [.4, 18], [3.4, 13], [1.4, 6], [6.4, 7], [7, 1], [11, 4]], AURA_I = [[14, 3], [19, 6], [24, 9], [22, 18], [25, 29], [3, 29], [6, 18], [4, 9], [9, 6]];
+const aura = (G, W, H, c, c2) => { const f = p => p.map(([x, y]) => [x * W / 28, y * H / 36]); G.poly(f(AURA_O), c); if (c2) G.poly(f(AURA_I), c2); };
+// one-pixel strokes, snapped to pixel centres (a width-1 stroke along a pixel boundary draws nothing)
+const l1 = (G, pts, c) => G.line(pts.map(([x, y]) => [Math.floor(x) + .5, Math.floor(y) + .5]), 1.05, 1.05, c);
+const bolt = l1;
+// every sprite gets a spare column each side and two spare rows on top, so spikes and auras keep their outline
+const spr = (W, H, paint, pal, sh) => shapeSprite(W + 2, H + 2, G => paint(shift(G, 1, 2)), pal, sh);
+
+// ---------- u9 · the trio de dangers: wolf-men brothers. a front-facing wolf head: tall pointed ears, a pale muzzle
+// with a black nose, slanted eyes. cx is the face's centre line (a pixel boundary), t the top of the skull ----------
+function wolfHead(G, cx, t, c, o = {}) {
+  const e = o.ears || [[cx - 3, t + 3], [cx - 5.4, t - 3.4]];
+  oline(G, e, 3.8, .8, c.f); oline(G, [[2 * cx - e[0][0], e[0][1]], [2 * cx - e[1][0], e[1][1]]], 3.8, .8, c.f);
+  G.line([[e[0][0] - .2, e[0][1] - .4], [e[1][0] + .6, e[1][1] + 1.6]], 1.4, .6, c.i); G.line([[2 * cx - e[0][0] + .2, e[0][1] - .4], [2 * cx - e[1][0] - .6, e[1][1] + 1.6]], 1.4, .6, c.i);
+  G.ell(cx, t + 5.2, 4.8, 4.4, c.f);
+  G.poly([[cx - 5.6, t + 5], [cx - 6.6, t + 9.6], [cx - 4.6, t + 9.4], [cx - 3.6, t + 11.6], [cx + 3.6, t + 11.6], [cx + 4.6, t + 9.4], [cx + 6.6, t + 9.6], [cx + 5.6, t + 5]], c.f);   // cheek ruff
+  if (o.mane) G.poly([[cx - 5, t + 2], [cx - 2, t - .6], [cx, t + 1.4], [cx + 2, t - .6], [cx + 5, t + 2], [cx + 3, t + 3], [cx - 3, t + 3]], c.m || c.f);
+  G.poly([[cx - 2.6, t + 7.4], [cx + 2.6, t + 7.4], [cx + 3, t + 10.4], [cx + 1.6, t + 12.4], [cx - 1.6, t + 12.4], [cx - 3, t + 10.4]], c.z);   // muzzle
+  G.rect(cx - 1, t + 7, 2, 1, 'k'); G.set(cx - 1, t + 8, 'K');                                                   // nose
+  const ey = t + 5, ek = o.eye || 'e';
+  if (o.shut) { G.rect(cx - 4, ey + 1, 3, 1, 'k'); G.rect(cx + 1, ey + 1, 3, 1, 'k'); G.set(cx - 3, ey + 2, 'Z'); G.set(cx + 2, ey + 2, 'Z'); }
+  else { G.set(cx - 4, ey - 1, 'k'); G.set(cx - 3, ey, 'k'); G.set(cx + 3, ey - 1, 'k'); G.set(cx + 2, ey, 'k');
+    G.rect(cx - 4, ey + 1, 2, 1, ek); G.rect(cx + 2, ey + 1, 2, 1, ek); G.set(cx - 3, ey + 1, 'k'); G.set(cx + 2, ey + 1, 'k'); }
+  if (o.mouth === 'fang') { G.rect(cx - 2, t + 10, 4, 1, 'k'); G.rect(cx - 2, t + 11, 4, 1, 'm'); G.set(cx - 2, t + 11, 'w'); G.set(cx + 1, t + 11, 'w'); }
+  else if (o.mouth === 'grin') { G.rect(cx - 3, t + 10, 6, 1, 'k'); G.set(cx - 2, t + 11, 'w'); G.set(cx + 1, t + 11, 'w'); G.rect(cx - 1, t + 11, 2, 1, 'k'); }
+  else if (o.mouth === 'tongue') { G.rect(cx - 2, t + 10, 4, 1, 'k'); G.rect(cx - 1, t + 11, 2, 2, 'q'); G.set(cx - 2, t + 11, 'w'); G.set(cx + 1, t + 11, 'w'); }
+  else { G.rect(cx - 1, t + 10, 2, 1, 'k'); G.set(cx - 2, t + 9, 'k'); G.set(cx + 1, t + 9, 'k'); }
+}
+
+// bergamo: the eldest, tallest and most muscular; steel-blue grey wolf, a red scarf, bandaged forearms with armbands,
+// brown trousers and belt, light-brown boots tied with three straps. absorbs blows and grows
+const BER_PAL = { o: 0x0c0e18, b: 0x6c88ae, B: 0x46587e, l: 0xa0b8d8, i: 0xd8a0a8, z: 0xd8e2ee, Z: 0x9aa8bc, k: 0x0a0a10, K: 0x2a2a34, e: 0xf2d040, w: 0xffffff, m: 0x8a1a28, q: 0xe86a8a, r: 0xd02a30, R: 0x86161c, x: 0xf2ead8, X: 0xb8ac94, a: 0x2a2a3a, p: 0x7a4c2c, P: 0x4c2e1a, u: 0xcaa070, U: 0x8a6440, y: 0xf2c840 };
+function bergamo(o = {}) {
+  const big = !!o.big, W = big ? 34 : 30, H = big ? 44 : 40, cx = W / 2, d = big ? 2 : 0;
+  return spr(W, H, G0 => {
+    const G = shift(G0, 0, big ? 4 : 0), c = { f: 'b', i: 'i', z: 'z' };
+    if (o.aura) aura(G0, W, H, 'l', 'z');
+    // legs: brown trousers, boots with three straps
+    oline(G, [[cx - 3, 26], [cx - 3.6, 32.4]], 4.2 + d / 2, 3.8 + d / 2, 'p'); oline(G, [[cx + 3, 26], [cx + 3.6, 32.4]], 4.2 + d / 2, 3.8 + d / 2, 'p');
+    G.rect(cx - 7, 31, 6, 5, 'u'); G.rect(cx + 1, 31, 6, 5, 'u'); for (const y of [32, 34]) { G.rect(cx - 7, y, 6, 1, 'U'); G.rect(cx + 1, y, 6, 1, 'U'); }
+    // v-shaped torso, bare furred chest
+    G.poly([[cx - 8 - d, 15], [cx + 8 + d, 15], [cx + 4.6, 26.4], [cx - 4.6, 26.4]], 'b');
+    l1(G, [[cx, 17], [cx, 21]], 'B'); G.rect(cx - 5, 19, 3, 1, 'B'); G.rect(cx + 2, 19, 3, 1, 'B');
+    for (const y of [22, 24]) G.rect(cx - 2, y, 4, 1, 'B');
+    G.rect(cx - 5, 25, 10, 2, 'a'); G.rect(cx - 1, 25, 2, 2, 'y');                                       // belt
+    G.ell(cx - 8 - d / 2, 16.4, 3.6 + d / 2, 2.8, 'b'); G.ell(cx + 8 + d / 2, 16.4, 3.6 + d / 2, 2.8, 'b');   // big shoulders
+    const fa = (pts, r = 2) => { oline(G, pts, 3.6 + d / 2, 3.4 + d / 2, 'b'); const n = pts.length - 1, [x0, y0] = pts[n - 1], [x1, y1] = pts[n]; G.line([[x0 + (x1 - x0) * .25, y0 + (y1 - y0) * .25], [x0 + (x1 - x0) * .8, y0 + (y1 - y0) * .8]], 3 + d / 2, 3 + d / 2, 'x'); G.line([[x0 + (x1 - x0) * .2, y0 + (y1 - y0) * .2], [x0 + (x1 - x0) * .3, y0 + (y1 - y0) * .3]], 3.4 + d / 2, 3.4 + d / 2, 'a'); fist(G, x1, y1, 'b', r + d / 3); };
+    const L = [[cx - 9 - d, 17.4], [cx - 11 - d, 21.6], [cx - 10 - d, 26]];
+    if (o.pose === 'fold') { fold(G, [[cx - 9.6, 17.4], [cx - 7.6, 21.6], [cx + 4.6, 21]], [[cx + 9.6, 17.4], [cx + 8, 23], [cx - 4.6, 22.6]], 'b', 'B', 'x', 3, 1.6); G.line([[cx - 3, 21.4], [cx + 1, 21.2]], 2.4, 2.4, 'x'); G.line([[cx - 1, 22.8], [cx + 3, 22.8]], 2.4, 2.4, 'X'); }
+    if (o.pose === 'flex') { fa([[cx - 9 - d, 17.4], [cx - 12.4 - d, 15], [cx - 11 - d, 10]]); fa(mir(W, [[cx - 9 - d, 17.4], [cx - 12.4 - d, 15], [cx - 11 - d, 10]])); }
+    if (o.pose === 'fists') { fa(L); fa(mir(W, L)); }
+    if (o.pose === 'beckon') { fa(L); fa([[cx + 9 + d, 17.4], [cx + 12, 19], [cx + 12.6, 14.6]], 1.8); }
+    // the red scarf round the neck, its tail flying
+    G.poly([[cx - 4.6, 13.4], [cx + 4.6, 13.4], [cx + 5, 16.4], [cx - 5, 16.4]], 'r'); G.poly([[cx - 4.6, 15], [cx - 2, 16], [cx - 7.4, 21], [cx - 8.6, 18.4]], 'r');
+    wolfHead(G, cx, 2, c, { mouth: o.mouth, ears: [[cx - 3.2, 4.6], [cx - 5.6, -1.6]], eye: o.eye });
+    G.set(cx - 3, 3, 'l'); G.set(cx - 2, 3, 'l');
+  }, BER_PAL, { b: 'B', p: 'P', r: 'R', u: 'U', x: 'X', z: 'Z' });
+}
+
+// lavender: the middle brother; gold coyote fur, white muzzle and chest, a hunched lanky build with very long arms,
+// green trousers with suspenders, a deranged grin. breathes poison, and fought blinded
+const LAV_PAL = { o: 0x120c06, f: 0xe0a83a, F: 0x9a6a1a, l: 0xf6d27a, i: 0xc87a50, z: 0xfaf4e6, Z: 0xc8bca8, k: 0x0c0806, K: 0x2a2018, e: 0xe83a2a, w: 0xffffff, m: 0x7a1a2a, q: 0xe86a8a, g: 0x3a8a4a, G: 0x1e5a2c, s: 0x2a2a30, v: 0xa04ae0, V: 0x6a2ab0, p: 0xd6a8ff };
+function lavender(o = {}) {
+  const W = 28, cx = 14, pose = o.pose || 'hunch';
+  return spr(W, 36, G0 => {
+    if (o.mist) { for (const [x, y, r] of [[4, 8, 3.4], [24, 6, 3], [3, 22, 3], [25, 20, 3.4], [22, 30, 2.6]]) { G0.ell(x, y, r, r * .8, 'V'); G0.ell(x - .6, y - .6, r - 1, r * .8 - 1, 'v'); } }
+    const G = shift(G0, 0, 2);
+    // short bowed legs, bare paws
+    oline(G, [[cx - 3, 24], [cx - 4.4, 29]], 3.4, 3, 'g'); oline(G, [[cx + 3, 24], [cx + 4.4, 29]], 3.4, 3, 'g');
+    G.ell(cx - 5, 31, 2.6, 1.4, 'f'); G.ell(cx + 5, 31, 2.6, 1.4, 'f');
+    // hunched torso, pale chest, green trousers with suspenders
+    G.poly([[cx - 6, 13], [cx + 6, 13], [cx + 5, 22], [cx - 5, 22]], 'f'); G.poly([[cx - 3, 13], [cx + 3, 13], [cx + 2, 19], [cx - 2, 19]], 'z');
+    G.poly([[cx - 5.6, 20], [cx + 5.6, 20], [cx + 6, 25.4], [cx - 6, 25.4]], 'g');
+    l1(G, [[cx - 3.6, 13], [cx - 3.6, 21]], 'G'); l1(G, [[cx + 3.6, 13], [cx + 3.6, 21]], 'G');
+    G.ell(cx - 6, 14, 2.6, 2, 'f'); G.ell(cx + 6, 14, 2.6, 2, 'f');
+    const a = (pts, r = 1.6) => arm(G, pts, 'f', 'f', 2.8, r);
+    const dangle = [[cx - 7, 14.6], [cx - 9.4, 21], [cx - 9.6, 27.6]];                                      // knuckle-dragging arms
+    if (pose === 'hunch') { a(dangle); a(mir(W, dangle)); }
+    if (pose === 'claw') { a(dangle); a([[cx + 7, 14.6], [cx + 11, 12], [cx + 11.6, 7]]); G.set(cx + 10, 4, 'w'); G.set(cx + 12, 4, 'w'); }
+    if (pose === 'breath') { a(dangle); a(mir(W, dangle)); for (const [x, y, r] of [[cx + 7, 10, 2.4], [cx + 10.6, 8, 2]]) { G.ell(x, y, r, r * .8, 'V'); G.ell(x - .4, y - .4, r - .9, r * .8 - .9, 'v'); } }
+    if (pose === 'lunge') { a([[cx - 7, 14.6], [cx - 11, 17], [cx - 12, 13]]); a([[cx + 7, 14.6], [cx + 11, 17], [cx + 12, 13]]); }
+    // head hangs forward, low between the shoulders
+    wolfHead(G, cx, 0, { f: 'f', i: 'i', z: 'z' }, { mouth: o.mouth || 'grin', shut: o.shut, ears: [[cx - 3, 2.6], [cx - 6, -2.4]] });
+    G.set(cx - 2, 1, 'l'); G.set(cx - 3, 2, 'l');
+    if (o.mouth === 'tongue') G.set(cx, 12, 'q');
+  }, LAV_PAL, { f: 'F', g: 'G', z: 'Z' });
+}
+
+// basil: the youngest, a maned wolf — red fur, long legs made for kicking, big ears, yellow eyes; a torn muffler,
+// black gloves, red boots. powered up he bulks out, the fur goes pink and the eyes purple
+const BAS_PAL = { o: 0x140608, f: 0xd8502a, F: 0x903018, l: 0xf6905a, i: 0xf2c0a0, z: 0xf6e8d8, Z: 0xc0ac98, k: 0x0c0606, K: 0x2a1c18, e: 0xf6d23a, u: 0xb05ae8, w: 0xffffff, m: 0x7a1a2a, q: 0xe86a8a, c: 0xe6d8b0, C: 0xa89a70, g: 0x22222a, n: 0x34343e, r: 0xc82a2e, R: 0x80141a, h: 0xec7a8a, H: 0xa84a5c, y: 0xfff08a };
+function basil(o = {}) {
+  const W = 28, cx = 14, pose = o.pose || 'stand', pw = !!o.power, f = pw ? 'h' : 'f';
+  return spr(W, 38, G => {
+    if (o.aura) aura(G, W, 38, 'R', 'q');
+    const lw = pw ? 3.6 : 3;
+    if (pose === 'kick') { oline(G, [[cx - 2.6, 23], [cx - 3.4, 34]], lw, lw - .4, f); G.rect(cx - 6, 33, 5, 3, 'r'); oline(G, [[cx + 2.6, 23], [cx + 8, 20], [cx + 12.6, 17]], lw, lw - .4, f); G.ell(cx + 12.4, 16.6, 1.8, 1.6, 'r'); for (const y of [13, 21]) G.rect(cx + 7, y, 4, 1, 'y'); }
+    else { oline(G, [[cx - 2.6, 23], [cx - 3.4, 34]], lw, lw - .4, f); oline(G, [[cx + 2.6, 23], [cx + 3.4, 34]], lw, lw - .4, f); G.rect(cx - 6, 32, 5, 4, 'r'); G.rect(cx + 1, 32, 5, 4, 'r'); }
+    G.poly([[cx - 5 - pw, 13], [cx + 5 + pw, 13], [cx + 4, 23.6], [cx - 4, 23.6]], f); G.poly([[cx - 2, 14], [cx + 2, 14], [cx + 1.4, 20], [cx - 1.4, 20]], 'z');
+    G.rect(cx - 4, 22, 8, 2, 'g');
+    G.ell(cx - 5.6, 14, 2.4 + pw, 1.8 + pw * .4, f); G.ell(cx + 5.6, 14, 2.4 + pw, 1.8 + pw * .4, f);
+    const a = (pts, r = 1.5) => arm(G, pts, f, 'g', pw ? 3.2 : 2.6, r + pw * .4);
+    if (pose === 'stand') { const p = [[cx - 6.4, 14.6], [cx - 8, 19], [cx - 7.4, 22]]; a(p); a(mir(W, p)); }
+    if (pose === 'kick') { a([[cx - 6.4, 14.6], [cx - 9, 13], [cx - 10, 9.6]]); a([[cx + 6.4, 14.6], [cx + 7, 18], [cx + 4.4, 18.6]]); }
+    if (pose === 'guard') { a([[cx - 6.4, 14.6], [cx - 8.6, 17.6], [cx - 5.6, 16]]); a([[cx + 6.4, 14.6], [cx + 9, 13], [cx + 8.6, 9.4]]); }
+    if (pose === 'flex') { const p = [[cx - 6.4, 14.6], [cx - 10, 13], [cx - 9.6, 8.6]]; a(p); a(mir(W, p)); }
+    // the torn muffler
+    G.poly([[cx - 4, 11.4], [cx + 4, 11.4], [cx + 4.4, 14], [cx - 4.4, 14]], 'c'); G.poly([[cx + 3, 12.6], [cx + 7.6, 15.4], [cx + 6.6, 17], [cx + 7.6, 18.4], [cx + 5, 17.6], [cx + 2, 14]], 'c'); G.set(cx - 2, 13, 'C'); G.set(cx + 1, 12, 'C');
+    wolfHead(G, cx, 1, { f, i: 'i', z: 'z' }, { mouth: o.mouth, eye: pw ? 'u' : 'e', ears: [[cx - 3, 3], [cx - 6.4, -1.8]] });
+  }, BAS_PAL, { f: 'F', h: 'H', r: 'R', c: 'C', z: 'Z' });
+}
+
+// ---------- u10 · obuni: lean green fighter, long white hair streaming down his back, a small blue vest with a jewelled
+// medallion, dark-blue dots down the bare abdomen, brown trousers. fights unseen, splitting into afterimages ----------
+const OBU_PAL = { o: 0x08120c, g: 0x5ab070, G: 0x347a48, l: 0x9ad8a4, h: 0xf2f2f6, H: 0xb8bcc8, k: 0x0a0c0e, w: 0xffffff, e: 0xd03030, b: 0x2a5ab8, B: 0x183a80, d: 0x1c2a6a, y: 0xf2c840, Y: 0xa8841a, j: 0xe0303a, p: 0x7a5232, P: 0x4c321c, n: 0x2a221c, a: 0x6a9a7c, A: 0x9ac8a8, m: 0x5a1820 };
+function obuni(o = {}) {
+  const W = 28, cx = 14, pose = o.pose || 'fold';
+  return spr(W, 36, G => {
+    if (o.ghost) for (const dx of [-8, 8]) { const g = shift(G, dx, 1); g.ell(cx, 9, 4, 4.4, 'A'); g.poly([[cx - 5, 14], [cx + 5, 14], [cx + 4, 24], [cx + 3, 33], [cx - 3, 33], [cx - 4, 24]], 'a'); }
+    // long white hair down the back
+    G.poly([[cx - 5, 5], [cx + 5, 5], [cx + 6.4, 12], [cx + 7.4, 22], [cx + 4, 19], [cx - 4, 19], [cx - 7.4, 22], [cx - 6.4, 12]], 'h');
+    oline(G, [[cx - 2.6, 24], [cx - 3.4, 31]], 3.6, 3.2, 'p'); oline(G, [[cx + 2.6, 24], [cx + 3.4, 31]], 3.6, 3.2, 'p');
+    G.rect(cx - 6, 31, 5, 3, 'n'); G.rect(cx + 1, 31, 5, 3, 'n');
+    G.poly([[cx - 5, 14], [cx + 5, 14], [cx + 4, 24.6], [cx - 4, 24.6]], 'g');
+    for (const y of [19, 21, 23]) { G.set(cx - 2, y, 'd'); G.set(cx + 1, y, 'd'); }                              // the dots down the abdomen
+    G.poly([[cx - 5.4, 13.6], [cx - 1.6, 13.6], [cx - 2.4, 18.4], [cx - 5, 18.4]], 'b'); G.poly(mir(W, [[cx - 5.4, 13.6], [cx - 1.6, 13.6], [cx - 2.4, 18.4], [cx - 5, 18.4]]), 'b');   // small vest
+    G.ell(cx, 15.6, 1.6, 1.6, 'y'); G.set(cx - 1, 15, 'j'); G.set(cx, 15, 'j'); G.set(cx - 1, 16, 'j'); G.set(cx, 16, 'j');   // medallion
+    G.rect(cx - 4, 23, 8, 2, 'P');
+    G.ell(cx - 5.6, 14.6, 2.2, 1.8, 'b'); G.ell(cx + 5.6, 14.6, 2.2, 1.8, 'b');
+    const a = (pts, r = 1.4) => arm(G, pts, 'g', 'g', 2.6, r);
+    if (pose === 'fold') fold(G, [[cx - 6.6, 15.4], [cx - 5, 18.6], [cx + 3, 18.2]], [[cx + 6.6, 15.4], [cx + 5.4, 19.6], [cx - 3, 19.4]], 'g', 'G', 'g', 2.6, 1.2);
+    if (pose === 'stance') { a([[cx - 6.6, 15.4], [cx - 9.4, 15.6], [cx - 11, 12.6]]); a([[cx + 6.6, 15.4], [cx + 8, 18.6], [cx + 5.6, 19.4]]); G.set(cx - 12, 10, 'g'); G.set(cx - 11, 10, 'g'); }
+    if (pose === 'blast') { a([[cx - 6.6, 15.4], [cx - 8, 19.6], [cx - 7.4, 22.6]]); a([[cx + 6.6, 15.4], [cx + 10, 15], [cx + 11.6, 14.6]]); G.ell(cx + 11.6, 11.2, 2.4, 2.4, 'b'); G.ell(cx + 11.6, 11.2, 1.4, 1.4, 'l'); }
+    if (pose === 'down') { const p = [[cx - 6.6, 15.4], [cx - 8, 19.6], [cx - 7.4, 22.6]]; a(p); a(mir(W, p)); }
+    // head: long narrow face, pointed ears, white hair parted and swept back
+    G.line([[cx - 4, 9.4], [cx - 6.6, 7.4]], 1.8, .6, 'g'); G.line([[cx + 4, 9.4], [cx + 6.6, 7.4]], 1.8, .6, 'g');
+    G.ell(cx, 9.4, 3.8, 4.6, 'g'); G.poly([[cx - 3.6, 9], [cx + 3.6, 9], [cx + 2.6, 13.4], [cx + 1, 14.4], [cx - 1, 14.4], [cx - 2.6, 13.4]], 'g');
+    G.poly([[cx - 4.4, 8.4], [cx - 4.6, 4.6], [cx - 2, 2.6], [cx + 2, 2.6], [cx + 4.6, 4.6], [cx + 4.4, 8.4], [cx + 2.6, 6.6], [cx, 5.2], [cx - 2.6, 6.6]], 'h');
+    G.set(cx - 2, 3, 'H'); G.set(cx + 1, 4, 'H');
+    G.rect(cx - 3, 8, 2, 1, 'k'); G.rect(cx + 1, 8, 2, 1, 'k');
+    if (o.shut) { G.rect(cx - 3, 9, 2, 1, 'G'); G.rect(cx + 1, 9, 2, 1, 'G'); }
+    else { G.rect(cx - 3, 9, 2, 1, 'w'); G.rect(cx + 1, 9, 2, 1, 'w'); G.set(cx - 2, 9, 'k'); G.set(cx + 1, 9, 'k'); }
+    G.set(cx, 11, 'G');
+    if (o.mouth === 'shout') { G.rect(cx - 1, 12, 2, 2, 'm'); } else G.rect(cx - 1, 12, 2, 1, 'G');
+  }, OBU_PAL, { g: 'G', h: 'H', b: 'B', p: 'P' });
+}
+
+// ---------- u10 · murichim: a towering crimson warrior monk, a nio temple guardian; bald with six dots on his crown,
+// a white robe wrapped round the hips and slung over one shoulder, bare arms and legs ----------
+const MUR_PAL = { o: 0x180608, r: 0xc83440, R: 0x8a1a24, l: 0xf07a80, k: 0x0e0606, w: 0xffffff, W: 0xc4beb0, c: 0xf4f0e6, C: 0xc0b8a6, y: 0xf2c840, Y: 0xa8841a, e: 0xf6e070, m: 0x5a0a14, a: 0xf6a040, A: 0xd05a1a, b: 0x3a2a24 };
+function murichim(o = {}) {
+  const W = 32, cx = 16, pose = o.pose || 'nio';
+  return spr(W, 40, G0 => {
+    if (o.aura) aura(G0, W, 40, 'A', 'a');
+    const G = shift(G0, 0, 1);
+    // bare muscular legs, bare feet
+    oline(G, [[cx - 3.6, 27], [cx - 4.6, 34]], 4.6, 4, 'r'); oline(G, [[cx + 3.6, 27], [cx + 4.6, 34]], 4.6, 4, 'r');
+    G.ell(cx - 5.4, 35.4, 3, 1.4, 'r'); G.ell(cx + 5.4, 35.4, 3, 1.4, 'r');
+    // huge chest and gut
+    G.poly([[cx - 9, 15], [cx + 9, 15], [cx + 7, 26], [cx - 7, 26]], 'r');
+    l1(G, [[cx, 17], [cx, 21]], 'R'); G.rect(cx - 6, 20, 4, 1, 'R'); G.rect(cx + 2, 20, 4, 1, 'R'); G.set(cx - 1, 24, 'R');
+    // the white robe: a wrap round the hips to the knees, and a band slung over the left shoulder
+    G.poly([[cx - 7.6, 24], [cx + 7.6, 24], [cx + 9, 31.4], [cx + 3, 30], [cx, 32], [cx - 3, 30], [cx - 9, 31.4]], 'c'); l1(G, [[cx - 2, 26], [cx - 3, 30]], 'C'); l1(G, [[cx + 3, 26], [cx + 4, 30]], 'C');
+    G.line([[cx - 8.6, 14.4], [cx + 6, 25]], 3.4, 3.4, 'c'); G.rect(cx - 7, 24, 14, 2, 'C');
+    G.ell(cx - 9, 16, 4, 3.2, 'r'); G.ell(cx + 9, 16, 4, 3.2, 'r');
+    G.line([[cx - 11.4, 15], [cx - 7, 17.6]], 2.4, 2.4, 'c');                                                   // the robe over the shoulder
+    const a = (pts, r = 2.2) => arm(G, pts, 'r', 'r', 4, r);
+    if (pose === 'nio') { a([[cx - 10, 17.4], [cx - 13, 21], [cx - 12, 25.4]]); a([[cx + 10, 17.4], [cx + 13.4, 13.6], [cx + 13, 8.6]], 2); for (const y of [5, 6]) G.rect(cx + 11, y, 4, 1, 'r'); G.set(cx + 11, 4, 'r'); G.set(cx + 14, 4, 'r'); }   // open palm raised
+    if (pose === 'fold') fold(G, [[cx - 10.4, 17.4], [cx - 8.4, 22], [cx + 5, 21.4]], [[cx + 10.4, 17.4], [cx + 8.6, 23.4], [cx - 5, 23]], 'r', 'R', 'r', 4, 2);
+    if (pose === 'fists') { const p = [[cx - 10, 17.4], [cx - 13, 21], [cx - 12, 25.4]]; a(p); a(mir(W, p)); }
+    if (pose === 'charge') { a([[cx - 10, 17.4], [cx - 13.4, 14], [cx - 13, 9.6]]); a([[cx + 10, 17.4], [cx + 13.4, 14], [cx + 13, 9.6]]); }
+    // bald head, thick neck, six dots in two rows on the crown
+    G.rect(cx - 3, 12, 6, 3, 'r');
+    G.ell(cx - 5, 8.4, 1.2, 1.8, 'r'); G.ell(cx + 5, 8.4, 1.2, 1.8, 'r');
+    G.ell(cx, 7, 4.6, 5, 'r'); G.poly([[cx - 4.4, 7], [cx + 4.4, 7], [cx + 3.6, 11.4], [cx + 1.6, 13], [cx - 1.6, 13], [cx - 3.6, 11.4]], 'r');
+    for (const x of [-3, -1, 1]) { G.set(cx + x, 3, 'b'); } for (const x of [-2, 0, 2]) G.set(cx + x, 4, 'b');   // six dots
+    G.set(cx - 2, 2, 'l'); G.set(cx - 3, 2, 'l');
+    // glaring nio face: heavy brows, bulging eyes, broad nose
+    G.rect(cx - 4, 6, 3, 1, 'k'); G.rect(cx + 1, 6, 3, 1, 'k'); G.set(cx - 2, 7, 'k'); G.set(cx + 1, 7, 'k');
+    G.rect(cx - 4, 7, 2, 1, 'w'); G.rect(cx + 2, 7, 2, 1, 'w'); G.set(cx - 3, 7, o.glow ? 'e' : 'k'); G.set(cx + 2, 7, o.glow ? 'e' : 'k');
+    G.rect(cx - 1, 9, 2, 1, 'R');
+    if (o.mouth === 'roar') { G.rect(cx - 2, 10, 4, 2, 'm'); G.rect(cx - 2, 10, 4, 1, 'w'); }
+    else { G.rect(cx - 2, 11, 4, 1, 'R'); G.set(cx - 3, 10, 'R'); G.set(cx + 2, 10, 'R'); }
+  }, MUR_PAL, { r: 'R', c: 'C' });
+}
+
+// ---------- u10 · rubalt: a brutish red bruiser, black dreadlocks, two square teeth jutting up from the lower jaw,
+// a tight sleeveless blue shirt, black trousers, purple shoes, gold armbands, a red belt with a gold buckle ----------
+const RUB_PAL = { o: 0x16080a, s: 0xc8584a, S: 0x86302a, l: 0xf08a76, h: 0x1c1820, H: 0x3a3440, k: 0x0c0606, w: 0xfff8ea, e: 0xf6e070, b: 0x2a6ac8, B: 0x1a4288, n: 0x1e1e26, N: 0x34343e, v: 0x6a3a9a, V: 0x44245e, y: 0xf2c840, Y: 0xa8841a, r: 0xc8282e, R: 0x80141a, m: 0x5a1018, a: 0xf2d060 };
+function rubalt(o = {}) {
+  const W = 30, cx = 15, pose = o.pose || 'fists';
+  return spr(W, 38, G => {
+    if (o.aura) aura(G, W, 38, 'Y', 'a');
+    // locks hanging behind the head
+    for (const [b, t] of [[[cx - 4, 6], [cx - 8.6, 14]], [[cx - 2.6, 5], [cx - 6.6, 15]], [[cx + 4, 6], [cx + 8.6, 14]], [[cx + 2.6, 5], [cx + 6.6, 15]]]) oline(G, [b, t], 2.4, 1.6, 'h');
+    oline(G, [[cx - 3.4, 26], [cx - 4, 32.6]], 4.2, 3.8, 'n'); oline(G, [[cx + 3.4, 26], [cx + 4, 32.6]], 4.2, 3.8, 'n');
+    G.rect(cx - 8, 32, 6, 3, 'v'); G.rect(cx + 2, 32, 6, 3, 'v');
+    G.poly([[cx - 8, 15], [cx + 8, 15], [cx + 6.6, 26.4], [cx - 6.6, 26.4]], 'b'); l1(G, [[cx, 17], [cx, 22]], 'B');
+    G.rect(cx - 7, 24, 14, 2, 'r'); G.rect(cx - 1, 24, 2, 2, 'y');
+    G.ell(cx - 8.6, 16.4, 3.4, 2.8, 's'); G.ell(cx + 8.6, 16.4, 3.4, 2.8, 's');                                 // bare shoulders
+    const a = (pts, r = 2.2) => { oline(G, pts, 3.8, 3.4, 's'); const [x0, y0] = pts[0], [x1, y1] = pts[1]; G.line([[x0 + (x1 - x0) * .6, y0 + (y1 - y0) * .6], [x0 + (x1 - x0) * .8, y0 + (y1 - y0) * .8]], 4, 4, 'y'); const [x, y] = pts[pts.length - 1]; fist(G, x, y, 's', r); };
+    if (pose === 'fists') { const p = [[cx - 9.4, 17.4], [cx - 12, 21.4], [cx - 11, 25.6]]; a(p); a(mir(W, p)); }
+    if (pose === 'fold') { fold(G, [[cx - 9.6, 17.4], [cx - 7.6, 21.6], [cx + 5, 21]], [[cx + 9.6, 17.4], [cx + 8, 23], [cx - 5, 22.6]], 's', 'S', 's', 3.6, 1.8); G.rect(cx - 10, 18, 3, 2, 'y'); G.rect(cx + 7, 18, 3, 2, 'y'); }
+    if (pose === 'smash') { const p = [[cx - 9.4, 17.4], [cx - 12.4, 13], [cx - 9, 8.6]]; a(p); a(mir(W, p)); }
+    if (pose === 'punch') { a([[cx - 9.4, 17.4], [cx - 12, 21.4], [cx - 11, 25.6]]); a([[cx + 9.4, 17.4], [cx + 13.4, 18]], 2.6); for (const [x, y] of [[29, 13], [29, 22], [26, 12]]) G.set(x, y, 'a'); }
+    // head: heavy brow, broad flat nose, jaw with two square teeth jutting up
+    G.ell(cx, 8.6, 4.8, 4.6, 's'); G.poly([[cx - 5, 9], [cx + 5, 9], [cx + 5, 13], [cx + 3, 15], [cx - 3, 15], [cx - 5, 13]], 's');
+    G.poly([[cx - 4.6, 7.4], [cx - 4.6, 4], [cx - 2, 2.4], [cx + 2, 2.4], [cx + 4.6, 4], [cx + 4.6, 7.4], [cx + 2, 5.6], [cx - 2, 5.6]], 'h');
+    G.set(cx - 2, 3, 'H'); G.set(cx + 1, 3, 'H'); G.set(cx - 4, 5, 'H');
+    G.rect(cx - 4, 7, 3, 1, 'S'); G.rect(cx + 1, 7, 3, 1, 'S');
+    G.rect(cx - 4, 8, 3, 1, 'k'); G.rect(cx + 1, 8, 3, 1, 'k'); G.set(cx - 3, 9, o.glow ? 'e' : 'w'); G.set(cx + 2, 9, o.glow ? 'e' : 'w'); G.set(cx - 2, 9, 'k'); G.set(cx + 1, 9, 'k');
+    G.rect(cx - 1, 10, 2, 2, 'S'); G.set(cx - 2, 11, 'S'); G.set(cx + 1, 11, 'S');
+    if (o.mouth === 'roar') { G.rect(cx - 3, 12, 6, 2, 'm'); G.rect(cx - 3, 13, 1, 1, 'w'); G.rect(cx + 2, 13, 1, 1, 'w'); G.set(cx - 3, 12, 'w'); G.set(cx + 2, 12, 'w'); }
+    else { G.rect(cx - 3, 13, 6, 1, 'k'); G.set(cx - 3, 12, 'w'); G.set(cx + 2, 12, 'w'); }                      // the jutting teeth
+  }, RUB_PAL, { s: 'S', b: 'B', h: 'H', n: 'N', v: 'V', r: 'R' });
+}
+
+// ---------- u4 · ganos, transformed: a big bird-man. green feathered body, a long orange-and-yellow crest, a thick
+// shoebill/eagle beak, magenta eyes, the dark-green vest with yellow lining, baggy trousers on a brown double belt with
+// a red-and-yellow gem, scaly brown-orange bird feet with black talons; the red beret and goggles ----------
+const GAN_PAL = { o: 0x0a1008, g: 0x58a048, G: 0x346a2c, l: 0x96d07a, f: 0x7cbc5c, h: 0xf08a2a, H: 0xb04e14, j: 0xffd04a, J: 0xd89a1a, b: 0xf2d27a, B: 0xb08a3a, k: 0x0c0a0a, e: 0xe03aa8, w: 0xffffff, v: 0x2a5a2e, V: 0x183a1c, y: 0xf2c840, p: 0xd8ccae, P: 0x9a8e70, t: 0x6a4224, T: 0x3e2614, r: 0xd02a30, R: 0x86161c, u: 0x3a8ae0, n: 0xc86a2a, N: 0x8a4218, m: 0x6a1a24, a: 0xfff0a0, A: 0xf2a020 };
+function ganos(o = {}) {
+  const W = 38, H = 46, cx = 19, pose = o.pose || 'stand';
+  return spr(W, H, G0 => {
+    if (o.aura) aura(G0, W, H, 'A', 'a');
+    const G = shift(G0, 0, 2);
+    // long crest of orange and yellow plumes streaming down the back
+    for (const [b, t, c] of [[[cx - 3, 4], [cx - 11, 14], 'h'], [[cx + 3, 4], [cx + 11, 14], 'h'], [[cx - 2, 3], [cx - 8, 20], 'H'], [[cx + 2, 3], [cx + 8, 20], 'H'], [[cx - 1, 2], [cx - 5, 22], 'j'], [[cx + 1, 2], [cx + 5, 22], 'j']]) oline(G, [b, t], 4, 1.4, c);
+    // scaly bird legs below the baggy trousers, black talons
+    oline(G, [[cx - 4, 33], [cx - 5, 39]], 2.4, 2.4, 'n'); oline(G, [[cx + 4, 33], [cx + 5, 39]], 2.4, 2.4, 'n');
+    for (const s of [-1, 1]) { const x = cx + s * 5; G.line([[x, 39], [x - 3.4, 41.4]], 1.6, 1.4, 'n'); G.line([[x, 39], [x + 3.4, 41.4]], 1.6, 1.4, 'n'); G.set(Math.round(x - 4), 41, 'k'); G.set(Math.round(x + 3), 41, 'k'); G.set(Math.round(x - 1), 41, 'k'); }
+    G.poly([[cx - 8, 27], [cx + 8, 27], [cx + 9, 33], [cx + 6, 35], [cx + 2, 33], [cx - 2, 33], [cx - 6, 35], [cx - 9, 33]], 'p'); l1(G, [[cx, 29], [cx, 33]], 'P');
+    // feathered chest, vest open over it
+    G.poly([[cx - 9, 15], [cx + 9, 15], [cx + 7.6, 27.4], [cx - 7.6, 27.4]], 'g');
+    G.poly([[cx - 3, 15], [cx + 3, 15], [cx + 2.4, 24], [cx, 26], [cx - 2.4, 24]], 'f');
+    for (const [x, y] of [[-1, 18], [1, 21], [-1, 23], [1, 17]]) G.set(cx + x, y, 'l');
+    if (!o.torn) { G.poly([[cx - 9.4, 14.6], [cx - 3, 14.6], [cx - 3.6, 26], [cx - 8, 26]], 'v'); G.poly(mir(W, [[cx - 9.4, 14.6], [cx - 3, 14.6], [cx - 3.6, 26], [cx - 8, 26]]), 'v'); l1(G, [[cx - 3.4, 15], [cx - 3.8, 25.6]], 'y'); l1(G, [[cx + 3.4, 15], [cx + 3.8, 25.6]], 'y'); }
+    G.rect(cx - 8, 26, 16, 2, 't'); G.rect(cx - 8, 28, 16, 1, 'T'); G.rect(cx - 1, 26, 2, 2, 'r'); G.set(cx, 26, 'y');   // double belt, gem
+    G.ell(cx - 9.4, 16.4, 4, 3, 'g'); G.ell(cx + 9.4, 16.4, 4, 3, 'g');
+    // feathered arms: a row of feathers trailing under each forearm
+    const a = (pts, r = 2.2) => { const [x0, y0] = pts[1], [x1, y1] = pts[2]; for (let f = .2; f < .9; f += .3) G.line([[x0 + (x1 - x0) * f, y0 + (y1 - y0) * f], [x0 + (x1 - x0) * f + 1.4, y0 + (y1 - y0) * f + 3.4]], 2.4, .8, 'G'); arm(G, pts, 'g', 'b', 4, r); };
+    if (pose === 'stand') { const p = [[cx - 10, 17.4], [cx - 13.4, 21.4], [cx - 13, 26]]; a(p); a(mir(W, p)); }
+    if (pose === 'spread') { a([[cx - 10, 17.4], [cx - 15, 14.4], [cx - 17, 10]]); a([[cx + 10, 17.4], [cx + 15, 14.4], [cx + 17, 10]]); }
+    if (pose === 'talon') { a([[cx - 10, 17.4], [cx - 13.4, 21.4], [cx - 13, 26]]); a([[cx + 10, 17.4], [cx + 14.6, 15.6], [cx + 16, 11]]); for (const x of [-2, 0, 2]) G.line([[cx + 16 + x * .8, 9.4], [cx + 16 + x * 1.2, 7]], 1.2, .8, 'k'); }
+    if (pose === 'fold') fold(G, [[cx - 10.4, 17.4], [cx - 8.4, 22], [cx + 5, 21.4]], [[cx + 10.4, 17.4], [cx + 8.6, 23.4], [cx - 5, 23]], 'g', 'G', 'b', 4, 2);
+    // the head: round, feathered, a heavy hooked beak
+    G.ell(cx, 7.4, 5.6, 5.4, 'g'); G.rect(cx - 3, 12, 6, 3, 'g');
+    G.poly([[cx - 4, 2.4], [cx, -1.6], [cx + 4, 2.4], [cx + 2, 3.6], [cx, 1.6], [cx - 2, 3.6]], 'j');               // crest tuft on the brow
+    const beak = [[cx - 4.2, 8.6], [cx + 4.2, 8.6], [cx + 4.4, 12], [cx + 2.6, 15.4], [cx + 1, 18.4], [cx - 1, 18.4], [cx - 2.6, 15.4], [cx - 4.4, 12]];   // the beak: broad, heavy, hooked
+    G.poly(beak.map(([x, y]) => [x + Math.sign(x - cx) * 1.1, y + (y > 12 ? 1 : 0)]), 'o'); G.poly(beak, 'b');
+    G.rect(cx - 1, 16, 2, 2, 'J'); G.set(cx - 1, 15, 'J'); G.set(cx, 15, 'J');
+    if (o.mouth === 'open') { G.rect(cx - 3, 12, 6, 2, 'm'); G.rect(cx - 2, 14, 4, 1, 'm'); } else { G.rect(cx - 3, 12, 6, 1, 'B'); G.set(cx - 4, 11, 'B'); G.set(cx + 3, 11, 'B'); }
+    G.set(cx - 2, 10, 'B'); G.set(cx + 1, 10, 'B'); G.set(cx - 3, 9, 'a'); G.set(cx - 2, 9, 'a');
+    G.rect(cx - 5, 5, 3, 1, 'k'); G.rect(cx + 2, 5, 3, 1, 'k'); G.set(cx - 2, 6, 'k'); G.set(cx + 1, 6, 'k');
+    G.rect(cx - 5, 6, 3, 2, 'e'); G.rect(cx + 2, 6, 3, 2, 'e'); G.set(cx - 4, 7, 'k'); G.set(cx + 3, 7, 'k'); G.set(cx - 5, 6, 'w'); G.set(cx + 2, 6, 'w');
+    if (o.beret) { G.poly([[cx - 6, 3], [cx + 4, 1], [cx + 7.4, 2.6], [cx + 5, 4.6], [cx - 5, 5]], 'r'); G.rect(cx - 4, 4, 9, 1, 't'); G.rect(cx - 3, 3, 3, 2, 'u'); G.rect(cx + 1, 3, 3, 2, 'u'); G.set(cx - 2, 3, 'y'); G.set(cx + 2, 3, 'y'); }   // beret, goggles
+  }, GAN_PAL, { g: 'G', h: 'H', j: 'J', v: 'V', p: 'P', n: 'N', b: 'B', r: 'R' });
+}
+
+// ---------- u4 · caway: an elven princess. light-green skin, long pink hair, blue eyes, a circlet on the brow,
+// a fantasy gown with a cape and arm warmers, high heels; fights with energy spears and bolts ----------
+const CAW_PAL = { o: 0x120a14, s: 0xb6e2b0, S: 0x7aac78, h: 0xf27ab0, H: 0xb44a80, j: 0xffb8d8, k: 0x100a14, e: 0x3a8af0, w: 0xffffff, W: 0xc8c4d8, d: 0xf6f2fa, D: 0xbcb4d0, c: 0x7a3ab8, C: 0x4e2280, y: 0xf2c840, Y: 0xa8841a, g: 0x3ad0a0, m: 0xd04a6a, b: 0xa0f0ff, B: 0x3ac0f0, p: 0xf06ab0 };
+function caway(o = {}) {
+  const W = 26, cx = 13, pose = o.pose || 'stand';
+  return spr(W, 36, G0 => {
+    const G = shift(G0, 0, 1);
+    // cape behind, long pink hair over it
+    G.poly([[cx - 5, 13], [cx + 5, 13], [cx + 9, 31], [cx - 9, 31]], 'c');
+    G.poly([[cx - 5, 4], [cx + 5, 4], [cx + 6.6, 12], [cx + 6, 22], [cx + 3, 19], [cx - 3, 19], [cx - 6, 22], [cx - 6.6, 12]], 'h');
+    // gown: fitted bodice, long skirt flaring to the floor, heels peeking out
+    G.rect(cx - 4, 31, 3, 2, 'k'); G.rect(cx + 1, 31, 3, 2, 'k');
+    G.poly([[cx - 3.4, 13.4], [cx + 3.4, 13.4], [cx + 3, 19], [cx + 7, 31.4], [cx - 7, 31.4], [cx - 3, 19]], 'd');
+    l1(G, [[cx, 20], [cx, 31]], 'D'); G.rect(cx - 3, 18, 6, 1, 'y'); G.set(cx - 1, 18, 'g'); G.set(cx, 18, 'g');
+    G.poly([[cx - 3, 13], [cx + 3, 13], [cx, 16]], 's');                                                         // neckline
+    G.ell(cx - 4, 14, 1.8, 1.4, 'd'); G.ell(cx + 4, 14, 1.8, 1.4, 'd');
+    const a = (pts, r = 1.1) => { oline(G, pts, 1.8, 1.6, 's'); const n = pts.length - 1, [x0, y0] = pts[n - 1], [x1, y1] = pts[n]; G.line([[x0 + (x1 - x0) * .2, y0 + (y1 - y0) * .2], [x0 + (x1 - x0) * .9, y0 + (y1 - y0) * .9]], 2.4, 2.2, 'c'); fist(G, x1, y1, 's', r); };   // arm warmers on the forearms
+    if (pose === 'stand') { a([[cx - 4.6, 14.6], [cx - 6.6, 17.6], [cx - 4.4, 19]]); a([[cx + 4.6, 14.6], [cx + 6, 18], [cx + 6, 21]]); }
+    if (pose === 'spear') { a([[cx - 4.6, 14.6], [cx - 6.6, 17.6], [cx - 6.4, 20.4]]); G.line([[cx + 9, 32], [cx + 10.6, 1]], 1.6, 1.6, 'B'); G.line([[cx + 9.2, 28], [cx + 10.6, 1]], .9, .9, 'b'); G.poly([[cx + 10.6, -1], [cx + 12.2, 4], [cx + 9, 4]], 'b'); a([[cx + 4.6, 14.6], [cx + 8, 15.4], [cx + 10, 13]]); }
+    if (pose === 'kiss') { a([[cx - 4.6, 14.6], [cx - 6.6, 17.6], [cx - 4.4, 19]]); a([[cx + 4.6, 14.6], [cx + 6.6, 12.6], [cx + 3.4, 11.4]]); G.set(cx + 7, 8, 'p'); G.set(cx + 9, 8, 'p'); G.rect(cx + 7, 9, 3, 1, 'p'); G.set(cx + 8, 10, 'p'); }
+    if (pose === 'bolts') { a([[cx - 4.6, 14.6], [cx - 8, 13.4], [cx - 10.4, 11]]); a([[cx + 4.6, 14.6], [cx + 8, 13.4], [cx + 10.4, 11]]); for (const [x, y] of [[2, 6], [24, 6], [1, 2], [25, 2]]) { G0.ell(x, y, 1.4, 1.4, 'B'); G0.set(x, y, 'b'); } }
+    // head: delicate face, pointed elf ears, circlet with a gem, pink bangs
+    G.line([[cx - 3.4, 9], [cx - 6.2, 6.4]], 1.6, .6, 's'); G.line([[cx + 3.4, 9], [cx + 6.2, 6.4]], 1.6, .6, 's');
+    G.ell(cx, 8.6, 3.6, 4, 's'); G.poly([[cx - 3.4, 8.4], [cx + 3.4, 8.4], [cx + 2.4, 11.6], [cx, 12.8], [cx - 2.4, 11.6]], 's');
+    G.poly([[cx - 4, 7.6], [cx - 4, 4.2], [cx - 1.6, 2.4], [cx + 1.6, 2.4], [cx + 4, 4.2], [cx + 4, 7.6], [cx + 2.6, 5.8], [cx, 6.4], [cx - 2.6, 5.8]], 'h');
+    G.set(cx - 2, 3, 'j'); G.set(cx - 3, 4, 'j');
+    G.rect(cx - 3, 5, 6, 1, 'y'); G.set(cx - 1, 5, 'e'); G.set(cx, 5, 'e');                                      // circlet
+    if (o.wink) { G.rect(cx - 3, 8, 2, 1, 'k'); G.rect(cx + 1, 8, 2, 1, 'k'); G.set(cx + 1, 7, 'k'); G.set(cx + 2, 8, 'e'); G.set(cx + 1, 8, 'w'); }
+    else { G.rect(cx - 3, 7, 2, 1, 'k'); G.rect(cx + 1, 7, 2, 1, 'k'); G.set(cx - 3, 8, 'w'); G.set(cx - 2, 8, 'e'); G.set(cx + 1, 8, 'e'); G.set(cx + 2, 8, 'w'); }
+    G.rect(cx - 1, 10, 2, 1, 'm');
+  }, CAW_PAL, { s: 'S', h: 'H', d: 'D', c: 'C' });
+}
+
+// ---------- u4 · dercori: light-violet skin, a mint-green high pointy ponytail with two long bangs down the sides of
+// the face, folded skin on the shoulders, fin ears, huge hands and bare feet, dark garb; throws paper talismans.
+// in the dark she powers up: white hair, face markings, long huge flowing limbs ----------
+const DER_PAL = { o: 0x0a0a14, s: 0xc0a6e0, S: 0x8a72b0, h: 0x8ae8c0, H: 0x48a888, j: 0xc8fff0, x: 0xf2f2f8, X: 0xb4b4c8, k: 0x0a0a12, e: 0xf04a6a, w: 0xffffff, d: 0x2a2a4a, D: 0x181830, t: 0xf6eed6, T: 0xd02a2a, m: 0x6a1a4a, n: 0x6a4aa0, z: 0x22163a };
+function dercori(o = {}) {
+  const W = 28, cx = 14, pose = o.pose || 'stand', dark = !!o.dark, hc = dark ? 'x' : 'h', hd = dark ? 'X' : 'H';
+  const tal = (G, x, y) => { G.rect(x, y, 2, 3, 't'); G.set(x, y + 1, 'T'); G.set(x + 1, y + 2, 'T'); };
+  return spr(W, 36, G0 => {
+    if (dark) { G0.ell(cx, 18, 13, 17, 'z'); }
+    const G = shift(G0, 0, 1);
+    // the ponytail sweeping up and back
+    oline(G, [[cx + 1, 4], [cx + 5, .4], [cx + 9, -.2], [cx + 12, 1.6]], 3.6, .8, hc);
+    // legs and huge bare feet
+    const lw = dark ? 2.6 : 2.6;
+    oline(G, [[cx - 2.4, 22], [cx - 3.4, 30]], lw + .6, lw, 's'); oline(G, [[cx + 2.4, 22], [cx + 3.4, 30]], lw + .6, lw, 's');
+    G.ell(cx - 5, 31, 3.4, 1.6, 's'); G.ell(cx + 5, 31, 3.4, 1.6, 's');
+    // dark garb: high-collared top and a short skirt
+    G.poly([[cx - 4.4, 13], [cx + 4.4, 13], [cx + 4, 20], [cx + 6, 24.4], [cx - 6, 24.4], [cx - 4, 20]], 'd'); l1(G, [[cx, 14], [cx, 24]], 'D');
+    G.rect(cx - 4, 19, 8, 1, 'n');
+    G.ell(cx - 5, 14.2, 2.4, 1.8, 's'); G.ell(cx + 5, 14.2, 2.4, 1.8, 's'); G.set(cx - 6, 14, 'S'); G.set(cx + 5, 14, 'S'); G.set(cx - 5, 15, 'S'); G.set(cx + 4, 15, 'S');   // the folds of skin
+    const a = (pts, r = 2.2) => arm(G, pts, 's', 's', dark ? 2.8 : 2.2, r);                                          // the oversized hands
+    if (pose === 'stand') { a([[cx - 6, 15], [cx - 7.6, 19], [cx - 7, 22.4]]); a([[cx + 6, 15], [cx + 8.6, 14], [cx + 9.4, 10.6]], 2); tal(G, cx + 9, 6); }
+    if (pose === 'throw') { a([[cx - 6, 15], [cx - 9, 15.6], [cx - 10.6, 13]]); a([[cx + 6, 15], [cx + 9, 15.6], [cx + 10.6, 13]]); for (const [x, y] of [[1, 3], [5, 0], [21, 0], [25, 4], [0, 9], [26, 10]]) tal(G0, x, y); }
+    if (pose === 'hush') { a([[cx - 6, 15], [cx - 7.6, 19], [cx - 7, 22.4]]); a([[cx + 6, 15], [cx + 6.6, 12.6], [cx + 1.4, 11.6]], 1.8); }
+    if (pose === 'loom') { a([[cx - 6, 15], [cx - 11, 12], [cx - 11.6, 6]], 3); a([[cx + 6, 15], [cx + 11, 12], [cx + 11.6, 6]], 3); for (const x of [-12.6, -10.6, 10.6, 12.6]) G.set(Math.round(cx + x), 2, 's'); }
+    // head: fin ears, mint bangs hanging either side of the face
+    G.poly([[cx - 3.4, 8], [cx - 6.6, 5.4], [cx - 6, 9], [cx - 3.4, 11]], 'S'); G.poly(mir(W, [[cx - 3.4, 8], [cx - 6.6, 5.4], [cx - 6, 9], [cx - 3.4, 11]]), 'S');
+    G.ell(cx, 8.4, 3.6, 4, 's'); G.poly([[cx - 3.4, 8.4], [cx + 3.4, 8.4], [cx + 2.4, 11.6], [cx, 12.8], [cx - 2.4, 11.6]], 's');
+    G.poly([[cx - 4, 8], [cx - 3.6, 4], [cx - 1, 2.6], [cx + 2, 2.6], [cx + 4, 4.4], [cx + 3.6, 6.4], [cx, 5], [cx - 2.4, 6.4]], hc);
+    oline(G, [[cx - 3.4, 6], [cx - 4, 13.6]], 1.6, 1.2, hc); oline(G, [[cx + 3.4, 6], [cx + 4, 13.6]], 1.6, 1.2, hc);   // the two long bangs
+    G.set(cx - 1, 3, dark ? 'w' : 'j');
+    if (dark) { G.set(cx - 3, 10, 'e'); G.set(cx + 2, 10, 'e'); G.set(cx - 2, 11, 'e'); G.set(cx + 1, 11, 'e'); G.set(cx, 4, 'e'); G.set(cx - 1, 4, 'e'); }   // face markings
+    G.rect(cx - 2, 7, 1, 2, 'k'); G.rect(cx + 1, 7, 1, 2, 'k'); G.set(cx - 2, 7, dark ? 'e' : 'w'); G.set(cx + 1, 7, dark ? 'e' : 'w');
+    if (o.mouth === 'grin') { G.rect(cx - 1, 10, 2, 1, 'k'); G.set(cx - 2, 9, 'k'); G.set(cx + 1, 9, 'k'); } else G.rect(cx - 1, 10, 2, 1, 'm');
+  }, DER_PAL, { s: 'S', h: 'H', x: 'X', d: 'D' });
+}
+
+// ---------- u3 · anilaza: the giant four-way merged robot. a dark body under white plating on the head, neck, shoulders
+// and chest; solid pink eyes, no nose; a big red core gem on the forehead; long ear fins with green sonar gems under
+// the tips; white shoulder guards topped with red gems; a green gem mid-chest; purple hands and shins; pointed boots;
+// it can sprout wings ----------
+const ANI_PAL = { o: 0x08080e, d: 0x3e4a5e, D: 0x262e3e, x: 0xeef0f4, X: 0xa8acbc, p: 0x8a52c8, P: 0x5a3090, i: 0xff6ab8, I: 0xc83a8a, r: 0xe02a3a, R: 0x8a1420, q: 0xff9aa0, g: 0x3ad070, G: 0x1a8a44, w: 0xffffff, k: 0x0c0c14, b: 0x6a7a94, y: 0xffe070, a: 0xc8f0ff, A: 0x6ab8f0 };
+function anilaza(o = {}) {
+  const W = 46, H = 54, cx = 23, pose = o.pose || 'stand';
+  return spr(W, H, G0 => {
+    const G = shift(G0, 0, 2);
+    if (o.wings) for (const s of [-1, 1]) { const m = p => p.map(([x, y]) => [cx + s * x, y]); G.poly(m([[6, 18], [22, 4], [22.6, 14], [20, 22], [21, 30], [9, 26]]), 'D'); l1(G, m([[8, 19], [21, 6]]), 'b'); l1(G, m([[9, 23], [20, 22]]), 'b'); }
+    // thick legs, purple shins, pointed boots
+    oline(G, [[cx - 5, 34], [cx - 6, 41]], 6, 5.6, 'd'); oline(G, [[cx + 5, 34], [cx + 6, 41]], 6, 5.6, 'd');
+    G.rect(cx - 9, 40, 6, 4, 'p'); G.rect(cx + 3, 40, 6, 4, 'p');
+    G.poly([[cx - 10, 44], [cx - 2, 44], [cx - 2, 47.4], [cx - 12.4, 47.4]], 'x'); G.poly([[cx + 2, 44], [cx + 10, 44], [cx + 12.4, 47.4], [cx + 2, 47.4]], 'x');
+    // massive torso: dark body, white chest plate with the green gem
+    G.poly([[cx - 12, 19], [cx + 12, 19], [cx + 9, 35.4], [cx - 9, 35.4]], 'd');
+    G.poly([[cx - 11, 18.6], [cx + 11, 18.6], [cx + 9, 26], [cx, 29], [cx - 9, 26]], 'x'); G.ell(cx, 23.6, 2.4, 2.2, 'g'); G.set(cx - 1, 22, 'w');
+    for (const y of [30, 32]) G.rect(cx - 4, y, 8, 1, 'D');
+    // white shoulder guards with red gems on top
+    G.ell(cx - 13, 20, 5, 4, 'x'); G.ell(cx + 13, 20, 5, 4, 'x'); G.ell(cx - 13, 18, 1.6, 1.4, 'r'); G.ell(cx + 13, 18, 1.6, 1.4, 'r');
+    const a = (pts, r = 3.4) => arm(G, pts, 'd', 'p', 5.6, r);
+    if (pose === 'stand') { const p = [[cx - 14, 23], [cx - 17.6, 29], [cx - 17, 35]]; a(p); a(mir(W, p)); }
+    if (pose === 'raise') { const p = [[cx - 14, 23], [cx - 18.6, 18], [cx - 18.4, 11]]; a(p); a(mir(W, p)); }
+    if (pose === 'punch') { a([[cx - 14, 23], [cx - 17.6, 29], [cx - 17, 35]]); a([[cx + 14, 23], [cx + 18.6, 25], [cx + 19.4, 24.4]], 3.8); for (const [x, y] of [[44, 18], [44, 31], [41, 17]]) G.set(x, y, 'y'); }
+    if (pose === 'burst') { a([[cx - 14, 23], [cx - 17.6, 27], [cx - 13, 29]]); a([[cx + 14, 23], [cx + 17.6, 27], [cx + 13, 29]]); G0.ell(cx, 32, 6, 5, 'A'); G0.ell(cx, 32, 4, 3.4, 'a'); G0.ell(cx, 32, 2, 1.6, 'w'); }   // destruction burst gathering
+    // head: white plated, ear fins swept out with green gems near the tips, big red forehead core
+    for (const s of [-1, 1]) { oline(G, [[cx + s * 5, 10], [cx + s * 13.6, 3.6]], 4, 1.2, 'x'); G.ell(cx + s * 11.6, 6.6, 1.2, 1.2, 'g'); }
+    G.rect(cx - 4, 15, 8, 4, 'x');
+    G.ell(cx, 10, 6.4, 6.6, 'x'); G.poly([[cx - 6, 10], [cx + 6, 10], [cx + 4.6, 15], [cx + 2, 17], [cx - 2, 17], [cx - 4.6, 15]], 'x');
+    G.ell(cx, 5.4, 2.4, 2.2, 'r'); G.set(cx - 1, 4, 'q');                                                      // the energy core
+    G.poly([[cx - 5, 9], [cx - 1.4, 10.6], [cx - 1.6, 12.4], [cx - 4.6, 11.6]], o.dim ? 'I' : 'i'); G.poly(mir(W, [[cx - 5, 9], [cx - 1.4, 10.6], [cx - 1.6, 12.4], [cx - 4.6, 11.6]]), o.dim ? 'I' : 'i');   // solid pink eyes
+    G.rect(cx - 5, 8, 4, 1, 'X'); G.rect(cx + 1, 8, 4, 1, 'X');
+    if (o.mouth === 'roar') { G.rect(cx - 3, 14, 6, 2, 'k'); G.rect(cx - 2, 14, 4, 1, 'w'); } else G.rect(cx - 2, 15, 4, 1, 'X');
+  }, ANI_PAL, { d: 'D', x: 'X', p: 'P', r: 'R', g: 'G' });
+}
+
+// ---------- u3 · paparoni: the gaunt dark-purple manager. white curly mohawk and goatee, a monocle, a white suit with a
+// red neckerchief, black trousers and shoes, a brown cane with a gold shaft topped by a blue orb ----------
+const PAP_PAL = { o: 0x0e0814, s: 0x7a52a2, S: 0x4e3270, l: 0xa888cc, h: 0xf4f4f6, H: 0xb8b8c4, k: 0x0a0810, w: 0xffffff, W: 0xc4c2cc, e: 0xf2d040, r: 0xd02a30, R: 0x86161c, n: 0x1e1c24, N: 0x3a3842, y: 0xf2c840, Y: 0xa8841a, b: 0x7a4a2a, u: 0x3a8af0, U: 0x1a4ab0, a: 0xa0d8ff, g: 0xd8c860, m: 0x6a1a3a };
+function paparoni(o = {}) {
+  const W = 26, cx = 13, pose = o.pose || 'cane';
+  return spr(W, 36, G0 => {
+    const G = shift(G0, 0, 1);
+    const cane = (x0, y0, x1, y1) => { G.line([[x0, y0], [x1, y1]], 1.6, 1.6, 'o'); l1(G, [[x0, y0], [x1, y1]], 'y'); G.ell(x1, y1 - 1.6, 2.2, 2.2, 'o'); G.ell(x1, y1 - 1.6, 1.6, 1.6, 'u'); G.set(Math.round(x1 - 1), Math.round(y1 - 3), 'a'); G.rect(Math.round(x1) - 1, Math.round(y1), 2, 1, 'b'); };
+    if (pose === 'cane') cane(cx + 8, 32, cx + 8, 16);
+    // thin legs, black trousers, pointed black shoes
+    oline(G, [[cx - 2, 23], [cx - 2.4, 30]], 2.6, 2.4, 'n'); oline(G, [[cx + 2, 23], [cx + 2.4, 30]], 2.6, 2.4, 'n');
+    G.poly([[cx - 6, 30], [cx - 1, 30], [cx - 1, 32], [cx - 7, 32]], 'n'); G.poly([[cx + 1, 30], [cx + 6, 30], [cx + 7, 32], [cx + 1, 32]], 'n');
+    // white suit jacket with tails, red neckerchief
+    G.poly([[cx - 4.4, 13], [cx + 4.4, 13], [cx + 4.4, 22], [cx + 5, 26], [cx + 1, 23.4], [cx - 1, 23.4], [cx - 5, 26], [cx - 4.4, 22]], 'h');
+    l1(G, [[cx, 16], [cx, 23]], 'H'); G.set(cx - 1, 18, 'y'); G.set(cx - 1, 21, 'y');
+    G.poly([[cx - 2.6, 12.6], [cx + 2.6, 12.6], [cx + 1.4, 15], [cx, 17.4], [cx - 1.4, 15]], 'r');
+    G.ell(cx - 4.6, 14, 2, 1.6, 'h'); G.ell(cx + 4.6, 14, 2, 1.6, 'h');
+    const a = (pts, r = 1.2) => arm(G, pts, 'h', 's', 2.4, r);
+    if (pose === 'cane') { a([[cx - 5.4, 14.6], [cx - 6.6, 18.4], [cx - 5.6, 21]]); a([[cx + 5.4, 14.6], [cx + 7, 17], [cx + 8, 18.6]]); }
+    if (pose === 'point') { a([[cx - 5.4, 14.6], [cx - 6.6, 18.4], [cx - 5.6, 21]]); cane(cx + 6.6, 15, cx + 12, 9); a([[cx + 5.4, 14.6], [cx + 7.6, 15.6], [cx + 8.4, 13.4]]); }
+    if (pose === 'raise') { a([[cx - 5.4, 14.6], [cx - 6.6, 18.4], [cx - 5.6, 21]]); cane(cx + 8.6, 18, cx + 8.6, 2.6); G0.ell(cx + 8.6, 2, 3.6, 3.6, 'U'); G0.ell(cx + 8.6, 2, 2.4, 2.4, 'a'); a([[cx + 5.4, 14.6], [cx + 8, 13], [cx + 8.6, 10.4]]); }
+    if (pose === 'laugh') { a([[cx - 5.4, 14.6], [cx - 8, 13], [cx - 8.6, 9.6]]); cane(cx + 7, 32, cx + 7, 18); a([[cx + 5.4, 14.6], [cx + 6.6, 17], [cx + 7, 18.4]]); }
+    // gaunt head, curly white mohawk, goatee, a monocle on the right eye
+    G.line([[cx - 3, 8.6], [cx - 5.4, 7.6]], 1.6, .8, 's'); G.line([[cx + 3, 8.6], [cx + 5.4, 7.6]], 1.6, .8, 's');
+    G.ell(cx, 8.4, 3.4, 4, 's'); G.poly([[cx - 3, 8.6], [cx + 3, 8.6], [cx + 2, 11.6], [cx, 12.6], [cx - 2, 11.6]], 's');
+    for (const [x, y, r] of [[-1, 4.4, 1.5], [1, 4.4, 1.5], [0, 3, 1.7]]) G.ell(cx + x, y + .6, r, r, 'h');   // the curly mohawk
+    G.set(cx - 2, 5, 'H'); G.set(cx + 1, 5, 'H'); G.set(cx, 3, 'H'); G.set(cx - 1, 4, 'H');
+    G.poly([[cx - 1.6, 11.4], [cx + 1.6, 11.4], [cx + .6, 15.4], [cx - .6, 15.4]], 'h');                          // goatee
+    G.rect(cx - 3, 7, 2, 1, 'k'); G.rect(cx + 1, 7, 2, 1, 'k');
+    G.set(cx - 3, 8, 'w'); G.set(cx - 2, 8, 'e'); G.set(cx + 2, 8, 'w');
+    G.set(cx + 3, 8, 'g'); G.set(cx + 2, 7, 'g'); G.set(cx + 2, 9, 'g'); G.set(cx + 1, 8, 'e'); l1(G, [[cx + 3.6, 10], [cx + 4.6, 14]], 'y');   // monocle and its chain
+    if (o.mouth === 'laugh') { G.rect(cx - 2, 10, 4, 1, 'm'); G.set(cx - 2, 9, 'k'); G.set(cx + 1, 9, 'k'); }
+    else { G.rect(cx - 2, 10, 3, 1, 'S'); G.set(cx + 1, 9, 'S'); }
+  }, PAP_PAL, { s: 'S', h: 'H', n: 'N', r: 'R' });
+}
+
+// ---------- u3 · koitsukai: a small giru-like robot. a white egg of a body with one big green eye, thick arms with big
+// green cuffs and black hands, stubby legs, two jets on the back ----------
+const KOI_PAL = { o: 0x0a0e10, w: 0xf4f6f8, W: 0xb4bcc8, g: 0x3ad070, G: 0x1a8a44, l: 0xb0ffd0, k: 0x14161a, K: 0x34383e, n: 0x6a7280, a: 0xffd060, A: 0xf06a2a, r: 0xe0303a, y: 0xfff4b0 };
+function koitsukai(o = {}) {
+  const W = 24, H = 28, cx = 12, pose = o.pose || 'stand', up = pose === 'fly' ? -3 : 0;
+  return spr(W, H, G0 => {
+    const G = shift(G0, 0, up + 2);
+    // two jets on the back, poking out either side, flame when flying
+    for (const s of [-1, 1]) { G.rect(cx + s * 6 - (s < 0 ? 2 : 0), 8, 2, 6, 'n'); if (pose === 'fly') { G.poly([[cx + s * 7 - 1.2, 14], [cx + s * 7 + 1.2, 14], [cx + s * 7, 20]], 'A'); G.poly([[cx + s * 7 - .6, 14], [cx + s * 7 + .6, 14], [cx + s * 7, 17.4]], 'a'); } }
+    // stubby legs
+    if (pose !== 'fly') { G.rect(cx - 4, 18, 3, 3, 'K'); G.rect(cx + 1, 18, 3, 3, 'K'); G.rect(cx - 5, 21, 4, 2, 'w'); G.rect(cx + 1, 21, 4, 2, 'w'); }
+    else { G.rect(cx - 4, 18, 3, 2, 'K'); G.rect(cx + 1, 18, 3, 2, 'K'); }
+    // the egg-shaped body/head
+    G.ell(cx, 10.4, 6.4, 8, 'w'); G.rect(cx - 5, 15, 10, 1, 'W');
+    G.set(cx - 3, 4, 'y'); G.set(cx - 4, 5, 'y');
+    l1(G, [[cx, 2.6], [cx, -0.4]], 'n'); G.set(cx, 0, 'r');                                           // antenna nub
+    // the big green eye
+    G.ell(cx, 8.4, 3.4, 3.4, 'K'); G.ell(cx, 8.4, 2.6, 2.6, o.red ? 'r' : 'g'); G.rect(cx - 1, 7, 2, 2, o.red ? 'y' : 'l'); G.set(cx + 1, 10, 'G');
+    G.rect(cx - 2, 13, 4, 1, 'n');
+    // thick arms with big green cuffs and black hands
+    const a = (pts, r = 2) => { oline(G, pts, 3, 3, 'W'); const n = pts.length - 1, [x0, y0] = pts[n - 1], [x1, y1] = pts[n]; G.line([[x0 + (x1 - x0) * .55, y0 + (y1 - y0) * .55], [x0 + (x1 - x0) * .75, y0 + (y1 - y0) * .75]], 3.8, 3.8, 'g'); fist(G, x1, y1, 'k', r); };
+    if (pose === 'stand') { const p = [[cx - 6, 12], [cx - 8.4, 15], [cx - 8.6, 18]]; a(p); a(mir(W, p)); }
+    if (pose === 'fly') { a([[cx - 6, 12], [cx - 9, 13], [cx - 10, 16]]); a([[cx + 6, 12], [cx + 9, 13], [cx + 10, 16]]); }
+    if (pose === 'up') { const p = [[cx - 6, 11], [cx - 9, 8], [cx - 9.4, 4]]; a(p); a(mir(W, p)); }
+    if (pose === 'punch') { a([[cx - 6, 12], [cx - 8.4, 15], [cx - 8.6, 18]]); a([[cx + 6, 12], [cx + 9.6, 12.4]], 2.4); for (const [x, y] of [[23, 8], [23, 16]]) G.set(x, y, 'a'); }
+  }, KOI_PAL, { w: 'W', g: 'G' });
+}
+
+// ---------- u2 · ribrianne, transformed: big and near-spherical, teal skin, a pink-red and green sleeveless dress over a
+// huge frilled petticoat and bloomers, yellow gloves and boots, a rubber cap with an antenna. super ribrianne grows
+// butterfly wings ----------
+const RIB_PAL = { o: 0x1a0a14, s: 0x6ad0c4, S: 0x3a9a90, l: 0xa8f0e6, p: 0xf2589a, P: 0xb02a66, q: 0xffa0c8, g: 0x48b860, G: 0x2a7a3a, f: 0xfff4fa, F: 0xe0bcd0, y: 0xf6d040, Y: 0xb8901a, c: 0xf06aa8, C: 0xb03a74, h: 0xf6c84a, H: 0xc08a20, k: 0x140a10, w: 0xffffff, e: 0x3a7ae0, m: 0xc02a4a, r: 0xff3a6a, b: 0xffc8f0, B: 0xd88ae8 };
+function ribrianne(o = {}) {
+  const W = 36, H = 40, cx = 18, pose = o.pose || 'heart';
+  return spr(W, H, G0 => {
+    if (o.wings) for (const s of [-1, 1]) { const m = p => p.map(([x, y]) => [cx + s * x, y]); G0.poly(m([[6, 14], [16, 2], [17.6, 10], [14, 18]]), 'B'); G0.poly(m([[6, 18], [17, 20], [15, 30], [8, 27]]), 'B'); G0.poly(m([[8, 14], [14.6, 6], [15.4, 11], [12.6, 16]]), 'b'); G0.poly(m([[8, 19.6], [14.6, 21.4], [13, 26.4], [9, 24.6]]), 'b'); }
+    const G = shift(G0, 0, 1);
+    if (o.hearts) for (const [x, y] of [[3, 6], [31, 4], [2, 22], [32, 20]]) { G.rect(x, y, 2, 1, 'r'); G.rect(x + 3, y, 2, 1, 'r'); G.rect(x, y + 1, 5, 1, 'r'); G.rect(x + 1, y + 2, 3, 1, 'r'); G.set(x + 2, y + 3, 'r'); }
+    // stubby legs in yellow boots under the bloomers
+    G.rect(cx - 6, 32, 4, 3, 'y'); G.rect(cx + 2, 32, 4, 3, 'y'); G.rect(cx - 7, 34, 5, 2, 'y'); G.rect(cx + 2, 34, 5, 2, 'y');
+    // the round body: huge petticoat, then the dress
+    G.ell(cx, 25, 13, 8, 'f'); for (let x = cx - 12; x <= cx + 11; x += 3) G.set(x, 32, 'F');
+    G.ell(cx, 22, 12, 9.4, 'p'); G.poly([[cx - 4, 13], [cx + 4, 13], [cx + 3, 22], [cx - 3, 22]], 'g'); G.rect(cx - 12, 24, 24, 2, 'g');
+    G.rect(cx - 1, 15, 2, 1, 'q'); G.rect(cx - 2, 16, 4, 1, 'q'); G.rect(cx - 1, 17, 2, 1, 'q');                   // heart on the bodice
+    for (const x of [-9, -5, 5, 9]) G.set(cx + x, 19, 'q');
+    // arms: chubby, yellow gloves
+    const a = (pts, r = 2) => arm(G, pts, 's', 'y', 3.4, r);
+    if (pose === 'heart') { a([[cx - 9, 15.4], [cx - 9.6, 12], [cx - 4, 10.4]]); a([[cx + 9, 15.4], [cx + 9.6, 12], [cx + 4, 10.4]]); G.rect(cx - 2, 7, 4, 1, 'r'); }
+    if (pose === 'wave') { a([[cx - 10, 16], [cx - 14, 19], [cx - 14.4, 23]]); a([[cx + 10, 16], [cx + 14.4, 12], [cx + 14.6, 7]]); }
+    if (pose === 'hips') { a([[cx - 10, 16], [cx - 14, 18.4], [cx - 11, 21.6]]); a([[cx + 10, 16], [cx + 14, 18.4], [cx + 11, 21.6]]); }
+    if (pose === 'beam') { a([[cx - 10, 16], [cx - 14, 19], [cx - 14.4, 23]]); a([[cx + 10, 16], [cx + 14, 15], [cx + 15.4, 13]]); G0.ell(cx + 15, 9, 2.6, 2.4, 'r'); G0.rect(cx + 14, 8, 2, 1, 'b'); }
+    G.ell(cx - 9.6, 15.6, 3, 2.4, 'p'); G.ell(cx + 9.6, 15.6, 3, 2.4, 'p');                                    // puffed shoulders
+    // round head, pink rubber cap with a heart-tipped antenna, golden curls peeking out
+    G.ell(cx - 6, 10, 2, 2.4, 'h'); G.ell(cx + 6, 10, 2, 2.4, 'h');
+    G.ell(cx, 8.6, 6, 5.4, 's'); G.rect(cx - 4, 13, 8, 1, 's');
+    G.poly([[cx - 6.4, 7.6], [cx - 5.6, 3.6], [cx - 2, 1.8], [cx + 2, 1.8], [cx + 5.6, 3.6], [cx + 6.4, 7.6], [cx + 4, 6], [cx - 4, 6]], 'c'); G.set(cx - 3, 3, 'q'); G.set(cx - 4, 4, 'q');
+    l1(G, [[cx, 2], [cx, -1]], 'C'); G.set(cx - 1, -1, 'r'); G.set(cx + 1, -1, 'r'); G.set(cx, 0, 'r');
+    // big starry eyes, rosy cheeks, lipstick
+    for (const x of [cx - 4, cx + 1]) { G.rect(x, 7, 3, 3, 'k'); G.rect(x, 8, 2, 1, 'e'); G.set(x, 7, 'w'); }
+    G.set(cx - 5, 11, 'r'); G.set(cx + 4, 11, 'r');
+    if (o.mouth === 'open') { G.rect(cx - 1, 11, 2, 2, 'm'); } else { G.rect(cx - 1, 11, 2, 1, 'm'); }
+  }, RIB_PAL, { s: 'S', p: 'P', g: 'G', f: 'F', y: 'Y', c: 'C', h: 'H' });
+}
+
+// ---------- u2 · rozie (roasie): teal skin, orange sunglasses, a yellow-and-white gown over a purple jumpsuit,
+// white gloves and boots, purple hair ----------
+const ROZ_PAL = { o: 0x120a16, s: 0x6ad0c4, S: 0x3a9a90, v: 0x7a3ab8, V: 0x4e2280, h: 0x8a4ad0, H: 0x5a2a94, j: 0xc49af0, y: 0xf6d040, Y: 0xb8901a, w: 0xf6f4f8, W: 0xbcb8c8, n: 0xf28a2a, N: 0xb0561a, k: 0x120a10, m: 0xc02a4a, r: 0xff3a6a, b: 0xffc8f0 };
+function rozie(o = {}) {
+  const W = 26, cx = 13, pose = o.pose || 'stand';
+  return spr(W, 36, G0 => {
+    const G = shift(G0, 0, 1);
+    if (o.hearts) for (const [x, y] of [[0, 4], [21, 2], [22, 12]]) { G.rect(x, y, 2, 1, 'r'); G.rect(x + 3, y, 2, 1, 'r'); G.rect(x, y + 1, 5, 1, 'r'); G.rect(x + 1, y + 2, 3, 1, 'r'); G.set(x + 2, y + 3, 'r'); }
+    // purple jumpsuit legs, white boots
+    oline(G, [[cx - 2.4, 22], [cx - 2.8, 29]], 2.8, 2.6, 'v'); oline(G, [[cx + 2.4, 22], [cx + 2.8, 29]], 2.8, 2.6, 'v');
+    G.rect(cx - 5, 29, 4, 3, 'w'); G.rect(cx + 1, 29, 4, 3, 'w');
+    // the gown: yellow, open at the front over the purple, white panels and collar
+    G.poly([[cx - 4, 13], [cx + 4, 13], [cx + 4.4, 19], [cx + 7, 26.4], [cx + 2, 25], [cx - 2, 25], [cx - 7, 26.4], [cx - 4.4, 19]], 'y');
+    G.poly([[cx - 2, 15], [cx + 2, 15], [cx + 2, 25], [cx - 2, 25]], 'v');
+    l1(G, [[cx - 4, 20], [cx - 6, 26]], 'w'); l1(G, [[cx + 3, 20], [cx + 5, 26]], 'w');
+    G.poly([[cx - 4.6, 12.4], [cx + 4.6, 12.4], [cx + 3, 15], [cx, 16.4], [cx - 3, 15]], 'w');
+    G.ell(cx - 4.6, 14, 2, 1.6, 'y'); G.ell(cx + 4.6, 14, 2, 1.6, 'y');
+    const a = (pts, r = 1.3) => arm(G, pts, 'y', 'w', 2.4, r);
+    if (pose === 'stand') { a([[cx - 5.4, 14.6], [cx - 7, 18.4], [cx - 4.6, 20]]); a([[cx + 5.4, 14.6], [cx + 7, 18.4], [cx + 4.6, 20]]); }
+    if (pose === 'shoot') { a([[cx - 5.4, 14.6], [cx - 7, 18.4], [cx - 6.6, 21]]); a([[cx + 5.4, 14.6], [cx + 9, 14.4], [cx + 11, 14]]); G.ell(cx + 11.6, 10.4, 1.8, 1.8, 'r'); G.set(cx + 11, 10, 'b'); }
+    if (pose === 'shades') { a([[cx - 5.4, 14.6], [cx - 7, 18.4], [cx - 4.6, 20]]); a([[cx + 5.4, 14.6], [cx + 7.4, 12], [cx + 4.4, 8.6]], 1.1); }
+    if (pose === 'up') { a([[cx - 5.4, 14.6], [cx - 8, 11], [cx - 8.4, 7]]); a([[cx + 5.4, 14.6], [cx + 8, 11], [cx + 8.4, 7]]); }
+    // head: purple hair swept up into a big bun-like quiff, orange sunglasses
+    G.ell(cx, 4.6, 4.6, 3.4, 'h');
+    G.ell(cx, 8.6, 3.6, 4, 's'); G.poly([[cx - 3.4, 8.4], [cx + 3.4, 8.4], [cx + 2.4, 11.6], [cx, 12.8], [cx - 2.4, 11.6]], 's');
+    G.poly([[cx - 4.2, 9], [cx - 4.4, 5], [cx, 3.6], [cx + 4.4, 5], [cx + 4.2, 9], [cx + 3, 6.6], [cx - 3, 6.6]], 'h'); G.set(cx - 2, 2, 'j'); G.set(cx - 3, 3, 'j');
+    G.rect(cx - 4, 7, 8, 2, 'n'); G.set(cx - 3, 7, 'w'); G.set(cx + 1, 7, 'w'); G.rect(cx - 4, 7, 8, 1, 'N'); G.set(cx - 3, 8, 'w'); G.set(cx + 1, 8, 'w');   // sunglasses
+    if (o.mouth === 'grin') { G.rect(cx - 2, 10, 4, 1, 'w'); G.set(cx - 2, 10, 'k'); G.set(cx + 1, 10, 'k'); G.rect(cx - 1, 11, 2, 1, 'm'); } else G.rect(cx - 1, 10, 2, 1, 'm');
+  }, ROZ_PAL, { s: 'S', h: 'H', y: 'Y', w: 'W', v: 'V' });
+}
+
+// ---------- u2 · kakunsa: a feral beast-girl. teal skin, a wild dark-blue mane, a black mask over the eyes, a dark-blue
+// sleeveless bodysuit, green clawed gloves and boots, a dark-blue tail ----------
+const KAK_PAL = { o: 0x08101a, s: 0x6ad0c4, S: 0x3a9a90, h: 0x3a4cc0, H: 0x22307e, j: 0x6a86e8, b: 0x3040a0, B: 0x1c2664, g: 0x48c060, G: 0x2a8040, k: 0x0a0a12, e: 0xf6e050, w: 0xffffff, m: 0x8a1a3a, y: 0xfff6c0 };
+function kakunsa(o = {}) {
+  const W = 28, cx = 14, pose = o.pose || 'crouch', dy = pose === 'crouch' ? 3 : 0;
+  return spr(W, 36, G0 => {
+    const G = shift(G0, 0, 1 + dy);
+    oline(G, [[cx + 3, 21], [cx + 9, 23], [cx + 11.6, 18], [cx + 10.6, 14]], 2.4, 1.6, 'b');                     // the tail
+    if (pose === 'crouch') { oline(G, [[cx - 3, 20], [cx - 6.4, 23.6], [cx - 4.6, 27]], 3, 2.8, 'b'); oline(G, [[cx + 3, 20], [cx + 6.4, 23.6], [cx + 4.6, 27]], 3, 2.8, 'b'); G.rect(cx - 8, 26, 5, 2, 'g'); G.rect(cx + 3, 26, 5, 2, 'g'); }
+    else if (pose === 'pounce') { oline(G, [[cx - 2.4, 21], [cx - 6, 25], [cx - 9, 27]], 3, 2.8, 'b'); oline(G, [[cx + 2.4, 21], [cx + 4, 26], [cx + 3, 29]], 3, 2.8, 'b'); G.rect(cx - 12, 26, 4, 2, 'g'); G.rect(cx + 1, 29, 5, 2, 'g'); }
+    else { oline(G, [[cx - 2.4, 21], [cx - 3, 29]], 3, 2.8, 'b'); oline(G, [[cx + 2.4, 21], [cx + 3, 29]], 3, 2.8, 'b'); G.rect(cx - 6, 29, 5, 3, 'g'); G.rect(cx + 1, 29, 5, 3, 'g'); }
+    G.poly([[cx - 4, 13], [cx + 4, 13], [cx + 3.4, 21.6], [cx - 3.4, 21.6]], 'b'); G.poly([[cx - 2, 13], [cx + 2, 13], [cx, 15.4]], 's');
+    G.ell(cx - 4.4, 14, 1.8, 1.6, 's'); G.ell(cx + 4.4, 14, 1.8, 1.6, 's');
+    const claws = (x, y, up) => { for (const d of [-1, 0, 1]) G.set(Math.round(x + d * 1.2), Math.round(y + (up ? -2 : 2)), 'y'); };
+    const a = (pts, up) => { arm(G, pts, 's', 'g', 2.4, 1.5); const [x, y] = pts[pts.length - 1]; claws(x, y, up); };
+    if (pose === 'crouch') { a([[cx - 5, 14.6], [cx - 8, 18], [cx - 9, 21.6]]); a([[cx + 5, 14.6], [cx + 8, 18], [cx + 9, 21.6]]); }
+    if (pose === 'slash') { a([[cx - 5, 14.6], [cx - 8, 12], [cx - 9, 7.6]], 1); a([[cx + 5, 14.6], [cx + 8, 17.4], [cx + 6, 20]]); }
+    if (pose === 'pounce') { a([[cx - 5, 14.6], [cx - 9, 13], [cx - 12, 10]], 1); a([[cx + 5, 14.6], [cx + 9, 13], [cx + 12, 10]], 1); }
+    if (pose === 'stand') { a([[cx - 5, 14.6], [cx - 6.6, 18.4], [cx - 6, 21.4]]); a([[cx + 5, 14.6], [cx + 7, 12.6], [cx + 6, 9.4]], 1); }
+    // head: wild spiky dark-blue mane, cat ears, black eye mask
+    for (const [b, t] of [[[cx - 3, 6], [cx - 8.6, 9]], [[cx + 3, 6], [cx + 8.6, 9]], [[cx - 3, 8], [cx - 7.4, 14]], [[cx + 3, 8], [cx + 7.4, 14]], [[cx - 2, 4], [cx - 5.4, -.6]], [[cx + 2, 4], [cx + 5.4, -.6]]]) oline(G, [b, t], 3.4, .8, 'h');
+    G.ell(cx, 8.6, 3.6, 4, 's'); G.poly([[cx - 3.4, 8.4], [cx + 3.4, 8.4], [cx + 2.4, 11.6], [cx, 12.8], [cx - 2.4, 11.6]], 's');
+    G.poly([[cx - 4, 8], [cx - 4, 4.6], [cx, 3], [cx + 4, 4.6], [cx + 4, 8], [cx + 2.4, 5.8], [cx, 6.6], [cx - 2.4, 5.8]], 'h'); G.set(cx - 2, 4, 'j');
+    G.rect(cx - 4, 7, 8, 2, 'k'); G.set(cx - 3, 8, 'e'); G.set(cx - 2, 8, 'e'); G.set(cx + 1, 8, 'e'); G.set(cx + 2, 8, 'e');   // the mask
+    if (o.mouth === 'fang') { G.rect(cx - 2, 10, 4, 1, 'm'); G.set(cx - 2, 10, 'w'); G.set(cx + 1, 10, 'w'); } else { G.rect(cx - 1, 10, 2, 1, 'S'); G.set(cx - 2, 10, 'S'); }
+  }, KAK_PAL, { s: 'S', h: 'H', b: 'B', g: 'G' });
+}
+
+// ---------- u6 · the saiyan girls. hair spikes are [base, tip] pairs drawn as tapering strokes ----------
+const spikes = (G, list, c, b = 3.4, t = .8) => { for (const [p, q] of list) G.line([p, q], b, t, c); };
+const SAI_PAL = { o: 0x0e0810, s: 0xf6cfa8, S: 0xc0906c, t: 0xc88c5c, T: 0x8e5a36, k: 0x100a10, K: 0x2a2430, w: 0xffffff, W: 0xc4c0cc, e: 0x2a2a3a, n: 0x22202a, N: 0x3c3844,
+  y: 0xffe04a, Y: 0xd8a018, j: 0xfff6b0, g: 0x3ae070, G: 0x1a9a48, q: 0x9cff7a, Q: 0x5ad83a, l: 0xd8ff9a,
+  c: 0xa8243e, C: 0x6a1426, m: 0xd82a8a, M: 0x8a1a5a, v: 0x6a3a9a, V: 0x44245e, r: 0xd02a2e, R: 0x86161c, u: 0x8a5a30, U: 0x5a3a1c, a: 0xf2c840, A: 0xa8841a, x: 0x9a9aa8, b: 0xd8781a, B: 0xf0a030, z: 0xc0e8ff, Z: 0x60b0f0, p: 0x6a1a2a, h: 0xf0e070, H: 0xb0a040 };
+
+// kefla: caulifla's spiky hair held up in kale's ponytail with bangs framing the face, a claret belly shirt and fitted
+// trousers, kale's gold armbands, black boots, green potara earrings
+function kefla(o = {}) {
+  const W = 28, cx = 14, pose = o.pose || 'fold', ss = o.ss || 0, hc = ss ? 'y' : 'k', hd = ss ? 'Y' : 'K';
+  return spr(W, 36, G0 => {
+    if (ss) aura(G0, W, 36, 'b', ss > 1 ? 'B' : null);
+    if (ss > 1) for (const p of [[[2, 6], [4, 9], [2, 11], [4, 14]], [[25, 18], [23, 21], [25, 23]], [[3, 24], [5, 27]], [[24, 4], [22, 7], [24, 9]]]) bolt(G0, p, 'z');
+    const G = shift(G0, 0, 1);
+    spikes(G, [[[cx + 1, 3], [cx + 4, -1.4]], [[cx + 2, 3], [cx + 7, -.6]]], hc, 3.6, 1);                      // the ponytail, held up
+    oline(G, [[cx - 2.4, 21], [cx - 2.8, 28.6]], 2.8, 2.6, 'c'); oline(G, [[cx + 2.4, 21], [cx + 2.8, 28.6]], 2.8, 2.6, 'c');
+    G.rect(cx - 5, 28, 4, 4, 'n'); G.rect(cx + 1, 28, 4, 4, 'n');
+    G.poly([[cx - 3.6, 18], [cx + 3.6, 18], [cx + 3.4, 22], [cx - 3.4, 22]], 't');                            // bare midriff
+    G.poly([[cx - 3.6, 22], [cx + 3.6, 22], [cx + 4, 23.6], [cx - 4, 23.6]], 'c');
+    G.poly([[cx - 4.4, 13], [cx + 4.4, 13], [cx + 3.6, 18], [cx - 3.6, 18]], 'c'); G.rect(cx - 2, 13, 4, 1, 't');
+    G.ell(cx - 4.6, 14, 1.8, 1.4, 'c'); G.ell(cx + 4.6, 14, 1.8, 1.4, 'c');
+    const a = (pts, r = 1.3) => { oline(G, pts, 2.2, 2, 't'); const n = pts.length - 1, [x0, y0] = pts[n - 1], [x1, y1] = pts[n]; G.line([[x0 + (x1 - x0) * .3, y0 + (y1 - y0) * .3], [x0 + (x1 - x0) * .8, y0 + (y1 - y0) * .8]], 2.6, 2.6, 'a'); fist(G, x1, y1, 't', r); };
+    if (pose === 'fold') fold(G, [[cx - 5.4, 14.6], [cx - 4.4, 17.4], [cx + 2.4, 17]], [[cx + 5.4, 14.6], [cx + 4.6, 18.2], [cx - 2.4, 18]], 'a', 'A', 't', 2.4, 1.1);
+    if (pose === 'hips') { a([[cx - 5.4, 14.6], [cx - 7.4, 17.6], [cx - 4.6, 19.6]]); a([[cx + 5.4, 14.6], [cx + 7.4, 17.6], [cx + 4.6, 19.6]]); }
+    if (pose === 'blast') { a([[cx - 5.4, 14.6], [cx - 7, 18.4], [cx - 6.6, 21.4]]); a([[cx + 5.4, 14.6], [cx + 9, 14], [cx + 11, 13.4]]); G0.ell(cx + 11.4, 9.4, 2.4, 2.4, 'Q'); G0.ell(cx + 11.4, 9.4, 1.4, 1.4, 'l'); }
+    if (pose === 'charge') { a([[cx - 5.4, 14.6], [cx - 7.6, 18], [cx - 7.6, 20.6]]); a([[cx + 5.4, 14.6], [cx + 7.6, 18], [cx + 7.6, 20.6]]); }
+    // head: caulifla's face, spiky crown, bangs down both sides
+    G.ell(cx, 8.6, 3.6, 4, 't'); G.poly([[cx - 3.4, 8.4], [cx + 3.4, 8.4], [cx + 2.4, 11.6], [cx, 12.8], [cx - 2.4, 11.6]], 't');
+    spikes(G, [[[cx - 2, 4], [cx - 5.4, -.4]], [[cx, 4], [cx - 1, -1.4]], [[cx + 1, 4], [cx + 2.4, -1]], [[cx - 3, 6], [cx - 7.6, 4]]], hc);
+    G.poly([[cx - 4.2, 8], [cx - 4, 4], [cx, 2.6], [cx + 4, 4], [cx + 4.2, 8], [cx + 2.6, 6], [cx, 7], [cx - 2.6, 6]], hc);
+    oline(G, [[cx - 3.6, 6], [cx - 4.4, 12.6]], 1.6, .8, hc); oline(G, [[cx + 3.6, 6], [cx + 4.4, 12.6]], 1.6, .8, hc);   // the framing bangs
+    G.set(cx - 2, 3, ss ? 'j' : 'N'); G.set(cx - 1, 4, ss ? 'j' : 'N');
+    G.set(cx - 5, 10, 'g'); G.set(cx - 5, 11, 'g'); G.set(cx + 4, 10, 'g'); G.set(cx + 4, 11, 'g');              // potara
+    G.rect(cx - 3, 8, 2, 1, 'k'); G.rect(cx + 1, 8, 2, 1, 'k'); G.set(cx - 2, 8, ss ? 'G' : 'e'); G.set(cx + 1, 8, ss ? 'G' : 'e'); G.set(cx - 3, 7, 'k'); G.set(cx + 2, 7, 'k');
+    if (o.mouth === 'grin') { G.rect(cx - 2, 10, 4, 1, 'w'); G.set(cx - 2, 10, 'k'); G.set(cx + 1, 10, 'k'); } else { G.rect(cx - 1, 10, 2, 1, 'T'); G.set(cx + 1, 9, 'T'); }
+  }, SAI_PAL, { t: 'T', c: 'C', y: 'Y', k: 'K', a: 'A' });
+}
+
+// caulifla: short and slender, long wild spiky black hair, a magenta tube top, low-set purple sirwal trousers,
+// long dark-grey wristbands, pointed dark-grey shoes
+function caulifla(o = {}) {
+  const W = 28, cx = 14, pose = o.pose || 'hips', ss = o.ss || 0, hc = ss ? 'y' : 'k';
+  return spr(W, 36, G0 => {
+    if (ss) aura(G0, W, 36, 'b', ss > 1 ? 'B' : null);
+    if (ss > 1) for (const p of [[[2, 6], [4, 9], [2, 11], [4, 14]], [[25, 18], [23, 21], [25, 23]], [[3, 24], [5, 27]], [[24, 4], [22, 7], [24, 9]]]) bolt(G0, p, 'z');
+    const G = shift(G0, 0, 2);
+    // the long wild mane behind
+    spikes(G, [[[cx - 3, 6], [cx - 9.6, 9]], [[cx + 3, 6], [cx + 9.6, 9]], [[cx - 3, 8], [cx - 8, 15]], [[cx + 3, 8], [cx + 8, 15]], [[cx - 2, 10], [cx - 5, 18]], [[cx + 2, 10], [cx + 5, 18]]], hc, 4, 1);
+    // baggy sirwal trousers gathered at the ankle, pointy shoes
+    G.poly([[cx - 4, 19], [cx + 4, 19], [cx + 5.4, 24], [cx + 4.4, 28], [cx + 1, 28], [cx, 22.4], [cx - 1, 28], [cx - 4.4, 28], [cx - 5.4, 24]], 'v');
+    G.poly([[cx - 5, 28], [cx - 1, 28], [cx - 1, 30], [cx - 7, 30]], 'n'); G.poly([[cx + 1, 28], [cx + 5, 28], [cx + 7, 30], [cx + 1, 30]], 'n');
+    G.poly([[cx - 3.4, 15.6], [cx + 3.4, 15.6], [cx + 3.6, 19.4], [cx - 3.6, 19.4]], 's');                     // bare midriff
+    G.poly([[cx - 3.6, 12.6], [cx + 3.6, 12.6], [cx + 3.6, 15.6], [cx - 3.6, 15.6]], 'm'); G.rect(cx - 3, 12, 6, 1, 's');   // tube top
+    G.ell(cx - 4.4, 13.4, 1.6, 1.4, 's'); G.ell(cx + 4.4, 13.4, 1.6, 1.4, 's');
+    const a = (pts, r = 1.2) => { oline(G, pts, 2, 1.8, 's'); const n = pts.length - 1, [x0, y0] = pts[n - 1], [x1, y1] = pts[n]; G.line([[x0 + (x1 - x0) * .25, y0 + (y1 - y0) * .25], [x0 + (x1 - x0) * .85, y0 + (y1 - y0) * .85]], 2.4, 2.4, 'N'); fist(G, x1, y1, 's', r); };
+    if (pose === 'hips') { a([[cx - 5, 14], [cx - 7.4, 17], [cx - 4.6, 18.6]]); a([[cx + 5, 14], [cx + 7.4, 17], [cx + 4.6, 18.6]]); }
+    if (pose === 'point') { a([[cx - 5, 14], [cx - 7.4, 17], [cx - 4.6, 18.6]]); a([[cx + 5, 14], [cx + 8.6, 12.6], [cx + 10.6, 11]], 1); G.set(cx + 11, 9, 's'); }
+    if (pose === 'fists') { a([[cx - 5, 14], [cx - 7, 17.6], [cx - 6.4, 20.4]]); a([[cx + 5, 14], [cx + 7, 17.6], [cx + 6.4, 20.4]]); }
+    if (pose === 'cannon') { a([[cx - 5, 14], [cx - 7, 17.6], [cx - 6.4, 20.4]]); a([[cx + 5, 14], [cx + 8.4, 11], [cx + 9, 7.4]]); G0.ell(cx + 9, 3.4, 3, 3, 'r'); G0.ell(cx + 9, 3.4, 1.8, 1.8, 'a'); }
+    // head: big-eyed, bangs spiking forward
+    G.ell(cx, 8.6, 3.6, 4, 's'); G.poly([[cx - 3.4, 8.4], [cx + 3.4, 8.4], [cx + 2.4, 11.6], [cx, 12.8], [cx - 2.4, 11.6]], 's');
+    spikes(G, [[[cx - 1, 4], [cx - 4.6, -1.4]], [[cx + 1, 4], [cx + 3.6, -1.6]], [[cx, 4], [cx, -1.4]]], hc);
+    G.poly([[cx - 4.4, 8.6], [cx - 4.2, 4], [cx, 2.6], [cx + 4.2, 4], [cx + 4.4, 8.6], [cx + 3, 6], [cx + 1.6, 7.6], [cx, 6], [cx - 1.6, 7.6], [cx - 3, 6]], hc);
+    G.set(cx - 2, 3, ss ? 'j' : 'N'); G.set(cx - 3, 4, ss ? 'j' : 'N');
+    G.rect(cx - 3, 8, 2, 2, 'k'); G.rect(cx + 1, 8, 2, 2, 'k'); G.set(cx - 3, 8, 'w'); G.set(cx + 1, 8, 'w'); if (ss) { G.set(cx - 2, 9, 'G'); G.set(cx + 2, 9, 'G'); }
+    if (o.mouth === 'grin') { G.rect(cx - 2, 11, 4, 1, 'w'); G.set(cx - 2, 11, 'k'); G.set(cx + 1, 11, 'k'); } else { G.rect(cx - 1, 11, 2, 1, 'S'); G.set(cx + 1, 10, 'S'); }
+  }, SAI_PAL, { s: 'S', m: 'M', v: 'V', y: 'Y', k: 'K' });
+}
+
+// kale, berserk legendary super saiyan: huge and hulking, a long mane of green-gold spikes, blank pupil-less eyes,
+// green aura; the red crop top torn, red skirt on a brown belt, gold bracelets on arms and shins, gold hoop earrings
+function kale(o = {}) {
+  const W = 36, H = 42, cx = 18, pose = o.pose || 'roar';
+  return spr(W, H, G0 => {
+    aura(G0, W, H, 'G', 'g');
+    const G = shift(G0, 0, 2);
+    spikes(G, [[[cx - 4, 6], [cx - 12, 4]], [[cx + 4, 6], [cx + 12, 4]], [[cx - 4, 9], [cx - 12.6, 13]], [[cx + 4, 9], [cx + 12.6, 13]], [[cx - 3, 11], [cx - 9, 20]], [[cx + 3, 11], [cx + 9, 20]], [[cx - 2, 3], [cx - 7, -2]], [[cx + 2, 3], [cx + 7, -2]], [[cx, 3], [cx, -2.6]]], 'q', 5, 1.2);
+    // legs: tan, gold shin guards, gold loafers
+    oline(G, [[cx - 4, 27], [cx - 5, 34]], 4.6, 4, 't'); oline(G, [[cx + 4, 27], [cx + 5, 34]], 4.6, 4, 't');
+    G.rect(cx - 8, 31, 6, 3, 'a'); G.rect(cx + 2, 31, 6, 3, 'a'); G.rect(cx - 8, 35, 6, 2, 'a'); G.rect(cx + 2, 35, 6, 2, 'a');
+    G.poly([[cx - 7, 24], [cx + 7, 24], [cx + 9, 30], [cx - 9, 30]], 'r'); G.rect(cx - 7, 24, 14, 2, 'u'); G.ell(cx, 25, 1.4, 1, 'x');   // skirt, belt, buckle
+    // massive torso: tan abs, shreds of the red top
+    G.poly([[cx - 10, 13], [cx + 10, 13], [cx + 7, 24.4], [cx - 7, 24.4]], 't');
+    G.poly([[cx - 9, 13], [cx + 9, 13], [cx + 7, 17], [cx + 4, 16], [cx + 2, 18], [cx - 1, 16.4], [cx - 4, 18], [cx - 7, 16.6]], 'r');
+    for (const y of [20, 22]) { G.rect(cx - 3, y, 2, 1, 'T'); G.rect(cx + 1, y, 2, 1, 'T'); }
+    G.ell(cx - 10, 15, 4.6, 3.6, 't'); G.ell(cx + 10, 15, 4.6, 3.6, 't');
+    const a = (pts, r = 2.6) => { oline(G, pts, 5, 4.6, 't'); const n = pts.length - 1, [x0, y0] = pts[n - 1], [x1, y1] = pts[n]; G.line([[x0 + (x1 - x0) * .4, y0 + (y1 - y0) * .4], [x0 + (x1 - x0) * .85, y0 + (y1 - y0) * .85]], 5.4, 5.4, 'a'); fist(G, x1, y1, 't', r); };
+    if (pose === 'roar') { const p = [[cx - 11, 16], [cx - 14.6, 21], [cx - 14, 26]]; a(p); a(mir(W, p)); }
+    if (pose === 'flex') { const p = [[cx - 11, 16], [cx - 15.4, 13], [cx - 14.6, 7.6]]; a(p); a(mir(W, p)); }
+    if (pose === 'blast') { a([[cx - 11, 16], [cx - 14.6, 21], [cx - 14, 26]]); a([[cx + 11, 16], [cx + 15, 16.6], [cx + 15.4, 15]]); G0.ell(cx + 14.6, 8.6, 3.4, 3.4, 'G'); G0.ell(cx + 14.6, 8.6, 2.2, 2.2, 'q'); G0.ell(cx + 14.6, 8.6, 1, 1, 'l'); }
+    if (pose === 'grab') { a([[cx - 11, 16], [cx - 15, 18], [cx - 15.6, 13.6]]); a([[cx + 11, 16], [cx + 15, 18], [cx + 15.6, 13.6]]); }
+    // head: small on the bulk, thick neck, bangs over the left of the face, blank eyes
+    G.rect(cx - 3, 10, 6, 4, 't');
+    G.ell(cx, 7.4, 4, 4.4, 't'); G.poly([[cx - 3.6, 7.4], [cx + 3.6, 7.4], [cx + 2.6, 11], [cx, 12.2], [cx - 2.6, 11]], 't');
+    G.poly([[cx - 4.6, 8], [cx - 4.4, 3.6], [cx, 2], [cx + 4.4, 3.6], [cx + 4.6, 8], [cx + 3, 5.4], [cx, 6], [cx - 2, 7.6], [cx - 3, 5.6]], 'q');
+    G.set(cx - 2, 3, 'l'); G.set(cx - 3, 4, 'l');
+    G.rect(cx - 3, 7, 2, 1, 'T'); G.rect(cx + 1, 7, 2, 1, 'T'); G.rect(cx - 3, 8, 2, 1, 'w'); G.rect(cx + 1, 8, 2, 1, 'w');   // blank eyes
+    G.set(cx - 5, 10, 'a'); G.set(cx + 4, 10, 'a');                                                                // hoop earrings
+    if (o.mouth === 'roar') { G.rect(cx - 2, 9, 4, 2, 'p'); G.rect(cx - 2, 9, 4, 1, 'w'); } else { G.rect(cx - 2, 10, 4, 1, 'p'); G.set(cx - 2, 10, 'w'); G.set(cx + 1, 10, 'w'); }
+  }, SAI_PAL, { t: 'T', r: 'R', a: 'A', q: 'Q' });
+}
+
+// ---------- u11 · dyspo: small, slim, hairless lilac speedster; long wide pointed ears, bulging yellow eyes, buck teeth;
+// the pride trooper suit (red, black yoke and legs, white gloves and tall white boots) ----------
+const DYS_PAL = { o: 0x140a18, p: 0xa47ad0, P: 0x6e4c9c, l: 0xd2b4f2, q: 0xe8a0c8, e: 0xf6e44a, k: 0x0e0a10, t: 0xfffcf0, r: 0xd8282e, R: 0x8e161c, n: 0x1c1a20, w: 0xf6f4f6, W: 0xbcb8c4, s: 0x9ad8ff, y: 0xfff07a };
+function dyspo(o = {}) {
+  const W = 22, pose = o.pose || 'stand';
+  return spr(W, 30, G => {
+    if (o.streak) for (const [y, x0, n] of [[10, 0, 4], [15, 1, 3], [19, 0, 5], [24, 1, 3]]) G.rect(x0, y, n, 1, o.streak);   // speed streaks
+    oline(G, [[9.4, 21], [9, 25.4]], 3, 2.8, 'n'); oline(G, [[12.6, 21], [13, 25.4]], 3, 2.8, 'n');
+    G.rect(6, 24, 5, 3, 'w'); G.rect(11, 24, 5, 3, 'w');                                                  // tall white boots
+    G.poly([[7, 14], [15, 14], [14.6, 21.6], [7.4, 21.6]], 'r');
+    G.poly([[8, 14], [14, 14], [13.2, 15.8], [11, 16.8], [8.8, 15.8]], 'n'); G.rect(7, 20, 8, 2, 'n');
+    G.ell(6.6, 15.4, 2.2, 1.8, 'r'); G.ell(15.4, 15.4, 2.2, 1.8, 'r');
+    const a = (pts, r = 1.3) => arm(G, pts, 'p', 'w', 2.2, r);
+    if (pose === 'stand') { a([[6.2, 15.8], [5, 19], [5.6, 21.4]]); a(mir(W, [[6.2, 15.8], [5, 19], [5.6, 21.4]])); }
+    if (pose === 'fight') { a([[6.2, 15.8], [4.6, 18.6], [7.6, 18.4]]); a([[15.8, 15.8], [18.6, 15.6], [19, 12.6]]); }
+    if (pose === 'point') { a([[6.2, 15.8], [5, 19], [5.6, 21.4]]); a([[15.8, 15.8], [18.4, 14.6], [20, 12.4]], 1.1); G.set(20, 10, 'w'); G.set(21, 9, 'w'); }
+    if (pose === 'dash') { a([[6.2, 15.8], [3.4, 17.4], [2.4, 15]]); a([[15.8, 15.8], [18.4, 18.4], [19.8, 17]]); }
+    // head: lilac, wide ears swept up and out, a narrow jaw
+    for (const e of [[[8, 8.6], [1.4, 1.4]], mir(W, [[8, 8.6], [1.4, 1.4]])]) oline(G, e, 5, 1, 'p');
+    G.line([[6.6, 7.4], [3, 3.6]], 1.6, .6, 'q'); G.line(mir(W, [[6.6, 7.4], [3, 3.6]]), 1.6, .6, 'q');
+    G.ell(11, 8.8, 4.4, 4.2, 'p'); G.poly([[7, 9], [15, 9], [14.2, 12.4], [12.4, 14.2], [9.6, 14.2], [7.8, 12.4]], 'p');
+    G.set(9, 5, 'l'); G.set(10, 5, 'l'); G.set(8, 6, 'l');
+    // bulging yellow eyes under heavy lids
+    G.rect(8, 7, 2, 1, 'P'); G.rect(12, 7, 2, 1, 'P');
+    G.rect(8, 8, 2, 2, 'e'); G.rect(12, 8, 2, 2, 'e');
+    if (o.glow) { G.set(9, 8, 'y'); G.set(12, 8, 'y'); } else { G.set(9, 9, 'k'); G.set(12, 9, 'k'); }
+    if (o.mouth === 'grin') { G.rect(9, 11, 4, 1, 'k'); G.set(8, 10, 'k'); G.set(13, 10, 'k'); G.rect(10, 12, 2, 1, 't'); }
+    else { G.rect(9, 11, 4, 1, 'P'); G.rect(10, 12, 2, 1, 't'); }                                       // buck teeth
+  }, DYS_PAL, { p: 'P', r: 'R', w: 'W' });
+}
+
+// ---------- u11 · toppo, god of destruction mode: tall and burly, tan, bald with two veins, big pointy ears,
+// yellow eyes with dark lines under, a huge white moustache over the mouth, a pot belly on short skinny legs,
+// long arms ending in massive white-gloved hands; violet hakai aura ----------
+const TOP_PAL = { o: 0x140a10, s: 0xdca478, S: 0x9e6a46, v: 0x9c4ef0, V: 0x5a1fa8, u: 0xd8a8ff, k: 0x0e0a0e, e: 0xf6d23a, y: 0xfff2c8, h: 0xf6f6f8, H: 0xbcbcc8, r: 0xd8282e, R: 0x8e161c, n: 0x1c1a20, N: 0x34323a, w: 0xf6f4f6, W: 0xbcb8c4 };
+function toppo(o = {}) {
+  const W = 34, H = 40, pose = o.pose || 'fold', cx = 17;
+  return spr(W, H, G => {
+    aura(G, W, H, 'V', 'v');
+    if (o.sparks) for (const p of [[[2, 10], [4, 12], [3, 14]], [[31, 8], [29, 11], [31, 13]], [[1, 26], [3, 28]], [[32, 24], [30, 27]]]) bolt(G, p, 'u');
+    // short skinny legs, white boots
+    oline(G, [[14.4, 31], [14, 35.4]], 3, 2.8, 'n'); oline(G, [[19.6, 31], [20, 35.4]], 3, 2.8, 'n');
+    G.rect(11, 35, 5, 3, 'w'); G.rect(18, 35, 5, 3, 'w');
+    // barrel torso with a pot belly
+    G.poly([[9, 17], [25, 17], [26.6, 25], [24.6, 31.6], [9.4, 31.6], [7.4, 25]], 'r');
+    G.poly([[11, 17], [23, 17], [21.6, 19.6], [17, 21], [12.4, 19.6]], 'n'); G.rect(9, 30, 16, 2, 'n');
+    l1(G, [[11, 27], [23, 27]], 'R'); G.set(17, 24, 'R');
+    if (o.torn) { G.poly([[12, 21], [15, 22.6], [13.4, 25], [16, 26], [14, 27.4], [11, 26]], 's'); G.set(13, 23, 'S'); }
+    G.ell(8.4, 19.4, 3.8, 3.2, 'r'); G.ell(25.6, 19.4, 3.8, 3.2, 'r');
+    const glove = (x, y, r = 2.6) => fist(G, x, y, 'w', r);
+    const a = pts => oline(G, pts, 3.8, 3.4, 's');
+    if (pose === 'fold') { fold(G, [[6.4, 20], [8, 24.6], [21.6, 24]], [[27.6, 20], [26, 26], [12.4, 25.8]], 's', 'S', 'w', 4, 2.2); }
+    if (pose === 'fists') { const p = [[6.4, 20.4], [4.6, 25], [5, 29]]; a(p); a(mir(W, p)); glove(5, 30); glove(29, 30); }
+    if (pose === 'hakai') {
+      const p = [[6.4, 20.4], [4.6, 25], [5, 29]]; a(p); glove(5, 30);
+      a([[27.6, 20], [30.4, 15.6], [29.6, 11]]); G.ell(28.4, 5, 5, 5, 'o'); G.ell(28.4, 5, 4.2, 4.2, 'u'); G.ell(28.4, 5, 3.2, 3.2, 'k'); G.ell(28.4, 5, 2, 2, 'V'); G.set(27, 3, 'u'); glove(29.6, 10.2, 2.4);
+    }
+    if (pose === 'punch') { const p = [[6.4, 20.4], [4.6, 25], [5, 29]]; a(p); glove(5, 30); a([[27.6, 20], [30, 21]]); glove(30.4, 21, 2.8); G.ell(30.4, 21, 1, 1, 'u'); }
+    // the head: bald and wide, big pointed ears, two veins on the crown
+    for (const e of [[[12.6, 11], [5, 3]], mir(W, [[12.6, 11], [5, 3]])]) oline(G, e, 4.4, .8, 's');
+    l1(G, [[10.6, 9], [7.6, 6]], 'S'); l1(G, mir(W, [[10.6, 9], [7.6, 6]]), 'S');
+    G.ell(cx, 9.2, 5.4, 6, 's'); G.poly([[11.6, 10], [22.4, 10], [21.8, 14.6], [19.4, 16.8], [14.6, 16.8], [12.2, 14.6]], 's'); G.rect(14, 16, 6, 2, 's');
+    l1(G, [[14.6, 7], [15.4, 5], [14.6, 3.6]], 'S'); l1(G, [[19.4, 7], [18.6, 5], [19.4, 3.6]], 'S');   // the two veins
+    G.set(13, 5, 'y'); G.set(14, 4, 'y');
+    G.rect(12, 8, 4, 1, 'k'); G.rect(18, 8, 4, 1, 'k'); G.set(15, 9, 'k'); G.set(18, 9, 'k');                  // heavy brows
+    if (o.blank) { G.rect(13, 9, 2, 1, 'y'); G.rect(19, 9, 2, 1, 'y'); }
+    else { G.rect(13, 9, 2, 1, 'e'); G.rect(19, 9, 2, 1, 'e'); G.set(14, 9, 'k'); G.set(19, 9, 'k'); }
+    G.rect(13, 10, 3, 1, 'S'); G.rect(18, 10, 3, 1, 'S');                                                       // the dark lines under the eyes
+    G.rect(16, 11, 2, 1, 'S');
+    G.poly([[12, 12.6], [17, 11.6], [22, 12.6], [23.4, 16], [21, 14.6], [17, 15.4], [13, 14.6], [10.6, 16]], 'h');   // the moustache
+    G.set(17, 13, 'H'); G.set(16, 13, 'H');
+    if (o.roar) { G.rect(15, 15, 4, 1, 'k'); G.rect(15, 16, 4, 1, 'k'); }
+  }, TOP_PAL, { s: 'S', r: 'R', w: 'W', h: 'H' });
+}
+return {
+  bergamo: [bergamo({ pose: 'fold' }), bergamo({ pose: 'beckon', mouth: 'grin' }), bergamo({ pose: 'flex', mouth: 'fang' }), bergamo({ pose: 'fists', mouth: 'fang', big: true, aura: true })],
+  lavender: [lavender({ pose: 'hunch' }), lavender({ pose: 'claw', mouth: 'tongue' }), lavender({ pose: 'breath', mouth: 'fang', mist: true }), lavender({ pose: 'lunge', shut: true, mouth: 'fang' })],
+  basil: [basil({ pose: 'stand' }), basil({ pose: 'kick', mouth: 'grin' }), basil({ pose: 'guard', mouth: 'fang' }), basil({ pose: 'flex', power: true, aura: true, mouth: 'fang' })],
+  obuni: [obuni({ pose: 'fold' }), obuni({ pose: 'stance' }), obuni({ pose: 'down', ghost: true, shut: true }), obuni({ pose: 'blast', mouth: 'shout' })],
+  murichim: [murichim({ pose: 'nio' }), murichim({ pose: 'fold' }), murichim({ pose: 'fists', mouth: 'roar' }), murichim({ pose: 'charge', mouth: 'roar', aura: true, glow: true })],
+  rubalt: [rubalt({ pose: 'fists' }), rubalt({ pose: 'fold' }), rubalt({ pose: 'smash', mouth: 'roar' }), rubalt({ pose: 'punch', mouth: 'roar', aura: true })],
+  ganos: [ganos({ pose: 'stand', beret: true }), ganos({ pose: 'spread', beret: true, mouth: 'open' }), ganos({ pose: 'talon', mouth: 'open' }), ganos({ pose: 'fold', aura: true, torn: true })],
+  caway: [caway({ pose: 'stand' }), caway({ pose: 'spear' }), caway({ pose: 'kiss', wink: true }), caway({ pose: 'bolts' })],
+  dercori: [dercori({ pose: 'stand' }), dercori({ pose: 'throw', mouth: 'grin' }), dercori({ pose: 'hush' }), dercori({ pose: 'loom', dark: true, mouth: 'grin' })],
+  anilaza: [anilaza({ pose: 'stand' }), anilaza({ pose: 'raise', mouth: 'roar' }), anilaza({ pose: 'punch', wings: true }), anilaza({ pose: 'burst', wings: true, mouth: 'roar' })],
+  paparoni: [paparoni({ pose: 'cane' }), paparoni({ pose: 'point' }), paparoni({ pose: 'raise', mouth: 'laugh' }), paparoni({ pose: 'laugh', mouth: 'laugh' })],
+  koitsukai: [koitsukai({ pose: 'stand' }), koitsukai({ pose: 'fly' }), koitsukai({ pose: 'up' }), koitsukai({ pose: 'punch', red: true })],
+  ribrianne: [ribrianne({ pose: 'heart' }), ribrianne({ pose: 'wave', mouth: 'open', hearts: true }), ribrianne({ pose: 'hips' }), ribrianne({ pose: 'beam', wings: true, mouth: 'open' })],
+  rozie: [rozie({ pose: 'stand' }), rozie({ pose: 'shoot', mouth: 'grin' }), rozie({ pose: 'shades' }), rozie({ pose: 'up', hearts: true, mouth: 'grin' })],
+  kakunsa: [kakunsa({ pose: 'crouch', mouth: 'fang' }), kakunsa({ pose: 'slash', mouth: 'fang' }), kakunsa({ pose: 'pounce', mouth: 'fang' }), kakunsa({ pose: 'stand' })],
+  kefla: [kefla({ pose: 'fold', ss: 1 }), kefla({ pose: 'blast', ss: 2, mouth: 'grin' }), kefla({ pose: 'hips', mouth: 'grin' }), kefla({ pose: 'charge', ss: 2 })],
+  caulifla: [caulifla({ pose: 'hips', mouth: 'grin' }), caulifla({ pose: 'point', ss: 1, mouth: 'grin' }), caulifla({ pose: 'fists', ss: 2 }), caulifla({ pose: 'cannon', mouth: 'grin' })],
+  kale: [kale({ pose: 'roar', mouth: 'roar' }), kale({ pose: 'flex', mouth: 'roar' }), kale({ pose: 'blast' }), kale({ pose: 'grab', mouth: 'roar' })],
+  dyspo: [dyspo({ pose: 'stand' }), dyspo({ pose: 'fight', mouth: 'grin' }), dyspo({ pose: 'point', mouth: 'grin' }), dyspo({ pose: 'dash', streak: 'y', glow: true })],
+  toppo: [toppo({ pose: 'fold' }), toppo({ pose: 'hakai', sparks: true }), toppo({ pose: 'fists', blank: true, roar: true, torn: true, sparks: true }), toppo({ pose: 'punch' })],
+};
+})();
 const VILLAINS = (() => {
   const body = (rows, pal) => makeSprite(rows, pal, { emit: 'r' });
   return [
@@ -1721,6 +2493,44 @@ const FUTURE = Object.assign({}, KAI, {
 });
 // puddles mirror the grey sky; a few windows, fires and craters still glow
 const FUT = { sky: [0x4e5866, 0x6a7480, 0x8a929c, 0xc4ccd4], lit: [0xe8a050, 0x9aaab8], fire: [0x5a1a0e, 0xa03a14, 0xe0702a, 0xffb050], fleck: [0xc4d0dc, 0x8a96a2] };
+// tournament of power: the null realm arena, the ring is the planet. TOP.dmg (0..1) breaks the floor, TOP.erase(u) empties that universe's stand
+const TOP = { dmg: 0, erased: new Set(), UNI: [9, 10, 4, 3, 2, 6, 11, 7], erase(u) { this.erased.add(u); } };
+const TOP_LOOK = { map: 'sq', tile: .19, tiles: [0x5e6078, 0x80849c, 0xa6aabe, 0xc8ccda, 0xe2e4ee, 0xf8f8fc], trim: [0x3a3e66, 0x50578a, 0x6c76b0, 0x96a2d6],
+    bg: [0x0c0618, 0x1c0c34, 0x2e1450], neb: [0x3e1a6a, 0x5a2a8e, 0x8a4ac0], rock: [0x140c22, 0x2a1e40, 0x443660, 0x66568a], rim: 0xa898d8, star: [0xffffff, 0xd8c8ff] };   // a square tile grid in a deep purple void
+const topTones = () => Object.assign({}, KAI, { grass: TOP_LOOK.tiles, road: TOP_LOOK.trim, stone: TOP_LOOK.tiles.slice(1, 5), leaf: TOP_LOOK.rock });
+// the gods in the stands: [god skin, god clothes, angel skin, banner]
+const TOP_GODS = { 9: [0x4a5a9a, 0xe0a040, 0x9ab8e8, 0x8a3a3a], 10: [0x9a9aa8, 0x6a3a9a, 0xa8c0f0, 0x3a7a5a], 4: [0xb8a49c, 0x3a6ac0, 0x8ab0e0, 0x8a6a2a], 3: [0x6a7080, 0x2a3a5a, 0x94b4e8, 0x2a5a8a],
+  2: [0xf4c8d0, 0x6ab0e0, 0xf0d8f0, 0xb04a8a], 6: [0x9a6ad0, 0x222222, 0x9ab8e8, 0x5a5ab0], 11: [0xf0e0d8, 0x8a2a6a, 0xd0e0f0, 0xc04a2a], 7: [0x8a5ac8, 0xf0f0f0, 0x9ab8e8, 0x2a8ab8] };
+const TOP_SPR = (() => {
+  const oline = (G, pts, w0, w1, c) => { G.line(pts, w0 + 2, w1 + 2, 'o'); G.line(pts, w0, w1, c); };
+  const arm = (G, pts, c, hand, w = 3) => { oline(G, pts, w, w - .4, c); const [x, y] = pts[pts.length - 1]; G.ell(x, y, 2.5, 2.5, 'o'); G.ell(x, y, 1.5, 1.5, hand); };
+  const zeno = ZENO;
+  // the grand priest: blue skin, tall white hair, an angel's halo round his neck, a long navy robe with a white panel and gold sash
+  const priest = shapeSprite(16, 31, G => {
+    G.rect(6, 0, 4, 2, 'h'); G.rect(5, 2, 6, 2, 'h');
+    G.rect(5, 4, 6, 6, 's'); G.rect(4, 4, 1, 4, 'h'); G.rect(11, 4, 1, 4, 'h'); G.rect(5, 4, 6, 1, 'h');
+    G.set(6, 7, 'k'); G.set(9, 7, 'k'); G.set(7, 5, 'c'); G.set(8, 5, 'c'); G.rect(7, 9, 2, 1, 'S');
+    G.rect(7, 10, 2, 2, 's');
+    G.rect(3, 13, 10, 15, 'r'); G.rect(2, 20, 12, 8, 'r'); G.rect(2, 14, 2, 6, 'r'); G.rect(12, 14, 2, 6, 'r');
+    G.rect(7, 13, 2, 15, 'w'); G.rect(6, 13, 4, 1, 'w'); G.rect(3, 18, 10, 1, 'y'); G.rect(2, 27, 12, 1, 'w');
+    G.rect(1, 19, 2, 2, 's'); G.rect(13, 19, 2, 2, 's');
+    G.rect(3, 11, 10, 2, 'c');
+    G.rect(4, 28, 3, 2, 'k'); G.rect(9, 28, 3, 2, 'k');
+  }, { o: 0x0c1028, s: 0x6a9ae8, S: 0x3e64b0, h: 0xf4f4fa, H: 0xbcc0d4, r: 0x232a5e, R: 0x121638, w: 0xf0f0f6, W: 0xb8bcd0, c: 0x7ae0f4, C: 0x3a9ac4, k: 0x0c0c18, y: 0xf2c840, Y: 0xb08820 }, { s: 'S', h: 'H', r: 'R', w: 'W', c: 'C', y: 'Y' });
+  // zeno's box: a gold-framed blue back panel on a white floating bowl, and a gold rail in front that hides their feet
+  const BP = { o: 0x140c26, w: 0xf4f2f8, W: 0xb4aec8, y: 0xf2c840, Y: 0xa8801c, b: 0x34348e, B: 0x22225e, m: 0xd85ac0, M: 0x8a2a7c };
+  const boxB = shapeSprite(64, 44, G => {
+    G.rect(18, 0, 28, 2, 'y'); G.rect(10, 2, 44, 2, 'y'); G.rect(6, 4, 52, 4, 'y'); G.rect(4, 8, 56, 24, 'y');
+    G.rect(20, 2, 24, 2, 'b'); G.rect(12, 4, 40, 4, 'b'); G.rect(7, 8, 50, 24, 'b'); G.rect(7, 8, 50, 1, 'B'); G.rect(56, 8, 1, 24, 'B');
+    G.rect(30, 3, 4, 3, 'm'); G.rect(31, 4, 2, 1, 'M');
+    for (const x of [12, 51]) { G.rect(x, 12, 1, 18, 'B'); }
+    G.rect(0, 32, 64, 4, 'w'); G.rect(0, 32, 64, 1, 'y'); G.rect(4, 36, 56, 3, 'w'); G.rect(10, 39, 44, 2, 'w'); G.rect(18, 41, 28, 2, 'y'); G.rect(28, 43, 8, 1, 'y');
+    for (let x = 8; x < 58; x += 8) G.rect(x, 37, 2, 1, 'y');
+  }, BP, { w: 'W', y: 'Y', b: 'B', m: 'M' });
+  const boxF = shapeSprite(64, 33, G => { G.rect(1, 27, 62, 2, 'y'); for (const x of [1, 31, 61]) G.rect(x, 26, 2, 6, 'y'); G.rect(3, 29, 58, 3, 'w'); G.rect(28, 29, 8, 2, 'm'); }, BP, { w: 'W', y: 'Y', m: 'M' });
+  const plate = shapeSprite(22, 6, G => { G.rect(0, 0, 22, 2, 'w'); G.rect(2, 2, 18, 2, 'w'); G.rect(6, 4, 10, 1, 'y'); G.rect(0, 0, 22, 1, 'y'); }, BP, { w: 'W', y: 'Y' });
+  return { zeno, priest, boxB, boxF, plate };
+})();
 const TRIP_WAIT = 120;   // seconds at home before a trip happens anyway, so slower players still see every world
 const PLANET_EVERY = 1e6;   // the first trip to another world at 1M best power, then at 4x your best each time: namek, planet vegeta, snake way, beerus' planet, west city, kame house, mount paozu, the future, kami's lookout, the kais' world, yardrat, in turn
 const WORLDS = [{ name: "king kai's planet", tones: KAI, sea: [0xe2a93a, 0xf3c55a, 0xf9dd8c, 0xfff2c8] }, { name: 'namek', tones: NAMEK, sea: [0x1e7a7a, 0x2fa59a, 0x6cd1bf, 0xc6f2e6] }, null /* planet vegeta: set with the newer worlds below */, { name: 'snake way', tones: KAI, sea: [0xc8642a, 0xe08a3a, 0xf4b45a, 0xfde0a0] }, { name: "beerus' planet", tones: BEERUSP, sea: [0x4a2a7a, 0x6a3ea0, 0x9a6ad0, 0xd8c0f0] }, { name: 'west city', tones: EARTH, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'kame house', tones: KAMEP, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }, { name: 'mount paozu', tones: PAOZU, sea: [0xd2dce8, 0xe6edf5, 0xf4f8fc, 0xffffff] }];
@@ -1826,6 +2636,7 @@ const W2L = {
   12: { sea: [0xc89ab8, 0xdab4cc, 0xeacede, 0xfaeaf2], tones: { grass: [0x8a7aa8, 0xa898c2, 0xc4b6da, 0xdcd0ec, 0xeee6f6, 0xfaf6fe], road: [0xc89ab0, 0xdcb4c6, 0xecd0dc, 0xf8e8f0], spot: [0x7a6a9a, 0x8e7eae, 0xa494c2, 0xbaaad6], leaf: [0x5a8ac8, 0x7aa6dc, 0x9ec2ee, 0xc4dcf8, 0xe8f2ff], trunk: [0x9a7aa8, 0xb496c2, 0xceb4da, 0xe6d2ee], dome: [0xa898b8, 0xc8b8d6, 0xe2d6ee, 0xf4eefa, 0xffffff], band: [0x6a5a8a, 0x8a7aaa, 0xaa9ac8, 0xcabce2], dot: [0xffffff, 0xfff0f8] } },
 };
 [[2, 'planet vegeta'], [10, "kami's lookout"], [11, "the supreme kai's world"], [12, 'yardrat']].forEach(([w, name]) => { const L = W2L[w]; L.T = Object.assign({}, KAI, Object.fromEntries(Object.entries(L.tones).filter(([n]) => n in KAI))); WORLDS[w] = { name, tones: L.T, sea: L.sea }; });
+WORLDS[9] = { name: 'tournament of power', tones: topTones(), sea: TOP_LOOK.bg };
 let SNV = 1;   // snake way's view: 1 behind the hero down the snake's back, 2 side-on once the road twists halfway
 GAMES.push({
   id: 'planet',
@@ -1861,8 +2672,8 @@ GAMES.push({
       { name: 'super saiyan rage', aura: [0xffffff, 0xfff4b0, 0x6ab8f0], sparks: 0xd8f2ff },
     ].map((f, i) => ({ ...f, i }));   // i: the hero sprite set
     const UI_FORM = 8, MUI_FORM = 9, LATE_STEP = 1000, LATE = { vegeta: [10, 12], goku: [9], gohan: [11], trunks: [13] };
-    // the first late form ×100 past ultra instinct, every one after (and every mastery star) ×1000 further
-    const ladderOf = h => [...ALL_FORMS.slice(0, 9), ...(LATE[h] || LATE.vegeta).map((i, j) => ({ ...ALL_FORMS[i], at: 2e13 * LATE_STEP ** j, x: [24, 40][j] }))];
+    // the first late form ×1000 past ultra instinct, every one after it (and every mastery star) ×1000 further
+    const ladderOf = h => [...ALL_FORMS.slice(0, 9), ...(LATE[h] || LATE.vegeta).map((i, j) => ({ ...ALL_FORMS[i], at: 2e14 * LATE_STEP ** j, x: [24, 40][j] }))];
     let FORMS = ladderOf(S.hero);
     S.form = Math.min(S.form || 0, FORMS.length - 1);
     const save = () => { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (_) {} };
@@ -1881,11 +2692,11 @@ GAMES.push({
       piccolo: { base: 30000, k: 2.4, label: 'piccolo', what: '+60/s, zaps meteors', unlock: () => S.best >= 10000 },
       chamber: { base: 150000, k: 2.8, label: 'time chamber', what: 'a door appears: train ×2 for 15s inside', unlock: () => S.best >= 40000 },
       ascend: { base: 1e6, k: 1, label: 'ascend', what: 'reset for ki seeds', unlock: () => S.best >= 1e6 },
-      godki: { base: 2e13, k: 1, label: 'god ki', what: 'reset for god ki', unlock: () => S.form >= MUI_FORM && godNow() > 0 },
+      godki: { base: 2e14, k: 1, label: 'god ki', what: 'reset for god ki', unlock: () => S.form >= MUI_FORM && godNow() > 0 },
       zeno: { base: 1, k: 1, label: 'zeno button', what: 'erase everything for zeno\'s favour', unlock: () => zenoReady() },
     };
     const RESETS = ['boots', 'partner', 'gravity', 'cloud', 'scouter', 'galick', 'senzu', 'house', 'armor', 'kaio', 'bigbang', 'piccolo', 'chamber'];
-    const cost = k => k === 'ascend' ? Math.max(1e6, Math.floor(S.pl)) : k === 'godki' ? Math.max(2e13, Math.floor(S.pl)) : k === 'zeno' ? 0 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]) * (1 - .05 * lvl('deal')));   // ascending spends all you hold (1M at least), so that's its price
+    const cost = k => k === 'ascend' ? Math.max(1e6, Math.floor(S.pl)) : k === 'godki' ? Math.max(2e14, Math.floor(S.pl)) : k === 'zeno' ? 0 : Math.floor(SHOP[k].base * Math.pow(SHOP[k].k, S[k]) * (1 - .05 * lvl('deal')));   // ascending spends all you hold (1M at least), so that's its price
     // permanent: gravity ×1.15 a level, wishes ×1.25 each, ascensions +10% each; temporary boosts add up rather than multiply
     const KAIO = () => 1.25 + .25 * S.kaio;
     // milestones: levels 10, 25, 50 and 100 of a producer double its output, then every 50 levels after, forever
@@ -1943,8 +2754,20 @@ GAMES.push({
     const tints = new Map();
     const tint = (spr, c) => { const key = spr.col, m = tints.get(key) || tints.set(key, new Map()).get(key); if (!m.has(c)) { const col = spr.col.map(v => { if (v < 0 || ((v >> 16) + (v >> 8 & 255) + (v & 255)) < 90) return v; const mix = (s, k) => Math.round((v >> s & 255) * .6 + (c >> s & 255) * .4) << s; return mix(16) | mix(8) | mix(0); }); m.set(c, Object.assign({}, spr, { col })); } return m.get(c); };   // each universe's fighters wear its colour; outlines stay dark
     // god ki: the prestige above ascending, spent in the angels' tree; zeno: the one above that
-    const FIGHTER_SPR = {};   // the drawn tournament fighters drop in here by key
-    const fighterSpr = (key, c) => FIGHTER_SPR[key] || (key === 'jiren' ? VILLAINS.find(v => v.name === 'jiren').spr : tint(VILLAINS[[...key].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9973, 7) % VILLAINS.length].spr, c));
+    const FIGHTER_SPR = TOP_FIGHTERS;   // four takes per fighter: idle, two attacking or hit, powered up
+    const home = () => S.multi ? 9 : 0;   // the arena is home for the rest of the run once the multiverse opens
+    // the arena's stands empty as each universe is erased; its floor breaks up from none at universe 9 to most of it at 11, all of it in ∞
+    const topSync = () => { TOP.erased = new Set(LADDER.slice(0, Math.min(S.uni, LADDER.length)).map(l => l.n)); TOP.dmg = S.uni >= LADDER.length ? 1 : .7 * S.uni / (LADDER.length - 1); if (S.world === 9) scenery(); };
+    const fighterSpr = (key, c) => FIGHTER_SPR[key] || [key === 'jiren' ? VILLAINS.find(v => v.name === 'jiren').spr : tint(VILLAINS[[...key].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 9973, 7) % VILLAINS.length].spr, c)];
+    const POWER_UP = {
+      bergamo: 'bergamo soaked up every hit — he\'s grown huge!', lavender: 'lavender goes blind with rage and lunges!', basil: 'basil powers up: bulkier, pink fur, a red aura!',
+      obuni: 'obuni shouts and fires a blue ki blast!', murichim: 'murichim\'s eyes glow — an orange aura!', rubalt: 'rubalt winds up a gold-aura punch!',
+      ganos: 'ganos sheds his vest: max power!', caway: 'caway throws up both hands — energy bolts!', dercori: 'the lights go out — dercori looms in the dark!',
+      anilaza: 'anilaza gathers a destruction burst!', paparoni: 'paparoni cackles and waves his cane!', koitsukai: 'koitsukai\'s eye turns red!',
+      ribrianne: 'super ribrianne! butterfly wings and a love blast!', rozie: 'rozie throws up both arms — love hearts everywhere!', kakunsa: 'kakunsa rears up on her hind legs!',
+      kefla: 'kefla goes super saiyan 2!', caulifla: 'caulifla charges a crush cannon!', kale: 'kale lunges to grab you!',
+      dyspo: 'dyspo hits super maximum light speed mode!', toppo: 'toppo unleashes hakai!',
+    };
     const ANGELS = [
       { id: 'divine', who: 'whis', tier: 0, cost: 1, name: 'divine seeds', what: 'ki seeds grow with power^0.55, not its square root' },
       { id: 'golden', who: 'whis', tier: 0, cost: 1, name: 'born golden', what: 'every ascension starts at super saiyan' },
@@ -1989,7 +2812,7 @@ GAMES.push({
     function godReset() {
       // god ki: ascending's big sister. seeds, the tree, forms and universes all go; wishes, sagas and mastery stars stay
       if (S.form < MUI_FORM || !godNow()) return; const g = godNow(); S.godki += g; S.godTotal += g; S.gods++; ach('godki');
-      S.pl = 0; S.runBest = 0; S.namekAt = 0; S.foes = []; for (const r of RESETS) S[r] = 0; S.seeds = 0; S.ascend = 0; S.tree = {}; S.form = ang('golden') ? 1 : 0; S.uni = S.uniStage = S.ustars = 0; preview = null; dropUniBoss(); ui.fx && ui.fx('form', S.form); scenery();
+      S.pl = 0; S.runBest = 0; S.namekAt = 0; S.foes = []; for (const r of RESETS) S[r] = 0; S.seeds = 0; S.ascend = 0; S.tree = {}; S.form = ang('golden') ? 1 : 0; S.uni = S.uniStage = S.ustars = 0; preview = null; dropUniBoss(); topSync(); ui.fx && ui.fx('form', S.form); scenery();
       ui.event(`whis: "ohoho, not bad." — +${g} god ki (×${fmtShort(godBoostOf(S.godTotal))} on everything). back to universe 9: spend god ki in menu → angels`, 5000); ui.fx && ui.fx('super'); flashT = 1; save(); syncShop();
       if (zenoReady()) setTimeout(() => ui.event('something tiny and very powerful is watching…', 3500), 5200);
     }
@@ -1998,7 +2821,7 @@ GAMES.push({
     function zenoErase() {
       if (!zenoReady()) return; const v = boss && !boss.dead ? boss.name : '';
       if (boss && !boss.dead) { boss.dead = boss.fled = true; boss.t1 = st.t; }
-      for (const r of [...RESETS, ...ERASE]) S[r] = 0; S.tree = {}; S.angel = {}; S.foes = []; S.zeno++; zen = null; preview = null; nextBoss = 60; ach('zeno');
+      for (const r of [...RESETS, ...ERASE]) S[r] = 0; S.tree = {}; S.angel = {}; S.foes = []; S.zeno++; zen = null; preview = null; nextBoss = 60; ach('zeno'); topSync();
       if (S.world) { travel(0); namekUntil = 0; }
       flashT = 1; shake = 1; ui.fx && ui.fx('form', S.form); ui.fx && ui.fx('super'); ui.sfx && ui.sfx('boom'); scenery();
       ui.event(v ? `zeno: "${v}? he's no fun." — ${v} is erased. then so is everything else. zeno's favour ×${fmtShort(ZENO_X ** S.zeno)}` : `zeno: "friend! let's play again!" — the whole universe is erased. zeno's favour ×${fmtShort(ZENO_X ** S.zeno)}`, 6000);
@@ -2062,6 +2885,7 @@ GAMES.push({
     const slabs = [];                        // the future's skyscrapers: { b: base, t: top, w: half-width, seed }
     function scenery() {
       solids.length = 0; wcRoads.length = 0; slabs.length = 0;
+      if (S.world === 9) return topScenery();
       if (S.world === 5) return westcityScenery();
       if (S.world === 6) return kameScenery();
       if (S.world === 8) return futureScenery();
@@ -2490,7 +3314,7 @@ GAMES.push({
       if (!playing) return;
       S.world = w; useWorld(w); layout(); scenery(); ui.world && ui.world(w);
       flashT = 1; shake = .5; const q = handPos(); burst(q.x, q.y, [0xffffff, 0xdfe6e8, 0x9adada], 40, 220);
-      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', '', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
+      ui.event(['back on king kai\'s planet', 'a space pod takes you to namek for 45 seconds — dragon balls ×2', 'a space pod takes you to planet vegeta for 45 seconds — the moon is always full', 'knocked into other world — run snake way back to king kai!', 'a space pod takes you to beerus\' planet — he\'s asleep. laps pay ×3 here, but every tap makes noise', 'capsule corp, west city — bulma is handing out gadgets: tap the capsules', 'kame house — master roshi\'s little island, out in the open sea', 'a space pod drops you on mount paozu — goku\'s home, deep in dinosaur country', 'a time machine drops you in trunks\' future — the city is in ruins and the androids are still out there', 'back in the null realm — the tournament of power goes on', 'kami\'s lookout — mr. popo keeps the tiles swept, high above the clouds', 'the sacred world of the kais — the supreme kai is expecting you', 'yardrat — the locals keep blinking in and out of sight'][w], w >= 3 ? 6000 : 2600); save(); syncShop();
       if (w === 2) { ach('vegeta'); nextMoon = 3; if (!boss) nextNappa = 6; }
       if (w === 3) { startSnake(); meteors = []; storm = null; moon = null; } else snk = null;   // no meteors or full moon over snake way and HFIL
       bz = w === 4 ? { c: capPt(.3, 4.4), noise: 0, awake: 0 } : null; pud = null; gadgets = []; nextGadget = 2;
@@ -2516,11 +3340,11 @@ GAMES.push({
         if (ginyu.members.every(x => x.dead)) { victory(); ach(ginyu.androids ? 'androids' : 'ginyu'); const prize = Math.max(ginyu.max * 2, wrate() * 200) * (1 + .5 * lvl('bounty')); gain(prize, cx, cy - R * 1.3, true); ui.event(`${ginyu.androids ? 'androids 17 and 18 are' : 'the ginyu force is'} defeated! +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); ui.sfx && ui.sfx('boom'); goal('boss'); ginyu.done = st.t; save(); } }
     }
     function hitBoss(dmg, x, y) {
-      boss.hp -= dmg * (1 + .5 * S.armor); boss.flash = .12; ui.sfx && ui.sfx('hit'); burst(x, y, [0xffffff, 0xffe08a, 0xff9a3c], 6, 70);
+      boss.hp -= dmg * (1 + .5 * S.armor); boss.flash = .12; boss.hitT = st.t; ui.sfx && ui.sfx('hit'); burst(x, y, [0xffffff, 0xffe08a, 0xff9a3c], 6, 70);
       if (boss.hp <= 0 && !boss.dead) {
         boss.dead = true; boss.t1 = st.t; S.bosses = (S.bosses || 0) + 1; goal('boss'); if (tour) tour.ko += 10; capsule = { x: boss.x, y: boss.y - boss.spr.h / 2 * boss.k, vy: -40, t0: st.t, land: cy - R * .3 }; let prize = boss.uni ? wrate() * 15 : Math.max(boss.max * 1.5, wrate() * 90) * (1 + .5 * lvl('bounty'));   // a universe fight pays little: its star is the prize
         if (boss.uni) {   // a stage of the universe ladder; its last fight pays a universe star
-          if (++S.uniStage >= UNI_STAGES.length) { const u = S.uni; S.uniStage = 0; S.uni++; S.ustars++; S.uniBest = Math.max(S.uniBest, S.uni); ach('universe'); if (S.uni >= LADDER.length) ach('multiverse'); setTimeout(() => ui.event(`${uniName(u)} cleared — a universe star: ×${STAR_X ** (ang('stars') ? 2 : 1)} on everything. next: ${uniName(S.uni)}`, 4500), 2600); }
+          if (++S.uniStage >= UNI_STAGES.length) { const u = S.uni; S.uniStage = 0; S.uni++; S.ustars++; S.uniBest = Math.max(S.uniBest, S.uni); topSync(); ach('universe'); if (S.uni >= LADDER.length) ach('multiverse'); setTimeout(() => ui.event(`${uniName(u)} cleared — a universe star: ×${STAR_X ** (ang('stars') ? 2 : 1)} on everything. next: ${uniName(S.uni)}`, 4500), 2600); }
         }
         if (boss.saga) { prize *= 2; S.saga++; if (lvl('saga')) { S.seeds++; S.ascend++; setTimeout(() => ui.event('legend — the villain drops a ki seed'), 5200); } if (S.saga >= VILLAINS.length) ach('sagas'); satan = { c: capPt(.42, 2.9), t0: st.t + 1.2, until: st.t + 9, prize: prize * .5 }; setTimeout(() => ui.event('mr. satan: "i did it! it was all me!" — tap him for the prize money', 4500), 2800); }
         victory(); S.beaten = S.beaten || {}; S.beaten[boss.name] = 1; S.foes = [...new Set([...(S.foes || []), boss.name])]; if (S.bosses >= 10) ach('villains10'); if (boss.name === 'frieza') ach('frieza'); if (boss.name === 'nappa' && S.world === 2) ach('nappa'); if (boss.name === 'cell') ach('cell'); if (boss.name === 'beerus') ach('beerus'); if (['frieza', 'cell', 'kid buu', 'beerus'].every(n => S.beaten[n])) ach('all4'); gain(prize, boss.x, boss.y - (boss.spr.h + 10) * boss.k, true); ui.event(boss.name === 'past vegeta' ? `you beat your younger self — technically you also lost. +${fmtShort(Math.round(prize))}` : `${boss.name} defeated — +${fmtShort(Math.round(prize))}`); ui.fx && ui.fx('star'); shake = .7; flashT = .8;
@@ -2559,7 +3383,7 @@ GAMES.push({
       { key: 'fuse', tier: 'rare', label: 'fusion ha!', what: () => 'fuse with bubbles right now: ×2 for 30s', ok: () => S.partner > 0, grant: () => { fuseUntil = st.t + 30; ach('fusion'); ui.event('your wish is granted — fusion ha! ×2 for 30s'); } },
       { key: 'kaio', tier: 'rare', label: 'king kai\'s blessing', what: () => `kaioken ×${KAIO()} now, no tiredness after`, ok: () => S.kaio > 0, grant: () => { kaioUntil = st.t + 15; kaioReady = st.t + 15; ui.event(`your wish is granted — kaioken ×${KAIO()}, and you won't get tired`); } },
       { key: 'bubbles', label: 'a bigger monkey', what: () => 'bubbles +5 levels', ok: () => S.partner > 0, grant: () => { S.partner += 5; ui.event('your wish is granted — bubbles +5 levels'); } },
-      { key: 'trip', label: 'a space pod', what: () => 'fly to the next world as soon as the dragon leaves', ok: () => !S.world, grant: () => { podWish = 1; ui.event('your wish is granted — a space pod is on its way'); } },
+      { key: 'trip', label: 'a space pod', what: () => 'fly to the next world as soon as the dragon leaves', ok: () => S.world === home(), grant: () => { podWish = 1; ui.event('your wish is granted — a space pod is on its way'); } },
       { key: 'radar', label: 'dragon radar', what: () => '+3 dragon balls toward the next summon', grant: () => { S.orbs7 = Math.min(6, S.orbs7 + 3); ui.event(`your wish is granted — ${S.orbs7}/7 dragon balls already`); } },
       { key: 'again', tier: 'epic', label: 'one more wish', what: () => 'the dragon grants an extra wish', grant: () => { shen.wishes++; ui.event('your wish is granted — one more wish!'); } },
       { key: 'satan', label: 'mr. satan\'s autograph', what: () => '"the world champion\'s signature!" (a little power)', grant: () => { gain(wrate() * 30); ui.event('mr. satan signs it with a flourish — +' + fmtShort(wrate() * 30) + '. it\'s worthless.'); } },
@@ -2612,6 +3436,7 @@ GAMES.push({
     function shadePlanet(o, n, x, y) {
       const nb = M3.apT(M, n), lum = light(n) + Math.pow(1 - n[2], 3) * .15;
       if (S.world === 6) return shadeKame(nb, lum, x, y);
+      if (S.world === 9) return shadeTop(nb, lum, x, y);
       const dn = V.dot(nb, N);
       if (W2L[S.world]) return shadeW2(nb, dn, lum, x, y);
       if (Math.abs(dn) < .07) return S.world === 5 && Math.abs(dn) < .006 && (Math.atan2(V.dot(nb, E2), V.dot(nb, E1)) * 10 + 99) % 1 < .55 ? 0xf6d84a : tone(TONES.road, lum + .2, x, y);
@@ -2666,6 +3491,119 @@ GAMES.push({
       return tone(FUT.sky, .15 + k * .5 + Math.sin(st.t * 6 + x * .9 + y * 1.3) * .12, x, y);
     }
     SHADE.pool = shadePool;
+    // ── tournament of power: the tiled ring in the null realm
+    const mixc = (a, b, k) => { const m = s => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * k); return (m(16) << 16) | (m(8) << 8) | m(0); };
+    function shadeTop(nb, lum, x, y) {
+      const Lk = TOP_LOOK, P = Lk.tiles, d = TOP.dmg;
+      const w = V.dot(nb, N), u = V.dot(nb, E1), v = V.dot(nb, E2), th = Math.acos(Math.max(-1, Math.min(1, w)));
+      const sc = th / Math.max(1e-4, Math.sin(th)) / Lk.tile, X = u * sc, Y = v * sc, ti = Math.floor(X), tj = Math.floor(Y), fu = X - ti, fv = Y - tj;
+      const road = Math.abs(th - 1.571) < .075, seam = .08;
+      // missing chunks: whole tiles drop out in ragged clusters, the hero's path holds out longest
+      if (d > 0) {
+        const thr = .2 + .32 * d - (road ? .14 : 0), hv = vnoise3(nb[0] * 3.2 + 11, nb[1] * 3.2, nb[2] * 3.2) * .7 + h2(ti * 7 + tj * 131 + 5, tj * 17 + ti * 3) * .3;
+        if (hv < thr) { const deep = thr - hv; if (deep < .028) return tone(P, lum * .55 - .1, x, y); const s = h2(x * 7 + 1, y * 13); return s > .992 ? Lk.star[1] : bayer(x, y) < .3 ? Lk.bg[1] : Lk.bg[0]; }
+        const c = vnoise3(nb[0] * 8 + 3, nb[1] * 8, nb[2] * 8 + 5);
+        if (Math.abs(c - .5) < .012 + .012 * d && vnoise3(nb[0] * 2 + 7, nb[1] * 2, nb[2] * 2) < .2 + d * .9) return tone(P, lum * .35, x, y);   // cracks
+        if (hv < thr + .035) lum -= .18;   // chipped, dusty tiles round each hole
+        lum -= d * .08;
+      }
+      const pal = road ? Lk.trim : P;
+      if (fu < seam || fv < seam) return tone(pal, lum - .2, x, y);
+      return tone(pal, lum + (h2(ti * 13 + 1, tj * 29 + 7) - .5) * .14 + (fu < seam * 2.5 || fv < seam * 2.5 ? .06 : 0), x, y);
+    }
+    SHADE.topChunk = (o, n, x, y) => tone(TOP_LOOK.tiles, light(n) * .8 - .12 + (h2(x * 5, y * 3) - .5) * .2, x, y);
+    // floor debris grows with the damage
+    function topScenery() {
+      let sd = 77; const rnd = () => (sd = sd * 16807 % 2147483647) / 2147483647, d = TOP.dmg;
+      for (let i = 0, n = Math.round(d * 26); i < n; i++) { const th = .1 + rnd() * 1.35, a = rnd() * 6.283, r = (.012 + rnd() * .022) * (1 + d * .8); if (Math.abs(th - 1.571) < .12) continue; solids.push({ c: V.mul(capPt(th, a), 1 + r * .15), r, kind: 'topChunk' }); }
+    }
+    // the void: a baked gradient and nebula, twinkling stars, floating rock pillars, then the stands and zeno's box
+    let voidBake = null;
+    const PILLARS = [[.06, .5, 16, 48], [.17, .2, 9, 22], [.9, .58, 18, 54], [.8, .14, 8, 18], [.3, .82, 7, 16], [.97, .28, 9, 26], [.66, .9, 8, 14]];
+    function bakeVoid() {
+      const W = st.W, H = st.H, Lk = TOP_LOOK, B = new Uint32Array(W * H), k0 = 267 / Math.min(W, H);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const g = y / H + (bayer(x, y) - .5) * .18;
+        let c = g < .45 ? Lk.bg[0] : g < .8 ? Lk.bg[1] : Lk.bg[2];
+        const X = x * k0, Y = y * k0;
+        const n = vnoise(X * .018 + 3, Y * .026) * .7 + vnoise(X * .05, Y * .07) * .35;
+        const b = bayer(x, y) * .14;
+        if (n + b > .78) c = Lk.neb[2]; else if (n + b > .66) c = Lk.neb[1]; else if (n + b > .55) c = Lk.neb[0];
+        B[y * W + x] = PK(c);
+      }
+      voidBake = { B, W, H };
+    }
+    function topPillar(x0, y0, w, h, seed) {
+      const Lk = TOP_LOOK, far = w < 10 ? .45 : 0, R4 = Lk.rock.map(c => mixc(c, Lk.bg[1], far)), rim = mixc(Lk.rim, Lk.bg[1], far + .15), taper = Math.round(h * .45);
+      for (let j = 0; j < h + taper; j++) {
+        const hw = j < h ? w / 2 * (1 + (h2(seed, j >> 2) - .5) * .22) : w / 2 * (1 - (j - h) / taper) * (1 + (h2(seed + 3, j) - .5) * .5);
+        if (hw < .6) continue;
+        for (let i = -Math.ceil(hw); i <= Math.ceil(hw); i++) {
+          if (Math.abs(i) > hw) continue;
+          if (j < 2 && h2(seed + i * 7, j) < .35) continue;
+          const f = i / hw, edge = Math.abs(i) > hw - 1;
+          let c = edge ? R4[0] : j < 3 ? rim : f < -.4 ? R4[3] : f < .25 ? R4[2] : R4[1];
+          if (!edge && j >= 3 && j % 7 === 6 && h2(seed + i, j) > .25) c = R4[1];
+          st.px(x0 + i, y0 + j, c);
+        }
+      }
+    }
+    // a gods' stand: two figures on a pale ledge with the universe number on its banner, on a stalk of rock; erased ones stand empty and faded
+    function topStand(x, y, u) {
+      const Lk = TOP_LOOK, g = TOP_GODS[u], gone = TOP.erased.has(u), a = gone ? .45 : 1;
+      x = Math.round(x) - 11; y = Math.round(y) - 13;
+      const P = (i, j, c) => st.px(x + i, y + j, c, a);
+      if (!gone) {
+        const fig = (fx, skin, cloth, angel) => {
+          for (let j = 0; j < 9; j++) for (let i = -1; i <= 5; i++) {   // outline first
+            const inside = (ii, jj) => jj >= 0 && jj < 9 && ii >= 0 && ii < 5 && !((jj === 0 || jj === 3) && (ii === 0 || ii === 4)) && !(jj === 8 && ii === 2);
+            if (inside(i, j)) P(fx + i, j, j < 4 ? (angel && j === 0 ? 0xffffff : skin) : angel && j === 4 ? 0x7ae0f4 : cloth);
+            else if (inside(i - 1, j) || inside(i + 1, j) || inside(i, j - 1) || inside(i, j + 1)) P(fx + i, j, 0x0c0a14);
+          }
+          P(fx + 1, 2, 0x0c0a14); P(fx + 3, 2, 0x0c0a14);
+        };
+        fig(4, g[0], g[1], false); fig(13, g[2], 0x2a2a5a, true);
+      }
+      const ROWS = ['..oooooooooooooooooo..', '.owwwwwwwwwwwwwwwwwwo.', 'owwwwwwwwwwwwwwwwwwwwo', 'oWWWWWWWWWWWWWWWWWWWWo', 'obbbbbbbbbbbbbbbbbbbbo', 'obbbbbbbbbbbbbbbbbbbbo', 'obbbbbbbbbbbbbbbbbbbbo', 'obbbbbbbbbbbbbbbbbbbbo', 'obbbbbbbbbbbbbbbbbbbbo', '.oBBBBBBBBBBBBBBBBBBo.', '..oorrrrrrrrrrrrrroo..', '....orrrrrrrrrrrro....', '.....orrrrrrrrrro.....', '......orrrRrrrro......', '........orrro.........', '.........oro..........'];
+      const ban = gone ? 0x2a2a34 : g[3], C = { o: 0x0c0a14, w: gone ? 0x9a98a8 : 0xf2f2f8, W: gone ? 0x6a687a : 0xb8b6c8, b: ban, B: mixc(ban, 0, .45), r: Lk.rock[2], R: Lk.rock[3] };
+      ROWS.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '.') P(i, 9 + j, gone && ch !== 'o' && h2(x + i, j) > .9 ? 0x0c0a14 : C[ch]); }));
+      const s = String(u), tw = st.textWidth(s); st.text(s, x + 11 - (tw >> 1), 9 + 4 + y, gone ? 0x5a5868 : 0xffffff, a);
+    }
+    // where the stands and zeno's box go, per look and per screen shape: { box: [x, y] bottom-centre of the box floor, back: drawn behind the planet, stands: [[x, y, u]] centres }
+    function topPlaces(t) {
+      const port = st.W / st.H < .8, U = TOP.UNI, bob = i => Math.round(Math.sin(t * .8 + i * 1.7) * 1.5);
+        const rx = port ? Math.min(1.3 * R, st.W / 2 - 12) : 1.62 * R, ry = port ? 1.55 * R : 1.22 * R;
+        return { box: [cx, cy - R + (port ? -R * .98 : 2) + bob(9)], back: true, stands: U.map((u, i) => { const a = (125 + i * 41.4) * Math.PI / 180; return [cx + Math.cos(a) * rx, cy - Math.sin(a) * ry + bob(i), u]; }) };
+    }
+    function topBox(x, y, apart) {
+      const X = Math.round(x) - 32, Y = Math.round(y) - 36;
+      st.blit(TOP_SPR.boxB, X, Y, false, true);
+      st.blit(TOP_SPR.zeno, X + 7, Y + 3, false, true); st.blit(TOP_SPR.zeno, X + 33, Y + 3, true, true);
+      st.blit(TOP_SPR.boxF, X, Y, false, true);
+      if (apart) { st.blit(TOP_SPR.plate, X + 67, Y + 49, false, true); st.blit(TOP_SPR.priest, X + 70, Y + 19, false, true); }   // on his own floating tile
+      else { st.blit(TOP_SPR.plate, X + 63, Y + 32, false, true); st.blit(TOP_SPR.priest, X + 66, Y + 2, false, true); }           // beside the box
+    }
+    let topFront = null;
+    function drawVoid(t) {
+      const Lk = TOP_LOOK;
+      if (!voidBake || voidBake.W !== st.W || voidBake.H !== st.H) bakeVoid();
+      st.buf.set(voidBake.B);
+      for (let k = 0; k < 140; k++) {
+        const x = Math.floor(hash(k * 3.1 + 1) * st.W), y = Math.floor(hash(k * 7.7 + 2) * st.H), big = hash(k * 1.3) > .9, tw = .35 + .65 * Math.max(0, Math.sin(t * (.6 + hash(k) * 2) + k));
+        st.px(x, y, Lk.star[k % 2], tw * (big ? 1 : .55));
+        if (big && tw > .75) for (const [a, b] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.px(x + a, y + b, Lk.star[1], .45);
+      }
+      const k0 = Math.min(st.W, st.H) / 267;
+      PILLARS.forEach(([fx, fy, w, h], i) => topPillar(Math.round(st.W * fx), Math.round(st.H * fy - h * k0 / 2 + Math.sin(t * .4 + i * 2) * 1.5), Math.round(w * k0), Math.round(h * k0), i * 31 + 7));
+      const pl = topPlaces(t); topFront = [];
+      for (const s of pl.stands) { if (s[3] > 0) topFront.push(s); else topStand(s[0], s[1], s[2]); }
+      if (pl.back) topBox(pl.box[0], pl.box[1], pl.priestApart); else topFront.box = pl;
+    }
+    function drawTopFront() {
+      if (!topFront) return;
+      for (const s of topFront) topStand(s[0], s[1], s[2]);
+      if (topFront.box) topBox(topFront.box.box[0], topFront.box.box[1], topFront.box.priestApart);
+    }
     // a skyscraper drawn as an upright slab in screen space: crisp edges, window grid, a snapped jagged top with holes and bent rebar
     function slab(o, id) {
       const b = M3.ap(M, o.b), t = M3.ap(M, o.t), X0 = cx + b[0] * R, Y0 = cy - b[1] * R + st.bob, X1 = cx + t[0] * R, Y1 = cy - t[1] * R + st.bob;
@@ -3135,14 +4073,14 @@ GAMES.push({
       if (yam && yam.boom && t > yam.boom) { yam.boom = 0; shake = .6; if (yam.sx !== undefined) burst(yam.sx, yam.sy - 6, [0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160); ui.sfx && ui.sfx('boom'); ui.event('BOOM. yamcha got wrecked again — tap him'); }
       if (yam && t > yam.until) yam = null;
       // the fusion dance: fu · sion · ha! three taps on the beat. all three makes the real fusion, fewer a botched one
-      if (!dance && !(fused && fused.until > t) && session > 200 && S.best >= 2e5 && !shen && !boss && !tour && !S.world && !cling && (nextDance -= dt) < 0) { const satanTurn = Math.random() < .2, [who, res] = satanTurn ? ['mr. satan', 'satan'] : DANCE[S.hero] || DANCE.vegeta; dance = { who, res, t0: t, beats: [t + 2, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9 }; ui.event(`${who} wants to do the fusion dance! tap on the beat: fu · sion · ha!`, 3500); nextDance = 300 + Math.random() * 120; }
+      if (!dance && !(fused && fused.until > t) && session > 200 && S.best >= 2e5 && !shen && !boss && !tour && S.world === home() && !cling && (nextDance -= dt) < 0) { const satanTurn = Math.random() < .2, [who, res] = satanTurn ? ['mr. satan', 'satan'] : DANCE[S.hero] || DANCE.vegeta; dance = { who, res, t0: t, beats: [t + 2, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9 }; ui.event(`${who} wants to do the fusion dance! tap on the beat: fu · sion · ha!`, 3500); nextDance = 300 + Math.random() * 120; }
       if (dance) { while (dance.i < dance.beats.length && t > dance.beats[dance.i] + .32) dance.i++;
         if (!dance.done && t > dance.beats[2] + .4) { dance.done = t; const ok = dance.hits === 3, sat = dance.res === 'satan', spr = sat ? FUSED.satan : ok ? FUSED[dance.res] : dance.hits ? FUSED.fat : FUSED.skinny;
           fused = { spr, x: sat ? 1.5 : ok ? 3 : .75, until: t + (ok || sat ? 25 : 15), fat: !sat && !ok && dance.hits > 0 }; flashT = 1; shake = .6; ui.sfx && ui.sfx('form'); ach('dance');
           ui.event(sat ? 'fusion ha! …mr. satan takes all the credit. ×1.5 for 25s' : ok ? `fusion ha! ${dance.res === 'gohanVidel' ? 'gohan and videl' : dance.res} — ×3 for 25s` : dance.hits ? 'fusion ha… you got the fat one. ×0.75 for 15s' : 'fusion ha… you got the skinny one. ×0.75 for 15s', 4000); }
         if (dance.done && t - dance.done > 1) dance = null; }
       // a saibaman clings to you now and then: tap it off before it blows
-      if (!cling && session > 150 && !shen && !boss && !tour && !S.world && (nextCling -= dt) < 0) { cling = { boom: t + 3.5 }; ui.event('a saibaman is hugging you — tap it off!'); nextCling = 240 + Math.random() * 120; }
+      if (!cling && session > 150 && !shen && !boss && !tour && S.world === home() && (nextCling -= dt) < 0) { cling = { boom: t + 3.5 }; ui.event('a saibaman is hugging you — tap it off!'); nextCling = 240 + Math.random() * 120; }
       if (cling && t > cling.boom) { const k = kidScreen(10); burst(k.x, k.y, [0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160); shake = .8; flashT = .6; tiredUntil = Math.max(tiredUntil, t + 6); ui.sfx && ui.sfx('boom'); ui.event('BOOM — you got yamcha\'d. tired ×0.75 for 6s'); cling = null; }
       // king kai takes his car for a spin round the road; tap it for a ride
       if (!car && session > 70 && !shen && (nextCar -= dt) < 0) { car = { phi: phi + Math.PI, until: t + 16 }; ui.event("king kai's out for a drive — tap his car"); nextCar = 170 + Math.random() * 60; }
@@ -3168,14 +4106,14 @@ GAMES.push({
       }
       // the first visit at 1M, then each time this run's best passes 4x what it was when you last left: the eight worlds strictly in turn
       // a trip at the next power mark, or after two minutes at home, whichever comes first
-      if (podWish && !S.world && !shen && (tour || boss) && podWish !== 2) { podWish = 2; ui.event(`your space pod is incoming — it lands after the ${tour ? 'tournament' : 'fight'}`); }   // the wished pod waits for the fight, and says so
-      if (!S.world && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT || podWish) && !tour && !shen && !boss && !dance) { podWish = 0; S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12][(S.trips - 1) % 11]); namekUntil = t + (S.world === 3 ? 75 : 45); }
-      if (S.world && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
-      if (S.world) { S.namekLeft = Math.max(0, namekUntil - t); const hung = t - namekUntil > 120;   // watchdog: whatever is still running, no visit outlasts its timer by two minutes
-        if (S.namekLeft <= 0 && (!shen || hung) && (S.world !== 3 || snk?.done || hung)) { if (hung && shen) { shen = null; document.body.classList.remove('shen'); ui.wishDone && ui.wishDone(); } travel(0); namekUntil = 0; homeSince = session; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
+      if (podWish && S.world === home() && !shen && (tour || boss) && podWish !== 2) { podWish = 2; ui.event(`your space pod is incoming — it lands after the ${tour ? 'tournament' : 'fight'}`); }   // the wished pod waits for the fight, and says so
+      if (S.world === home() && (S.runBest >= (S.namekAt || PLANET_EVERY) || session - homeSince > TRIP_WAIT || podWish) && !tour && !shen && !boss && !dance) { podWish = 0; S.namekAt = S.runBest * 4; S.trips = (S.trips || 0) + 1; travel([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12][(S.trips - 1) % 11]); namekUntil = t + (S.world === 3 ? 75 : 45); }
+      if (S.world && S.world !== 9 && !namekUntil) namekUntil = t + Math.min(45, S.namekLeft || 45);   // resumed after a reload
+      if (S.world && S.world !== 9) { S.namekLeft = Math.max(0, namekUntil - t); const hung = t - namekUntil > 120;   // watchdog: whatever is still running, no visit outlasts its timer by two minutes
+        if (S.namekLeft <= 0 && (!shen || hung) && (S.world !== 3 || snk?.done || hung)) { if (hung && shen) { shen = null; document.body.classList.remove('shen'); ui.wishDone && ui.wishDone(); } travel(home()); namekUntil = 0; homeSince = session; S.namekAt = Math.max(S.namekAt || 0, S.runBest * 2); } }   // home after any wishes; the next trip is at least twice this run's best away
       if (S.world !== 3) {
       if (S.partner >= 3 && S.best >= 50000 && fuseUntil < t && fuseOffer < t && !tour && (nextFuse -= dt) < 0) { fuseOffer = t + 12; nextFuse = 170 + Math.random() * 60; ui.event('bubbles wants to fuse — tap him!'); }
-      if (!tour && !shen && !boss && !S.world && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
+      if (!tour && !shen && !boss && S.world === home() && session > 75 && S.best >= 3000 && (nextTour -= dt) < 0) { tour = { t0: t, until: t + 60, ko: 0, next: 1.5, villain: false }; ui.event('the tournament of power begins — 60s!'); ui.fx && ui.fx('star'); }
       if (tour) {
         if ((tour.next -= dt) < 0 && saibas.length < 8) { saibas.push({ c: capPt(.2 + Math.random() * .9, Math.random() * 6.28), born: t, life: 6 }); tour.next = Math.max(.45, 1.2 - (t - tour.t0) / 80); }
         if (!tour.villain && t - tour.t0 > 28 && !boss) { tour.villain = true; const V0 = VILLAINS[(S.bosses || 0) % VILLAINS.length], hp = Math.max(400, wrate() * 18); boss = { name: V0.name === 'vegeta' && S.hero === 'vegeta' ? 'past vegeta' : V0.name, spr: V0.spr, hp, max: hp, t0: t, until: t + 25, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event(`${V0.name} joins the tournament!`); }
@@ -3188,11 +4126,11 @@ GAMES.push({
       // nappa defends planet vegeta
       if (S.world === 2 && nextNappa > 0 && !boss && !shen && (nextNappa -= dt) <= 0) { nextNappa = 0; const hp = Math.max(800, wrate() * 50); boss = { name: 'nappa', spr: NAPPA, hp, max: hp, t0: t, until: t + 35, x: 0, y: 0, k: 1, flash: 0, nextKi: 1 }; ui.event('nappa: "vegeta, let me handle this!" — tap him'); }
       // ultra instinct (or the end of the sagas) opens the multiverse, for the rest of the run
-      if (!S.multi && (S.saga >= VILLAINS.length || S.form >= UI_FORM)) { S.multi = 1; S.multiT = session; nextBoss = Math.min(nextBoss, 20); ui.event('whis: "your power is felt across the multiverse." — universe 9 is up first. beat each universe for a universe star', 5000); }
+      if (!S.multi && (S.saga >= VILLAINS.length || S.form >= UI_FORM)) { S.multi = 1; S.multiT = session; nextBoss = Math.min(nextBoss, 20); topSync(); if (!S.world) travel(9); ui.event('the grand priest: "welcome to the tournament of power." — universe 9 is up first. beat each universe for a universe star', 5000); }
       if (!tour && session > 110 && !boss && !shen && S.multi && (nextBoss -= dt) < 0) {
         // past the sagas: the multiverse. three fights a universe, a fixed wall each, the villains in that universe's colour
         const u = S.uni, k = S.uniStage, who = uniFighter(u, k), hp = uniHp(u, k), last = k === UNI_STAGES.length - 1;
-        boss = { name: who, tag: uniName(u) + (last ? ' boss' : ` ${k + 1}/${UNI_STAGES.length}`), spr: fighterSpr(who, uniColour(u)), hp, max: hp, t0: t, until: t + uniTime(), x: 0, y: 0, k: 1, flash: 0, nextKi: 1, uni: true, badge: uniBadge(u) + (last ? ' BOSS' : ''), tc: uniColour(u) };
+        boss = { name: who, tag: uniName(u) + (last ? ' boss' : ` ${k + 1}/${UNI_STAGES.length}`), sprs: fighterSpr(who, uniColour(u)), get spr() { return this.sprs[this.p || 0]; }, hp, max: hp, t0: t, until: t + uniTime(), x: 0, y: 0, k: 1, flash: 0, nextKi: 1, uni: true, badge: uniBadge(u) + (last ? ' BOSS' : ''), tc: uniColour(u) };
         ui.event(`${uniName(u)}${last ? ' — its strongest' : ''}: ${who} steps up. ${uniTime()}s to win — tap!`, 3500); ui.sfx && ui.sfx('boss'); nextBoss = 10 + Math.random() * 6;
       }
       if (!tour && session > 110 && !boss && !shen && !S.multi && (nextBoss -= dt) < 0) {
@@ -3218,6 +4156,11 @@ GAMES.push({
         else if (struggle.p >= 1) { struggle = null; hitBoss(finisher(), boss.x, boss.y - boss.spr.h / 2 * boss.k); ach('struggle'); ui.event('you won the beam struggle!'); }
         else if (struggle.p <= 0 || t > struggle.until) { struggle = null; tiredUntil = t + 6; shake = .6; ui.event('lost the beam struggle — tired ×0.75 for 6s'); }
       }
+      if (boss && boss.sprs && !boss.dead) {
+        const low = boss.sprs[3] && boss.hp / boss.max < .4;
+        if (low && !boss.pow) { boss.pow = 1; shake = .5; flashT = .4; ui.event(POWER_UP[boss.name] || `${boss.name} powers up!`, 3000); }
+        boss.p = low ? 3 : boss.sprs[2] && (t - (boss.hitT ?? -9) < .4 || struggle) ? 1 + Math.floor(t * 6) % 2 : 0;
+      }
       if (boss) {
         if (!boss.dead && t > boss.until) { boss.dead = true; boss.fled = true; boss.t1 = t; if (boss.uni) { nextBoss = 20; ui.event(`${boss.name} holds ${boss.tag.replace(/ (boss|\d\/\d)$/, '')} — ${Math.round(boss.hp / boss.max * 100)}% left. grow, he's back in 20s`, 3500); } else ui.event(`${boss.name} got away`); }
         if (boss.dead && t - boss.t1 > 1.2) boss = null;
@@ -3235,9 +4178,9 @@ GAMES.push({
       if (S.form < FORMS.length - 1 && S.pl >= FORMS[S.form + 1].at) transform(!!preview);
       // past the last form: a mastery star for every ×100 of held power beyond it, the best you've ever held
       if (S.form === FORMS.length - 1 && !preview && S.pl >= FORMS[S.form].at * LATE_STEP ** (S.mastery + 1)) { S.mastery++; ach('mastery'); ui.event(`mastery star ${S.mastery} — ×${MASTERY_X} on everything, kept through god ki. next at ${fmtShort(FORMS[S.form].at * LATE_STEP ** (S.mastery + 1))}`, 3500); ui.fx && ui.fx('star'); save(); }
-      if (ang('auto') && S.autoAt && S.pl >= AUTO_AT[S.autoAt] && !boss && !shen && !S.world) ascend();   // the angels' self-ascension
+      if (ang('auto') && S.autoAt && S.pl >= AUTO_AT[S.autoAt] && !boss && !shen && S.world === home()) ascend();   // the angels' self-ascension
       if (ang('staff') && bz) whisUntil = Math.max(whisUntil, t + 1);
-      if (!zen && zenoReady() && playing && !shen && !S.world) { zen = { c: capPt(.4, 1.7), t0: t }; ui.event('zeno-sama is here. "you\'re strong! let\'s be friends!" — tap him for the zeno button', 5000); ui.sfx && ui.sfx('dragon'); }
+      if (!zen && zenoReady() && playing && !shen && S.world === home()) { zen = { c: capPt(.4, 1.7), t0: t }; ui.event('zeno-sama is here. "you\'re strong! let\'s be friends!" — tap him for the zeno button', 5000); ui.sfx && ui.sfx('dragon'); }
       if (star) { star.x += star.vx * dt; star.y += Math.sin(t * 3) * .3; if (Math.random() < .9) fx.add({ x: star.x - 7, y: star.y + (Math.random() - .5) * 4, vx: -30, vy: 0, life: .45, s: 2, c: [0xffffff, 0xffd84a, 0xff8a3a], raw: true }); if (star.x > st.W + 12) star = null; }
       for (const m of meteors) { if (m.delay > 0) { m.delay -= dt; continue; } m.x += m.vx * dt; m.y += m.vy * dt; if (!m.dead && Math.random() < .9) fx.add({ x: m.x + 2, y: m.y - 2, vx: -m.vx * .1, vy: -m.vy * .1, life: .5, s: 2, grow: 1, c: [0xfff1c0, 0xffb35a, 0xe0473e, 0x8a8f98], raw: true }); }
       meteors = meteors.filter(m => !m.dead && m.y < st.H + 10);
@@ -3252,7 +4195,7 @@ GAMES.push({
       if (drag && (drag.moved <= 6 || charging > 0) && S.galick > 0 && t - drag.t > .3) charging = Math.min(2.5, t - drag.t - .3); else if (!drag) charging = 0;
       if (S.senzu > 0 && !bean && (nextBean -= dt) < 0) { bean = { c: V.mul(capPt(.3 + Math.random() * .9, Math.random() * 6.28), 1.03) }; nextBean = 40 / S.senzu; once('bean', 'a senzu bean sprouted — tap it'); }
       const fxs = [];
-      if (S.world) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way', 'beerus', 'west city', 'kame house', 'paozu', 'the future', '', 'lookout', 'kai world', 'yardrat'][S.world]; if (bz) fxs.push(bz.awake ? 'beerus AWAKE ×0.25 — find pudding' : `noise ${Math.round(bz.noise * 100)}%`); fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
+      if (S.world && S.world !== 9) { const left = Math.max(0, namekUntil - t); const wn = ['', 'namek', 'vegeta', 'snake way', 'beerus', 'west city', 'kame house', 'paozu', 'the future', 'the arena', 'lookout', 'kai world', 'yardrat'][S.world]; if (bz) fxs.push(bz.awake ? 'beerus AWAKE ×0.25 — find pudding' : `noise ${Math.round(bz.noise * 100)}%`); fxs.push(S.world === 3 && snk ? `${wn} ${Math.floor(Math.min(1, snk.dist / snk.len) * 100)}%` : left > 60 ? `${wn} ${Math.ceil(left / 60)}m` : `${wn} ${Math.ceil(left)}s`); }
       if (storm && t < storm.until) fxs.push(`meteor storm ${Math.ceil(storm.until - t)}s`);
       if (struggle) fxs.push(`struggle ${Math.ceil(struggle.until - t)}s`);
       if (boss && boss.uni && !boss.dead) fxs.push(`${boss.tag} ${Math.ceil(boss.until - t)}s`);
@@ -3284,7 +4227,7 @@ GAMES.push({
       // ── draw
       st.clear(); zb.fill(-1e9); ib.fill(0);
       if (S.world === 3 && snk) { drawSnake(t, dt); return; }
-      drawSea(t, false);
+      if (S.world === 9) drawVoid(t); else drawSea(t, false);
       if (moon) {
         const { x, y, r } = moon, a = moon.a;
         for (let yy = -r - 6; yy <= r + 6; yy++) for (let xx = -r - 6; xx <= r + 6; xx++) {
@@ -3359,6 +4302,7 @@ GAMES.push({
       if (W2L[S.world]) drawW2(t, dt);
       if (S.world === 5) { const v = M3.ap(M, capPt(.55, 3.2)); if (v[2] > .05) blitZ(BULMA, cx + v[0] * R, cy - v[1] * R + st.bob, Math.atan2(v[0], v[1]), Math.floor(t / 2) % 2 === 0, 0, v[2] * R + 6, 1); }
       if (S.world === 7) drawPaozu(t);
+      if (S.world === 9) drawTopFront();
       if (bz) npc(NPCS.whis, WHIS_AT, Math.floor(t / 3) % 2 === 0);
       if (S.world === 7) npc(NPCS.chichi, CHI_AT, true);
       if (S.world === 6) { npc(NPCS.turtle, TURTLE_AT); npc(NPCS.oolong, OOLONG_AT, Math.floor(t / 2.5) % 2 === 0); }
@@ -3488,7 +4432,7 @@ GAMES.push({
       fx.step(st, dt);
       if (star) st.blit(POD, star.x - 7, star.y - 7, false, true);   // in front of the planet
       if (gero) { const h = handPos(); if (t - gero.t0 > 1.2) for (let i = 0; i <= 1; i += .02) if ((i * 50 + t * 20) % 4 < 2) st.px(h.x + (gero.x - h.x) * i, h.y + (gero.y - gero.spr.h * .55 - h.y) * i, 0xe0473e); st.blit(gero.spr, gero.x - gero.spr.w / 2, gero.y - gero.spr.h + Math.sin(t * 3) * 2, true, true); }
-      drawSea(t, true);
+      if (S.world !== 9) drawSea(t, true);
       if (flashT > 0) { flashT = Math.max(0, flashT - dt * 1.8); const a = flashT * flashT * .85; for (let k = 0; k < st.buf.length; k++) { if (bayer(k % st.W, (k / st.W) | 0) < a) st.buf[k] = 0xffffffff; } }
       for (const f of floats) { f.life -= dt * .8; f.y -= dt * 16; if (f.life <= 0) continue; const x = Math.round(f.x - st.textWidth(f.s) / 2), y = Math.round(f.y), a = Math.min(1, f.life * 2); for (const [ox, oy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) st.text(f.s, x + ox, y + oy, 0xffffff, a); st.text(f.s, x, y, f.gold ? 0xd99a1c : 0x111111, a); }
       for (let k = floats.length - 1; k >= 0; k--) if (floats[k].life <= 0) floats.splice(k, 1);
@@ -3540,7 +4484,7 @@ GAMES.push({
     if (/krillin/.test(HASH)) { session = 131; nextKril = 0; }   // preview hook: #krillin
     if (/seeds/.test(HASH)) S.seeds = 40;   // preview hook: #seeds (40 ki seeds to spend)
     { const uh = HASH.match(/universe(\d+)/); if (uh) { S.saga = VILLAINS.length; S.multi = 1; S.uni = Math.max(0, LADDER.findIndex(l => l.n === +uh[1])); S.uniStage = UNI_STAGES.length - 1; S.ustars = S.uni; session = 111; nextBoss = 0; } }   // preview hook: #universe3 (that universe's boss raids now)
-    if (/mui/.test(HASH)) { S.pl = S.best = 2.1e13; S.form = MUI_FORM - 1; }   // preview hook: #mui (the first form past ultra instinct; #hero-goku#mui for mastered ultra instinct)
+    if (/mui/.test(HASH)) { S.pl = S.best = 2.1e14; S.form = MUI_FORM - 1; }   // preview hook: #mui (the first form past ultra instinct; #hero-goku#mui for mastered ultra instinct)
     { const fh = HASH.match(/form(\d+)/); if (fh) { S.pl = S.best = FORMS[Math.min(+fh[1], FORMS.length - 1)].at * 1.05; S.form = Math.max(0, Math.min(+fh[1], FORMS.length - 1) - 1); } }   // preview hook: #form12 (any form by index)
     if (/godki/.test(HASH)) { S.pl = S.best = 2.1e15; S.form = MUI_FORM; S.godki = 6; S.godTotal = 3; S.gods = 1; S.multi = 1; S.saga = VILLAINS.length; S.uni = S.ustars = 2; }   // preview hook: #godki (the god ki reset is up, 6 god ki to spend)
     if (/zeno/.test(HASH)) { S.gods = ZENO_GODS; S.saga = VILLAINS.length; S.multi = 1; session = 111; }   // preview hook: #zeno (he shows up)
@@ -3565,9 +4509,12 @@ GAMES.push({
     if (/cling/.test(HASH)) { session = 151; nextCling = 0; }   // preview hook: #cling (a saibaman hugs you)
     if (/dance/.test(HASH)) { session = 201; nextDance = 0; S.best = Math.max(S.best, 2e5); }   // preview hook: #dance (the fusion dance)
     if (/gregory/.test(HASH)) { session = 61; nextGreg = 0; }   // preview hook: #gregory (the race)
+    { const tp = HASH.match(/#top/); if (tp) { const dm = HASH.match(/topdmg=([\d.]+)/), er = HASH.match(/toperase=([\d.]+)/); TOP.dmg = dm ? Math.max(0, Math.min(1, +dm[1])) : 0; if (er) er[1].split('.').forEach(u => TOP.erase(+u)); S.world = 9; useWorld(9); layout(); scenery(); ui.world && ui.world(9); namekUntil = 1e9; } }   // preview hooks: #top, #topdmg=0.7, #toperase=9.10 (the arena, its damage, emptied stands)
     if (/tournament/.test(HASH)) { session = 76; S.best = Math.max(S.best, 3000); nextTour = 0; }   // preview hook: #tournament
     if (/shenron/.test(HASH)) setTimeout(() => summon(+(HASH.match(/shenron(\d)/) || [0, 1])[1]), 800);   // preview hook: #shenron summons him   // preview hook: #ape brings the moon out at once
     FORMS = ladderOf(S.hero); S.form = Math.min(S.form, FORMS.length - 1);   // a #hero- hook may have switched the ladder
+    if (S.multi && !S.world) { S.world = 9; useWorld(9); layout(); scenery(); ui.world && ui.world(9); }   // multiverse hooks open in the arena
+    if (S.multi) topSync();
     S.runBest = Math.max(S.runBest, S.best);   // hooks raise best; this run's best follows
     // the achievements / characters popup reads from here
     const menu = () => ({ seeds: S.seeds, boost: seedBoost().toFixed(1), branches: ['body', 'spirit', 'fate'].map(b => ({ name: b, pts: branchPts(b) })), tree: TREE.map(n => ({ id: n.id, branch: n.branch, tier: n.tier, need: TIER_NEED[n.tier], open: nodeOpen(n), name: n.name, what: n.what, lvl: lvl(n.id), max: nodeMax(n), cost: nodeCost(n), can: nodeOpen(n) && lvl(n.id) < nodeMax(n) && S.seeds >= nodeCost(n) })), spent: TREE.some(n => lvl(n.id)), ach: ACH.map(a => ({ ...a, done: !!S.ach[a.id] })), chars: CHARS.map(c => ({ id: c.id, name: c.name, open: heroOpen(c.id), need: c.need && ACH.find(a => a.id === c.need).text, on: S.hero === c.id })) });
