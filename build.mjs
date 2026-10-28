@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url'
 import { rustPlanet } from './rust/planet-web/assemble.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const read = f => readFileSync(join(here, f), 'utf8')
+// a Windows checkout may have CRLF sources: everything below matches on \n, and the output must not depend on it
+const read = f => readFileSync(join(here, f), 'utf8').replace(/\r\n/g, '\n')
 
 const widget = process.argv.includes('--widget')
 const rust = process.argv.includes('--rust')

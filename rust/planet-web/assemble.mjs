@@ -29,5 +29,5 @@ export function rustPlanet(read, fence) {
   twin = patch(twin, 'uy = -Math.cos(kd.ang); shake = Math.max(shake, .06);', 'uy = -Math.cos(kd.ang);')
   const env = ['Math', 'setTimeout', 'clearTimeout', 'localStorage', 'location', 'document', 'addEventListener']
   const wrapped = `(function (${env.join(', ')}, __rs) {\n${twin}\n})(${env.map(k => 'TWIN.env.' + k).join(', ')}, TWIN.env.rs);`
-  return glue + '\n' + readFileSync(join(here, 'shim.js'), 'utf8').replace('__RUST_WASM__', () => wasm.toString('base64')).replace('__TWIN__', () => wrapped)
+  return glue + '\n' + readFileSync(join(here, 'shim.js'), 'utf8').replace(/\r\n/g, '\n').replace('__RUST_WASM__', () => wasm.toString('base64')).replace('__TWIN__', () => wrapped)
 }
