@@ -4,11 +4,11 @@
 // (the root of highskore/idle-fighterz-widget, which has this repo as its game/ submodule)
 // The site page also carries the Rust engine behind ?rust (rust/planet-web): when its wasm build is there (sh
 // rust/planet-web/build.sh), dist/planet-rust.js and dist/planet-rust.wasm are written next to planet.html, which fetches
-// them only for ?rust. --rust fails the build without them
+// them only for ?rust, from the top of its <head>. --rust fails the build without them
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { rustEngine, rustLoader } from './rust/planet-web/assemble.mjs'
+import { rustEngine, rustLoader, rustPreload } from './rust/planet-web/assemble.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 // a Windows checkout may have CRLF sources: everything below matches on \n, and the output must not depend on it
@@ -25,7 +25,7 @@ const fence = s => s.replace(/\/\*widget\*\/([\s\S]*?)\/\*\/widget\*\//g, widget
 let page = fence(read('page.html'))
   .replace('__BAGEL__', () => read('bagel.typeface.json'))
   .replace('__WORLD__', () => fence(read('world.js')).replace('__PX__', () => readFileSync(join(here, 'wasm', 'px.wasm')).toString('base64')))
-  .replace('__PLANET__', () => read('shenron.js') + fence(read('game.js')) + (widget ? '' : '\n' + rustLoader(engine)))
+  .replace('__PLANET__', () => read('shenron.js') + fence(read('game.js')) + (widget ? '' : '\n' + rustLoader()))
   .replace('__MAIN__', widget ? '(main => main())' : 'planetMain')
 page = widget ? await widgetPage(page) : await sitePage(page)
 const split = page.indexOf('</style>') + '</style>'.length
@@ -66,7 +66,9 @@ if (widget) {
   console.log(join(out, 'index.html'), 'written')
 } else {
   mkdirSync(join(here, 'dist'), { recursive: true })
-  writeFileSync(join(here, 'dist', 'planet.html'), head + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
+  // ?rust's files start downloading before the rest of the page parses
+  const preload = (await (await import('esbuild')).transform(rustPreload(engine), { loader: 'js', minify: true, charset: 'utf8', legalComments: 'none' })).code.trim()
+  writeFileSync(join(here, 'dist', 'planet.html'), head + '<script>' + preload + '</script>\n' + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
   for (const f of ['planet-rust.js', 'planet-rust.wasm']) rmSync(join(here, 'dist', f), { force: true })
   if (engine) {
     const esbuild = await import('esbuild')

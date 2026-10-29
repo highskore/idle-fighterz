@@ -1,4 +1,5 @@
-// The site page's ?rust engine for build.mjs: loader.js goes into the page after game.js, and the wasm build in pkg/
+// The site page's ?rust engine for build.mjs: preload.js goes at the top of the page's <head>, loader.js after game.js,
+// and the wasm build in pkg/
 // (sh rust/planet-web/build.sh) becomes two files next to it, planet-rust.js (wasm-bindgen's glue and shim.js) and
 // planet-rust.wasm. The page asks for them with a hash of the build in the URL, so a cached copy of one never meets a
 // new copy of the other.
@@ -18,7 +19,9 @@ export function rustEngine() {
   return { js, wasm, files: { js: `planet-rust.js?v=${v}`, wasm: `planet-rust.wasm?v=${v}` } }
 }
 
-export function rustLoader(engine) {
+export const rustLoader = () => readFileSync(join(here, 'loader.js'), 'utf8')
+
+export function rustPreload(engine) {
   const files = engine ? engine.files : { js: 'planet-rust.js', wasm: 'planet-rust.wasm' }
-  return readFileSync(join(here, 'loader.js'), 'utf8').replace('__RUST_JS__', files.js).replace('__RUST_WASM__', files.wasm)
+  return readFileSync(join(here, 'preload.js'), 'utf8').replace('__RUST_JS__', files.js).replace('__RUST_WASM__', files.wasm)
 }
