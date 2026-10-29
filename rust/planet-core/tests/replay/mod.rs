@@ -1,6 +1,9 @@
 //! The replay behind the differential tests: runs a scenario in game.js (rust/difftest/run.js), replays its inputs
 //! in planet-core, and compares the state, the HUD and the save. Shared by planet-core's difftest and planet-render's
-//! drawn one.
+//! drawn one, and its inputs and samples by planet-render's golden traces.
+//!
+//! game.js is frozen, so the comparison only holds for the behaviour it has: it's opt-in, with `JS_PARITY=1`
+//! (`npm run difftest:js`), and needs `node`; otherwise these tests skip.
 #![allow(dead_code)]
 
 use planet_core::data::{Upg, TREE};
@@ -19,6 +22,10 @@ pub fn js(arg: &str) -> Option<Value> {
 /// of the JS they came from.
 pub fn js_args(args: &[&str]) -> Option<Value> {
     let arg = args[0];
+    if !js_parity() {
+        eprintln!("skipped the {arg} difftest against game.js: set JS_PARITY=1 to run it");
+        return None;
+    }
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../difftest");
     let mut h: u64 = 0xcbf29ce484222325;
     for f in ["../../game.js", "../../world.js", "../../shenron.js", "harness.js", "run.js"] {
@@ -43,6 +50,11 @@ pub fn js_args(args: &[&str]) -> Option<Value> {
         let _ = std::fs::write(c, &out.stdout);
     }
     Some(serde_json::from_slice(&out.stdout).expect("trace json"))
+}
+
+/// Whether to diff against game.js (`JS_PARITY=1`).
+pub fn js_parity() -> bool {
+    std::env::var("JS_PARITY").is_ok_and(|v| v == "1")
 }
 
 fn close(a: f64, b: f64) -> bool {
@@ -99,7 +111,6 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
     g.start_on(tr["today"].as_str().unwrap());
     let (mut t, mut ii, mut si) = (0.0f64, 0usize, 0usize);
     let mut rep = Report::default();
-    let n = |i: &Value, k: &str| i[k].as_f64().unwrap();
     let mut saves = 0;
     let mut events: Vec<(f64, String, f64)> = Vec::new();
     let mut cues: Vec<(f64, Value)> = Vec::new();
@@ -111,53 +122,17 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
     for f in 0..frames {
         while ii < inputs.len() && inputs[ii]["f"].as_u64().unwrap() as usize == f {
             let i = &inputs[ii];
-            let k = i["k"].as_str().unwrap_or("");
-            match i["a"].as_str().unwrap() {
-                "train" => g.train(),
-                "buy" => {
-                    g.buy(k);
-                }
-                "kaio" => g.kaioken(),
-                "learn" => g.learn(k),
-                "angel" => g.learn_angel(k),
-                "auto" => g.auto_next(),
-                "hero" => {
-                    g.pick_hero(k);
-                }
-                "set" => g.debug_set(k, i["v"].as_f64().unwrap()),
-                "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
-                "summon" => g.summon(),
-                "pick" => g.pick(k),
-                "force" => match k {
-                    "struggle" => g.tl.struggle_force = i["v"].as_bool().unwrap(),
-                    "boss" => g.tl.next_boss = 0.0,
-                    "wish" => g.tl.wish_force = planet_core::data::WISHES.iter().position(|w| w.0 == i["v"].as_str().unwrap()),
-                    _ => panic!("unknown force {k}"),
-                },
+            if i["a"] == "jump" {
                 // a world from the last picker planet-core opened
-                "jump" => {
-                    let w = i["k"].as_u64().unwrap();
-                    let pending = g.cues.iter().rev().find_map(|c| match c {
-                        planet_core::hud::Cue::ItxPick(l) => Some(serde_json::from_str::<Value>(l).unwrap()),
-                        _ => None,
-                    });
-                    let last = pending.or_else(|| cues.iter().rev().find(|c| c.1[0] == "itxPick").map(|c| c.1[1].clone()));
-                    assert!(last.is_some_and(|l| l.as_array().unwrap().iter().any(|o| o["key"] == w)), "{name}: no picker with world {w} at frame {f}");
-                    g.itx_jump(w as u32)
-                }
-                "down" => {
-                    let (id, button, touch) =
-                        (i["id"].as_i64().unwrap_or(1) as i32, i["button"].as_i64().unwrap_or(0) as i32, i["touch"].as_bool().unwrap_or(false));
-                    g.pointer_down(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by"), id, button, touch)
-                }
-                "move" => g.pointer_move(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by"), i["id"].as_i64().unwrap_or(1) as i32),
-                "up" => g.pointer_up(n(i, "bx"), n(i, "by"), i["id"].as_i64().unwrap_or(1) as i32),
-                "cancel" => g.pointer_cancel(),
-                "key" => {
-                    g.key(k);
-                }
-                a => panic!("unknown input {a}"),
+                let w = i["k"].as_u64().unwrap();
+                let pending = g.cues.iter().rev().find_map(|c| match c {
+                    planet_core::hud::Cue::ItxPick(l) => Some(serde_json::from_str::<Value>(l).unwrap()),
+                    _ => None,
+                });
+                let last = pending.or_else(|| cues.iter().rev().find(|c| c.1[0] == "itxPick").map(|c| c.1[1].clone()));
+                assert!(last.is_some_and(|l| l.as_array().unwrap().iter().any(|o| o["key"] == w)), "{name}: no picker with world {w} at frame {f}");
             }
+            apply(&mut g, i);
             ii += 1;
         }
         events.extend(g.events.drain(..).map(|(s, ms)| (g.t, s, ms)));
@@ -317,6 +292,47 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
     assert!(hud.bad.is_empty(), "{name}: the HUD differs:\n{}", hud.bad.join("\n"));
 }
 
+/// One of run.js's inputs, applied to the game.
+pub fn apply(g: &mut Game, i: &Value) {
+    let n = |i: &Value, k: &str| i[k].as_f64().unwrap();
+    let k = i["k"].as_str().unwrap_or("");
+    match i["a"].as_str().unwrap() {
+        "train" => g.train(),
+        "buy" => {
+            g.buy(k);
+        }
+        "kaio" => g.kaioken(),
+        "learn" => g.learn(k),
+        "angel" => g.learn_angel(k),
+        "auto" => g.auto_next(),
+        "hero" => {
+            g.pick_hero(k);
+        }
+        "set" => g.debug_set(k, i["v"].as_f64().unwrap()),
+        "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
+        "summon" => g.summon(),
+        "pick" => g.pick(k),
+        "force" => match k {
+            "struggle" => g.tl.struggle_force = i["v"].as_bool().unwrap(),
+            "boss" => g.tl.next_boss = 0.0,
+            "wish" => g.tl.wish_force = planet_core::data::WISHES.iter().position(|w| w.0 == i["v"].as_str().unwrap()),
+            _ => panic!("unknown force {k}"),
+        },
+        "jump" => g.itx_jump(i["k"].as_u64().unwrap() as u32),
+        "down" => {
+            let (id, button, touch) = (i["id"].as_i64().unwrap_or(1) as i32, i["button"].as_i64().unwrap_or(0) as i32, i["touch"].as_bool().unwrap_or(false));
+            g.pointer_down(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by"), id, button, touch)
+        }
+        "move" => g.pointer_move(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by"), i["id"].as_i64().unwrap_or(1) as i32),
+        "up" => g.pointer_up(n(i, "bx"), n(i, "by"), i["id"].as_i64().unwrap_or(1) as i32),
+        "cancel" => g.pointer_cancel(),
+        "key" => {
+            g.key(k);
+        }
+        a => panic!("unknown input {a}"),
+    }
+}
+
 /// A JSON value from game.js against planet-core's: every key game.js has, numbers within tolerance, the rest exact.
 fn deep(rep: &mut Report, t: f64, path: &str, js: &Value, rs: &Value) {
     match (js, rs) {
@@ -399,7 +415,7 @@ fn compare_save(rep: &mut Report, js: &Value, g: &Game) {
 }
 
 /// The timeline's state, in run.js's `tl` order: what's up in the sky and how the run is going.
-fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
+pub fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
     let (s, tl) = (&g.s, &g.tl);
     let n = |v: f64| Some(v);
     let b = |v: bool| Some(if v { 1.0 } else { 0.0 });

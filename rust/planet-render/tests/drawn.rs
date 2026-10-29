@@ -8,7 +8,8 @@
 //! against them in seconds. Each scenario is its own test: run them side by side with `--test-threads=4`. A trace
 //! can't be cut into chunks run side by side: game.js's state lives in `mount()`'s closure, so it can't be saved, and a
 //! fast headless run doesn't reach the drawn state (drawing spends random draws and writes screen spots back).
-//! Needs `node`; skips without.
+//! game.js is frozen, so this holds only for the behaviour it has: opt-in with `JS_PARITY=1`, and needs `node`; skips
+//! otherwise. The regression test that must pass is golden.rs, against the Rust traces recorded from these runs.
 
 #[path = "../../planet-core/tests/replay/mod.rs"]
 mod replay;

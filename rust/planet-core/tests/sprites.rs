@@ -7,6 +7,10 @@ use std::process::Command;
 
 #[test]
 fn heroes_match_game_js() {
+    // game.js is frozen: opt-in, as the difftest
+    if !std::env::var("JS_PARITY").is_ok_and(|v| v == "1") {
+        return eprintln!("skipped: set JS_PARITY=1 to diff against game.js");
+    }
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../difftest");
     let file = Path::new(env!("CARGO_TARGET_TMPDIR")).join("heroes.bin");
     match Command::new("node").arg(dir.join("sprites.js")).arg("--heroes").arg(&file).output() {

@@ -1,6 +1,7 @@
 //! Differential test: game.js (headless, via rust/difftest/run.js) against planet-core, same seed and inputs.
 //! Each scenario's JS trace carries the inputs it applied frame by frame and a state sample every second; we replay
-//! the inputs here and compare. Needs `node` on PATH; without it the tests skip.
+//! the inputs here and compare. game.js is frozen, so this holds only for the behaviour it has: opt-in with
+//! `JS_PARITY=1` (`npm run difftest:js`), and needs `node` on PATH; otherwise the tests skip.
 
 mod replay;
 
