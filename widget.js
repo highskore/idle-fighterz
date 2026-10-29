@@ -63,9 +63,11 @@
     let titleAt = -1e9, title = '';
     ui.update = s => {
       if (!hudDue('u')) return;
-      update(s);
       const at = performance.now();
       if (at - titleAt >= 1000) { titleAt = at; const t = short(s.pl); if (t !== title) { title = t; invoke('tray_title', { text: t }); } }
+      // hidden, only the menu-bar number: DOM changes nobody sees still wake WebKit's GPU process
+      if (st.headless) return;
+      update(s);
       if (num.dataset.v !== $('pl').dataset.v) { num.dataset.v = $('pl').dataset.v; num.innerHTML = $('pl').innerHTML; }
       rate.textContent = $('rate').textContent + '/s';
       bar.firstChild.style.width = (s.form.p * 100).toFixed(1) + '%'; ring.lastChild.setAttribute('stroke-dashoffset', (100 - s.form.p * 100).toFixed(1));
@@ -80,6 +82,8 @@
       }
       iNext.firstChild.style.width = (f.p * 100).toFixed(1) + '%';
     };
+    const event = ui.event;
+    ui.event = (text, ms) => { if (!st.headless) event(text, ms); };   // a toast while hidden is gone before it shows
     let couldAscend = null;
     ui.shop = items => {
       if (!hudDue('s')) return;
