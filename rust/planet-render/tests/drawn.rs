@@ -120,7 +120,6 @@ fn input_drawn() {
 }
 
 #[test]
-#[ignore = "game.js takes over 10 minutes to draw it; cargo test -- --ignored"]
 fn ascend_drawn() {
     drawn("ascend");
 }
