@@ -2950,7 +2950,7 @@ GAMES.push({
     const angelOpen = a => ANGELS.filter(x => x.who === a.who && ang(x.id)).length >= a.tier, zenoReady = () => S.gods >= ZENO_GODS * (1 + S.zeno);
     const godBoostOf = n => 1 + GOD_X * n;   // each god ki ever earned: +100% on everything, spent or not
     // the ki ceiling: gravity, wishes and seeds only push so far, then shrink to a small power. it rises with every minute in the multiverse and a little per universe cleared, so the walls set the late pace
-    const CEIL0 = 20, CEIL_T = 1.08, CEIL_STEP = 2, CEIL_EXP = .15;   // the step counts your best universe this run, so god ki doesn't take it back
+    const CEIL0 = 20, CEIL_T = 1.04, CEIL_STEP = 2, CEIL_EXP = .15;   // the step counts your best universe this run, so god ki doesn't take it back
     const ceiling = () => CEIL0 * (S.multi ? CEIL_T ** Math.max(0, (session - S.multiT) / 60) : 1) * CEIL_STEP ** S.uniBest, capped = m => { const c = ceiling(); return m <= c ? m : c * (m / c) ** CEIL_EXP; };
     const lateBoost = () => STAR_X ** (S.ustars * (ang('stars') ? 2 : 1)) * MASTERY_X ** S.mastery * godBoostOf(S.godTotal) * ZENO_X ** S.zeno;
     const chamberLen = () => 15, chamberX = (lv = S.chamber) => 1.5 + .5 * lv;   // a fixed 15s visit: the shop raises what training inside pays, the tree brings the door round sooner
