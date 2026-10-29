@@ -92,7 +92,7 @@ fn k_sin(x: f64, y: f64, iy: bool) -> f64 {
     if !iy {
         fma(v, fma(z, r, S1), x)
     } else {
-        x - fma(-v, S1, fma(z, fma(0.5, y, -(v * r)), -y))
+        x - fma(-v, S1, fma(z, 0.5 * y - v * r, -y))
     }
 }
 
@@ -112,10 +112,10 @@ fn k_cos(x: f64, y: f64) -> f64 {
     let z = x * x;
     let r = z * fma(z, fma(z, fma(z, fma(z, fma(z, C6, C5), C4), C3), C2), C1);
     if ix < 0x3fd33333 {
-        1.0 - fma(0.5, z, -fma(z, r, -(x * y)))
+        1.0 - (0.5 * z - fma(z, r, -(x * y)))
     } else {
         let qx = if ix > 0x3fe90000 { 0.28125 } else { with_hi(ix - 0x00200000, 0) };
-        let hz = fma(0.5, z, -qx);
+        let hz = 0.5 * z - qx;
         let a = 1.0 - qx;
         a - (hz - fma(z, r, -(x * y)))
     }
@@ -129,6 +129,8 @@ const PIO2_2T: f64 = 2.02226624879595063154e-21;
 const PIO2_3: f64 = 2.02226624871116645580e-21;
 const PIO2_3T: f64 = 8.47842766036889956997e-32;
 
+// Where clang fuses a product that is exact (by a power of two, or n by PIO2_1, which has 31 bits, for n < 2^20) the
+// fused and unfused sums are the same double, so those are written unfused: emulating them in wasm costs.
 /// x reduced by n·π/2: (n, y0, y1). Medium arguments only (|x| < 2^19·π/2); past that it defers to the platform.
 #[inline]
 fn rem_pio2(x: f64) -> Option<(i32, f64, f64)> {
@@ -164,7 +166,7 @@ fn rem_pio2(x: f64) -> Option<(i32, f64, f64)> {
     let t = x.abs();
     let n = fma(t, INVPIO2, 0.5) as i32;
     let fnn = n as f64;
-    let mut r = fma(-fnn, PIO2_1, t);
+    let mut r = t - fnn * PIO2_1;
     let mut w = fnn * PIO2_1T;
     let mut y0;
     let npio2_hw = |n: i32| hi(n as f64 * std::f64::consts::FRAC_PI_2);
