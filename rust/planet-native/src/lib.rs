@@ -1,4 +1,4 @@
-//! planet-native: the Powerrr widget's renderer (stage 5). Tauri hosts it; frames go to a wgpu texture (or a
+//! planet-native: the Idle FighterZ widget's renderer (stage 5). Tauri hosts it; frames go to a wgpu texture (or a
 //! softbuffer surface as the fallback) instead of a web view's canvas, and a small web view overlays the HTML HUD.
 //!
 //! No window or GPU dependencies yet: this crate only fixes the seam the Tauri side will call.

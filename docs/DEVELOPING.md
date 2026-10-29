@@ -78,7 +78,7 @@ grep -n 'preview hook' game.js
 
 ## The Rust port
 
-`rust/` is a port of the game to Rust, built two ways: to WebAssembly for the site, and natively for the powerrr widget. The JS game stays the live game until the port reaches parity; the default build doesn't touch `rust/`. The plan and its stages are in [rust/PLAN.md](../rust/PLAN.md), and the HUD bridge in [rust/HUD.md](../rust/HUD.md).
+`rust/` is a port of the game to Rust, built two ways: to WebAssembly for the site, and natively for the Idle FighterZ widget. The JS game stays the live game until the port reaches parity; the default build doesn't touch `rust/`. The plan and its stages are in [rust/PLAN.md](../rust/PLAN.md), and the HUD bridge in [rust/HUD.md](../rust/HUD.md).
 
 ```sh
 npm run wasm:rust    # sh rust/planet-web/build.sh
