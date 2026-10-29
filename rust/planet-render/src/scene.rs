@@ -51,8 +51,8 @@ pub struct Scene {
     pub own_rng: Option<planet_core::rng::Lcg>,
     /// the time chamber's last frame (`echo`), empty outside it
     pub(crate) echo: Vec<u32>,
-    /// the last instant transmission's departure (`blinkFx`)
-    blink: Option<Blink>,
+    /// the last instant transmission's departure (`itxFx`)
+    itx_fx: Option<ItxFx>,
     tones_key: Option<(u32, u8)>,
     pub tones: Option<Tones>,
 }
@@ -543,9 +543,9 @@ impl Scene {
     fn draw_hero(&mut self, c: &mut Ctx, g: &mut Game, dt: f64) -> HeroAt {
         let t = c.t;
         // instant transmission: where he left from (with his facing and lift as last drawn), seen once
-        if let Some((from, t0)) = g.tl.blink_from {
-            if self.blink.as_ref().is_none_or(|b| b.t0 != t0) {
-                self.blink = Some(Blink { x: from.x, y: from.y, ang: from.ang, z: from.v[2], flip: g.flip_now, lift: g.lift_now, t0, fx: false });
+        if let Some((from, t0)) = g.tl.itx_fx {
+            if self.itx_fx.as_ref().is_none_or(|b| b.t0 != t0) {
+                self.itx_fx = Some(ItxFx { x: from.x, y: from.y, ang: from.ang, z: from.v[2], flip: g.flip_now, lift: g.lift_now, t0, fx: false });
             }
         }
         let kd = g.kid_screen(0.0);
@@ -553,7 +553,7 @@ impl Scene {
         let fi = ALL_FORMS.iter().position(|f| f.0 == form.name).unwrap_or(0);
         let hero = sprite::hero(hero_id(g));
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[fi] };
-        let bl = match &self.blink {
+        let bl = match &self.itx_fx {
             Some(b) if t - b.t0 < 0.75 => t - b.t0,
             _ => -1.0,
         };
@@ -722,7 +722,7 @@ impl Scene {
         }
         if bl >= 0.0 {
             // where he stood: his shape fades out in a shimmer; where he lands, a ring of light pulls in
-            let b = self.blink.as_mut().unwrap();
+            let b = self.itx_fx.as_mut().unwrap();
             if bl < 0.35 {
                 let ghost = itx_ghost(&set.idle, 1.0 - bl / 0.35, t);
                 c.blit_z(&ghost, b.x, b.y, b.ang, b.flip, b.lift, b.z * c.r + 6.0, 1.05);
@@ -1221,8 +1221,8 @@ impl Pn {
     }
 }
 
-/// `blinkFx`: where an instant transmission left from, and whether its sparkle has been thrown
-struct Blink {
+/// `itxFx`: where an instant transmission left from, and whether its sparkle has been thrown
+struct ItxFx {
     x: f64,
     y: f64,
     ang: f64,
