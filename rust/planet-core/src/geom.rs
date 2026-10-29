@@ -128,6 +128,8 @@ pub struct Cam {
     pub widget: bool,
     /// CSS pixels per buffer pixel (`st.scale`): a drag turns the planet by its on-screen size
     pub scale: f64,
+    /// the page's `data-cx`: where across the buffer the planet's centre sits, instead of layout()'s own choice
+    pub fcx: Option<f64>,
 }
 
 /// A point on screen and the angle the planet's surface tilts at there (`kidScreen`).
@@ -142,7 +144,7 @@ pub struct Spot {
 impl Cam {
     /// A view of a `w`×`h` buffer (game.js's `st.W`×`st.H`, in its big pixels).
     pub fn new(w: f64, h: f64) -> Self {
-        let mut c = Cam { w, h, r: 40.0, cx: 0.0, cy: 0.0, m: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], bob: 0.0, scale: 3.0, widget: false };
+        let mut c = Cam { w, h, r: 40.0, cx: 0.0, cy: 0.0, m: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], bob: 0.0, scale: 3.0, widget: false, fcx: None };
         c.layout(0);
         c
     }
@@ -151,7 +153,7 @@ impl Cam {
     pub fn layout(&mut self, world: u32) {
         let (w, h) = (self.w, self.h);
         let wide = w / h >= 1.15;
-        let fcx = if wide { 0.56 } else { 0.5 };
+        let fcx = self.fcx.unwrap_or(if wide { 0.56 } else { 0.5 });
         self.r = js_round(if w / h < 0.8 {
             (w * 0.34).min(h * 0.22)
         } else if wide {

@@ -85,6 +85,17 @@ impl Bridge {
         self.t
     }
 
+    /// game.js's `frame(t, dt)` as page.html calls it, once an animation frame with the page's own `t` and `dt`: the
+    /// timeouts due by `t` first (game.js's run on the wall clock; the slack absorbs float drift in the page's summed
+    /// `t`), then the frame's logic and `draw`.
+    pub fn frame_drawn(&mut self, t: f64, dt: f64, now_ms: f64, draw: &mut dyn FnMut(&mut crate::Game, f64)) {
+        self.game.timeouts_by(t + 1e-6);
+        self.t = t;
+        self.clock(now_ms);
+        self.game.sim(t, dt);
+        draw(&mut self.game, dt);
+    }
+
     /// What the HUD needs since the last call, as `{hud?, shop?, world?, events, cues}`:
     /// - `hud`: `ui.update`'s argument (plus `night`, `world`, `shen`, `look`), when anything on it changed
     /// - `shop`: `ui.shop`'s last argument (`Game::shop`, the copy the difftest checks), when a row changed
