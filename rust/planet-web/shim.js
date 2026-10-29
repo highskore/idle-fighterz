@@ -29,8 +29,10 @@ self.planetRust = async ({ GAMES, HEROES, HASH, wasm }) => {
 
     // planet-core's messages, onto page.html's ui
     let night = false, shen = false, look = '', itxOwn = false;
+    // every input first runs the timeouts that would have fired before it, as game.js's setTimeouts do
+    const due = () => P.timeouts_now(Date.now());
     // the calls that hand the page a callback: what picking does
-    const back = { wish: k => P.pick_wish(k), itxPick: w => P.itx_jump(w) };
+    const back = { wish: k => { due(); P.pick_wish(k); }, itxPick: w => { due(); P.itx_jump(w); } };
     const deliver = () => {
       const m = JSON.parse(P.frame());
       if ('world' in m) { ui.hell && ui.hell(false); ui.world && ui.world(m.world); }
@@ -44,16 +46,17 @@ self.planetRust = async ({ GAMES, HEROES, HASH, wasm }) => {
       for (const [text, ms] of m.events) ui.event(text, ms);
       for (const [call, ...args] of m.cues) if (back[call]) ui[call](args[0], v => { back[call](v); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
     };
-    ui.onBuy(k => { P.buy(k); deliver(); });
+    ui.onBuy(k => { due(); P.buy(k); deliver(); });
 
     const cv = st.cv;
-    cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); P.pointer_down(e.clientX, e.clientY, bx, by, e.pointerId, e.button, e.pointerType === 'touch'); deliver(); });
-    cv.addEventListener('pointermove', e => { const [bx, by] = st.toBuf(e); P.pointer_move(e.clientX, e.clientY, bx, by, e.pointerId); });
-    cv.addEventListener('pointerup', e => { const [bx, by] = st.toBuf(e); P.pointer_up(bx, by, e.pointerId); deliver(); });
-    cv.addEventListener('pointercancel', () => P.pointer_cancel());
+    cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); due(); P.pointer_down(e.clientX, e.clientY, bx, by, e.pointerId, e.button, e.pointerType === 'touch'); deliver(); });
+    cv.addEventListener('pointermove', e => { const [bx, by] = st.toBuf(e); due(); P.pointer_move(e.clientX, e.clientY, bx, by, e.pointerId); });
+    cv.addEventListener('pointerup', e => { const [bx, by] = st.toBuf(e); due(); P.pointer_up(bx, by, e.pointerId); deliver(); });
+    cv.addEventListener('pointercancel', () => { due(); P.pointer_cancel(); });
     cv.addEventListener('contextmenu', e => { if (itxOwn) e.preventDefault(); });   // right-click is instant transmission's once it's owned
     addEventListener('keydown', e => {
       if (!P.playing() || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, [contenteditable]')) return;
+      due();
       if (P.key(e.key.toLowerCase())) e.preventDefault();
       deliver();
     });
@@ -88,15 +91,15 @@ self.planetRust = async ({ GAMES, HEROES, HASH, wasm }) => {
     return {
       menu, card, frame, thumb,
       ascendInfo: () => JSON.parse(P.ascend_info()), angels: () => JSON.parse(P.angels()), godInfo: () => JSON.parse(P.god_info()), zenoInfo: () => JSON.parse(P.zeno_info()),
-      learn: id => { P.learn(id); deliver(); },
-      respec: () => { P.respec(); deliver(); },
-      learnAngel: id => { P.learn_angel(id); deliver(); },
-      autoNext: () => P.auto_next(),
-      pick: id => P.pick_hero(id),
-      kaioken: () => { P.kaioken(); deliver(); },
-      itx: () => { P.itx(); deliver(); },
-      train: () => { P.train(); deliver(); },
-      start: () => { const now = Date.now(); P.start(new Date(now).toDateString(), now); deliver(); save(); },
+      learn: id => { due(); P.learn(id); deliver(); },
+      respec: () => { due(); P.respec(); deliver(); },
+      learnAngel: id => { due(); P.learn_angel(id); deliver(); },
+      autoNext: () => { due(); P.auto_next(); },
+      pick: id => { due(); return P.pick_hero(id); },
+      kaioken: () => { due(); P.kaioken(); deliver(); },
+      itx: () => { due(); P.itx(); deliver(); },
+      train: () => { due(); P.train(); deliver(); },
+      start: () => { const now = Date.now(); P.timeouts_now(now); P.start(new Date(now).toDateString(), now); deliver(); save(); },
       resize: () => { P.resize(st.W, st.H, st.scale); img = null; },
     };
   };

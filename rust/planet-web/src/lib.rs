@@ -199,6 +199,11 @@ impl Planet {
         self.0.game.preview(hash);
     }
 
+    /// The timeouts due by `now_ms` (`Date.now()`): call it before handing the game an input.
+    pub fn timeouts_now(&mut self, now_ms: f64) {
+        self.0.timeouts_now(now_ms);
+    }
+
     /// `frame(t, dt)` as page.html calls it, drawn with planet-render (call `draw_with_rust` first); `pixels_ptr` then
     /// holds the frame.
     pub fn frame_drawn(&mut self, t: f64, dt: f64, now_ms: f64) {

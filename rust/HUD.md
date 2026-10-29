@@ -33,6 +33,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `preview(hash)` | game.js's preview hooks, from `location.hash` on dev hosts. Call it before `start` |
 | `draw_with_rust(widget, clouds, amount)` | draw with planet-render from now on, into a framebuffer of the game's size; the drawing shares the game's random numbers, as game.js does |
 | `frame_drawn(t, dt, now_ms)` | `frame(t, dt)` as page.html calls it, every animation frame with its own `t` and `dt`, drawn. The timeouts due by `t` run first, as a page's `setTimeout`s fire between frames |
+| `timeouts_now(now_ms)` | the timeouts due by `Date.now()`, counted from the last `frame_drawn`. The shim calls it before every input, since a page's `setTimeout`s fire in time order with its events |
 | `pixels_ptr() → ptr` | where the frame's RGBA bytes are in the module's memory (`w`×`h`×4), for an `ImageData` over them |
 | `step(elapsed_s, now_ms) → steps`, `step_drawn(elapsed_s, now_ms) → steps` | fixed 1/30 s steps, at most 8 a call, undrawn or drawn. For the native widget (stage 5) |
 | `frame() → message` | see below; call it after stepping and after every command |

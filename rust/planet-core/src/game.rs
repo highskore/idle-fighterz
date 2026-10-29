@@ -1342,8 +1342,9 @@ impl Game {
             self.tl.later.push((0.8, crate::timeline::Later::Summon));
         }
         if has("itx") {
-            // (and opens the picker 1.5s in: a cue only)
+            // and opens the picker 1.5s in, or once playing: `setTimeout(open, 1500)`
             lv(self, Upg::Itx, 3);
+            self.tl.later.push((1.5, crate::timeline::Later::ItxPicker));
             self.s.ach.insert("yardrat");
             self.s.been = crate::data::ITX_WORLDS.iter().fold(0, |m, w| m | 1 << w);
         }

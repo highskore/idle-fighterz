@@ -476,6 +476,8 @@ pub enum Later {
     SnakeTip,
     /// the `#buffs` preview hook: two minutes of every timed buff
     Buffs,
+    /// the `#itx` preview hook: the transmission picker opens, once playing (it asks again every 0.5s)
+    ItxPicker,
 }
 
 /// The timeline's runtime state: `mount()`'s closure variables that frame() reads and writes.
@@ -780,7 +782,7 @@ impl Game {
     pub(crate) fn run_later(&mut self, by: f64) {
         self.tl.later.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
         while !self.tl.later.is_empty() && self.tl.later[0].0 <= by {
-            let (_, what) = self.tl.later.remove(0);
+            let (at, what) = self.tl.later.remove(0);
             match what {
                 Later::Summon => self.summon(),
                 Later::Event(s, ms) => self.event_ms(s, ms),
@@ -795,6 +797,14 @@ impl Game {
                     self.riding = 120.0;
                     for k in [WishBuff::Fast, WishBuff::Taps, WishBuff::Idle, WishBuff::Laps, WishBuff::Combo] {
                         self.wish_buff[k as usize] = u;
+                    }
+                }
+                Later::ItxPicker => {
+                    if self.playing {
+                        self.itx_open();
+                    } else {
+                        // from when this one was due, as a setTimeout set inside a setTimeout counts
+                        self.tl.later.push((at + 0.5, Later::ItxPicker));
                     }
                 }
                 Later::NextWish => {
