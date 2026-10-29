@@ -424,6 +424,10 @@ pub struct Snake {
     pub spin: f64,
     pub hx: f64,
     pub hy: f64,
+    /// his height on screen as last drawn: the streak tag sits over it
+    pub sh: f64,
+    /// ki blasts at lost souls, (x, y, t0); the renderer draws and drops them
+    pub shots: Vec<(f64, f64, f64)>,
 }
 
 #[derive(Clone, Debug)]
@@ -2301,7 +2305,12 @@ impl Game {
             spin: 0.0,
             hx: w / 2.0,
             hy: h / 2.0,
+            sh: 28.0,
+            shots: Vec::new(),
         });
+        if self.snake_nimbus {
+            self.riding = 30.0;
+        }
         self.after(2.8, Later::SnakeTip);
     }
 
@@ -2312,9 +2321,13 @@ impl Game {
 
     /// `blastGhost`: a lost soul sent back down to HFIL.
     pub(crate) fn blast_ghost(&mut self, gi: usize) {
+        let t = self.t;
         let snk = self.tl.snk.as_mut().unwrap();
         snk.ghosts[gi].dead = true;
         snk.blasted += 1;
+        if let Some((x, y)) = snk.ghosts[gi].sx {
+            snk.shots.push((x, y, t));
+        }
         self.s.souls += 1;
         if self.s.souls >= 10 {
             self.ach("souls10");

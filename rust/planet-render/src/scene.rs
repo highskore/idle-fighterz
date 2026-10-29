@@ -302,7 +302,7 @@ impl Scene {
     }
 
     /// world.js `particleSystem().step`: age, move and draw every particle, newest first.
-    fn step_fx(fx: &mut Vec<Particle>, fb: &mut Framebuffer, dt: f64) {
+    pub(crate) fn step_fx(fx: &mut Vec<Particle>, fb: &mut Framebuffer, dt: f64) {
         let mut i = fx.len();
         while i > 0 {
             i -= 1;
@@ -379,6 +379,11 @@ impl Scene {
         let tones = self.tones.take().unwrap();
         let world = g.s.world;
         let mut c = Ctx { fb, w: g.cam.w, h: g.cam.h, cx: g.cam.cx, cy: g.cam.cy, r: g.cam.r, m: g.cam.m, bob: g.cam.bob, t, l: light_dir(), world, tones: &tones };
+        if world == 3 && g.tl.snk.is_some() {
+            crate::snake::draw(&mut c, g, view, dt);
+            self.tones = Some(tones);
+            return;
+        }
         let sea = sea_pal(&tones.sea, g.tl.night_k);
         if world == 9 {
             crate::top::draw_void(&mut c, g, &mut self.void, view.bare);
@@ -840,7 +845,7 @@ impl Scene {
     }
 }
 
-fn hero_id(g: &Game) -> &'static str {
+pub(crate) fn hero_id(g: &Game) -> &'static str {
     use planet_core::data::Hero;
     match g.s.hero {
         Hero::Vegeta => "vegeta",

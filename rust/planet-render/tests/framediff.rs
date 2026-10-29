@@ -49,7 +49,15 @@ fn cases() -> Vec<Case> {
         c("#yardrat", DESK, 400, true),
         c("#top", DESK, 60, true),
         c("#top", PHONE, 60, true),
-        c("#snake", DESK, 400, false),
+        c("#snake", DESK, 400, true),
+        c("#snake", PHONE, 400, true),
+        Case { draw: 4, ..c("#snake", DESK, 900, true) },
+        c("#snake-nimbus", DESK, 300, true),
+        c("#snake", DESK, 1770, true),
+        c("#snake", DESK, 1810, true),
+        c("#snake", DESK, 1868, true),
+        c("#snake", DESK, 1900, true),
+        c("#snake", PHONE, 1850, true),
         c("#form1", DESK, 120, true),
         c("#form3", DESK, 120, true),
         c("#form7", DESK, 120, true),
@@ -114,6 +122,8 @@ fn cases() -> Vec<Case> {
     v.push(Case { widget: Some(Some(('c', 3))), ..c("#top", (800, 600), 60, true) });
     v.push(Case { widget: Some(Some(('a', 2))), ..c("#raid", (800, 600), 300, true) });
     v.push(Case { widget: Some(Some(('e', 2))), ..c("#westcity", (1040, 600), 400, true) });
+    v.push(Case { widget: Some(Some(('c', 2))), ..c("#snake", (800, 600), 400, true) });
+    v.push(Case { widget: Some(None), ..c("#snake", (500, 400), 400, true) });
     v
 }
 
