@@ -111,11 +111,22 @@ pub fn h2(x: f64, y: f64) -> f64 {
 }
 
 /// JS ToInt32 (`x | 0`).
+#[inline]
 pub fn to_int32(x: f64) -> i32 {
+    // below 2^63 the truncation fits an i64, whose low 32 bits are the answer (no fmod, which wasm has to call)
+    if x.abs() < 9223372036854775808.0 {
+        return x as i64 as i32;
+    }
     if !x.is_finite() {
         return 0;
     }
     (x.trunc().rem_euclid(4294967296.0) as u64 as u32) as i32
+}
+
+/// `x % 2` without wasm's `fmod` call: exact for every double (x / 2 is exact wherever it decides anything)
+#[inline]
+pub fn rem2(x: f64) -> f64 {
+    (x - 2.0 * (x * 0.5).trunc()).copysign(x)
 }
 
 fn js_round(x: f64) -> f64 {
@@ -137,6 +148,47 @@ mod tests {
         assert_eq!(fb.buf[3 * 4 + 1], 0xff7f007f);
         fb.px(0.0, 0.0, 0x00ff00, 0.5);
         assert_eq!(fb.buf[0], pk(0x00ff00, 128));
+    }
+
+    #[test]
+    fn fast_paths_match_fmod() {
+        let slow = |x: f64| if x.is_finite() { (x.trunc().rem_euclid(4294967296.0) as u64 as u32) as i32 } else { 0 };
+        let mut s = 0x2545f4914f6cdd1du64;
+        let mut edge = vec![
+            0.0,
+            -0.0,
+            0.5,
+            -0.5,
+            1.0,
+            -1.0,
+            2.0,
+            -3.0,
+            2147483648.0,
+            -2147483649.0,
+            4294967296.0,
+            9.2e18,
+            -9.3e18,
+            1e300,
+            f64::MIN_POSITIVE,
+            5e-324,
+            -5e-324,
+        ];
+        edge.extend([f64::INFINITY, f64::NEG_INFINITY, f64::NAN]);
+        for i in 0..2_000_000u64 {
+            s ^= s << 13;
+            s ^= s >> 7;
+            s ^= s << 17;
+            let x = if (i as usize) < edge.len() {
+                edge[i as usize]
+            } else if i % 2 == 0 {
+                f64::from_bits(s)
+            } else {
+                (s >> 11) as f64 * if s & 1 == 0 { 1e-3 } else { -7.3 }
+            };
+            assert_eq!(to_int32(x), slow(x), "{x:e}");
+            let (a, b) = (rem2(x), x % 2.0);
+            assert!(a.to_bits() == b.to_bits() || (a.is_nan() && b.is_nan()), "{x:e}: {a:e} {b:e}");
+        }
     }
 
     #[test]

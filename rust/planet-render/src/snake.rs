@@ -11,7 +11,7 @@ use planet_core::Game;
 
 use crate::scene::{hash, text, text_width, Ctx, Scene, View};
 use crate::top::vnoise;
-use crate::{bayer, h2, to_int32, Framebuffer};
+use crate::{bayer, h2, rem2, to_int32, Framebuffer};
 
 const END: f64 = 400.0;
 const BEAT: f64 = 3.6;
@@ -111,14 +111,14 @@ fn snc(o: f64, v: f64) -> u32 {
         return 0x9a5a14;
     }
     if au > 0.78 {
-        return if (v * 2.0).floor() % 2.0 != 0.0 { 0xffc84a } else { 0xfff6c0 };
+        return if rem2((v * 2.0).floor()) != 0.0 { 0xffc84a } else { 0xfff6c0 };
     }
     if au > 0.74 {
         return 0x9a5a14;
     }
     let row = v.floor();
     let fv = v - row;
-    let su = o * 4.2 + (row % 2.0) * 0.5;
+    let su = o * 4.2 + rem2(row) * 0.5;
     let fu = su - su.floor();
     let arc = pow((fu - 0.5) * 2.0, 2.0) * 0.55;
     if fv < arc + 0.12 && fv > arc {
@@ -655,20 +655,23 @@ fn road_3d(c: &mut Ctx, g: &mut Game, view: &View, rw: f64) -> f64 {
     let y_at = |z: f64| hz + 1.6 / z * (h - hz);
     let x_at = |s: f64, z: f64| w / 2.0 + (bend_s(s) - bend_s(cam) - sx) * rw * 1.6 / z;
     if !bare {
+        // a row's colours only change with the dither's column, so each row mixes its four once
         let mut y = 0.0;
         while y < hz + 4.0 {
+            let row: [u32; 4] = std::array::from_fn(|i| mix_c(SKY[0], SKY[1], y / hz + (bay(i as f64, y) - 0.5) * 0.1));
             let mut x = 0.0;
             while x < w {
-                px(c.fb, x, y, mix_c(SKY[0], SKY[1], y / hz + (bay(x, y) - 0.5) * 0.1));
+                px(c.fb, x, y, row[x as usize & 3]);
                 x += 1.0;
             }
             y += 1.0;
         }
         let mut y = hz + 3.0;
         while y < h {
+            let row: [u32; 4] = std::array::from_fn(|i| mix_c(FLOOR[0], FLOOR[1], (y - hz) / (h - hz) + (bay(i as f64, y) - 0.5) * 0.12));
             let mut x = 0.0;
             while x < w {
-                px(c.fb, x, y, mix_c(FLOOR[0], FLOOR[1], (y - hz) / (h - hz) + (bay(x, y) - 0.5) * 0.12));
+                px(c.fb, x, y, row[x as usize & 3]);
                 x += 1.0;
             }
             y += 1.0;
