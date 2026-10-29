@@ -9,6 +9,8 @@ html.widget, html.widget body { background: transparent !important; overflow: hi
 .widget .page, .widget:not(.windowed) #game { background: transparent !important; }
 .widget #game { position: absolute; inset: 0; width: auto; height: auto; min-height: 0; max-height: none; border: 0; border-radius: 0; transform: none !important; font-size: clamp(9px, 3.4vmin, 12px); }
 .widget { --chip: rgba(255,255,255,.94); --edge: rgba(0,0,0,.08); --shadow: 0 2px 10px rgba(0,0,0,.18); --b: clamp(22px, 8.6vmin, 30px); --tb: 10px; }
+/* Windows (html.win): its transparent web view loses ClearType and the secondary grey washes out; #636363 is 6:1 on white */
+.widget.win { --muted: #636363; }
 
 /* pieces every layout arranges */
 .w { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
