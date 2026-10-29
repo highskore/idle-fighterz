@@ -19,7 +19,7 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, cal
   }
   const M = Object.create(Math); M.random = rnd
   const noop = () => {}, handlers = {}, win = {}, events = [], cues = [], pending = [], errors = []
-  let wish = null, update = null, shop = null, side = null, night = false, world = null
+  let wish = null, itx = null, update = null, shop = null, side = null, night = false, world = null
   const rect = () => ({ left: 0, top: 0, width: W, height: H })
   const ctx2d = { createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }), putImageData: noop }
   const cv = { width: 0, height: 0, style: {}, addEventListener: (k, f) => { handlers[k] = f }, setPointerCapture: noop, releasePointerCapture: noop, getBoundingClientRect: rect, getContext: () => ctx2d }
@@ -45,23 +45,24 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, cal
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
   // what the HUD gets: toasts and the other one-shot calls (cues) with their time and arguments, the last ui.update /
   // ui.shop arguments, and beside each ui.update what game.js has set elsewhere by then: ui.night, ui.world and the body classes
-  const CUES = ['sfx', 'fx', 'bump', 'achieved', 'zeno', 'treeGift', 'wishDone', 'notify', 'itxPick']
+  const CUES = ['sfx', 'fx', 'bump', 'achieved', 'zeno', 'treeGift', 'wishDone', 'notify']
   const look = () => classes.has('jelly') ? 'jelly' : classes.has('earth') ? 'earth' : ''
   const ui = new Proxy({}, { get: (_, k) => k === 'event' ? ((s, ms = 2600) => events.push([T, s, ms])) : CUES.includes(k) ? ((...a) => cues.push([T, k, ...a.filter(x => typeof x !== 'function')]))
     : k === 'update' ? (u => { update = u; side = { night, world, shen: classes.has('shen'), look: look() } }) : k === 'night' ? (n => { night = n }) : k === 'world' ? (w => { world = w })
-    : k === 'shop' ? (s => { shop = s }) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick } }) : noop })
+    : k === 'shop' ? (s => { shop = s }) : k === 'onBuy' ? (f => { ctx.BUY = f }) : k === 'confirm' ? ((a, f) => f && f()) : k === 'wish' ? ((offer, pick) => { wish = { offer, pick }; cues.push([T, k, offer]) })
+    : k === 'itxPick' ? ((worlds, jump) => { itx = { worlds, jump }; cues.push([T, k, worlds]) }) : noop })
   const st = ctx.__makeStage({ querySelector: () => el }); st.resize(); st.calm = calm
   const game = ctx.__G.find(g => g.id === 'planet').mount(st, ui); game.start()
   const ev = s => ctx.__ev(s)
   const runPending = () => { pending.sort((a, b) => a[0] - b[0]); while (pending.length && pending[0][0] <= T) { const [, f] = pending.shift(); f() } }
   const step = (dt = 1 / 30) => { T += dt; st.t = T; game.frame(T, dt); runPending() }
   // the canvas's pointer listeners and the window's keydown, called the way a browser would (clientX/Y in CSS pixels)
-  const ptr = (k, x, y, pointerId = 1, button = 0) => handlers[k]({ clientX: x, clientY: y, pointerId, button })
+  const ptr = (k, x, y, pointerId = 1, button = 0, touch = false) => handlers[k]({ clientX: x, clientY: y, pointerId, button, pointerType: touch ? 'touch' : 'mouse' })
   const input = {
     toBuf: (x, y) => st.toBuf({ clientX: x, clientY: y }),
-    down: (x, y, id, button) => ptr('pointerdown', x, y, id, button), move: (x, y) => ptr('pointermove', x, y), up: (x, y) => ptr('pointerup', x, y), cancel: () => handlers.pointercancel({}),
+    down: (x, y, id, button, touch) => ptr('pointerdown', x, y, id, button, touch), move: (x, y, id) => ptr('pointermove', x, y, id), up: (x, y, id) => ptr('pointerup', x, y, id), cancel: () => handlers.pointercancel({}),
     key: k => win.keydown({ key: k, repeat: false, target: { closest: () => null, blur: noop }, preventDefault: noop }),
   }
-  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), input, store, get update() { return update }, get side() { return side }, get shop() { return shop }, today: new FakeDate().toDateString(), events, cues, errors, sites, get draws() { return draws }, get T() { return T } }
+  return { game, ev, step, buy: k => ctx.BUY(k), train: () => game.train(), offer: () => wish.offer, pick: k => wish.pick(k), get itx() { return itx }, input, store, get update() { return update }, get side() { return side }, get shop() { return shop }, today: new FakeDate().toDateString(), events, cues, errors, sites, get draws() { return draws }, get T() { return T } }
 }
 module.exports = mount
