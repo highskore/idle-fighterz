@@ -2132,6 +2132,8 @@ impl Game {
         self.flash_t = 1.0;
         self.cue(Cue::Sfx("boom"));
         self.shake = 1.0;
+        let r = self.cam.r * 1.1;
+        self.inp.blasts.push(crate::input::Blast { x, y, r, t0: self.t, kaio: false });
         for i in 0..self.tl.saibas.len() {
             if !self.tl.saibas[i].dead && self.tl.saibas[i].sx.is_some() {
                 self.kill_saiba(i);
@@ -2947,6 +2949,8 @@ impl Game {
             self.flash_t = 1.0;
             self.shake = 1.0;
             self.b.tired_until = self.b.tired_until.max(t + 8.0);
+            let (x, y, r) = (self.cam.cx, self.cam.cy - self.cam.r * 0.6, self.cam.r * 1.2);
+            self.inp.blasts.push(crate::input::Blast { x, y, r, t0: t, kaio: false });
             self.cue(Cue::Sfx("boom"));
             self.event_ms("SUPERNOVA — you're knocked flat. tired ×0.75 for 8s, and cooler leaves you for dead", 4000.0);
             let bm = self.tl.boss.as_mut().unwrap();
