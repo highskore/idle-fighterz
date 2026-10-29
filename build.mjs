@@ -2,12 +2,13 @@
 // Run: node build.mjs (highskore.com copies the result to its public/planet.html).
 // With --widget it builds the desktop widget's page instead, into dist/index.html under the directory it runs from
 // (the root of highskore/idle-fighterz-widget, which has this repo as its game/ submodule)
-// With --rust the planet runs on the Rust core (rust/planet-web, built first with sh rust/planet-web/build.sh) behind the
-// same HTML HUD; game.js stays in the page only to draw, in lockstep, until the Rust renderer lands (rust/HUD.md)
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+// The site page also carries the Rust engine behind ?rust (rust/planet-web): when its wasm build is there (sh
+// rust/planet-web/build.sh), dist/planet-rust.js and dist/planet-rust.wasm are written next to planet.html, which fetches
+// them only for ?rust. --rust fails the build without them
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { rustPlanet } from './rust/planet-web/assemble.mjs'
+import { rustEngine, rustLoader } from './rust/planet-web/assemble.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 // a Windows checkout may have CRLF sources: everything below matches on \n, and the output must not depend on it
@@ -16,13 +17,16 @@ const read = f => readFileSync(join(here, f), 'utf8').replace(/\r\n/g, '\n')
 const widget = process.argv.includes('--widget')
 const rust = process.argv.includes('--rust')
 if (rust && widget) throw new Error('--rust builds the site page; the widget gets the Rust core natively (stage 5)')
+const engine = widget ? null : rustEngine()
+if (rust && !engine) throw new Error('no wasm build in rust/planet-web/pkg: run sh rust/planet-web/build.sh first')
 // widget-only code is fenced by /*widget*/…/*/widget*/: the site build drops it whole, so its output is unchanged
 const fence = s => s.replace(/\/\*widget\*\/([\s\S]*?)\/\*\/widget\*\//g, widget ? '$1' : '')
 
 let page = fence(read('page.html'))
   .replace('__BAGEL__', () => read('bagel.typeface.json'))
   .replace('__WORLD__', () => fence(read('world.js')).replace('__PX__', () => readFileSync(join(here, 'wasm', 'px.wasm')).toString('base64')))
-  .replace('__PLANET__', () => rust ? rustPlanet(read, fence) : read('shenron.js') + fence(read('game.js')))
+  .replace('__PLANET__', () => read('shenron.js') + fence(read('game.js')) + (widget ? '' : '\n' + rustLoader(engine)))
+  .replace('__MAIN__', widget ? '(main => main())' : 'planetMain')
 page = widget ? await widgetPage(page) : await sitePage(page)
 const split = page.indexOf('</style>') + '</style>'.length
 
@@ -63,7 +67,13 @@ if (widget) {
 } else {
   mkdirSync(join(here, 'dist'), { recursive: true })
   writeFileSync(join(here, 'dist', 'planet.html'), head + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
-  console.log(rust ? 'dist/planet.html written (the Rust core)' : 'dist/planet.html written')
+  for (const f of ['planet-rust.js', 'planet-rust.wasm']) rmSync(join(here, 'dist', f), { force: true })
+  if (engine) {
+    const esbuild = await import('esbuild')
+    writeFileSync(join(here, 'dist', 'planet-rust.js'), (await esbuild.transform(engine.js, { loader: 'js', minify: true, charset: 'utf8', legalComments: 'none' })).code)
+    writeFileSync(join(here, 'dist', 'planet-rust.wasm'), engine.wasm)
+  }
+  console.log(engine ? 'dist/planet.html, planet-rust.js and planet-rust.wasm written' : 'dist/planet.html written (no wasm build in rust/planet-web/pkg: ?rust falls back to game.js)')
 }
 
 // the site page fetches nothing before it can play: the fonts are inlined, cut down to the characters the page has (hints

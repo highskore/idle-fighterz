@@ -5,7 +5,7 @@ One Rust codebase built two ways:
 - **Web:** compiled to WebAssembly. It draws into the existing canvas on highskore.com, and the HTML HUD stays.
 - **Widget:** compiled natively inside the Idle FighterZ widget (Tauri). It draws through wgpu (or softbuffer) instead of a web view's canvas.
 
-The JS game (`game.js`, `world.js`, `shenron.js`, `page.html`) stays the live game until the port reaches parity. `node build.mjs --rust` builds a page where planet-core runs the game behind the HTML HUD (stage 4, [HUD.md](HUD.md)); the default build doesn't touch `rust/`.
+The JS game (`game.js`, `world.js`, `shenron.js`, `page.html`) stays the live game until the port reaches parity. The site page carries both: with `?rust` in the URL it fetches the wasm build and planet-core runs the game, drawn by planet-render, behind the HTML HUD ([HUD.md](HUD.md)); without it nothing more is fetched and game.js runs. `npm run bench` compares the two in Chromium and WebKit ([test/bench/README.md](../test/bench/README.md)).
 
 ## Workspace
 
@@ -44,7 +44,7 @@ Dependencies only point downward: `web` and `native` depend on `render`, and `re
 ### planet-web
 
 - `Planet` is planet-core's `Bridge` exported with wasm-bindgen: inputs, the shop, tree and angels in; the HUD's per-frame delta message and the menus out, as JSON in game.js's shapes. [HUD.md](HUD.md) has the API; the native widget uses the same one over Tauri IPC.
-- page.html keeps its HUD, menus and shop. `rust/planet-web/shim.js` hands it a `game` object with game.js's API and maps the bridge's messages onto its `ui.*` callbacks. Until stage 1, game.js draws, running in lockstep with the Rust game (HUD.md); afterwards the shim's frame becomes `step()` and `putImageData` of `pixels()`.
+- page.html keeps its HUD, menus and shop. `rust/planet-web/shim.js` hands it a `game` object with game.js's API and maps the bridge's messages onto its `ui.*` callbacks. planet-render draws: the shim's frame is `frame_drawn(t, dt)` with page.html's own `t` and `dt`, then `putImageData` of the framebuffer, straight from the module's memory.
 - Saves stay in `localStorage` under the same `hs-power` key and JSON shape, so a returning player keeps their daily-bonus date.
 
 ### planet-native
@@ -80,10 +80,10 @@ Estimates are in focused working days for one person or agent, assuming the perf
 | 1. Renderer and world | **Mostly done** (below). Still to do: the time chamber's afterimage, the rest of the timeline's bursts as real particles. | 2–3 days remaining |
 | 2. Hero, laps and economy | **Done** (below), the save and the daily bonus with stage 4. | |
 | 3. Events and bosses | **Done**. The renderer-placed taps are diffed now (planet-render's drawn difftest). | |
-| 4. HUD bridge and menus | **Done** (below): input, the save, the HUD as data, wasm-bindgen exports, the shim, `build.mjs --rust`. Still to do: cut over (after stage 1). | |
+| 4. HUD bridge and menus | **Done** (below): input, the save, the HUD as data, wasm-bindgen exports, the shim, and the cut-over: `?rust` on the site page draws with planet-render. | |
 | 5. Native wgpu widget | `planet-native` on wgpu (softbuffer fallback) in Powerrr, the overlay web view for the HUD and menubar power. The widget's drawing (no backdrop, its five cloud shapes and amount, the rim) is in planet-render and diffed already. Pixel-diff the native build against the web one. | 2–4 days |
 
-That leaves about 5–8 days: the rest of stage 1, the cut-over (the `--rust` page drawing with planet-render through `Planet::draw_with_rust`, `step_drawn` and `pixels`, about a day), and stage 5.
+That leaves about 4–7 days: the rest of stage 1 and stage 5.
 
 ## Stage 1: what's ported
 
@@ -126,10 +126,10 @@ All of `frame()`'s timeline, in game.js order and with its short-circuits (a cou
 - The save (`save.rs`, `json.rs`): `JSON.stringify(S)` key for key, numbers as JS prints them; `load_json` keeps what game.js keeps; `start_on(today)` gives the daily bonus. Achievements carry their time (`epoch_ms`, from the host).
 - The HUD (`hud.rs`): the `ui.update` snapshot (`Hud`, rebuilt where game.js calls it), the buffs line and the run's standing, the shop rows, the dragon's offer, the menu, the angels (`learn_angel`, `auto_next`), the hero pick, the confirm boxes and the share card; toasts with their durations, game.js's delayed ones included; cues for `ui.sfx`, `ui.fx`, `bump`, `achieved`, `zeno`, `treeGift`, `wishDone` and the widget's `notify`.
 - The bridge (`bridge.rs`): the fixed-step owner the web and native hosts drive, with a delta message per frame. `spots.rs` takes screen spots from a renderer that isn't planet-render.
-- The web build (`planet-web`, `shim.js`, `assemble.mjs`, `build.sh`) and `node build.mjs --rust`; the default build is byte-identical. `node rust/planet-web/test.mjs` plays the shipped code with drawing on and checks the Rust game against the drawing every frame.
+- The web build (`planet-web`, `shim.js`, `loader.js`, `assemble.mjs`, `build.sh`): `?rust` on the site page. Every browser pixel baseline is played again with `?rust` and must match game.js's.
 
 ## Next
 
 1. Run the drawn difftest through every scenario (snake way is drawn now: `planet-render/src/snake.rs`).
 2. The time chamber's afterimage; the remaining bursts as real particles.
-3. The cut-over: the `--rust` page draws with planet-render instead of the game.js twin (HUD.md), then stage 5 on the bridge.
+3. Stage 5 on the bridge.

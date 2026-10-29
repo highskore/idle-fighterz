@@ -78,22 +78,22 @@ grep -n 'preview hook' game.js
 
 ## The Rust port
 
-`rust/` is a port of the game to Rust, built two ways: to WebAssembly for the site, and natively for the Idle FighterZ widget. The JS game stays the live game until the port reaches parity; the default build doesn't touch `rust/`. The plan and its stages are in [rust/PLAN.md](../rust/PLAN.md), and the HUD bridge in [rust/HUD.md](../rust/HUD.md).
+`rust/` is a port of the game to Rust, built two ways: to WebAssembly for the site, and natively for the Idle FighterZ widget. The JS game stays the default until the port reaches parity. The site page carries the Rust engine too: `?rust` (or `#rust`) in the URL fetches `planet-rust.js` and `planet-rust.wasm`, which `node build.mjs` writes next to `planet.html` when there's a wasm build, and runs the game on them, drawn by planet-render. Without the flag the page fetches nothing more. Deploying it means copying those two files beside `planet.html`. The plan and its stages are in [rust/PLAN.md](../rust/PLAN.md), and the HUD bridge in [rust/HUD.md](../rust/HUD.md).
 
 ```sh
 npm run wasm:rust    # sh rust/planet-web/build.sh
-npm run build:rust   # node build.mjs --rust: planet-core runs the game behind the HTML HUD
-npm run test:rust    # node rust/planet-web/test.mjs
+npm run build:rust   # node build.mjs --rust: the same build, failing without the wasm build
+npm run bench        # JS against ?rust in Chromium and WebKit, desktop and a throttled phone (test/bench/README.md)
 ```
 
 ## Tests
 
-CI (`.github/workflows/ci.yml`) runs on every pull request and push to main: both page builds; rustfmt, clippy and the JS-vs-Rust difftest; the wasm builds (`wasm/px.wasm` must match its source) and `rust/planet-web/test.mjs`; every preview hook in headless Chromium; and the pixel baselines.
+CI (`.github/workflows/ci.yml`) runs on every pull request and push to main: both page builds; rustfmt, clippy and the JS-vs-Rust difftest; the wasm builds (`wasm/px.wasm` must match its source) and every pixel baseline again with `?rust`; every preview hook in headless Chromium; and the pixel baselines.
 
 ```sh
 npm test             # both builds, rustfmt and the difftest
 npm run test:hooks   # every preview hook (each "// preview hook" in game.js) at 1280×800 and 390×844: no page or console errors
-npm run test:visual  # the pixel baselines in test/browser/__screenshots__ (Linux only: they're rendered on CI)
+npm run test:visual  # the pixel baselines in test/browser/__screenshots__ (Linux only: they're rendered on CI), with ?rust too when built
 npm run shots        # the same screenshots into shots/, without comparing
 ```
 

@@ -71,7 +71,7 @@ jobs:
 
   wasm:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -91,11 +91,18 @@ jobs:
         run: sh wasm/build.sh && git diff --exit-code --stat wasm/px.wasm
       - name: planet-web
         run: sh rust/planet-web/build.sh
-      - run: npm ci
-      - name: The --rust page
-        run: node build.mjs --rust
-      - name: The --rust page's game against the drawing
-        run: node rust/planet-web/test.mjs
+      - uses: ./.github/actions/browser
+      - name: The site page with its ?rust engine
+        run: node build.mjs --rust && ls -l dist
+      - name: Every pixel baseline again with ?rust
+        run: npx playwright test visual --grep @rust
+      - name: Upload expected, actual and diff
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rust-visual-diffs
+          path: test-results/
+          if-no-files-found: ignore
 
   hooks:
     runs-on: ubuntu-24.04

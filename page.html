@@ -435,7 +435,7 @@ __WIDGET_CSS__
 let BARE = WIDGET;   // the floating widget draws no sky or backdrops; its window mode (a setting) turns them back on
 /*/widget*/__WORLD__
 __PLANET__
-(() => {
+__MAIN__(() => {
   const $ = id => document.getElementById(id), root = document.documentElement;
 
   const SUF = ['', '', '', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
@@ -898,7 +898,7 @@ __PLANET__
       drawGlints(dt);
     };
   } catch (e) { logo.hidden = true; document.querySelector('.brand h1').removeAttribute('style'); } };
-  addEventListener('DOMContentLoaded', title, { once: true });
+  if (document.readyState === 'loading') addEventListener('DOMContentLoaded', title, { once: true }); else title();   // ?rust starts the page after its engine loads
 
   // the game draws at 30fps, except while the page scrolls: then every frame (up to 60fps), so the planet moves as
   // smoothly as the card sliding in. the pearl title is the heaviest thing on the page: at most 60fps (not 120 on
@@ -920,6 +920,6 @@ __PLANET__
   requestAnimationFrame(tick);
 /*widget*/
 __WIDGET_JS__
-/*/widget*/})();
+/*/widget*/});
 </script>
 <script id="three">__THREE__</script>

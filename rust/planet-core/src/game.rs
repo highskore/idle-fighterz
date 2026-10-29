@@ -1060,7 +1060,13 @@ impl Game {
 
     /// The `setTimeout`s due by now.
     pub fn timeouts(&mut self) {
-        self.run_later();
+        self.run_later(self.t);
+    }
+
+    /// The timeouts due by `t`, run while the game's clock still reads the last frame's time, as a page's setTimeouts
+    /// fire between animation frames.
+    pub fn timeouts_by(&mut self, t: f64) {
+        self.run_later(t);
     }
 
     /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S` (`world` also lays it out).
@@ -1108,7 +1114,7 @@ impl Game {
 impl Game {
     /// game.js's preview hooks (`#raid`, `#namek`, `#form12`, `#hero-goku`, ...), applied as `mount()` applies them,
     /// after the world is set up and before `start()`. Of those that wait on a `setTimeout`, `#shenron` is ported;
-    /// `#flight`, `#chamber`, `#buffs` and `#cvlink` aren't.
+    /// `#flight`, `#chamber` and `#cvlink` aren't.
     pub fn preview(&mut self, hash: &str) {
         use crate::data::{Hero, Upg, LADDER, MUI_FORM, VILLAINS};
         let has = |k: &str| hash.contains(k);
@@ -1324,6 +1330,10 @@ impl Game {
             self.cam.layout(9);
             self.tl.namek_until = 1e9;
         }
+        if has("buffs") {
+            // `setTimeout(() => { …a long buff line… }, 800)`
+            self.tl.later.push((0.8, crate::timeline::Later::Buffs));
+        }
         if let Some(i) = hash.find("shenron") {
             // `setTimeout(() => summon(look), 800)`
             if let Some(d) = hash[i + 7..].chars().next().and_then(|c| c.to_digit(10)) {
@@ -1332,8 +1342,9 @@ impl Game {
             self.tl.later.push((0.8, crate::timeline::Later::Summon));
         }
         if has("itx") {
-            // (and opens the picker 1.5s in: a cue only)
+            // and opens the picker 1.5s in, or once playing: `setTimeout(open, 1500)`
             lv(self, Upg::Itx, 3);
+            self.tl.later.push((1.5, crate::timeline::Later::ItxPicker));
             self.s.ach.insert("yardrat");
             self.s.been = crate::data::ITX_WORLDS.iter().fold(0, |m, w| m | 1 << w);
         }

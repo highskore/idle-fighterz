@@ -15,6 +15,8 @@ pub struct Bridge {
     sent_hud: Option<Hud>,
     sent_shop: String,
     sent_world: Option<u32>,
+    /// `Date.now()` at the last `frame_drawn`
+    drawn_at: Option<f64>,
 }
 
 impl Bridge {
@@ -22,7 +24,7 @@ impl Bridge {
     pub fn new(seed: u32, w: f64, h: f64, scale: f64) -> Self {
         let mut game = Game::new(seed);
         game.resize(w, h, scale);
-        Bridge { game, t: 0.0, bank: 0.0, sent_hud: None, sent_shop: String::new(), sent_world: None }
+        Bridge { game, t: 0.0, bank: 0.0, sent_hud: None, sent_shop: String::new(), sent_world: None, drawn_at: None }
     }
 
     /// Reads the stored save (`localStorage['hs-power']`): a new visit keeps its daily bonus date.
@@ -83,6 +85,26 @@ impl Bridge {
         draw(&mut self.game, DT);
         self.game.timeouts();
         self.t
+    }
+
+    /// game.js's `frame(t, dt)` as page.html calls it, once an animation frame with the page's own `t` and `dt`: the
+    /// timeouts due by `t` first (game.js's run on the wall clock; the slack absorbs float drift in the page's summed
+    /// `t`), then the frame's logic and `draw`.
+    pub fn frame_drawn(&mut self, t: f64, dt: f64, now_ms: f64, draw: &mut dyn FnMut(&mut crate::Game, f64)) {
+        self.game.timeouts_by(t + 1e-6);
+        self.t = t;
+        self.drawn_at = Some(now_ms);
+        self.clock(now_ms);
+        self.game.sim(t, dt);
+        draw(&mut self.game, dt);
+    }
+
+    /// The timeouts due by `now_ms` (`Date.now()`), counted from the last `frame_drawn`: a page calls it before
+    /// handing the game an input, since a page's setTimeouts fire in time order with its events, not only before frames.
+    pub fn timeouts_now(&mut self, now_ms: f64) {
+        if let Some(at) = self.drawn_at {
+            self.game.timeouts_by(self.t + (now_ms - at) / 1000.0 + 1e-6);
+        }
     }
 
     /// What the HUD needs since the last call, as `{hud?, shop?, world?, events, cues}`:

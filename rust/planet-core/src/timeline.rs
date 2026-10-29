@@ -474,6 +474,10 @@ pub enum Later {
     Event(String, f64),
     /// snake way's tip, if he's still on it
     SnakeTip,
+    /// the `#buffs` preview hook: two minutes of every timed buff
+    Buffs,
+    /// the `#itx` preview hook: the transmission picker opens, once playing (it asks again every 0.5s)
+    ItxPicker,
 }
 
 /// The timeline's runtime state: `mount()`'s closure variables that frame() reads and writes.
@@ -774,17 +778,33 @@ impl Game {
         self.tl.later.push((at, what));
     }
 
-    /// The `setTimeout`s due by now, in time order (the harness runs them after the frame).
-    pub(crate) fn run_later(&mut self) {
+    /// The `setTimeout`s due by `by`, in time order (the harness runs them after the frame, by its time).
+    pub(crate) fn run_later(&mut self, by: f64) {
         self.tl.later.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-        while !self.tl.later.is_empty() && self.tl.later[0].0 <= self.t {
-            let (_, what) = self.tl.later.remove(0);
+        while !self.tl.later.is_empty() && self.tl.later[0].0 <= by {
+            let (at, what) = self.tl.later.remove(0);
             match what {
                 Later::Summon => self.summon(),
                 Later::Event(s, ms) => self.event_ms(s, ms),
                 Later::SnakeTip => {
                     if self.playing && self.s.world == 3 && self.tl.snk.is_some() {
                         self.event_ms("he runs on his own — tap to hop for the golden orbs and to blast the lost souls", 4200.0);
+                    }
+                }
+                Later::Buffs => {
+                    let (u, b) = (self.t + 120.0, &mut self.b);
+                    (b.boost_until, b.senzu_until, b.car_until, b.roshi_until, b.laugh_until, b.calm_until) = (u, u, u, u, u, u);
+                    self.riding = 120.0;
+                    for k in [WishBuff::Fast, WishBuff::Taps, WishBuff::Idle, WishBuff::Laps, WishBuff::Combo] {
+                        self.wish_buff[k as usize] = u;
+                    }
+                }
+                Later::ItxPicker => {
+                    if self.playing {
+                        self.itx_open();
+                    } else {
+                        // from when this one was due, as a setTimeout set inside a setTimeout counts
+                        self.tl.later.push((at + 0.5, Later::ItxPicker));
                     }
                 }
                 Later::NextWish => {
