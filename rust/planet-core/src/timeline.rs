@@ -2281,14 +2281,18 @@ impl Game {
         let snk = self.tl.snk.as_mut().unwrap();
         snk.ghosts[gi].dead = true;
         snk.blasted += 1;
-        if let Some((x, y)) = snk.ghosts[gi].sx {
+        let at = snk.ghosts[gi].sx;
+        if let Some((x, y)) = at {
             snk.shots.push((x, y, t));
         }
         self.s.souls += 1;
         if self.s.souls >= 10 {
             self.ach("souls10");
         }
-        self.burst(18);
+        match at {
+            Some((x, y)) => self.burst_at(x, y, &[0xffffff, 0xdff4ff, 0xfff3a0], 18, 120.0),
+            None => self.burst(18),
+        }
         let n = 90f64.max(self.wrate() * 12.0);
         self.gain(n);
         self.cue(Cue::Sfx("beam"));
@@ -2398,7 +2402,8 @@ impl Game {
             self.event(format!("made it to king kai's planet at {}s! +{}", to_fixed(t - t0, 0), fmt_short(js_round(g))));
             self.victory();
             self.cue(Cue::Sfx("form"));
-            self.burst(36);
+            let (hx, hy) = self.tl.snk.as_ref().map_or((0.0, 0.0), |s| (s.hx, s.hy));
+            self.burst_at(hx, hy, &[0xffffff, 0xfff3a0, 0xffd23a, 0x8ad65a], 36, 160.0);
         }
     }
 

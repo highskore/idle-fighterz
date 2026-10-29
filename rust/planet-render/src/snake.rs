@@ -203,7 +203,20 @@ fn puff_row(fb: &mut Framebuffer, w: f64, h: f64, off: f64, y0: f64, r: f64, sd:
                 }
                 let l = if dy < 0.0 { -(dx * 0.5 + dy * 0.9) / rr } else { -0.5 - dy / (h - cy + 1.0) };
                 let v = l + bay(x, y) * 0.3;
-                px(fb, x, y, PUFF[if v > 0.65 { 3 } else if v > 0.2 { 2 } else if v > -0.4 { 1 } else { 0 }]);
+                px(
+                    fb,
+                    x,
+                    y,
+                    PUFF[if v > 0.65 {
+                        3
+                    } else if v > 0.2 {
+                        2
+                    } else if v > -0.4 {
+                        1
+                    } else {
+                        0
+                    }],
+                );
                 x += 1.0;
             }
             y += 1.0;
@@ -579,7 +592,18 @@ fn orb_dot(fb: &mut Framebuffer, x: f64, y: f64, r: f64) {
         while xx <= r {
             let q = hypot(&[xx, yy]) / r;
             if q <= 1.0 {
-                px(fb, x + xx, y + yy, if q < 0.45 { 0xffffff } else if q < 0.8 { 0xffe08a } else { 0xff9a2a });
+                px(
+                    fb,
+                    x + xx,
+                    y + yy,
+                    if q < 0.45 {
+                        0xffffff
+                    } else if q < 0.8 {
+                        0xffe08a
+                    } else {
+                        0xff9a2a
+                    },
+                );
             }
             xx += 1.0;
         }
@@ -738,7 +762,18 @@ fn road_3d(c: &mut Ctx, g: &mut Game, view: &View, rw: f64) -> f64 {
             let k = (t * (0.5 + hash(fi + gf * 9.0) * 0.5) + hash(fi * 3.7 + gf)) % 1.0;
             let ex = sg.x + (hash(fi * 1.3 + gf) - 0.5) * sg.w * 1.6 + sin(t * 3.0 + fi) * 2.0;
             let ey = sg.y1 - k * span;
-            px(c.fb, ex, ey, if k > 0.7 { 0xffe08a } else if i % 2 != 0 { 0xff8a30 } else { 0xffc040 });
+            px(
+                c.fb,
+                ex,
+                ey,
+                if k > 0.7 {
+                    0xffe08a
+                } else if i % 2 != 0 {
+                    0xff8a30
+                } else {
+                    0xffc040
+                },
+            );
             if sg.w > 40.0 {
                 px(c.fb, ex, ey - 1.0, 0xffd070);
             }
