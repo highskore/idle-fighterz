@@ -91,10 +91,10 @@ Brotli at quality 11, as a CDN serves it; raw and gzip -9 for reference.
 
 | | raw | gzip | brotli |
 |---|---|---|---|
-| `planet.html` (the default page, both engines' loader) | 984,057 | 342,767 | 297,949 |
+| `planet.html` (the default page, both engines' loader) | 984,057 | 342,767 | 297,807 |
 | `planet.html` before this branch | 983,604 | 342,507 | 297,570 |
-| `planet-rust.js` (wasm-bindgen glue and the shim, minified) | 11,343 | 3,699 | 3,319 |
-| `planet-rust.wasm` | 772,353 | 310,369 | 253,544 |
+| `planet-rust.js` (wasm-bindgen glue and the shim, minified) | 11,524 | 3,735 | 3,354 |
+| `planet-rust.wasm` | 772,677 | 310,470 | 253,866 |
 | the old `--rust` page (one file, wasm inlined as base64, game.js twin, not minified) | 2,446,423 | 832,422 | 679,197 |
 | the old wasm, release profile (opt-level 3, thin LTO, no wasm-opt) | 1,069,471 | 343,280 | 272,165 |
 | the old glue | 20,325 | 3,983 | 3,489 |
