@@ -551,10 +551,10 @@ pub struct Tl {
     /// `once()` texts already shown
     pub seen: Vec<&'static str>,
     /// instant transmission: when it's recharged, whether the trip under way was a jump (its end starts the cooldown),
-    /// and where and when the last jump left from (the renderer's shimmer and pose)
+    /// and the session time the last jumped trip got home (a natural trip waits `TRIP_WAIT × 0.7` after it)
     pub itx_ready: f64,
     pub itx_trip: bool,
-    pub blink_from: Option<(Spot, f64)>,
+    pub itx_back: f64,
     pub later: Vec<(f64, Later)>,
 }
 
@@ -653,7 +653,7 @@ impl Default for Tl {
             seen: Vec::new(),
             itx_ready: 0.0,
             itx_trip: false,
-            blink_from: None,
+            itx_back: f64::NEG_INFINITY,
             later: Vec::new(),
         }
     }
@@ -1319,8 +1319,10 @@ impl Game {
             self.event(msg);
         }
         let mark = if self.s.namek_at != 0.0 { self.s.namek_at } else { PLANET_EVERY };
+        // jumped trips don't move either; one that comes due during a jump waits until you've been home TRIP_WAIT × 0.7
+        let due = (self.s.run_best >= mark || session - self.tl.home_since > TRIP_WAIT * self.soon()) && session - self.tl.itx_back >= TRIP_WAIT * 0.7;
         if self.s.world == home
-            && (self.s.run_best >= mark || session - self.tl.home_since > TRIP_WAIT * self.soon() || self.tl.pod_wish != 0)
+            && (due || self.tl.pod_wish != 0)
             && self.tl.tour.is_none()
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
@@ -1329,8 +1331,7 @@ impl Game {
             self.tl.pod_wish = 0;
             self.s.namek_at = self.s.run_best * 4.0;
             self.s.trips += 1;
-            self.travel(TRIPS[((self.s.trips - 1) % 11) as usize]);
-            self.tl.namek_until = t + if self.s.world == 3 { 75.0 } else { 45.0 };
+            self.trip(TRIPS[((self.s.trips - 1) % 11) as usize]);
         }
         let w = self.s.world;
         if w != 0 && w != 9 && self.tl.namek_until == 0.0 {
@@ -1347,12 +1348,12 @@ impl Game {
                 }
                 self.travel(self.home());
                 self.tl.namek_until = 0.0;
-                self.tl.home_since = self.session;
                 if self.tl.itx_trip {
-                    self.tl.itx_trip = false;
-                    self.tl.itx_ready = t + self.itx_cd();
+                    self.itx_home();
+                } else {
+                    self.tl.home_since = self.session;
+                    self.s.namek_at = self.s.namek_at.max(self.s.run_best * 2.0);
                 }
-                self.s.namek_at = self.s.namek_at.max(self.s.run_best * 2.0);
             }
         }
     }
@@ -2097,15 +2098,19 @@ impl Game {
         }
     }
 
+    /// `trip(w)`: a visit, 45 seconds (snake way's run 75).
+    pub(crate) fn trip(&mut self, w: u32) {
+        self.travel(w);
+        self.tl.namek_until = self.t + if self.s.world == 3 { 75.0 } else { 45.0 };
+    }
+
     /// `travel(w)`: off to another world (or home).
     pub(crate) fn travel(&mut self, w: u32) {
         if !self.playing {
             return;
         }
         self.s.world = w;
-        if w != 0 && w != 3 && w != 9 {
-            self.s.been |= 1 << w;
-        }
+        self.s.been |= 1 << w;
         self.cam.layout(w);
         self.inp.w2_pole = w == 10; // game.js's scenery() rebuild: korin's tower only under the lookout
         self.shake = 0.5;
@@ -2387,7 +2392,8 @@ impl Game {
         sh.phase = Phase::Wish;
         sh.phase_t = t;
         sh.offer = offer;
-        sh.offer_json = text;
+        sh.offer_json = text.clone();
+        self.cue(crate::hud::Cue::Wish(text));
     }
 
     /// Grants a wish by key (the HUD's pick, or the rarest of the three after 20s).

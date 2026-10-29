@@ -107,12 +107,24 @@ fn scenario(name: &str) {
                 "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 "summon" => g.summon(),
                 "pick" => g.pick(k),
-                "jump" => g.itx_jump(i["k"].as_u64().unwrap() as u32),
-                "down" => {
-                    g.pointer_down(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by"), i["id"].as_i64().unwrap_or(1) as i32, i["button"].as_i64().unwrap_or(0) as i32)
+                // a world from the last picker planet-core opened
+                "jump" => {
+                    let w = i["k"].as_u64().unwrap();
+                    let pending = g.cues.iter().rev().find_map(|c| match c {
+                        planet_core::hud::Cue::ItxPick(l) => Some(serde_json::from_str::<Value>(l).unwrap()),
+                        _ => None,
+                    });
+                    let last = pending.or_else(|| cues.iter().rev().find(|c| c.1[0] == "itxPick").map(|c| c.1[1].clone()));
+                    assert!(last.is_some_and(|l| l.as_array().unwrap().iter().any(|o| o["key"] == w)), "{name}: no picker with world {w} at frame {f}");
+                    g.itx_jump(w as u32)
                 }
-                "move" => g.pointer_move(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by")),
-                "up" => g.pointer_up(n(i, "bx"), n(i, "by")),
+                "down" => {
+                    let (id, button, touch) =
+                        (i["id"].as_i64().unwrap_or(1) as i32, i["button"].as_i64().unwrap_or(0) as i32, i["touch"].as_bool().unwrap_or(false));
+                    g.pointer_down(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by"), id, button, touch)
+                }
+                "move" => g.pointer_move(n(i, "x"), n(i, "y"), n(i, "bx"), n(i, "by"), i["id"].as_i64().unwrap_or(1) as i32),
+                "up" => g.pointer_up(n(i, "bx"), n(i, "by"), i["id"].as_i64().unwrap_or(1) as i32),
                 "cancel" => g.pointer_cancel(),
                 "key" => {
                     g.key(k);
@@ -424,6 +436,8 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         }),
         ("itxReady", n(tl.itx_ready)),
         ("itxTrip", b(tl.itx_trip)),
+        ("itxBack", Some(tl.itx_back).filter(|v| v.is_finite())),
+        ("two", g.inp.two.map(|w| w.moved[0] + w.moved[1] + if w.lift.is_some() { 100.0 } else { 0.0 })),
         ("been", n(s.been as f64)),
         ("nextStar", n(tl.next_star)),
         ("nextCloud", n(tl.next_cloud)),

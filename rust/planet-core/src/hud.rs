@@ -28,6 +28,8 @@ pub enum Cue {
     TreeGift(String),
     /// `ui.wishDone()`: the dragon chose (or left) without the player; the page closes the wish box
     WishDone,
+    /// `ui.wish(offer, pick)`: the dragon's offer, `[{key, label, what, tier}, ...]` (the page calls back `pick_wish`)
+    Wish(String),
     /// `ui.itxPick(worlds, jump)`: instant transmission's picker, `[{key, label}, ...]` (the page calls back `itx_jump`)
     ItxPick(String),
     /// `ui.notify(kind, arg)`: the widget's desktop notifications (a pod, a trip, a raid, the dragon); the site has none
@@ -47,6 +49,7 @@ impl Cue {
             Cue::TreeGift(s) => arr(["\"treeGift\"".into(), json::str(s)]),
             Cue::WishDone => "[\"wishDone\"]".into(),
             Cue::Notify(k, a) if a.is_empty() => arr(["\"notify\"".into(), json::str(k)]),
+            Cue::Wish(l) => arr(["\"wish\"".into(), l.clone()]),
             Cue::ItxPick(l) => arr(["\"itxPick\"".into(), l.clone()]),
             Cue::Notify(k, a) => arr(["\"notify\"".into(), json::str(k), json::str(a)]),
         }

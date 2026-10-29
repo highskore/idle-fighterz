@@ -14,7 +14,6 @@ pub struct Bridge {
     bank: f64,
     sent_hud: Option<Hud>,
     sent_shop: String,
-    sent_offer: f64,
     sent_world: Option<u32>,
 }
 
@@ -23,7 +22,7 @@ impl Bridge {
     pub fn new(seed: u32, w: f64, h: f64, scale: f64) -> Self {
         let mut game = Game::new(seed);
         game.resize(w, h, scale);
-        Bridge { game, t: 0.0, bank: 0.0, sent_hud: None, sent_shop: String::new(), sent_offer: f64::NAN, sent_world: None }
+        Bridge { game, t: 0.0, bank: 0.0, sent_hud: None, sent_shop: String::new(), sent_world: None }
     }
 
     /// Reads the stored save (`localStorage['hs-power']`): a new visit keeps its daily bonus date.
@@ -70,12 +69,12 @@ impl Bridge {
         self.t
     }
 
-    /// What the HUD needs since the last call, as `{hud?, shop?, wish?, world?, events, cues}`:
+    /// What the HUD needs since the last call, as `{hud?, shop?, world?, events, cues}`:
     /// - `hud`: `ui.update`'s argument (plus `night`, `world`, `shen`, `look`), when anything on it changed
     /// - `shop`: `ui.shop`'s last argument (`Game::shop`, the copy the difftest checks), when a row changed
-    /// - `wish`: `ui.wish`'s list, when the dragon makes an offer
     /// - `world`: the world, when it changed (the page's `ui.hell(false)` and `ui.world(w)`)
-    /// - `events`: `[[text, ms], ...]` for `ui.event`; `cues`: `[[call, arg?], ...]` for the other `ui` calls
+    /// - `events`: `[[text, ms], ...]` for `ui.event`; `cues`: `[[call, arg?], ...]` for the other `ui` calls, the
+    ///   dragon's offer (`wish`) and instant transmission's picker (`itxPick`) among them
     ///
     /// The HUD only comes while playing, as game.js only calls `ui.update` then.
     pub fn frame_json(&mut self) -> String {
@@ -89,14 +88,6 @@ impl Bridge {
             o = o.raw("shop", &g.shop);
             self.sent_shop.clone_from(&g.shop);
         }
-        match g.wish_offer() {
-            Some((at, list)) if at != self.sent_offer => {
-                o = o.raw("wish", list);
-                self.sent_offer = at;
-            }
-            None => self.sent_offer = f64::NAN,
-            _ => {}
-        }
         if self.sent_world != Some(g.s.world) {
             o = o.num("world", g.s.world as f64);
             self.sent_world = Some(g.s.world);
@@ -104,12 +95,15 @@ impl Bridge {
         o.raw("events", g.take_events_json()).raw("cues", g.take_cues_json()).end()
     }
 
-    /// Forces the next `frame_json` to carry the whole HUD and shop (a page that just (re)built its DOM).
+    /// Forces the next `frame_json` to carry the whole HUD and shop, and the dragon's offer while it waits (a page that
+    /// just (re)built its DOM).
     pub fn resend(&mut self) {
         self.sent_hud = None;
         self.sent_shop.clear();
         self.sent_world = None;
-        self.sent_offer = f64::NAN;
+        if let Some((_, list)) = self.game.wish_offer() {
+            self.game.cue(crate::hud::Cue::Wish(list));
+        }
     }
 
     /// A probe for a renderer running in lockstep: `{t, pl, draws, mult, passive}`.

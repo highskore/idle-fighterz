@@ -33,13 +33,13 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `step_one(now_ms) → t` | one fixed step. The web shim calls this, one step at a time, because the twin below steps in lockstep |
 | `frame() → message` | see below; call it after stepping and after every command |
 | `resize(w, h, scale)` | `resize()` (`layout()`) |
-| `pointer_down(x, y, bx, by)`, `pointer_move(x, y, bx, by)`, `pointer_up(bx, by)`, `pointer_cancel()` | the canvas's pointer listeners: tap, double tap (big bang), drag (spin, with inertia), hold (beam charge); on snake way the press acts |
+| `pointer_down(x, y, bx, by, id, button, touch)`, `pointer_move(x, y, bx, by, id)`, `pointer_up(bx, by, id)`, `pointer_cancel()` | the canvas's pointer listeners, with `pointerId`, `button` and `pointerType === 'touch'`: tap, double tap (big bang), drag (spin, with inertia), hold (beam charge); on snake way the press acts. Once instant transmission is owned, a right-click opens it, and so does a two-finger tap at home with nothing on (two touches landing within 0.12 s and lifting within 0.25 s, unmoved) |
 | `key(k) → bool` | the window's `keydown`, `k` = `e.key.toLowerCase()`; true: call `preventDefault`. The page filters repeats, modifiers and typing in fields first |
-| `train()`, `kaioken()` | the train tab, the kaioken button |
+| `train()`, `kaioken()`, `itx()` | the train tab, the kaioken button, the transmission button |
 | `buy(key) → bool` | `ui.onBuy`'s callback: shop rows, `ascend`, `godki`, `zeno` |
 | `learn(id)`, `respec()` | the training tree |
 | `learn_angel(id)`, `auto_next()` | the angels' tab |
-| `pick_wish(key)` | the wish box's callback |
+| `pick_wish(key)`, `itx_jump(w)` | the wish box's and the transmission picker's callbacks |
 | `pick_hero(id) → bool` | the characters tab |
 | `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures (see stage 5) |
 | `save() → text` | what to store under `hs-power`: `JSON.stringify(S)`, key for key |
@@ -51,7 +51,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 `frame()` returns only what changed since the last call:
 
 ```json
-{ "hud": {...}, "shop": {...}, "wish": [...], "world": 3, "events": [["text", 2600]], "cues": [["sfx", "tap"], ["bump"]] }
+{ "hud": {...}, "shop": {...}, "world": 3, "events": [["text", 2600]], "cues": [["sfx", "tap"], ["bump"]] }
 ```
 
 - `hud`, while playing, when anything on it has changed. This is `ui.update`'s argument: `goal {text, p, n}`,
@@ -65,14 +65,16 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 - `shop`, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, what, can, open, special}}` in shop
   order. It's `Game::shop`, rebuilt wherever game.js calls `syncShop` (the HUD point of a frame, mounting, `start`, buys,
   the tree and the angels), so it can come before play starts, as game.js's does.
-- `wish`: `ui.wish`'s list, `[{key, label, what, tier}]`, once for each offer the dragon makes. The words are fixed
-  when the offer is made, as in game.js. The callback is `pick_wish(key)`.
 - `world`: the world, when it changed. The page calls `ui.hell(false)` and then `ui.world(w)`.
 - `events`: toasts for `ui.event(text, ms)`, oldest first. They include game.js's delayed ones (achievements 0.9 s
   later, the daily bonus, mr. satan, a universe cleared), which planet-core schedules on simulated time.
 - `cues`: the other one-shot `ui` calls, as `[name, ...args]`: `sfx(kind)`, `fx(kind)` and `fx('form', i)`, `bump`,
   `achieved`, `zeno`, `treeGift(text)`, `wishDone`, and `notify(kind, arg)` (the widget's desktop notifications for a
-  pod, a trip, a raid and the dragon; the site has no `ui.notify`, so the shim skips it).
+  pod, a trip, a raid and the dragon; the site has no `ui.notify`, so the shim skips it). Two hand the page a list to
+  pick from, and the page calls back: `wish(list)`, the dragon's offer `[{key, label, what, tier}]`, once for each
+  offer (its words fixed when it's made, as in game.js), calls back `pick_wish(key)`; `itxPick(list)`, instant
+  transmission's worlds `[{key, label}]`, calls back `itx_jump(w)`. `resend()` sends the dragon's offer again while it
+  waits.
 
 Every cue game.js emits is ported, at the same point of the same call (90 sites). None is draw-only: the one site in
 game.js's drawing code, `explode`'s `boom` when a big bang lands, runs in the block both sides hoist out of the drawing.

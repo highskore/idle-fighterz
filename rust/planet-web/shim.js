@@ -79,28 +79,30 @@ __TWIN__
     const both = (rust, js) => { rust(); TWIN.run(js); };
 
     // planet-core's messages, onto page.html's ui
-    let night = false, shen = false, look = '';
+    let night = false, shen = false, look = '', itxOwn = false;
+    // the calls that hand the page a callback: what picking does, on both sides
+    const back = { wish: k => both(() => P.pick_wish(k), () => twinPick && twinPick(k)), itxPick: w => both(() => P.itx_jump(w), () => twinJump && twinJump(w)) };
     const deliver = () => {
       const m = JSON.parse(P.frame());
       if ('world' in m) { ui.hell && ui.hell(false); ui.world && ui.world(m.world); }
       if (m.hud) {
-        ui.update(m.hud);
+        ui.update(m.hud); itxOwn = m.hud.itx.own;
         if (m.hud.night !== night) { night = m.hud.night; ui.night && ui.night(night); }
         if (m.hud.shen !== shen) document.body.classList.toggle('shen', shen = m.hud.shen);
         if (m.hud.look !== look) { document.body.classList.remove('jelly', 'earth'); look = m.hud.look; if (look) document.body.classList.add(look); }
       }
       if (m.shop) ui.shop(m.shop);
       for (const [text, ms] of m.events) ui.event(text, ms);
-      for (const [call, ...args] of m.cues) if (call === 'itxPick') ui.itxPick(args[0], w => { both(() => P.itx_jump(w), () => twinJump && twinJump(w)); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
-      if (m.wish) ui.wish(m.wish, k => { both(() => P.pick_wish(k), () => twinPick && twinPick(k)); deliver(); });
+      for (const [call, ...args] of m.cues) if (back[call]) ui[call](args[0], v => { back[call](v); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
     };
     ui.onBuy(k => { both(() => P.buy(k), () => twinBuy && twinBuy(k)); deliver(); });
 
     // input: planet-core and the twin get every event at the same point of simulated time
-    cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); both(() => P.pointer_down(e.clientX, e.clientY, bx, by, e.pointerId, e.button), () => held.pointerdown(e)); deliver(); });
-    cv.addEventListener('pointermove', e => { const [bx, by] = st.toBuf(e); both(() => P.pointer_move(e.clientX, e.clientY, bx, by), () => held.pointermove(e)); });
-    cv.addEventListener('pointerup', e => { const [bx, by] = st.toBuf(e); both(() => P.pointer_up(bx, by), () => held.pointerup(e)); deliver(); });
+    cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); both(() => P.pointer_down(e.clientX, e.clientY, bx, by, e.pointerId, e.button, e.pointerType === 'touch'), () => held.pointerdown(e)); deliver(); });
+    cv.addEventListener('pointermove', e => { const [bx, by] = st.toBuf(e); both(() => P.pointer_move(e.clientX, e.clientY, bx, by, e.pointerId), () => held.pointermove(e)); });
+    cv.addEventListener('pointerup', e => { const [bx, by] = st.toBuf(e); both(() => P.pointer_up(bx, by, e.pointerId), () => held.pointerup(e)); deliver(); });
     cv.addEventListener('pointercancel', e => both(() => P.pointer_cancel(), () => held.pointercancel(e)));
+    cv.addEventListener('contextmenu', e => { if (itxOwn) e.preventDefault(); });   // right-click is instant transmission's once it's owned
     addEventListener('keydown', e => {
       if (!P.playing() || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, [contenteditable]')) return;
       both(() => P.key(e.key.toLowerCase()), () => TWIN.listeners.keydown && TWIN.listeners.keydown(e));

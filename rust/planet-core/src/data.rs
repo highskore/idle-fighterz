@@ -75,10 +75,10 @@ pub const SHOP: [ShopItem; 15] = [
     ShopItem { key: "itx", base: 5e6, k: 2.6, label: "instant transmission", what: "two-finger tap or right-click: jump to a world you've been" },
 ];
 
-/// Producer milestones: these levels double output, then every 50 past 100.
 /// Where instant transmission can jump: every world but home, snake way and the arena.
 pub const ITX_WORLDS: [u32; 10] = [1, 2, 4, 5, 6, 7, 8, 10, 11, 12];
 
+/// Producer milestones: these levels double output, then every 50 past 100.
 pub const MILES: [Upg; 4] = [Upg::Boots, Upg::Partner, Upg::House, Upg::Piccolo];
 pub const MS: [u32; 4] = [10, 25, 50, 100];
 
