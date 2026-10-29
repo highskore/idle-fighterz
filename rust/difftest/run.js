@@ -301,14 +301,17 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
     ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH],
     ['charging', charging], ['dragged', drag ? drag.moved : null], ['vrx', vrx], ['vry', vry], ['m4', M[4]], ['beam', beam ? beam.c : null], ['beamDx', beam ? beam.dx : null],
-    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['itxReady', itxReady], ['itxTrip', +itxTrip], ['been', S.been], ['nextStar', nextStar], ['nextCloud', nextCloud], ['sceneryHouse', __sceneryHouse]] })`
+    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['itxReady', itxReady], ['itxTrip', +itxTrip], ['been', S.been], ['nextStar', nextStar], ['nextCloud', nextCloud],
+    ['floats', floats.length], ['floatXY', floats.reduce((a, f) => a + f.x * 3 + f.y, 0)], ['floatLife', floats.reduce((a, f) => a + f.life, 0)],
+    ['floatS', floats.length ? [...floats[floats.length - 1].s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0) : null],
+    ['floatTone', floats.length ? (f => f.red ? 2 : f.gold ? 1 : 0)(floats[floats.length - 1]) : null], ['sceneryHouse', __sceneryHouse]] })`
 
 // name+draw: game.js draws every frame (planet-render's drawn difftest), so the screen spots it writes while drawing are
 // set, and the script also taps what only the drawing places (the visitors, the boss, the ginyu force)
 function run(name) {
   const drawn = name.endsWith('+draw'), base = drawn ? name.slice(0, -5) : name
   const sc = SCENARIOS[base]; if (!sc) throw new Error('no scenario ' + name)
-  const g = mount({ seed: sc.seed, saved: sc.saved, calm: !!sc.calm, noFloats: drawn })
+  const g = mount({ seed: sc.seed, saved: sc.saved, calm: !!sc.calm })
   // drawn, a hash of every frame game.js draws (FNV-1a over its pixels), for planet-render to match
   const hashes = [], fnv = b => { let h = 0x811c9dc5; for (let k = 0; k < b.length; k++) h = Math.imul(h ^ b[k], 16777619) >>> 0; return h }
   if (drawn) { g.ctx.__skip = false; g.ctx.BARE = false; DRAWN = true }
