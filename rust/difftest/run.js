@@ -137,7 +137,8 @@ const SCENARIOS = {
         const lv = g.ev('S.itx'), late = g.ev('st.t + ' + cd(lv)), due = g.ev('session - homeSince > TRIP_WAIT * soon() || S.runBest >= (S.namekAt || PLANET_EVERY)')
         if (g.ev('itxReady') !== late) fail(`cooldown at lv ${lv}: ${g.ev('itxReady - st.t')}s, not ${cd(lv)}s`)
         if (g.ev('homeSince') !== k.hs || g.ev('S.namekAt') !== k.na) fail('a jump moved the natural trips\' timer or power mark')
-        if (lv === 1) k.end1++; if (lv === 40) k.end40++; if (due) k.deferred++
+        // end1 and end40: below its 90s floor and at it (a capsule corp wish can add a level to either)
+        if (cd(lv) > 90) k.end1++; else k.end40++; if (due) k.deferred++
         k.back = g.ev('session')
       }
       if (trips !== k.trips && f > 30 * 12) { if (g.ev('session') - k.back < FLOOR) fail(`a natural trip ${g.ev('session') - k.back}s after a jump`) }
