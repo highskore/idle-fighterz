@@ -102,6 +102,9 @@ pub struct Game {
     pub flash_t: f64,
     /// whether the hero was in view the last time he was drawn (a full beam charge makes the screen tremble then)
     pub hero_seen: bool,
+    /// planet-render draws this game: a full charge's tremble then comes from the drawing, as in game.js, not from
+    /// `draw_step`'s guess from the last frame
+    pub drawn_here: bool,
     /// the capsule houses as game.js last built the scenery (`scenery()`): a wish's free levels don't rebuild it
     pub scenery_house: u32,
 }
@@ -146,6 +149,7 @@ impl Game {
             floats: Vec::new(),
             flash_t: 0.0,
             hero_seen: false,
+            drawn_here: false,
             scenery_house: 0,
         };
         g.sync_shop();
@@ -1011,7 +1015,7 @@ impl Game {
         self.run_later();
     }
 
-    /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S`.
+    /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S` (`world` also lays it out).
     pub fn debug_set(&mut self, key: &str, v: f64) {
         let s = &mut self.s;
         match key {
@@ -1043,6 +1047,11 @@ impl Game {
                     panic!("debug_set: unknown key {key}");
                 }
             }
+        }
+        if key == "world" {
+            // as the harness's poke does: the world's layout and scenery, without the trip
+            self.cam.layout(self.s.world);
+            self.scenery();
         }
     }
 }
@@ -1229,6 +1238,7 @@ impl Game {
             self.session = 111.0;
             self.tl.next_boss = 0.0;
             lv(self, Upg::Galick, 1);
+            self.tl.struggle_force = true;
         }
         if has("frieza") {
             self.session = 151.0;
