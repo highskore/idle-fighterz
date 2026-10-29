@@ -1,7 +1,7 @@
 # JS against Rust in the browser
 
 `npm run bench` builds the site page with its Rust engine (it needs `npm run wasm:rust` first) and plays every scene
-below on `planet.html` and `planet.html?rust`, headless, over a local server, in Chromium and WebKit, as a desktop
+below on `planet.html` (the Rust engine) and `planet.html?js` (game.js's fallback), headless, over a local server, in Chromium and WebKit, as a desktop
 (1280×800) and as a phone (390×844 at 3×, touch). In Chromium the phone also gets a 4× CPU slowdown
 (`Emulation.setCPUThrottlingRate`, `--throttle`); WebKit has no CPU throttling in Playwright, so its phone is only the
 viewport, the pixel ratio and touch. It writes `results.json` (ignored by git) and prints the tables.
@@ -23,12 +23,17 @@ What's measured:
   game at 30 fps.
 - **dropped %**: display frames missed, from the gaps between animation frames (a gap of n intervals drops n − 1).
 - **busy %**: the time spent in those callbacks per second of wall time.
-- **load**: `DOMContentLoaded`, and the first frame of the game on the canvas, which is when the page answers input
-  (with `?rust` the game mounts once the wasm is in, so its fetch and compile land in it).
+- **load**: `DOMContentLoaded`, and when the game mounts on its engine (`<html data-engine>` is set), which is when the
+  page can answer input: the engine's fetch and compile, or game.js's, land in it. (The results below, from before Rust
+  was the default, give the first frame on the canvas instead; on a phone the card starts off screen, and a game that
+  mounts after the page saw that draws nothing until it scrolls in.)
 - **idle CPU %**: Chromium's main-thread task time per second of wall time in the home scene (WebKit: busy %).
 - **memory**: Chromium's JS heap after a GC, and the Rust engine's wasm memory.
 
 ## Results
+
+The tables in this section are from before Rust was the default (`?rust` against the JS page); the next section has
+the default page's.
 
 Measured 2026-10-29 on an Apple M1 Pro (10 cores), Chromium 1248 (Playwright 1.64.1) and WebKit 2215 (Playwright
 1.56.1), with the wasm build this branch ships. The machine was busy with other work throughout (another agent's
@@ -152,6 +157,67 @@ targets), and the shim's two uses of it, the heroes' thumbnails in the menu and 
 from planet-core's `make_hero` instead. Painting the 184 baked sprites from a Rust port of their paint programs would
 trade 31 KB of data for the Rust of hundreds of lines of game.js's drawing code: likely 10 KB saved at most, so it
 isn't done here.
+
+## Rust as the default
+
+The site page runs the Rust engine and no longer inlines game.js and shenron.js; they are `planet-game.js`, fetched
+only where WebAssembly can't run (or with `?js`). Measured 2026-10-29 on the same M1 Pro, main's build and this one back
+to back, under `nice -n 19`, load average 10 to 17 on 10 cores (another agent's builds).
+
+**Size** (brotli 11):
+
+| file | main | Rust default |
+|---|---|---|
+| `planet.html` | 298,285 | 192,211 |
+| `planet-rust.js` | 3,354 | 3,460 |
+| `planet-rust.wasm` | 260,302 | 260,629 |
+| `planet-game.js` (game.js and shenron.js) | inlined | 110,382 |
+| the Rust page, all it fetches | 561,941 (`?rust`) | 456,300 |
+| the JS page, all it fetches | 298,285 | 302,593 (fallback, `?js`) |
+
+The page keeps world.js's top-level names unminified (planet-game.js reads them), and its fonts keep every character
+either engine shows: together about 4 KB of the 192.
+
+**Load** (`load.mjs`, Chromium phone, median of 5; main's build with `--before`). "Mounted" is the game on its
+engine; on a phone the card starts off screen, so a game that mounts after the page saw that draws its first frame only
+once it scrolls in ("—": none of the five did by then).
+
+| network, CPU | page | DCL ms | title visible ms | game mounted ms | first game frame ms |
+|---|---|---|---|---|---|
+| Fast 4G, 4× CPU | main, JS | 1678 | 1703 | 755 | 755 |
+| Fast 4G, 4× CPU | main, `?rust` | 1661 | 1686 | 810 | 1747 |
+| Fast 4G, 4× CPU | **Rust default** | 1289 | **1313** | 1381 | — |
+| Fast 4G, 4× CPU | Rust default, `?js` | 1307 | 1331 | 1993 | — |
+| no throttling | main, JS | 954 | 961 | 133 | 133 |
+| no throttling | main, `?rust` | 946 | 953 | 969 | 983 |
+| no throttling | **Rust default** | 817 | **824** | 840 | 854 (2 of 5) |
+| no throttling | Rust default, `?js` | 818 | 824 | 889 | 908 |
+
+The title shows 390 ms sooner at Fast 4G (130 ms unthrottled): the page is 106 KB smaller and has no game.js to parse.
+At Fast 4G on 4× CPU the engine mounts later than main's `?rust` did, because the title, now built sooner, takes the
+main thread first; everything is in by 1.4 s against main's 1.7 s for `?rust`'s first frame. game.js's own mount on
+main (755 ms) came from parsing it inline; as a fallback file it mounts at 2.0 s.
+
+**Frames** (`npm run bench`, ms per drawn frame, mean, main / this build, same engines). The Rust and JS code are
+unchanged apart from the two sprite exports, and Chromium's throttled phone, the steadiest profile, is flat within 2%
+in every scene. The desktop and WebKit rows moved together for both engines (late form and the multiverse slower on
+both, home and raid faster on both), which is the machine's load, not the build. No errors, no dropped frames.
+
+| browser | profile | scene | JS main / this | Rust main / this |
+|---|---|---|---|---|
+| chromium | phone 4× | home | 5.51 / 5.45 | 4.27 / 4.21 |
+| chromium | phone 4× | raid | 6.29 / 6.22 | 4.43 / 4.43 |
+| chromium | phone 4× | big bang | 6.34 / 6.32 | 4.48 / 4.40 |
+| chromium | phone 4× | struggle | 6.45 / 6.51 | 4.52 / 4.45 |
+| chromium | phone 4× | snake way | 10.64 / 10.50 | 4.77 / 4.72 |
+| chromium | phone 4× | shenron | 9.43 / 9.16 | 6.94 / 6.89 |
+| chromium | phone 4× | late form | 6.01 / 5.85 | 4.32 / 4.35 |
+| chromium | phone 4× | multiverse | 8.91 / 8.90 | 6.45 / 6.49 |
+| chromium | desktop | multiverse | 1.71 / 2.72 | 1.19 / 2.29 |
+| webkit | desktop | snake way | 6.60 / 6.68 | 4.02 / 2.02 |
+| webkit | phone | multiverse | 2.05 / 3.99 | 2.25 / 4.02 |
+
+Summed over all 32 scenes: JS 139.0 / 128.4 ms, Rust 97.0 / 91.3 ms.
 
 ## The wasm build's opt-level
 
