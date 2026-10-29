@@ -9,7 +9,7 @@ function patch(src, from, to) { if (!src.includes(from)) throw new Error('harnes
 // the wall clock the game reads (Date.now() stamps achievements, toDateString() decides the daily bonus): fixed, then simulated time
 const EPOCH = 1793188800000   // 2026-10-28 12:00 UTC
 
-function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, calm = false, hash = '', widget = false, px = false, noFloats = false } = {}) {
+function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, calm = false, hash = '', widget = false, px = false } = {}) {
   let rs = seed >>> 0 || 1, draws = 0
   const sites = new Map()
   const rnd = () => {
@@ -47,9 +47,6 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, cal
   src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'let __stomp = false, __heroSeen = false; if (!(S.world === 3 && snk)) { if (bang && Math.min(1, (t - bang.t0) / bang.dur) >= 1) { explode(bang.x1, bang.y1); bang = null; } if (apeUntil > t && Math.floor(t * 3.2) !== apeStep) { apeStep = Math.floor(t * 3.2); shake = Math.max(shake, .35); __stomp = true; } if (charging >= 2.4 && __heroSeen) shake = Math.max(shake, .06); if (capsule) { const c = capsule; if (c.y < c.land) { c.vy += 160 * dt; c.y = Math.min(c.land, c.y + c.vy * dt); } else c.y = c.land + Math.sin((t - c.t0) * 4) * 1.5; if (t - c.t0 > 8) openCapsule(); } } if (globalThis.__skip) return; st.clear(); zb.fill(-1e9); ib.fill(0);')
   src = patch(src, 'const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for', 'const step = Math.floor(t * 3.2); if (__stomp) { for')
   src = patch(src, 'const c = capsule; if (c.y < c.land) { c.vy += 160 * dt; c.y = Math.min(c.land, c.y + c.vy * dt); } else c.y = c.land + Math.sin((t - c.t0) * 4) * 1.5;\n        if (t - c.t0 > 8) openCapsule();\n        else {', 'const c = capsule; {')
-  // the floating gain numbers aren't drawn by planet-render yet (planet-core doesn't keep where gains land): the drawn
-  // difftest leaves them out of game.js's frames too, so every other pixel can be compared
-  if (noFloats) { const n = (src.match(/st\.text\(f\.s, [^;]*\);/g) || []).length; if (n !== 4) throw new Error('harness anchor missing: floats (' + n + ')'); src = src.replace(/st\.text\(f\.s, [^;]*\);/g, ';') }
   ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
   // what the HUD gets: toasts and the other one-shot calls (cues) with their time and arguments, the last ui.update /

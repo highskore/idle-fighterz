@@ -351,9 +351,12 @@ impl Game {
                 let d = self.wall_cap(dmg * 4.0, pts * 4.0);
                 let (bx, by) = (b.x, b.y - s.h / 2.0 * b.k);
                 self.hit_boss(d, bx, by);
+                let b = self.tl.boss.as_ref().unwrap();
+                let (bx, by) = (b.x, b.y - b.spr().h * b.k);
+                self.buff_pop(d, bx, by);
             }
         }
-        self.gain(pts);
+        self.gain_at(pts, kx, ky - 16.0, true);
         self.cue(crate::hud::Cue::Fx("buy"));
         for i in 0..self.tl.meteors.len() {
             let m = &self.tl.meteors[i];
@@ -363,10 +366,11 @@ impl Game {
             let (rx, ry) = (m.x - kx, m.y - ky);
             let (along, off) = (rx * dir[0] + ry * dir[1], (rx * dir[1] - ry * dir[0]).abs());
             if along > 0.0 && off < 6.0 + c * 3.0 {
+                let (mx, my) = (m.x, m.y);
                 self.tl.meteors[i].dead = true;
                 self.goal("meteor", 1.0, false);
                 let n = self.meteor_pay();
-                self.gain(n);
+                self.gain_at(n, mx, my - 6.0, true);
             }
         }
     }
@@ -423,7 +427,7 @@ impl Game {
         self.inp.blasts.push(Blast { x, y, r: r * if self.b.ape_until > self.t { 1.6 } else { 1.0 }, t0: self.t, kaio: self.b.kaio_until > self.t });
         self.shake = self.shake.max(0.45);
         let n = self.beam_pay() * (1.3 + 0.05 * bb.log2());
-        self.gain(n);
+        self.gain_at(n, x, y - 10.0, true);
         for i in 0..self.tl.saibas.len() {
             let sb = &self.tl.saibas[i];
             if !sb.dead && sb.sx.is_some_and(|(sx, sy)| hypot(&[sx - x, sy - 6.0 - y]) < r + 6.0) {
@@ -433,10 +437,11 @@ impl Game {
         for i in 0..self.tl.meteors.len() {
             let m = &self.tl.meteors[i];
             if !m.dead && m.delay <= 0.0 && hypot(&[m.x - x, m.y - y]) < r + 4.0 {
+                let (mx, my) = (m.x, m.y);
                 self.tl.meteors[i].dead = true;
                 self.goal("meteor", 1.0, false);
                 let n = self.meteor_pay();
-                self.gain(n);
+                self.gain_at(n, mx, my - 6.0, true);
             }
         }
         // rate() already adds kaioken and the ape; the bare hit times atk_buff lets them stack as on a beam
@@ -464,6 +469,7 @@ impl Game {
             if hypot(&[b.x - x, b.y - s.h / 2.0 * b.k - y]) < r + s.w / 2.0 * b.k {
                 let dmg = self.wall_cap(hit(self) * 12.0 * bb, self.rate().max(self.lap_value() * self.mult(false)) * 12.0 * bb);
                 self.hit_boss(dmg, x, y);
+                self.buff_pop(dmg, x, y - 10.0);
             }
         }
         if let Some(s) = self.tl.star.as_ref() {
