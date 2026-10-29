@@ -592,8 +592,8 @@ __PLANET__
   // a held enter or space doesn't repeat-click buttons (the train button, the wish box): one press, one tap
   addEventListener('keydown', e => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); }, true);
   // ascending wipes the run, so it asks first and says exactly what goes and what stays
-  const askAscend = () => { const a = game.ascendInfo(); $('ascGo').disabled = !a.ok; $('ascGo').textContent = a.ok ? 'ascend and train' : 'ascend at 1M power';
-    if (!a.ok) { $('ascLose').innerHTML = '<b>not yet</b>: ascending takes 1M power.'; $('ascKeep').innerHTML = `your ki seeds and talents live here: open <b>ki training</b> to spend them.`; $('ascBox').hidden = false; $('ascTree').focus(); return; }
+  const askAscend = () => { const a = game.ascendInfo(); $('ascGo').disabled = !a.ok; $('ascGo').textContent = a.ok ? 'ascend and train' : a.wait ? `ascend again in ${a.wait}s` : 'ascend at 1M power';
+    if (!a.ok) { $('ascLose').innerHTML = a.wait ? `<b>not yet</b>: your body needs ${a.wait}s more to settle after the last ascension.` : '<b>not yet</b>: ascending takes 1M power.'; $('ascKeep').innerHTML = `your ki seeds and talents live here: open <b>ki training</b> to spend them.`; $('ascBox').hidden = false; $('ascTree').focus(); return; }
     $('ascLose').innerHTML = `<b>you lose</b> all ${a.pl} power, every upgrade, and your form (back to base).`; $('ascKeep').innerHTML = `<b>you keep</b> ki seeds and the training tree, achievements, characters, wishes and saga progress. you get <b>+${a.seeds} ki seeds</b>: everything goes from ×${a.now} to <b>×${a.next}</b>${a.keep ? `, and head start keeps ${a.keep}% of your power` : ''}. <b>the training tree opens next</b> so you can spend them.`; $('ascBox').hidden = false; $('ascGo').focus(); };
   const closeAsc = () => { $('ascBox').hidden = true; };
   $('ascGo').addEventListener('click', () => { const got = game.ascendInfo().seeds; closeAsc(); buyFn && buyFn('ascend'); setTimeout(() => openTree(`+${got} ki seeds from ascending`), 650); });

@@ -21,11 +21,11 @@ const SCENARIOS = {
       if (f % 30 === 0) { buyAll(g, act, [...POLICY, 'tail']); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
     },
   },
-  // ultra instinct opens the multiverse: universe fights, then god ki (a second reset brings zeno) and the zeno erase
+  // ultra instinct opens the multiverse: universe fights, then god ki (after one erase, a fourth reset brings zeno back) and the zeno erase
   multiverse: {
     seed: 5, minutes: 14,
     script(g, f, act) {
-      if (f === 0) for (const [k, v] of [['pl', 5e19], ['best', 5e19], ['gravity', 60], ['wishes', 12], ['ascend', 400], ['seeds', 30], ['house', 40], ['partner', 60], ['piccolo', 25], ['boots', 70], ['scouter', 4], ['kaio', 3], ['galick', 5], ['armor', 12], ['gods', 1], ['zeno', 1], ['godTotal', 3], ['ustars', 2]]) act({ a: 'set', k, v })
+      if (f === 0) for (const [k, v] of [['pl', 5e19], ['best', 5e19], ['gravity', 60], ['wishes', 12], ['ascend', 400], ['seeds', 30], ['house', 40], ['partner', 60], ['piccolo', 25], ['boots', 70], ['scouter', 4], ['kaio', 3], ['galick', 5], ['armor', 12], ['gods', 3], ['zeno', 1], ['godTotal', 3], ['ustars', 2]]) act({ a: 'set', k, v })
       if (f % 4 === 0 && f % 600 < 400) act({ a: 'train' })
       if (f % 3 === 0) clickTargets(g, act)
       if (f % 30 === 0 && f >= 60) { buyAll(g, act); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
@@ -49,6 +49,39 @@ const SCENARIOS = {
       if (f % (30 * 50) === 30 * 25) act({ a: 'summon' })
       // every other offer is picked by hand (its last wish), the rest wait out the 20s auto-pick
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
+    },
+  },
+  // a taste of the next form is offered one form short of the top, and the top is reached while the offer waits: picking it
+  // by hand or leaving it to the 20s auto-pick must leave the top form alone and the game running
+  toptaste: {
+    seed: 3, minutes: 12,
+    script(g, f, act) {
+      const top = g.ev('FORMS.length - 1'), fail = m => { throw new Error('toptaste: ' + m) }, k = this.k || (this.k = { hand: 0, auto: 0, waiting: false })
+      if (f === 0) for (const [key, v] of [['pl', 1e5], ['best', 5e19], ['partner', 20], ['house', 10]]) act({ a: 'set', k: key, v })
+      if (g.ev('!shen') && g.ev('S.form') !== top - 1) act({ a: 'set', k: 'form', v: top - 1 })
+      if (f % 150 === 60 && g.ev('!shen')) act({ a: 'summon' })
+      const open = g.ev("!!shen && shen.phase === 'wish'"), has = open && g.offer().some(w => w.key === 'form')
+      if (has && !k.waiting) { k.waiting = true; act({ a: 'set', k: 'form', v: top }); if ((k.hand + k.auto) % 2 === 0) { act({ a: 'pick', k: 'form' }); k.hand++ } else k.auto++ }
+      if (!open) k.waiting = false
+      if (g.ev('S.form') > top || !g.ev('isFinite(mult()) && isFinite(rate())')) fail('the taste ran past the top form')
+      if (f === 30 * 60 * 12 - 1 && (k.hand < 1 || k.auto < 1)) fail('the form wish was not offered often enough: ' + JSON.stringify(k))
+    },
+  },
+  // the side upgrades past their old caps: crits past 100% chance, senzu past full uptime (the dragon's bag of senzu), beams
+  // and big bangs at high levels, tail training past lv 10; the shop words what each next level does
+  sides: {
+    seed: 7, minutes: 10,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 4e6], ['best', 4e6], ['scouter', 12], ['senzu', 6], ['galick', 7], ['bigbang', 4], ['tail', 14], ['partner', 20], ['house', 10], ['boots', 30], ['kaio', 1]]) act({ a: 'set', k, v })
+      const p = f % 120, [tx, ty] = target(g)
+      if (f % 4 === 0 && p < 60) act({ a: 'train' })
+      if (p === 60) press(g, act, 'down', tx * 3, ty * 3)
+      if (p === 100) press(g, act, 'up', tx * 3, ty * 3)
+      if (p === 105 || p === 108) { press(g, act, 'down', tx * 3, ty * 3); press(g, act, 'up', tx * 3, ty * 3) }
+      if (f % 3 === 0) clickTargets(g, act)
+      if (f % 30 === 0) { buyAll(g, act, [...POLICY, 'tail']); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
+      if (f % (30 * 40) === 30 * 5 && g.ev('!shen')) act({ a: 'summon' })
+      if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 2 && st.t - shen.phaseT < 2.04")) { const o = g.offer(), w = o.find(w => w.key === 'senzu') || o[o.length - 1]; act({ a: 'pick', k: w.key }) }
     },
   },
   // kami's lookout turns only round korin's tower; back home, a vertical drag tilts the planet again
@@ -235,7 +268,7 @@ const SCENARIOS = {
     },
   },
   ascend: {
-    seed: 3, minutes: 12,
+    seed: 3, minutes: 14,
     script(g, f, act) {
       if (f === 0) { act({ a: 'set', k: 'pl', v: 3e6 }); act({ a: 'set', k: 'best', v: 3e6 }) }
       if (f % 4 === 0 && f % 900 < 450) act({ a: 'train' })
@@ -244,6 +277,9 @@ const SCENARIOS = {
       if (f % 30 === 0 && f > 30 * 150 && f < 30 * 590) buyAll(g, act)
       if (f === 30 * 590) act({ a: 'set', k: 'pl', v: 5e7 })
       if (f === 30 * 600) act({ a: 'buy', k: 'ascend' })
+      // the second ascend: refused above (10 minutes haven't passed since the first), allowed once they have
+      if (f === 30 * 755) act({ a: 'set', k: 'pl', v: 5e7 })
+      if (f === 30 * 760) act({ a: 'buy', k: 'ascend' })
     },
   },
   late: {
