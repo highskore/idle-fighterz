@@ -1,3 +1,7 @@
+// FROZEN. This is the legacy JS engine: the site runs the Rust engine (rust/), and game.js is only its fallback where
+// WebAssembly can't run (and ?js), plus the widget's web-view build until it draws natively. New features go in rust/
+// (planet-core, planet-render), not here. CI fails a pull request that changes this file unless it has the legacy-js
+// label or a commit with a "Legacy-JS: <why>" trailer (.github/workflows/legacy-js.yml); see docs/DEVELOPING.md.
 /* Power planet: an idle game on a tiny 3D pixel planet.
    Everything solid (planet, dome huts, trees, bushes, orbs) is a sphere rasterised with a
    depth buffer and shaded in dithered palette tones, so it all turns correctly when you
