@@ -128,6 +128,12 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
                 "click" => g.click(i["x"].as_f64().unwrap(), i["y"].as_f64().unwrap()),
                 "summon" => g.summon(),
                 "pick" => g.pick(k),
+                "force" => match k {
+                    "struggle" => g.tl.struggle_force = i["v"].as_bool().unwrap(),
+                    "boss" => g.tl.next_boss = 0.0,
+                    "wish" => g.tl.wish_force = planet_core::data::WISHES.iter().position(|w| w.0 == i["v"].as_str().unwrap()),
+                    _ => panic!("unknown force {k}"),
+                },
                 // a world from the last picker planet-core opened
                 "jump" => {
                     let w = i["k"].as_u64().unwrap();

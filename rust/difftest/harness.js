@@ -49,6 +49,10 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, cal
   src = patch(src, 'st.clear(); zb.fill(-1e9); ib.fill(0);', 'let __stomp = false, __heroSeen = false; if (!(S.world === 3 && snk)) { if (bang && Math.min(1, (t - bang.t0) / bang.dur) >= 1) { explode(bang.x1, bang.y1); bang = null; } if (apeUntil > t && Math.floor(t * 3.2) !== apeStep) { apeStep = Math.floor(t * 3.2); shake = Math.max(shake, .35); __stomp = true; } if (charging >= 2.4 && __heroSeen) shake = Math.max(shake, .06); if (capsule) { const c = capsule; if (c.y < c.land) { c.vy += 160 * dt; c.y = Math.min(c.land, c.y + c.vy * dt); } else c.y = c.land + Math.sin((t - c.t0) * 4) * 1.5; if (t - c.t0 > 8) openCapsule(); } } if (globalThis.__skip) return; st.clear(); zb.fill(-1e9); ib.fill(0);')
   src = patch(src, 'const step = Math.floor(t * 3.2); if (step !== apeStep) { apeStep = step; shake = Math.max(shake, .35); for', 'const step = Math.floor(t * 3.2); if (__stomp) { for')
   src = patch(src, 'const c = capsule; if (c.y < c.land) { c.vy += 160 * dt; c.y = Math.min(c.land, c.y + c.vy * dt); } else c.y = c.land + Math.sin((t - c.t0) * 4) * 1.5;\n        if (t - c.t0 > 8) openCapsule();\n        else {', 'const c = capsule; {')
+  // the scripts' forced events (run.js's `force` input; planet-core's struggle_force and wish_force): every villain
+  // fires back, and the forced wish takes the third slot of each offer it's ok for. No random draw changes
+  src = patch(src, '/struggle/.test(HASH) || Math.random() < .6', '/struggle/.test(HASH) || globalThis.__struggle || Math.random() < .6')
+  src = patch(src, 'offer = S.krillinDead ? [...pool, KRILLIN_WISH] : pool;', 'offer = ((w => w && (!w.ok || w.ok()) && !pool.includes(w) && pool.splice(Math.min(pool.length, 2), 1, w))(globalThis.__wish && WISHES.find(w => w.key === globalThis.__wish)), S.krillinDead ? [...pool, KRILLIN_WISH] : pool);')
   ctx.__skip = true
   vm.runInContext(src + '\n;globalThis.__G = GAMES; globalThis.__makeStage = makeStage;', ctx)
   // what the HUD gets: toasts and the other one-shot calls (cues) with their time and arguments, the last ui.update /

@@ -541,8 +541,10 @@ pub struct Tl {
     pub next_movie: f64,
     pub last_movie: &'static str,
     pub movie_force: &'static str,
-    /// the `#struggle` preview hook: every villain fires back
+    /// the `#struggle` preview hook (and the difftests' forced struggles): every villain fires back
     pub struggle_force: bool,
+    /// the difftest harness's forced wish (an index into `WISHES`): the third of each offer while it's ok
+    pub wish_force: Option<usize>,
     pub movie_note: Option<(f64, String)>,
     pub next_nappa: f64,
     pub boss: Option<Boss>,
@@ -656,6 +658,7 @@ impl Default for Tl {
             last_movie: "",
             movie_force: "",
             struggle_force: false,
+            wish_force: None,
             movie_note: None,
             next_nappa: 0.0,
             boss: None,
@@ -2543,6 +2546,10 @@ impl Game {
         }
         pool.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         let mut offer: Vec<usize> = pool.iter().take(3).map(|p| p.0).collect();
+        if let Some(w) = self.tl.wish_force.filter(|&w| self.wish_ok(WISHES[w].0) && !offer.contains(&w)) {
+            offer.truncate(2);
+            offer.push(w);
+        }
         if self.s.krillin_dead {
             offer.push(KRILLIN_WISH);
         }

@@ -62,19 +62,22 @@ const SCENARIOS = {
     },
   },
   // a taste of the next form is offered one form short of the top, and the top is reached while the offer waits: picking it
-  // by hand or leaving it to the 20s auto-pick must leave the top form alone and the game running
+  // by hand or leaving it to the 20s auto-pick must leave the top form alone and the game running. The form wish is
+  // forced into every offer it's ok for, so both happen whatever the random stream (drawing spends draws of its own)
   toptaste: {
     seed: 3, minutes: 12,
     script(g, f, act) {
-      const top = g.ev('FORMS.length - 1'), fail = m => { throw new Error('toptaste: ' + m) }, k = this.k || (this.k = { hand: 0, auto: 0, waiting: false })
-      if (f === 0) for (const [key, v] of [['pl', 1e5], ['best', 5e19], ['partner', 20], ['house', 10]]) act({ a: 'set', k: key, v })
+      const top = g.ev('FORMS.length - 1'), fail = m => { throw new Error('toptaste: ' + m) }, k = this.k || (this.k = { hand: 0, left: 0, auto: 0, waiting: false })
+      if (f === 0) { for (const [key, v] of [['pl', 1e5], ['best', 5e19], ['partner', 20], ['house', 10]]) act({ a: 'set', k: key, v }); act({ a: 'force', k: 'wish', v: 'form' }) }
       if (g.ev('!shen') && g.ev('S.form') !== top - 1) act({ a: 'set', k: 'form', v: top - 1 })
       if (f % 150 === 60 && g.ev('!shen')) act({ a: 'summon' })
       const open = g.ev("!!shen && shen.phase === 'wish'"), has = open && g.offer().some(w => w.key === 'form')
-      if (has && !k.waiting) { k.waiting = true; act({ a: 'set', k: 'form', v: top }); if ((k.hand + k.auto) % 2 === 0) { act({ a: 'pick', k: 'form' }); k.hand++ } else k.auto++ }
+      if (has && !k.waiting) { k.waiting = true; act({ a: 'set', k: 'form', v: top }); if ((k.hand + k.left) % 2 === 0) { act({ a: 'pick', k: 'form' }); k.hand++ } else k.left++ }
       if (!open) k.waiting = false
       if (g.ev('S.form') > top || !g.ev('isFinite(mult()) && isFinite(rate())')) fail('the taste ran past the top form')
-      if (f === 30 * 60 * 12 - 1 && (k.hand < 1 || k.auto < 1)) fail('the form wish was not offered often enough: ' + JSON.stringify(k))
+      // auto: the 20s auto-pick granted the taste itself (it takes the rarest, so an epic beside it wins)
+      k.auto = g.events.filter(e => /no answer — the dragon grants the rarest: a taste of /.test(e[1])).length
+      if (f === 30 * 60 * 12 - 1) { if (k.hand < 1 || k.auto < 1) fail('the form wish was not picked by hand and by the auto-pick: ' + JSON.stringify(k)); console.error('toptaste: ' + JSON.stringify(k)) }
     },
   },
   // the side upgrades past their old caps: crits past 100% chance, senzu past full uptime (the dragon's bag of senzu), beams
@@ -118,7 +121,9 @@ const SCENARIOS = {
   // a tap); then it's bought and every second a gesture is tried (a two-thumb tap, a right-click, two thumbs too far
   // apart in time, two thumbs with one sliding) and a jump picked from the last picker, home or away, in a fight or not.
   // It checks that jumps land and leave the natural trips alone, the cooldown at lv 1 and its 90s floor at lv 40, the
-  // refusals, that a natural trip due during a jump waits 84s at home, and that two thumbs in a struggle stay taps
+  // refusals, that a natural trip due during a jump waits 84s at home, and that two thumbs in a struggle stay taps. While
+  // it doesn't jump, a villain is called and every villain fires back (forced) and isn't tapped before he does, so a
+  // struggle comes whatever the random stream (drawing spends draws of its own)
   itx: {
     seed: 13, minutes: 20,
     script(g, f, act) {
@@ -143,7 +148,9 @@ const SCENARIOS = {
       if (f === 30 * 10) act({ a: 'buy', k: 'itx' })
       if (f === 30 * 600) act({ a: 'set', k: 'itx', v: 40 })
       if (f % 300 < 150 && f % 6 === 0) act({ a: 'train' })
-      if (f % 3 === 0) clickTargets(g, act)
+      if (f === 30 * 700) { act({ a: 'force', k: 'struggle', v: true }); act({ a: 'force', k: 'boss' }) }
+      if (f === 30 * 880) act({ a: 'force', k: 'struggle', v: false })
+      if (f % 3 === 0 && !(f >= 30 * 700 && f < 30 * 880 && g.ev('!!boss && !boss.dead && !boss.struggled'))) clickTargets(g, act)
       if (f % 30 === 0 && f > 30 * 10) { buyAll(g, act, POLICY); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
       if (g.ev('S.itx > 0')) {
         // may: what itxCan() should say, written out here so a broken itxCan can't vouch for itself
@@ -362,6 +369,8 @@ function apply(g, i) {
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
+  // a forced event: 'struggle' on or off and 'wish' with the wish's key (as harness.js wires them), 'boss' raids now
+  else if (i.a === 'force') i.k === 'boss' ? g.ev('nextBoss = 0') : g.ctx['__' + i.k] = i.v
   // a world from the last picker game.js opened (the harness keeps its callback)
   else if (i.a === 'jump') { if (!g.itx || !g.itx.worlds.some(w => w.key === i.k)) throw new Error('no picker with world ' + i.k); g.itx.jump(i.k) }
   else if (i.a === 'down') g.input.down(i.x, i.y, i.id, i.button, i.touch)
