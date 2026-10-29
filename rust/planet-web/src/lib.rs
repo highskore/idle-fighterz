@@ -229,12 +229,26 @@ impl Planet {
         d.fb.rgba().as_ptr()
     }
 
-    /// `[hero, form, fused]`: which sprite the share card shows (game.js's `card().spr`).
-    pub fn look(&self) -> String {
-        let g = &self.0.game;
-        let hero = planet_core::data::CHARS.iter().find(|c| c.0 == g.s.hero).map_or("vegeta", |c| c.1);
-        format!("[\"{hero}\",{},{}]", g.s.form, g.b.fuse_until > g.t)
+    /// A hero's idle sprite, the characters tab's thumbnail (game.js's `HEROES[id].idle`), as `[w, h, ...col]` (`col`:
+    /// 0xRRGGBB a pixel, -1 for none); vegeta's for an unknown id.
+    pub fn hero_sprite(&self, id: &str) -> Vec<i32> {
+        sprite_px(&planet_core::sprite::hero(id).forms[0].idle)
     }
+
+    /// The sprite the share card shows, as `hero_sprite`: the hero's form, or fused (game.js's `card().spr`).
+    pub fn card_sprite(&self) -> Vec<i32> {
+        let g = &self.0.game;
+        let id = planet_core::data::CHARS.iter().find(|c| c.0 == g.s.hero).map_or("vegeta", |c| c.1);
+        let h = planet_core::sprite::hero(id);
+        sprite_px(if g.b.fuse_until > g.t { &h.fused.idle } else { &h.forms[g.s.form].idle })
+    }
+}
+
+fn sprite_px(s: &planet_core::sprite::Sprite) -> Vec<i32> {
+    let mut v = Vec::with_capacity(2 + s.col.len());
+    v.extend([s.w as i32, s.h as i32]);
+    v.extend_from_slice(&s.col);
+    v
 }
 
 /// The game plus the framebuffer planet-render draws into (stage 1); not exported yet.
@@ -299,5 +313,14 @@ mod tests {
         p.pointer_up(100.0, 66.0, 1);
         assert!(p.frame().contains("[\"sfx\",\"tap\"]"));
         assert!(p.save().contains("\"daily\":\"Wed Oct 28 2026\""));
+    }
+
+    #[test]
+    fn sprites_are_width_height_then_colours() {
+        let p = Planet::new(7, 200.0, 134.0, 3.0);
+        let idle = &planet_core::sprite::hero("goku").forms[0].idle;
+        let v = p.hero_sprite("goku");
+        assert_eq!((v[0] as usize, v[1] as usize, &v[2..]), (idle.w, idle.h, &idle.col[..]));
+        assert_eq!(p.card_sprite(), p.hero_sprite("vegeta"));
     }
 }
