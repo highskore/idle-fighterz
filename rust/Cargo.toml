@@ -11,3 +11,17 @@ repository = "https://github.com/highskore/idle-fighterz"
 [profile.release]
 opt-level = 3
 lto = "thin"
+
+# the web build (planet-web/build.sh): the site downloads it, so size first (then wasm-opt -Oz), except for the
+# per-pixel drawing, which pays for its bytes in frame time (test/bench/README.md)
+[profile.wasm]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = false
+strip = true
+
+[profile.wasm.package.planet-render]
+opt-level = 3

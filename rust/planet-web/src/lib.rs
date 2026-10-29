@@ -40,6 +40,13 @@ impl Planet {
         self.0.set_calm(calm);
     }
 
+    /// The page's `data-cx`: where across the canvas the planet's centre sits (game.js's `layout()` reads it).
+    pub fn set_cx(&mut self, fcx: f64) {
+        let g = &mut self.0.game;
+        g.cam.fcx = Some(fcx);
+        g.cam.layout(g.s.world);
+    }
+
     pub fn start(&mut self, today: &str, now_ms: f64) {
         self.0.start(today, now_ms);
     }
@@ -47,12 +54,6 @@ impl Planet {
     /// Advances by real elapsed seconds in fixed steps; returns how many ran.
     pub fn step(&mut self, elapsed: f64, now_ms: f64) -> u32 {
         self.0.step(elapsed, now_ms)
-    }
-
-    /// One fixed step; returns the new time. `now_ms` is `Date.now()`.
-    pub fn step_one(&mut self, now_ms: f64) -> f64 {
-        self.0.clock(now_ms);
-        self.0.step_one()
     }
 
     /// The delta message for the HUD (see `Bridge::frame_json`).
@@ -180,46 +181,54 @@ impl Planet {
         self.0.game.playing
     }
 
-    // ── drawing with planet-render (stage 1): replaces the lockstep game.js twin
+    // ── drawing with planet-render
 
     /// Draw the game with planet-render from now on, into a buffer of the game's size. `widget` is the floating
-    /// widget (no backdrop); `clouds` its cloud shape ('a'..'e', or empty) and `amount` (1-5). The drawing's random
-    /// numbers come from their own generator, so the game's stream stays what it is headless.
+    /// widget (no backdrop); `clouds` its cloud shape ('a'..'e', or empty) and `amount` (1-5). The drawing shares the
+    /// game's random numbers, as game.js does.
     pub fn draw_with_rust(&mut self, widget: bool, clouds: &str, amount: f64) {
         let c = &self.0.game.cam;
         let (w, h, scale) = (c.w as usize, c.h as usize, c.scale);
         self.0.game.set_view(c.w, c.h, widget);
-        let mut scene = planet_render::scene::Scene::new();
-        scene.own_rng = Some(planet_core::rng::Lcg::new(0x9e3779b9));
         let view = planet_render::scene::View { scale, bare: widget, clouds: clouds.chars().next(), cloud_amt: amount };
-        self.1 = Some(Drawn { scene, fb: Framebuffer::new(w, h), view });
+        self.1 = Some(Drawn { scene: planet_render::scene::Scene::new(), fb: Framebuffer::new(w, h), view });
     }
 
-    /// `step`, drawing every step with planet-render (call `draw_with_rust` first). Then `pixels` holds the frame.
+    /// game.js's preview hooks (`location.hash` on dev hosts), as `mount()` applies them: call it before `start`.
+    pub fn preview(&mut self, hash: &str) {
+        self.0.game.preview(hash);
+    }
+
+    /// `frame(t, dt)` as page.html calls it, drawn with planet-render (call `draw_with_rust` first); `pixels_ptr` then
+    /// holds the frame.
+    pub fn frame_drawn(&mut self, t: f64, dt: f64, now_ms: f64) {
+        match self.1.as_mut() {
+            Some(d) => self.0.frame_drawn(t, dt, now_ms, &mut |g, dt| d.scene.draw(&mut d.fb, g, &d.view, dt)),
+            None => self.0.frame_drawn(t, dt, now_ms, &mut |_, _| {}),
+        }
+    }
+
+    /// `step`, drawing every step with planet-render (call `draw_with_rust` first). Then `pixels_ptr` holds the frame.
     pub fn step_drawn(&mut self, elapsed: f64, now_ms: f64) -> u32 {
         let Some(d) = self.1.as_mut() else { return self.0.step(elapsed, now_ms) };
         self.0.step_drawn(elapsed, now_ms, &mut |g, dt| d.scene.draw(&mut d.fb, g, &d.view, dt))
     }
 
-    /// The frame's RGBA bytes, as ImageData takes them (the widget's rim applied when it's bare).
-    pub fn pixels(&mut self) -> Vec<u8> {
-        let Some(d) = self.1.as_mut() else { return Vec::new() };
+    /// Where the frame's RGBA bytes are in the module's memory (`w`×`h`×4 of them, as ImageData takes them, the widget's
+    /// rim applied when it's bare), so the page puts them on the canvas without a copy; 0 before `draw_with_rust`.
+    pub fn pixels_ptr(&mut self) -> *const u8 {
+        let Some(d) = self.1.as_mut() else { return std::ptr::null() };
         if d.view.bare {
             planet_render::px::rim(&mut d.fb);
         }
-        d.fb.rgba().to_vec()
+        d.fb.rgba().as_ptr()
     }
 
-    // ── the temporary renderer bridge (until the page draws with planet-render)
-
-    /// Screen spots from a renderer drawing the same game (planet-core's `spots.rs`).
-    pub fn spots(&mut self, json: &str) {
-        self.0.spots(json);
-    }
-
-    /// `{t, pl, draws, mult, passive}`, to check a lockstep renderer hasn't drifted.
-    pub fn probe(&self) -> String {
-        self.0.probe_json()
+    /// `[hero, form, fused]`: which sprite the share card shows (game.js's `card().spr`).
+    pub fn look(&self) -> String {
+        let g = &self.0.game;
+        let hero = planet_core::data::CHARS.iter().find(|c| c.0 == g.s.hero).map_or("vegeta", |c| c.1);
+        format!("[\"{hero}\",{},{}]", g.s.form, g.b.fuse_until > g.t)
     }
 }
 
