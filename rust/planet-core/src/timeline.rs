@@ -541,8 +541,10 @@ pub struct Tl {
     pub next_movie: f64,
     pub last_movie: &'static str,
     pub movie_force: &'static str,
-    /// the `#struggle` preview hook: every villain fires back
+    /// the `#struggle` preview hook (and the difftests' forced struggles): every villain fires back
     pub struggle_force: bool,
+    /// the difftest harness's forced wish (an index into `WISHES`): the third of each offer while it's ok
+    pub wish_force: Option<usize>,
     pub movie_note: Option<(f64, String)>,
     pub next_nappa: f64,
     pub boss: Option<Boss>,
@@ -583,10 +585,12 @@ pub struct Tl {
     /// `once()` texts already shown
     pub seen: Vec<&'static str>,
     /// instant transmission: when it's recharged, whether the trip under way was a jump (its end starts the cooldown),
-    /// and where and when the last jump left from (the renderer's shimmer and pose)
+    /// and the session time the last jumped trip got home (a natural trip waits `TRIP_WAIT × 0.7` after it)
     pub itx_ready: f64,
     pub itx_trip: bool,
-    pub blink_from: Option<(Spot, f64)>,
+    pub itx_back: f64,
+    /// where and when the last jump left from (`itxFx`): the renderer's shimmer and pose
+    pub itx_fx: Option<(Spot, f64)>,
     pub later: Vec<(f64, Later)>,
 }
 
@@ -654,6 +658,7 @@ impl Default for Tl {
             last_movie: "",
             movie_force: "",
             struggle_force: false,
+            wish_force: None,
             movie_note: None,
             next_nappa: 0.0,
             boss: None,
@@ -691,7 +696,8 @@ impl Default for Tl {
             seen: Vec::new(),
             itx_ready: 0.0,
             itx_trip: false,
-            blink_from: None,
+            itx_back: f64::NEG_INFINITY,
+            itx_fx: None,
             later: Vec::new(),
         }
     }
@@ -902,7 +908,9 @@ impl Game {
             self.tl.next_greg = 80.0 + self.r() * 40.0;
         }
         if let Some(g) = self.tl.greg.clone() {
-            if t > g.until { if let Some((x, y)) = g.sx { self.burst_at(x, y, &[0xffffff, 0xd8a868], 8, 60.0);
+            if t > g.until {
+                if let Some((x, y)) = g.sx {
+                    self.burst_at(x, y, &[0xffffff, 0xd8a868], 8, 60.0);
                 }
                 self.tl.greg = None;
                 self.event("gregory got away");
@@ -956,7 +964,10 @@ impl Game {
                 self.event("kamehameha! roshi clears the sky — ×1.5 for 20s");
                 for i in 0..self.tl.meteors.len() {
                     let m = &mut self.tl.meteors[i];
-                    if !m.dead && m.delay <= 0.0 { m.dead = true; let (x, y) = (m.x, m.y); self.burst_at(x, y, &[0xffffff, 0x9fdcff, 0x2f9ae0], 8, 80.0);
+                    if !m.dead && m.delay <= 0.0 {
+                        m.dead = true;
+                        let (x, y) = (m.x, m.y);
+                        self.burst_at(x, y, &[0xffffff, 0x9fdcff, 0x2f9ae0], 8, 80.0);
                     }
                 }
                 for i in 0..self.tl.saibas.len() {
@@ -1172,7 +1183,8 @@ impl Game {
             if y.boom != 0.0 && t > y.boom {
                 self.tl.yam.as_mut().unwrap().boom = 0.0;
                 self.shake = 0.6;
-                if let Some((x, yy)) = y.sx { self.burst_at(x, yy - 6.0, &[0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160.0);
+                if let Some((x, yy)) = y.sx {
+                    self.burst_at(x, yy - 6.0, &[0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160.0);
                 }
                 self.cue(Cue::Sfx("boom"));
                 self.event("BOOM. yamcha got wrecked again — tap him");
@@ -1331,7 +1343,11 @@ impl Game {
         {
             self.krillin_hit("the ginyu force");
             let hp = 300f64.max(self.wrate() * 9.0);
-            let members = GINYU.iter().enumerate().map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 }).collect();
+            let members = GINYU
+                .iter()
+                .enumerate()
+                .map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 })
+                .collect();
             self.tl.ginyu = Some(Ginyu { androids: false, members, max: hp * 5.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0 });
             self.event("the ginyu force strikes a pose!");
             self.cue(Cue::Sfx("boss"));
@@ -1373,7 +1389,8 @@ impl Game {
             let sb = &mut self.tl.saibas[i];
             if !sb.dead && t - sb.born > sb.life {
                 sb.dead = true;
-                if let Some((x, y)) = sb.sx { self.burst_at(x, y - 4.0, &[0xe7e2d4, 0xcfc8b6], 8, 50.0);
+                if let Some((x, y)) = sb.sx {
+                    self.burst_at(x, y - 4.0, &[0xe7e2d4, 0xcfc8b6], 8, 50.0);
                 }
             }
         }
@@ -1395,8 +1412,10 @@ impl Game {
             self.event(msg);
         }
         let mark = if self.s.namek_at != 0.0 { self.s.namek_at } else { PLANET_EVERY };
+        // jumped trips don't move either; one that comes due during a jump waits until you've been home TRIP_WAIT × 0.7
+        let due = (self.s.run_best >= mark || session - self.tl.home_since > TRIP_WAIT * self.soon()) && session - self.tl.itx_back >= TRIP_WAIT * 0.7;
         if self.s.world == home
-            && (self.s.run_best >= mark || session - self.tl.home_since > TRIP_WAIT * self.soon() || self.tl.pod_wish != 0)
+            && (due || self.tl.pod_wish != 0)
             && self.tl.tour.is_none()
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
@@ -1405,8 +1424,7 @@ impl Game {
             self.tl.pod_wish = 0;
             self.s.namek_at = self.s.run_best * 4.0;
             self.s.trips += 1;
-            self.travel(TRIPS[((self.s.trips - 1) % 11) as usize]);
-            self.tl.namek_until = t + if self.s.world == 3 { 75.0 } else { 45.0 };
+            self.trip(TRIPS[((self.s.trips - 1) % 11) as usize]);
         }
         let w = self.s.world;
         if w != 0 && w != 9 && self.tl.namek_until == 0.0 {
@@ -1423,12 +1441,12 @@ impl Game {
                 }
                 self.travel(self.home());
                 self.tl.namek_until = 0.0;
-                self.tl.home_since = self.session;
                 if self.tl.itx_trip {
-                    self.tl.itx_trip = false;
-                    self.tl.itx_ready = t + self.itx_cd();
+                    self.itx_home();
+                } else {
+                    self.tl.home_since = self.session;
+                    self.s.namek_at = self.s.namek_at.max(self.s.run_best * 2.0);
                 }
-                self.s.namek_at = self.s.namek_at.max(self.s.run_best * 2.0);
             }
         }
     }
@@ -2117,6 +2135,8 @@ impl Game {
         self.flash_t = 1.0;
         self.cue(Cue::Sfx("boom"));
         self.shake = 1.0;
+        let r = self.cam.r * 1.1;
+        self.inp.blasts.push(crate::input::Blast { x, y, r, t0: self.t, kaio: false });
         for i in 0..self.tl.saibas.len() {
             if !self.tl.saibas[i].dead && self.tl.saibas[i].sx.is_some() {
                 self.kill_saiba(i);
@@ -2164,7 +2184,7 @@ impl Game {
         let t = self.t;
         if roll < 0.3 {
             self.b.senzu_until = t + 15.0 + 5.0 * self.lvl(N_SENZU);
-            let msg = format!("capsule: senzu beans — ×1.5 for {}s", 15.0 + 5.0 * self.lvl(N_SENZU));
+            let msg = format!("capsule: senzu beans — ×{} for {}s", self.senzu_x(), 15.0 + 5.0 * self.lvl(N_SENZU));
             self.event(msg);
         } else if roll < 0.6 {
             let g = self.wrate() * 150.0;
@@ -2208,11 +2228,18 @@ impl Game {
         }
     }
 
-    /// game.js `topSync()`: in the arena, the scenery is rebuilt (the stands empty as universes are erased).
-    fn top_sync(&mut self) {
+    /// game.js `topSync()`: the arena takes the universes erased so far, and is rebuilt if it's up.
+    pub(crate) fn top_sync(&mut self) {
+        self.top_uni = self.s.uni;
         if self.s.world == 9 {
             self.scenery();
         }
+    }
+
+    /// `trip(w)`: a visit, 45 seconds (snake way's run 75).
+    pub(crate) fn trip(&mut self, w: u32) {
+        self.travel(w);
+        self.tl.namek_until = self.t + if self.s.world == 3 { 75.0 } else { 45.0 };
     }
 
     /// `travel(w)`: off to another world (or home).
@@ -2221,9 +2248,7 @@ impl Game {
             return;
         }
         self.s.world = w;
-        if w != 0 && w != 3 && w != 9 {
-            self.s.been |= 1 << w;
-        }
+        self.s.been |= 1 << w;
         self.cam.layout(w);
         self.scenery();
         self.flash_t = 1.0;
@@ -2521,6 +2546,10 @@ impl Game {
         }
         pool.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
         let mut offer: Vec<usize> = pool.iter().take(3).map(|p| p.0).collect();
+        if let Some(w) = self.tl.wish_force.filter(|&w| self.wish_ok(WISHES[w].0) && !offer.contains(&w)) {
+            offer.truncate(2);
+            offer.push(w);
+        }
         if self.s.krillin_dead {
             offer.push(KRILLIN_WISH);
         }
@@ -2529,7 +2558,8 @@ impl Game {
         sh.phase = Phase::Wish;
         sh.phase_t = t;
         sh.offer = offer;
-        sh.offer_json = text;
+        sh.offer_json = text.clone();
+        self.cue(crate::hud::Cue::Wish(text));
     }
 
     /// Grants a wish by key (the HUD's pick, or the rarest of the three after 20s).
@@ -2578,6 +2608,9 @@ impl Game {
                 self.event("your wish is granted — ×1.25 forever");
             }
             "form" => {
+                if self.s.form >= self.forms.len() - 1 {
+                    return;
+                }
                 let from = self.tl.preview.map_or(self.s.form, |p| p.0);
                 self.tl.preview = Some((from, t + 60.0));
                 self.transform(true);
@@ -2634,7 +2667,8 @@ impl Game {
             "combo" => self.buff(WishBuff::Combo, 120.0, "max combo for 2 minutes"),
             "senzu" => {
                 self.b.senzu_until = self.b.senzu_until.max(t + 120.0);
-                self.event("your wish is granted — senzu ×1.5 for 2 minutes");
+                let msg = format!("your wish is granted — senzu ×{} for 2 minutes", self.senzu_x());
+                self.event(msg);
             }
             "fuse" => {
                 self.b.fuse_until = t + 30.0;
@@ -2718,8 +2752,11 @@ impl Game {
         b.movie = true;
         b.struggled = true;
         self.new_boss(b);
-        let minions =
-            o.minions.iter().map(|&name| Henchman { name, spr: movie_dim(name), hp: mh, max: mh, twin: false, dead: false, x: None, y: 0.0, k: 1.0, flash: 0.0 }).collect();
+        let minions = o
+            .minions
+            .iter()
+            .map(|&name| Henchman { name, spr: movie_dim(name), hp: mh, max: mh, twin: false, dead: false, x: None, y: 0.0, k: 1.0, flash: 0.0 })
+            .collect();
         self.tl.movie = Some(Movie {
             o,
             boss: self.tl.boss_ids,
@@ -2920,6 +2957,8 @@ impl Game {
             self.flash_t = 1.0;
             self.shake = 1.0;
             self.b.tired_until = self.b.tired_until.max(t + 8.0);
+            let (x, y, r) = (self.cam.cx, self.cam.cy - self.cam.r * 0.6, self.cam.r * 1.2);
+            self.inp.blasts.push(crate::input::Blast { x, y, r, t0: t, kaio: false });
             self.cue(Cue::Sfx("boom"));
             self.event_ms("SUPERNOVA — you're knocked flat. tired ×0.75 for 8s, and cooler leaves you for dead", 4000.0);
             let bm = self.tl.boss.as_mut().unwrap();
@@ -3077,7 +3116,8 @@ impl Game {
                 self.b.senzu_until = self.b.senzu_until.max(t + 10.0);
                 let g = 200f64.max(self.wrate() * 40.0);
                 self.gain_at(g, x, y - 10.0, true);
-                self.event("yamcha: \"i'm fine!\" — senzu ×1.5 for 10s");
+                let msg = format!("yamcha: \"i'm fine!\" — senzu ×{} for 10s", self.senzu_x());
+                self.event(msg);
                 self.cue(Cue::Sfx("coin"));
                 return;
             }
@@ -3297,7 +3337,7 @@ impl Game {
         if let Some((x, y)) = self.tl.bean.as_ref().and_then(|b| b.sx) {
             if hypot(&[px - x, py - (y - 6.0)]) < 13.0 {
                 self.b.senzu_until = t + 15.0 + 5.0 * self.lvl(N_SENZU);
-                let msg = format!("senzu bean — ×1.5 for {}s", 15.0 + 5.0 * self.lvl(N_SENZU));
+                let msg = format!("senzu bean — ×{} for {}s", self.senzu_x(), 15.0 + 5.0 * self.lvl(N_SENZU));
                 self.event(msg);
                 self.spray(x, y, &[0xffffff, 0xb8f08a, 0x4fae3a], 18, 100.0, 3.0, 0.6);
                 self.tl.bean = None;

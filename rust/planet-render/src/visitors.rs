@@ -9,8 +9,8 @@ use planet_core::sprite::{self, Sprite};
 use planet_core::Game;
 
 use crate::scene::{blit, hash, text, text_width, tone, Ctx, Scene};
-use planet_core::fx::Particle;
 use crate::{h2, pk};
+use planet_core::fx::Particle;
 
 /// What the hero's draw leaves for the rest: where he is and whether he can be seen.
 pub struct HeroAt {
@@ -216,7 +216,16 @@ impl Scene {
             for (i, p) in fa.iter().enumerate() {
                 let v = ap(&m, *p);
                 if v[2] > 0.05 {
-                    c.blit_z(sprite::get(if i > 0 { "A18" } else { "A17" }), cx + v[0] * r, cy - v[1] * r + bob, stand_ang(v), i == 0, 0.0, v[2] * r + 6.0, 1.0);
+                    c.blit_z(
+                        sprite::get(if i > 0 { "A18" } else { "A17" }),
+                        cx + v[0] * r,
+                        cy - v[1] * r + bob,
+                        stand_ang(v),
+                        i == 0,
+                        0.0,
+                        v[2] * r + 6.0,
+                        1.0,
+                    );
                 }
             }
             let v = ap(&m, g.frame3.cap_pt(1.3, 3.25));
@@ -248,7 +257,16 @@ impl Scene {
         if world == 5 {
             let v = ap(&m, g.frame3.cap_pt(0.55, 3.2));
             if v[2] > 0.05 {
-                c.blit_z(sprite::get("BULMA"), cx + v[0] * r, cy - v[1] * r + bob, atan2(v[0], v[1]), (t / 2.0).floor() as i64 % 2 == 0, 0.0, v[2] * r + 6.0, 1.0);
+                c.blit_z(
+                    sprite::get("BULMA"),
+                    cx + v[0] * r,
+                    cy - v[1] * r + bob,
+                    atan2(v[0], v[1]),
+                    (t / 2.0).floor() as i64 % 2 == 0,
+                    0.0,
+                    v[2] * r + 6.0,
+                    1.0,
+                );
             }
         }
         if world == 7 {
@@ -281,7 +299,20 @@ impl Scene {
                 } else {
                     c.blit_z(sprite::get("BEERUS"), x, y, ang + 1.45, false, -12.0, v[2] * r + 6.0, 0.9);
                     let z = (t * 0.8) % 1.0;
-                    text(c.fb, if z < 0.33 { "z" } else if z < 0.66 { "zz" } else { "zzz" }, x + 6.0, y - 22.0 - z * 6.0, 0x5e44a0, 1.0);
+                    text(
+                        c.fb,
+                        if z < 0.33 {
+                            "z"
+                        } else if z < 0.66 {
+                            "zz"
+                        } else {
+                            "zzz"
+                        },
+                        x + 6.0,
+                        y - 22.0 - z * 6.0,
+                        0x5e44a0,
+                        1.0,
+                    );
                 }
             }
         }
@@ -329,7 +360,16 @@ impl Scene {
                 };
                 let (rx, ry) = (cos(ang), sin(ang));
                 if kf >= 0 {
-                    c.blit_z(sprite::get(["ROSHI_KAME.0", "ROSHI_KAME.1", "ROSHI_KAME.2"][kf as usize]), sx + rx * 4.0, sy + ry * 4.0, ang, false, (up - 1.0) * 18.0, v[2] * r + 6.0, 0.95);
+                    c.blit_z(
+                        sprite::get(["ROSHI_KAME.0", "ROSHI_KAME.1", "ROSHI_KAME.2"][kf as usize]),
+                        sx + rx * 4.0,
+                        sy + ry * 4.0,
+                        ang,
+                        false,
+                        (up - 1.0) * 18.0,
+                        v[2] * r + 6.0,
+                        0.95,
+                    );
                 } else {
                     c.blit_z(sprite::get("ROSHI"), sx, sy, ang + if down { 1.45 } else { 0.0 }, false, (up - 1.0) * 18.0, v[2] * r + 6.0, 0.95);
                 }
@@ -388,7 +428,11 @@ impl Scene {
             if v[2] > 0.05 {
                 let (sx, sy) = (cx + v[0] * r, cy - v[1] * r + bob);
                 n.sx = Some((sx, sy));
-                let (flip, hop) = if key == 0 { ((t / flipper).floor() as i64 % 2 == 0, sin(t * 2.5).abs() * 2.0) } else { ((t * 2.0).floor() as i64 % 2 == 0, sin(t * 5.0).abs() * 3.0) };
+                let (flip, hop) = if key == 0 {
+                    ((t / flipper).floor() as i64 % 2 == 0, sin(t * 2.5).abs() * 2.0)
+                } else {
+                    ((t * 2.0).floor() as i64 % 2 == 0, sin(t * 5.0).abs() * 3.0)
+                };
                 c.blit_z(sprite::get(spr), sx, sy, atan2(v[0], v[1]), flip, (up - 1.0) * lift_k + hop, v[2] * r + 6.0, 1.0);
             } else {
                 n.sx = None;
@@ -399,7 +443,16 @@ impl Scene {
             let land = 1f64.min((t - s.t0) / 1.2);
             let lift = if s.left != 0.0 { planet_core::jsmath::pow((t - s.left) / 1.5, 2.0) } else { 0.0 };
             if v[2] > 0.05 {
-                c.blit_z(sprite::get("SHIP"), cx + v[0] * r, cy - v[1] * r + bob, atan2(v[0], v[1]), false, (1.0 - land) * 70.0 + lift * 90.0, v[2] * r + 5.0, 0.9);
+                c.blit_z(
+                    sprite::get("SHIP"),
+                    cx + v[0] * r,
+                    cy - v[1] * r + bob,
+                    atan2(v[0], v[1]),
+                    false,
+                    (1.0 - land) * 70.0 + lift * 90.0,
+                    v[2] * r + 5.0,
+                    0.9,
+                );
             }
         }
         if let Some(y) = g.tl.yam.as_mut() {
@@ -424,7 +477,16 @@ impl Scene {
             if v[2] > 0.05 {
                 let (sx, sy) = (cx + v[0] * r, cy - v[1] * r + bob);
                 gr.sx = Some((sx, sy));
-                c.blit_z(sprite::get("GREGORY"), sx, sy, atan2(v[0], v[1]), k < 1.0 && from[0] > gr.c[0], sin(k * std::f64::consts::PI) * 9.0, v[2] * r + 4.0, 1.1);
+                c.blit_z(
+                    sprite::get("GREGORY"),
+                    sx,
+                    sy,
+                    atan2(v[0], v[1]),
+                    k < 1.0 && from[0] > gr.c[0],
+                    sin(k * std::f64::consts::PI) * 9.0,
+                    v[2] * r + 4.0,
+                    1.1,
+                );
             } else {
                 gr.sx = None;
             }
@@ -446,7 +508,16 @@ impl Scene {
                 g.fx.push(Particle::new(x, y, &[0xffffff, 0xffe08a, 0xff9a3c]).v(0.0, -20.0).life(0.5));
             }
             let fr = (t * 8.0).floor() as i64 % 2;
-            c.blit_z(sprite::get(if fr == 0 { "MONKEY.0" } else { "MONKEY.1" }), mx, my, ma, hero.flip, if g.tl.fuse_offer > t { sin(t * 9.0).abs() * 3.0 } else { 0.0 }, mv[2] * r + 5.0, 1.1 * kk);
+            c.blit_z(
+                sprite::get(if fr == 0 { "MONKEY.0" } else { "MONKEY.1" }),
+                mx,
+                my,
+                ma,
+                hero.flip,
+                if g.tl.fuse_offer > t { sin(t * 9.0).abs() * 3.0 } else { 0.0 },
+                mv[2] * r + 5.0,
+                1.1 * kk,
+            );
         } else {
             g.tl.monkey_at = None;
         }
@@ -485,7 +556,12 @@ impl Scene {
                     while yy < k {
                         let mut xx = 0.0;
                         while xx < k {
-                            c.fb.px(b.x + (i as f64 - spr.ax) * k + xx, b.y + (j as f64 - spr.h as f64) * k + yy, if b.flash > 0.0 { 0xffffff } else { col as u32 }, 1.0);
+                            c.fb.px(
+                                b.x + (i as f64 - spr.ax) * k + xx,
+                                b.y + (j as f64 - spr.h as f64) * k + yy,
+                                if b.flash > 0.0 { 0xffffff } else { col as u32 },
+                                1.0,
+                            );
                             xx += 1.0;
                         }
                         yy += 1.0;
@@ -563,7 +639,12 @@ impl Scene {
                     while yy < k {
                         let mut xx = 0.0;
                         while xx < k {
-                            c.fb.px(m.x + (ii as f64 - spr.ax) * k + xx, m.y + (j as f64 - spr.h as f64) * k + yy, if m.flash > 0.0 { 0xffffff } else { col as u32 }, 1.0);
+                            c.fb.px(
+                                m.x + (ii as f64 - spr.ax) * k + xx,
+                                m.y + (j as f64 - spr.h as f64) * k + yy,
+                                if m.flash > 0.0 { 0xffffff } else { col as u32 },
+                                1.0,
+                            );
                             xx += 1.0;
                         }
                         yy += 1.0;
@@ -578,7 +659,18 @@ impl Scene {
             while x <= bw {
                 for y in -1..=1 {
                     let y = y as f64;
-                    c.fb.px(bx + x, by + y, if x < 0.0 || x == bw || y != 0.0 { 0x1d1030 } else if x < bw * f { 0x34d873 } else { 0xffffff }, 1.0);
+                    c.fb.px(
+                        bx + x,
+                        by + y,
+                        if x < 0.0 || x == bw || y != 0.0 {
+                            0x1d1030
+                        } else if x < bw * f {
+                            0x34d873
+                        } else {
+                            0xffffff
+                        },
+                        1.0,
+                    );
                 }
                 x += 1.0;
             }
@@ -661,7 +753,16 @@ impl Scene {
             }
             let ah = ap(&c.m, g.frame3.cap_pt(th, a + 0.02 * cos(ph)));
             let (x, y) = (c.cx + v[0] * c.r, c.cy - v[1] * c.r + c.bob);
-            c.blit_z(sprite::get(spr), x, y, atan2(v[0], v[1]) * 1f64.min((v[0] * v[0] + v[1] * v[1]) * 1.6), c.cx + ah[0] * c.r < x, sin(t * 5.0 + a0).abs() * hop, v[2] * c.r + 6.0, k);
+            c.blit_z(
+                sprite::get(spr),
+                x,
+                y,
+                atan2(v[0], v[1]) * 1f64.min((v[0] * v[0] + v[1] * v[1]) * 1.6),
+                c.cx + ah[0] * c.r < x,
+                sin(t * 5.0 + a0).abs() * hop,
+                v[2] * c.r + 6.0,
+                k,
+            );
         }
         let (e1, e2, n) = (g.frame3.e1, g.frame3.e2, g.frame3.n);
         let ring = |a: f64| norm(add(add(mul(e1, cos(a)), e2, sin(a)), n, 0.55));
@@ -871,7 +972,18 @@ impl Scene {
             while x <= bw {
                 for y in -1..=1 {
                     let y = y as f64;
-                    c.fb.px(bx + x, by + y, if x < 0.0 || x == bw || y != 0.0 { 0x1d1030 } else if x < bw * f { 0x34d873 } else { 0xffffff }, 1.0);
+                    c.fb.px(
+                        bx + x,
+                        by + y,
+                        if x < 0.0 || x == bw || y != 0.0 {
+                            0x1d1030
+                        } else if x < bw * f {
+                            0x34d873
+                        } else {
+                            0xffffff
+                        },
+                        1.0,
+                    );
                 }
                 x += 1.0;
             }
@@ -896,7 +1008,18 @@ impl Scene {
                 while xx <= r + 3.0 {
                     let d = hypot(&[xx, yy]);
                     if d <= r {
-                        c.fb.px(nx + xx, ny + yy, if d < r * 0.45 { 0xfff2d0 } else if d < r * 0.8 { 0xffb050 } else { 0xf06a20 }, 1.0);
+                        c.fb.px(
+                            nx + xx,
+                            ny + yy,
+                            if d < r * 0.45 {
+                                0xfff2d0
+                            } else if d < r * 0.8 {
+                                0xffb050
+                            } else {
+                                0xf06a20
+                            },
+                            1.0,
+                        );
                     } else if d <= r + 3.0 && crate::bayer(js_round(nx + xx) as i64 as i32, js_round(ny + yy) as i64 as i32) < 0.5 {
                         c.fb.px(nx + xx, ny + yy, 0xffd0a0, 0.7);
                     }

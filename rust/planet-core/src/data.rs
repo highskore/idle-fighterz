@@ -71,14 +71,14 @@ pub const SHOP: [ShopItem; 15] = [
     ShopItem { key: "bigbang", base: 60000.0, k: 2.5, label: "big bang attack", what: "double-tap: an exploding ki ball" },
     ShopItem { key: "piccolo", base: 30000.0, k: 2.4, label: "piccolo", what: "+60/s, zaps meteors" },
     ShopItem { key: "chamber", base: 150000.0, k: 2.8, label: "time chamber", what: "a door appears: train ×2 for 15s inside" },
-    ShopItem { key: "tail", base: 40000.0, k: 2.5, label: "tail training", what: "great ape: +8% size, +2s, +×0.25 (less past lv 10)" },
+    ShopItem { key: "tail", base: 40000.0, k: 2.5, label: "tail training", what: "great ape: +×0.25, +8% size, +2s (size and time slow past lv 10)" },
     ShopItem { key: "itx", base: 5e6, k: 2.6, label: "instant transmission", what: "two-finger tap or right-click: jump to a world you've been" },
 ];
 
-/// Producer milestones: these levels double output, then every 50 past 100.
 /// Where instant transmission can jump: every world but home, snake way and the arena.
 pub const ITX_WORLDS: [u32; 10] = [1, 2, 4, 5, 6, 7, 8, 10, 11, 12];
 
+/// Producer milestones: these levels double output, then every 50 past 100.
 pub const MILES: [Upg; 4] = [Upg::Boots, Upg::Partner, Upg::House, Upg::Piccolo];
 pub const MS: [u32; 4] = [10, 25, 50, 100];
 
@@ -249,17 +249,22 @@ pub const GOALS: [Goal; 9] = [
 
 // economy tuning
 pub const ECON: f64 = 0.35;
+/// power and its multiplier stop short of Infinity, so costs and resets never go NaN
+pub const MAX_MULT: f64 = 1e200;
+pub const MAX_PL: f64 = 1e300;
 pub const SEED_SOFT: f64 = 10.0;
 pub const SEED_EXP: f64 = 0.5;
 pub const CEIL0: f64 = 20.0;
-pub const CEIL_T: f64 = 1.08;
+pub const CEIL_T: f64 = 1.04;
 pub const CEIL_STEP: f64 = 2.0;
 pub const CEIL_EXP: f64 = 0.15;
 pub const STAR_X: f64 = 1.5;
 pub const GOD_X: f64 = 1.0;
 pub const MASTERY_X: f64 = 1.25;
-pub const ZENO_X: f64 = 1000.0;
+pub const ZENO_X: f64 = 10.0;
 pub const ZENO_GODS: u32 = 2;
+/// seconds between ascends: rank spam can't outrun the ki ceiling, and an idle player checking in now and then never waits
+pub const ASC_CD: f64 = 600.0;
 /// game.js laps at 6.283, a hair short of 2π; kept so lap timing matches
 #[allow(clippy::approx_constant)]
 pub const LAP: f64 = 6.283;

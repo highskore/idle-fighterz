@@ -375,7 +375,12 @@ pub fn draw(ctx: &mut Ctx, look: usize, tr: &Track) {
                 let ww = (1.0 - j / (rr * 0.9)) * 2.4;
                 let mut o = -ww;
                 while o <= ww {
-                    ctx.px(p.x - nx * (rr + j - 0.5) + (tx / tl) * o, p.y - ny * (rr + j - 0.5) + (ty / tl) * o, if j > rr * 0.55 { SPINE_HI } else { SPINE }, 0.0);
+                    ctx.px(
+                        p.x - nx * (rr + j - 0.5) + (tx / tl) * o,
+                        p.y - ny * (rr + j - 0.5) + (ty / tl) * o,
+                        if j > rr * 0.55 { SPINE_HI } else { SPINE },
+                        0.0,
+                    );
                     o += 0.5;
                 }
                 j += 1.0;
@@ -438,7 +443,12 @@ pub fn draw_porunga(ctx: &mut Ctx) {
         let u = i as f64 / 900.0;
         let a = -1.3 + u * 6.283 * 0.95;
         let rr = 1.32 - u * 0.12;
-        pts.push([ctx.cx + cos(a) * rr * ctx.r + sin(u * 9.0 + t * 1.5) * 2.0, ctx.cy + (-0.15 + u * 0.95) * ctx.r + lift * (1.0 - u * 0.4), sin(a) * rr * ctx.r, u]);
+        pts.push([
+            ctx.cx + cos(a) * rr * ctx.r + sin(u * 9.0 + t * 1.5) * 2.0,
+            ctx.cy + (-0.15 + u * 0.95) * ctx.r + lift * (1.0 - u * 0.4),
+            sin(a) * rr * ctx.r,
+            u,
+        ]);
     }
     let mut s_acc = 0.0;
     for i in 1..pts.len() - 1 {

@@ -72,18 +72,20 @@ impl Planet {
         }
     }
 
-    // ── input: (x, y) in CSS pixels (clientX/Y), (bx, by) in buffer pixels (st.toBuf)
+    // ── input: (x, y) in CSS pixels (clientX/Y), (bx, by) in buffer pixels (st.toBuf), the pointerId, and for a
+    // press its button and whether pointerType is touch
 
-    pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32, button: i32) {
-        self.0.game.pointer_down(x, y, bx, by, id, button);
+    #[allow(clippy::too_many_arguments)]
+    pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32, button: i32, touch: bool) {
+        self.0.game.pointer_down(x, y, bx, by, id, button, touch);
     }
 
-    pub fn pointer_move(&mut self, x: f64, y: f64, bx: f64, by: f64) {
-        self.0.game.pointer_move(x, y, bx, by);
+    pub fn pointer_move(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32) {
+        self.0.game.pointer_move(x, y, bx, by, id);
     }
 
-    pub fn pointer_up(&mut self, bx: f64, by: f64) {
-        self.0.game.pointer_up(bx, by);
+    pub fn pointer_up(&mut self, bx: f64, by: f64, id: i32) {
+        self.0.game.pointer_up(bx, by, id);
     }
 
     pub fn pointer_cancel(&mut self) {
@@ -279,8 +281,8 @@ mod tests {
         p.start("Wed Oct 28 2026", 1.7e12);
         p.step(0.05, 1.7e12);
         assert!(p.frame().contains("\"hud\":"));
-        p.pointer_down(300.0, 200.0, 100.0, 66.0, 1, 0);
-        p.pointer_up(100.0, 66.0);
+        p.pointer_down(300.0, 200.0, 100.0, 66.0, 1, 0, false);
+        p.pointer_up(100.0, 66.0, 1);
         assert!(p.frame().contains("[\"sfx\",\"tap\"]"));
         assert!(p.save().contains("\"daily\":\"Wed Oct 28 2026\""));
     }

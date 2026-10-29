@@ -2,6 +2,10 @@
 //!
 //! `px` holds px.wasm's kernels (the same source file builds both), `scene` turns a `planet_core::Game` into pixels.
 
+// game.js's literals (6.28, 3.1416) and its `!(a > b)` tests, which differ from `a <= b` on NaN, are kept as written so the
+// pixels stay bit-identical; ports of game.js's drawing functions keep their parameter lists
+#![allow(clippy::approx_constant, clippy::neg_cmp_op_on_partial_ord, clippy::too_many_arguments)]
+
 pub mod beam;
 pub mod effects;
 pub mod floats;

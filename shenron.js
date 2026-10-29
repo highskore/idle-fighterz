@@ -7,13 +7,17 @@ const SHENRON = (() => {
 
   function grid(w, h) {
     const g = Array.from({ length: h }, () => Array(w).fill('.'));
-    const each = (test, c) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (test(x + .5, y + .5)) g[y][x] = c; };
+    // only pixels in the shape's box (and a margin) can pass: testing the whole grid was most of the page's start-up
+    const each = (test, c, x0, y0, x1, y1) => { for (let y = Math.max(0, Math.floor(y0) - 2); y < Math.min(h, Math.ceil(y1) + 2); y++) for (let x = Math.max(0, Math.floor(x0) - 2); x < Math.min(w, Math.ceil(x1) + 2); x++) if (test(x + .5, y + .5)) g[y][x] = c; };
     return {
       g, w, h,
       set(x, y, c) { if (x >= 0 && y >= 0 && x < w && y < h) g[y][x] = c; },
       rect(x, y, rw, rh, c) { for (let j = y; j < y + rh; j++) for (let i = x; i < x + rw; i++) this.set(i, j, c); },
-      ell(cx, cy, rx, ry, c) { each((x, y) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1, c); },
-      poly(p, c) { each((x, y) => { let s = false; for (let i = 0, j = p.length - 1; i < p.length; j = i++) { const [xi, yi] = p[i], [xj, yj] = p[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) s = !s; } return s; }, c); },
+      ell(cx, cy, rx, ry, c) { each((x, y) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1, c, cx - Math.abs(rx), cy - Math.abs(ry), cx + Math.abs(rx), cy + Math.abs(ry)); },
+      poly(p, c) {
+        const n = p.length, X = p.map(q => q[0]), Y = p.map(q => q[1]);
+        each((x, y) => { let s = false; for (let i = 0, j = n - 1; i < n; j = i++) if ((Y[i] > y) !== (Y[j] > y) && x < (X[j] - X[i]) * (y - Y[i]) / (Y[j] - Y[i]) + X[i]) s = !s; return s; }, c, Math.min(...X), Math.min(...Y), Math.max(...X), Math.max(...Y));
+      },
       // a tapering stroke along a polyline (horns, spikes)
       line(p, w0, w1, c) {
         let L = 0; const seg = []; for (let i = 1; i < p.length; i++) { const l = Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]); seg.push(l); L += l; }

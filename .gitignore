@@ -2,3 +2,6 @@
 /dist
 .DS_Store
 /wasm/target
+/shots
+/test-results
+/playwright-report

@@ -43,11 +43,19 @@ fn gods(u: u32) -> [u32; 4] {
     }
 }
 
-const PILLARS: [[f64; 4]; 7] = [[0.06, 0.5, 16.0, 48.0], [0.17, 0.2, 9.0, 22.0], [0.9, 0.58, 18.0, 54.0], [0.8, 0.14, 8.0, 18.0], [0.3, 0.82, 7.0, 16.0], [0.97, 0.28, 9.0, 26.0], [0.66, 0.9, 8.0, 14.0]];
+const PILLARS: [[f64; 4]; 7] = [
+    [0.06, 0.5, 16.0, 48.0],
+    [0.17, 0.2, 9.0, 22.0],
+    [0.9, 0.58, 18.0, 54.0],
+    [0.8, 0.14, 8.0, 18.0],
+    [0.3, 0.82, 7.0, 16.0],
+    [0.97, 0.28, 9.0, 26.0],
+    [0.66, 0.9, 8.0, 14.0],
+];
 
 /// `TOP.erased`, as `topSync` keeps it: the universes cleared this cycle (none outside the multiverse).
 fn erased(g: &Game, u: u32) -> bool {
-    g.s.multi && LADDER[..(g.s.uni as usize).min(LADDER.len())].iter().any(|l| l.0 == u)
+    g.s.multi && LADDER[..(g.top_uni as usize).min(LADDER.len())].iter().any(|l| l.0 == u)
 }
 
 /// The baked void (`bakeVoid`): a dithered gradient with nebula.
@@ -57,7 +65,13 @@ pub fn bake(w: usize, h: usize) -> Vec<u32> {
     for y in 0..h {
         for x in 0..w {
             let g = y as f64 / h as f64 + (bayer(x as i32, y as i32) - 0.5) * 0.18;
-            let mut c = if g < 0.45 { top::BG[0] } else if g < 0.8 { top::BG[1] } else { top::BG[2] };
+            let mut c = if g < 0.45 {
+                top::BG[0]
+            } else if g < 0.8 {
+                top::BG[1]
+            } else {
+                top::BG[2]
+            };
             let (xx, yy) = (x as f64 * k0, y as f64 * k0);
             let n = vnoise(xx * 0.018 + 3.0, yy * 0.026) * 0.7 + vnoise(xx * 0.05, yy * 0.07) * 0.35;
             let bb = bayer(x as i32, y as i32) * 0.14;
@@ -116,8 +130,21 @@ fn pillar(c: &mut Ctx, x0: f64, y0: f64, w: f64, h: f64, seed: f64) {
 }
 
 const STAND: [&str; 16] = [
-    "..oooooooooooooooooo..", ".owwwwwwwwwwwwwwwwwwo.", "owwwwwwwwwwwwwwwwwwwwo", "oWWWWWWWWWWWWWWWWWWWWo", "obbbbbbbbbbbbbbbbbbbbo", "obbbbbbbbbbbbbbbbbbbbo", "obbbbbbbbbbbbbbbbbbbbo",
-    "obbbbbbbbbbbbbbbbbbbbo", "obbbbbbbbbbbbbbbbbbbbo", ".oBBBBBBBBBBBBBBBBBBo.", "..oorrrrrrrrrrrrrroo..", "....orrrrrrrrrrrro....", ".....orrrrrrrrrro.....", "......orrrRrrrro......", "........orrro.........",
+    "..oooooooooooooooooo..",
+    ".owwwwwwwwwwwwwwwwwwo.",
+    "owwwwwwwwwwwwwwwwwwwwo",
+    "oWWWWWWWWWWWWWWWWWWWWo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    ".oBBBBBBBBBBBBBBBBBBo.",
+    "..oorrrrrrrrrrrrrroo..",
+    "....orrrrrrrrrrrro....",
+    ".....orrrrrrrrrro.....",
+    "......orrrRrrrro......",
+    "........orrro.........",
     ".........oro..........",
 ];
 
@@ -130,7 +157,8 @@ fn stand(c: &mut Ctx, g: &Game, x: f64, y: f64, u: u32) {
     let mut p = |c: &mut Ctx, i: f64, j: f64, col: u32| c.fb.px(x + i, y + j, col, a);
     if !gone {
         let fig = |c: &mut Ctx, p: &mut dyn FnMut(&mut Ctx, f64, f64, u32), fx: f64, skin: u32, cloth: u32, angel: bool| {
-            let inside = |ii: i64, jj: i64| jj >= 0 && jj < 9 && ii >= 0 && ii < 5 && !((jj == 0 || jj == 3) && (ii == 0 || ii == 4)) && !(jj == 8 && ii == 2);
+            let inside =
+                |ii: i64, jj: i64| (0..9).contains(&jj) && (0..5).contains(&ii) && !((jj == 0 || jj == 3) && (ii == 0 || ii == 4)) && !(jj == 8 && ii == 2);
             for j in 0..9i64 {
                 for i in -1..=5i64 {
                     if inside(i, j) {
@@ -192,8 +220,11 @@ fn stand(c: &mut Ctx, g: &Game, x: f64, y: f64, u: u32) {
     text(c.fb, &s, x + 11.0 - (tw >> 1) as f64, 9.0 + 4.0 + y, if gone { 0x5a5868 } else { 0xffffff }, a);
 }
 
+/// zeno's box, and each stand's spot and universe
+type Places = ((f64, f64), Vec<(f64, f64, u32)>);
+
 /// `topPlaces`: zeno's box over the planet, the stands in an arc round it.
-fn places(c: &Ctx, t: f64) -> ((f64, f64), Vec<(f64, f64, u32)>) {
+fn places(c: &Ctx, t: f64) -> Places {
     let port = c.w / c.h < 0.8;
     let bob = |i: f64| js_round(sin(t * 0.8 + i * 1.7) * 1.5);
     let (r, cx, cy) = (c.r, c.cx, c.cy);

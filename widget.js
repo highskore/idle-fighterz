@@ -7,19 +7,22 @@
     // the frame rate setting is the idle rate: 60 (smooth), 30 (balanced, the default) or 15 (battery saver). while the
     // pointer is about it doubles, up to 60
     let idleFps = 30;
-    const pace = () => { st.fps = root.classList.contains('awake') ? Math.min(60, idleFps * 2) : idleFps; };
+    // hidden (by the app, or document.hidden), nothing draws: 0
+    let away = false;
+    const pace = () => { st.fps = away || document.hidden ? 0 : root.classList.contains('awake') ? Math.min(60, idleFps * 2) : idleFps; };
     pace();
     go();
 
     const ICON = {
       up: '<path d="M6 13.5l6-6 6 6M6 19l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
       kaio: '<path d="M12 2.5c1 4.2 5.5 5.6 5.5 10.6a5.5 5.5 0 0 1-11 0c0-2.8 1.6-4 2.7-5.6.5 1.7 1.3 2.6 2.2 2.8C11 7.6 11.5 5.1 12 2.5z" fill="currentColor"/>',
+      itx: '<path d="M10 12.5V5a1.5 1.5 0 0 1 3 0v7.5M13 12V4a1.5 1.5 0 0 1 3 0v8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M7.5 12.5c0 4 2 7 5.5 7s5-2.6 5-6.5V11" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M4 6.5h3M3.5 10h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
       share: '<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11H6v9h12v-9h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
       snd: '<path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
       gear: '<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.8"/>',
       close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
     };
-    const LABEL = { up: 'upgrades', kaio: 'kaioken', share: 'share', snd: 'sound', gear: 'settings', close: 'hide' };
+    const LABEL = { up: 'upgrades', kaio: 'kaioken', itx: 'instant transmission', share: 'share', snd: 'sound', gear: 'settings', close: 'hide' };
     const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
     const w = el('div', 'w'), pl = el('div', 'w-pl', '<b class="w-n">0</b><span class="w-rate"></span>'), bar = el('span', 'w-bar', '<b></b>'), btns = el('div', 'w-btns'), num = pl.firstChild, rate = pl.lastChild;
     // the dock's middle: the form and a bar to the next one, dragon balls and wishes once there are any
@@ -28,8 +31,8 @@
     ring.innerHTML = '<circle class="track" cx="50" cy="50" r="49"/><circle class="fill" cx="50" cy="50" r="49" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 50 50)"/>';
     const B = {};
     for (const k of Object.keys(ICON)) { const b = el('button', '', `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${k === 'up' ? '<i></i>' : ''}`); b.type = 'button'; b.dataset.w = k; b.title = b.ariaLabel = LABEL[k]; btns.append(b); B[k] = b; }
-    B.kaio.hidden = true;
-    const ACT = { up: () => $('shopToggle').click(), kaio: () => $('kaio').click(), share: () => $('share').click(), snd: () => { $('snd').click(); B.snd.setAttribute('aria-pressed', $('snd').getAttribute('aria-pressed')); }, gear: () => invoke('open_settings'), close: () => invoke('hide_widget') };
+    B.kaio.hidden = B.itx.hidden = true;
+    const ACT = { up: () => $('shopToggle').click(), kaio: () => $('kaio').click(), itx: () => $('itxBtn').click(), share: () => $('share').click(), snd: () => { $('snd').click(); B.snd.setAttribute('aria-pressed', $('snd').getAttribute('aria-pressed')); }, gear: () => invoke('open_settings'), close: () => invoke('hide_widget') };
     w.addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (b) ACT[b.dataset.w](); });
     B.snd.setAttribute('aria-pressed', $('snd').getAttribute('aria-pressed'));
     $('game').append(w);
@@ -48,7 +51,7 @@
       if (n !== 3 && bar.parentNode === pl) pl.after(bar);
     }
     // ring: the power level at the top, settings and close up either side, the rest along the bottom
-    const RING = { gear: 208, close: 332, up: 52, kaio: 78, share: 102, snd: 128 };
+    const RING = { gear: 208, close: 332, up: 40, kaio: 65, itx: 90, share: 115, snd: 140 };
     function placeRing() { for (const [k, deg] of Object.entries(RING)) { const a = deg * Math.PI / 180; B[k].style.left = `calc(50% + ${(Math.cos(a) * 38).toFixed(2)}vmin)`; B[k].style.top = `calc(55% + ${(Math.sin(a) * 38).toFixed(2)}vmin)`; } }
 
     // the game's own hud stays hidden; these mirror it. the hud needn't follow every frame: at most 30 times a second
@@ -61,13 +64,16 @@
     let titleAt = -1e9, title = '';
     ui.update = s => {
       if (!hudDue('u')) return;
-      update(s);
       const at = performance.now();
       if (at - titleAt >= 1000) { titleAt = at; const t = short(s.pl); if (t !== title) { title = t; invoke('tray_title', { text: t }); } }
+      // hidden, only the menu-bar number: DOM changes nobody sees still wake WebKit's GPU process
+      if (st.headless) return;
+      update(s);
       if (num.dataset.v !== $('pl').dataset.v) { num.dataset.v = $('pl').dataset.v; num.innerHTML = $('pl').innerHTML; }
       rate.textContent = $('rate').textContent + '/s';
       bar.firstChild.style.width = (s.form.p * 100).toFixed(1) + '%'; ring.lastChild.setAttribute('stroke-dashoffset', (100 - s.form.p * 100).toFixed(1));
       B.kaio.hidden = !s.kaio.own; B.kaio.disabled = !s.kaio.ready; B.kaio.title = s.kaio.ready ? 'kaioken' : `kaioken in ${s.kaio.left}s`;
+      if (s.itx) { B.itx.hidden = !s.itx.own; B.itx.disabled = !s.itx.ready; B.itx.title = s.itx.ready ? 'instant transmission' : s.itx.left > 0 ? `instant transmission in ${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}` : 'instant transmission: from home, with no fight on'; }
       const f = s.form, key = [f.name, f.next, s.balls, s.wishes].join();
       if (info.dataset.k !== key) {
         info.dataset.k = key;
@@ -78,6 +84,8 @@
       }
       iNext.firstChild.style.width = (f.p * 100).toFixed(1) + '%';
     };
+    const event = ui.event;
+    ui.event = (text, ms) => { if (!st.headless) event(text, ms); };   // a toast while hidden is gone before it shows
     let couldAscend = null;
     ui.shop = items => {
       if (!hudDue('s')) return;
@@ -146,21 +154,30 @@
     const sent = {};
     ui.notify = (kind, arg) => {
       const at = Date.now();
-      if (!conf.notify[kind] || quiet() || (root.classList.contains('awake') && !document.hidden) || at - (sent[kind] || 0) < 60000) return;
+      if (!conf.notify[kind] || quiet() || (root.classList.contains('awake') && !away && !document.hidden) || at - (sent[kind] || 0) < 60000) return;
       sent[kind] = at; const [title, body] = NOTE[kind](arg); invoke('notify', { title, body });
     };
-    // hidden, the page gets no animation frames; with notifications or the menu-bar power level on, the game keeps
-    // playing without drawing, in quarter-second steps that catch up on however long the (throttled) timer slept
-    let bg = 0;
-    document.addEventListener('visibilitychange', () => {
-      clearInterval(bg); st.headless = false; if (!document.hidden || !(conf.menubar_power || Object.values(conf.notify).some(Boolean))) return;
-      st.headless = true; let was = performance.now();
-      bg = setInterval(() => { const n = Math.min(240, Math.floor((performance.now() - was) / 250)); was = Math.max(was + n * 250, performance.now() - 250); for (let k = 0; k < n; k++) { T += .25; st.t = T; game.frame(T, .25); } }, 1000);
-    });
+    // hidden, nothing draws. with notifications or the menu-bar power level on, the game keeps playing without drawing,
+    // in the 30fps steps it plays in on screen, a batch a second that catches up on however long the (throttled) timer
+    // slept, up to a minute; otherwise it pauses. the app says when it hides the window too: WebView2 may leave
+    // document.hidden false. a game the app runs (game.native) needs no steps from here
+    const STEP = 1000 / 30;
+    let bg = 0, was = 0;
+    const background = () => {
+      pace(); st.headless = away || document.hidden;
+      const play = st.headless && !game.native && (conf.menubar_power || Object.values(conf.notify).some(Boolean));
+      if (play && !bg) {
+        was = performance.now();
+        bg = setInterval(() => { const n = Math.min(1800, Math.floor((performance.now() - was) / STEP)); was = Math.max(was + n * STEP, performance.now() - STEP); for (let k = 0; k < n; k++) { T += STEP / 1000; st.t = T; game.frame(T, STEP / 1000); } }, 1000);
+      } else if (!play && bg) { clearInterval(bg); bg = 0; }
+      invoke('page_state', { hidden: document.hidden, away, ticking: !!bg });
+    };
+    document.addEventListener('visibilitychange', background);
+    if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; background(); });
 
     const apply = s => {
       const first = conf.layout !== s.layout || !w.firstChild; conf = s;
-      idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; pace();
+      idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; background();
       if (first) arrange(s.layout);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live

@@ -5,7 +5,7 @@
 
 use crate::data::{Upg, N_BEAM};
 use crate::game::Game;
-use crate::jsmath::{cos, hypot, log, sin};
+use crate::jsmath::{cos, hypot, sin};
 
 /// A press in progress (game.js's `drag`).
 #[derive(Clone, Copy, Debug)]
@@ -20,8 +20,21 @@ pub struct Drag {
     /// where the beam aims, in buffer pixels
     pub ax: f64,
     pub ay: f64,
-    /// the pointer (a second one landing with it is a two-finger tap)
+    /// the pointer, and whether it's a finger (two landing together may be a two-finger tap)
     pub id: i32,
+    pub touch: bool,
+}
+
+/// game.js's `two`: two fingers that landed together, at home with nothing on. If both lift within 0.25s of each other,
+/// unmoved, it's a two-finger tap; otherwise the first lift's tap, held back until then, happens after all.
+#[derive(Clone, Copy, Debug)]
+pub struct Two {
+    pub ids: [i32; 2],
+    /// each finger's last position and how far it has moved, in CSS pixels
+    pub xy: [(f64, f64); 2],
+    pub moved: [f64; 2],
+    /// the first lift: its time and buffer spot
+    pub lift: Option<(f64, f64, f64)>,
 }
 
 /// A fired beam, for the renderer.
@@ -69,6 +82,7 @@ pub struct Blast {
 #[derive(Clone, Debug)]
 pub struct Input {
     pub drag: Option<Drag>,
+    pub two: Option<Two>,
     /// the spin a drag leaves behind, radians a second round x and y
     pub vrx: f64,
     pub vry: f64,
@@ -96,6 +110,7 @@ impl Default for Input {
     fn default() -> Self {
         Input {
             drag: None,
+            two: None,
             vrx: 0.0,
             vry: 0.0,
             idle_t: 99.0,
@@ -114,28 +129,45 @@ impl Default for Input {
 }
 
 impl Game {
-    /// `pointerdown`: (x, y) in CSS pixels, (bx, by) in buffer pixels, the browser's `pointerId` and `button`. A
-    /// right-click, or a second finger landing with the first, opens instant transmission.
-    pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32, button: i32) {
+    /// `pointerdown`: (x, y) in CSS pixels, (bx, by) in buffer pixels, the browser's `pointerId` and `button`, and
+    /// whether `pointerType` is `touch`. A right-click opens instant transmission once it's owned; a second finger
+    /// landing within 0.12s of the first, at home with nothing on, may be a two-finger tap (`pointer_up` decides).
+    #[allow(clippy::too_many_arguments)]
+    pub fn pointer_down(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32, button: i32, touch: bool) {
         if self.playing && self.s.world == 3 && self.tl.snk.is_some() {
             self.snake_tap(bx, by);
             return;
         }
-        if button == 2 {
+        if button == 2 && self.s.lv(Upg::Itx) > 0 {
             self.itx_open();
             return;
         }
-        if self.inp.drag.is_some_and(|d| d.id != id && self.s.lv(Upg::Itx) > 0 && self.t - d.t < 0.4 && d.moved <= 6.0) {
-            self.itx_open();
-            self.inp.drag = None;
-            self.inp.charging = 0.0;
-            return;
+        if let Some(d) = self.inp.drag.filter(|d| touch && d.touch && d.id != id && self.t - d.t <= 0.12 && d.moved <= 6.0 && self.itx_can()) {
+            self.inp.two = Some(Two { ids: [d.id, id], xy: [(d.x, d.y), (x, y)], moved: [d.moved, 0.0], lift: None });
         }
-        self.inp.drag = Some(Drag { x, y, moved: 0.0, t: self.t, ax: bx, ay: by, id });
+        self.inp.drag = Some(Drag { x, y, moved: 0.0, t: self.t, ax: bx, ay: by, id, touch });
     }
 
-    /// `pointermove`: aims a charging beam, or spins the planet once the press has moved past 6px.
-    pub fn pointer_move(&mut self, x: f64, y: f64, bx: f64, by: f64) {
+    /// Not a two-finger tap after all: the tap held back from the first lift happens now.
+    fn two_miss(&mut self) {
+        if let Some((_, x, y)) = self.inp.two.take().and_then(|w| w.lift) {
+            self.tap(x, y);
+        }
+    }
+
+    /// `pointermove` of pointer `id`: aims a charging beam, or spins the planet once the press has moved past 6px.
+    pub fn pointer_move(&mut self, x: f64, y: f64, bx: f64, by: f64, id: i32) {
+        if let Some(w) = self.inp.two.as_mut() {
+            if let Some(i) = w.ids.iter().position(|&p| p == id) {
+                let p = &mut w.xy[i];
+                w.moved[i] += (x - p.0).abs() + (y - p.1).abs();
+                *p = (x, y);
+                if w.moved[i] <= 6.0 {
+                    return;
+                }
+                self.two_miss();
+            }
+        }
         let Some(d) = self.inp.drag.as_mut() else { return };
         let (dx, dy) = (x - d.x, y - d.y);
         d.x = x;
@@ -161,8 +193,23 @@ impl Game {
         }
     }
 
-    /// `pointerup` at (bx, by): fires a charged beam, or taps if the press didn't move.
-    pub fn pointer_up(&mut self, bx: f64, by: f64) {
+    /// `pointerup` of pointer `id` at (bx, by): fires a charged beam, or taps if the press didn't move. The second
+    /// finger of a two-finger tap opens instant transmission instead.
+    pub fn pointer_up(&mut self, bx: f64, by: f64, id: i32) {
+        if let Some(w) = self.inp.two.filter(|w| w.ids.contains(&id) && (w.lift.is_some() || self.inp.charging <= 0.15)) {
+            match w.lift {
+                None => self.inp.two.as_mut().unwrap().lift = Some((self.t, bx, by)),
+                Some((t, _, _)) if self.t - t <= 0.25 && self.itx_can() => {
+                    self.inp.two = None;
+                    self.itx_open();
+                }
+                Some(_) => self.two_miss(),
+            }
+            self.inp.charging = 0.0;
+            self.inp.drag = None;
+            return;
+        }
+        self.inp.two = None;
         if let Some(d) = self.inp.drag {
             if self.inp.charging > 0.15 {
                 self.fire_beam(self.inp.charging, d.ax, d.ay);
@@ -177,6 +224,7 @@ impl Game {
     pub fn pointer_cancel(&mut self) {
         self.inp.drag = None;
         self.inp.charging = 0.0;
+        self.inp.two = None;
     }
 
     /// `keydown` with `e.key.toLowerCase()`; true when the game took it (the page then calls `preventDefault`).
@@ -228,9 +276,9 @@ impl Game {
         }
     }
 
-    /// A full charge, in seconds of rate: levels add a little, never compound.
+    /// A full charge, in seconds of rate: levels add, never compound.
     pub fn beam_pay(&self) -> f64 {
-        self.wrate() * 4.0 * (1.0 + 0.25 * log(1f64.max(self.s.lvf(Upg::Galick)))) * (1.0 + 0.25 * self.lvl(N_BEAM))
+        self.wrate() * 4.0 * Self::beam_x_at(self.s.lvf(Upg::Galick)) * (1.0 + 0.25 * self.lvl(N_BEAM))
     }
 
     /// Kaioken times the great ape, on beam and big bang damage (never on what they pay).
@@ -426,7 +474,7 @@ impl Game {
         let r = 18.0 * (1.0 + 0.25 * (bb - 1.0)) * 1f64.max(self.cam.r / 50.0);
         self.inp.blasts.push(Blast { x, y, r: r * if self.b.ape_until > self.t { 1.6 } else { 1.0 }, t0: self.t, kaio: self.b.kaio_until > self.t });
         self.shake = self.shake.max(0.45);
-        let n = self.beam_pay() * (1.3 + 0.05 * bb.log2());
+        let n = self.beam_pay() * Self::bang_x_at(bb);
         self.gain_at(n, x, y - 10.0, true);
         for i in 0..self.tl.saibas.len() {
             let sb = &self.tl.saibas[i];
@@ -507,4 +555,3 @@ impl Game {
         self.inp.w2_pole
     }
 }
-

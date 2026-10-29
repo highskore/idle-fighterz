@@ -120,7 +120,6 @@ fn input_drawn() {
 }
 
 #[test]
-#[ignore = "game.js takes over 10 minutes to draw it; cargo test -- --ignored"]
 fn ascend_drawn() {
     drawn("ascend");
 }
@@ -153,4 +152,14 @@ fn snake_drawn() {
 #[test]
 fn daily_drawn() {
     drawn("daily");
+}
+
+#[test]
+fn toptaste_drawn() {
+    drawn("toptaste");
+}
+
+#[test]
+fn sides_drawn() {
+    drawn("sides");
 }

@@ -4,11 +4,11 @@
 //! hero, piccolo, bubbles and the visitors stand) are written back to the game the same way.
 
 use planet_core::data::{ALL_FORMS, FORM_AURA};
+use planet_core::fx::Particle;
 use planet_core::geom::{ap, dot, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, pow, sin};
 use planet_core::num::js_round;
 use planet_core::sprite::{self, Sprite};
-use planet_core::fx::Particle;
 use planet_core::Game;
 
 use crate::scenery::{Built, Kind, Pn, Solid};
@@ -38,11 +38,10 @@ impl View {
 /// What game.js keeps between frames for drawing only.
 #[derive(Default)]
 pub struct Scene {
-    
     pub(crate) built: Built,
     /// the arena's baked void, for its canvas size
     void: Option<(usize, usize, Vec<u32>)>,
-    
+
     /// shenron's track per look, built on first use
     tracks: std::collections::HashMap<usize, crate::shenron::Track>,
     key: Option<(u32, u32, u32)>,
@@ -51,8 +50,8 @@ pub struct Scene {
     pub own_rng: Option<planet_core::rng::Lcg>,
     /// the time chamber's last frame (`echo`), empty outside it
     pub(crate) echo: Vec<u32>,
-    /// the last instant transmission's departure (`blinkFx`)
-    blink: Option<Blink>,
+    /// the last instant transmission's departure (`itxFx`)
+    itx_fx: Option<ItxFx>,
     tones_key: Option<(u32, u8)>,
     pub tones: Option<Tones>,
 }
@@ -101,15 +100,52 @@ fn mix_c(a: u32, b: u32, k: f64) -> u32 {
 }
 
 const F3: [(char, &str); 46] = [
-    ('0', "111101101101111"), ('1', "010110010010111"), ('2', "111001111100111"), ('3', "111001111001111"), ('4', "101101111001001"),
-    ('5', "111100111001111"), ('6', "111100111101111"), ('7', "111001010010010"), ('8', "111101111101111"), ('9', "111101111001111"),
-    ('+', "000010111010000"), ('-', "000000111000000"), ('x', "000101010101000"), (' ', "000000000000000"), ('K', "101101110101101"),
-    ('.', "000000000000010"), ('A', "010101111101101"), ('B', "110101110101110"), ('C', "011100100100011"), ('D', "110101101101110"),
-    ('E', "111100110100111"), ('F', "111100110100100"), ('G', "011100101101011"), ('H', "101101111101101"), ('I', "111010010010111"),
-    ('J', "001001001101010"), ('L', "100100100100111"), ('M', "101111111101101"), ('N', "110101101101101"), ('O', "010101101101010"),
-    ('P', "110101110100100"), ('Q', "010101101110011"), ('R', "110101110101101"), ('S', "011100010001110"), ('T', "111010010010010"),
-    ('U', "101101101101111"), ('V', "101101101101010"), ('W', "101101111111101"), ('X', "101101010101101"), ('Y', "101101010010010"),
-    ('Z', "111001010100111"), ('!', "010010010000010"), ('\'', "010010000000000"), ('?', "000000000000000"), ('/', "000000000000000"), (',', "000000000000000"),
+    ('0', "111101101101111"),
+    ('1', "010110010010111"),
+    ('2', "111001111100111"),
+    ('3', "111001111001111"),
+    ('4', "101101111001001"),
+    ('5', "111100111001111"),
+    ('6', "111100111101111"),
+    ('7', "111001010010010"),
+    ('8', "111101111101111"),
+    ('9', "111101111001111"),
+    ('+', "000010111010000"),
+    ('-', "000000111000000"),
+    ('x', "000101010101000"),
+    (' ', "000000000000000"),
+    ('K', "101101110101101"),
+    ('.', "000000000000010"),
+    ('A', "010101111101101"),
+    ('B', "110101110101110"),
+    ('C', "011100100100011"),
+    ('D', "110101101101110"),
+    ('E', "111100110100111"),
+    ('F', "111100110100100"),
+    ('G', "011100101101011"),
+    ('H', "101101111101101"),
+    ('I', "111010010010111"),
+    ('J', "001001001101010"),
+    ('L', "100100100100111"),
+    ('M', "101111111101101"),
+    ('N', "110101101101101"),
+    ('O', "010101101101010"),
+    ('P', "110101110100100"),
+    ('Q', "010101101110011"),
+    ('R', "110101110101101"),
+    ('S', "011100010001110"),
+    ('T', "111010010010010"),
+    ('U', "101101101101111"),
+    ('V', "101101101101010"),
+    ('W', "101101111111101"),
+    ('X', "101101010101101"),
+    ('Y', "101101010010010"),
+    ('Z', "111001010100111"),
+    ('!', "010010010000010"),
+    ('\'', "010010000000000"),
+    ('?', "000000000000000"),
+    ('/', "000000000000000"),
+    (',', "000000000000000"),
 ];
 
 /// world.js `st.text` with the 3×5 font.
@@ -210,7 +246,11 @@ impl Ctx<'_> {
         let (ox, oy) = (bx + ux * lift, by + uy * lift);
         let rr = (hypot(&[spr.w as f64, spr.h as f64]) + 6.0) * k;
         let on = |i: f64, j: f64| {
-            i >= 0.0 && j >= 0.0 && i < spr.w as f64 && j < spr.h as f64 && spr.col[j as usize * spr.w + if flip { spr.w - 1 - i as usize } else { i as usize }] >= 0
+            i >= 0.0
+                && j >= 0.0
+                && i < spr.w as f64
+                && j < spr.h as f64
+                && spr.col[j as usize * spr.w + if flip { spr.w - 1 - i as usize } else { i as usize }] >= 0
         };
         let pulse = 0.5 + 0.5 * sin(t * 9.0);
         let f = (t * 12.0).floor();
@@ -248,7 +288,16 @@ impl Ctx<'_> {
                                     n += 1.0;
                                 }
                                 if q != 0.0 {
-                                    *b = pk(if q >= fl { 0xffd0c0 } else if q > 2.0 { 0xff8a6a } else { 0xff4a3a }, 255);
+                                    *b = pk(
+                                        if q >= fl {
+                                            0xffd0c0
+                                        } else if q > 2.0 {
+                                            0xff8a6a
+                                        } else {
+                                            0xff4a3a
+                                        },
+                                        255,
+                                    );
                                 } else if (on(i - 2.0, j) || on(i + 2.0, j) || on(i, j + 2.0)) && bayer(x as i32, y as i32) < 0.25 + 0.35 * pulse {
                                     *b = pk(0xb0201a, 255);
                                 }
@@ -339,13 +388,21 @@ impl Scene {
 
     /// The scenery's solids for the game's world and the houses game.js last built (`Game::scenery_house`).
     fn sync(&mut self, g: &Game) {
-        let key = (g.s.world, g.scenery_house.min(9), if g.s.world == 9 { g.s.uni } else { 0 });
+        let key = (g.s.world, g.scenery_house.min(9), if g.s.world == 9 { g.top_uni } else { 0 });
         if self.key != Some(key) {
             self.key = Some(key);
             self.built = crate::scenery::build(g);
         }
         // janemba's jelly world and bojack's earth recolour the planet (`recolour`) until the movie ends; the sea stays
-        let look = g.tl.movie.as_ref().map_or(0, |m| if m.o.jelly { 1 } else if m.o.earth { 2 } else { 0 });
+        let look = g.tl.movie.as_ref().map_or(0, |m| {
+            if m.o.jelly {
+                1
+            } else if m.o.earth {
+                2
+            } else {
+                0
+            }
+        });
         if self.tones_key != Some((g.s.world, look)) {
             self.tones_key = Some((g.s.world, look));
             let mut t = tones::tones(g.s.world);
@@ -378,7 +435,8 @@ impl Scene {
         fb.clear();
         let tones = self.tones.take().unwrap();
         let world = g.s.world;
-        let mut c = Ctx { fb, w: g.cam.w, h: g.cam.h, cx: g.cam.cx, cy: g.cam.cy, r: g.cam.r, m: g.cam.m, bob: g.cam.bob, t, l: light_dir(), world, tones: &tones };
+        let mut c =
+            Ctx { fb, w: g.cam.w, h: g.cam.h, cx: g.cam.cx, cy: g.cam.cy, r: g.cam.r, m: g.cam.m, bob: g.cam.bob, t, l: light_dir(), world, tones: &tones };
         if world == 3 && g.tl.snk.is_some() {
             crate::snake::draw(&mut c, g, view, dt);
             self.tones = Some(tones);
@@ -543,16 +601,15 @@ impl Scene {
             }
         }
         crate::floats::draw(c.fb, g, dt);
-        drop(c);
         self.tones = Some(tones);
     }
 
     fn draw_hero(&mut self, c: &mut Ctx, g: &mut Game, dt: f64) -> HeroAt {
         let t = c.t;
         // instant transmission: where he left from (with his facing and lift as last drawn), seen once
-        if let Some((from, t0)) = g.tl.blink_from {
-            if self.blink.as_ref().is_none_or(|b| b.t0 != t0) {
-                self.blink = Some(Blink { x: from.x, y: from.y, ang: from.ang, z: from.v[2], flip: g.flip_now, lift: g.lift_now, t0, fx: false });
+        if let Some((from, t0)) = g.tl.itx_fx {
+            if self.itx_fx.as_ref().is_none_or(|b| b.t0 != t0) {
+                self.itx_fx = Some(ItxFx { x: from.x, y: from.y, ang: from.ang, z: from.v[2], flip: g.flip_now, lift: g.lift_now, t0, fx: false });
             }
         }
         let kd = g.kid_screen(0.0);
@@ -560,7 +617,7 @@ impl Scene {
         let fi = ALL_FORMS.iter().position(|f| f.0 == form.name).unwrap_or(0);
         let hero = sprite::hero(hero_id(g));
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[fi] };
-        let bl = match &self.blink {
+        let bl = match &self.itx_fx {
             Some(b) if t - b.t0 < 0.75 => t - b.t0,
             _ => -1.0,
         };
@@ -576,7 +633,10 @@ impl Scene {
         } else {
             &set.run[((t * (9.0 + g.sprint * 10.0)).floor() as i64 % 4) as usize]
         };
-        let lift = g.tl.jump_h + if g.riding > 0.0 { 9.0 } else { 0.0 } + if surf && g.riding <= 0.0 { 3.0 + sin(t * 4.0) } else { 0.0 } + if fly { 18.0 } else { 0.0 };
+        let lift = g.tl.jump_h
+            + if g.riding > 0.0 { 9.0 } else { 0.0 }
+            + if surf && g.riding <= 0.0 { 3.0 + sin(t * 4.0) } else { 0.0 }
+            + if fly { 18.0 } else { 0.0 };
         let depth = kd.v[2] * c.r + 6.0;
         g.flip_now = flip;
         g.lift_now = lift;
@@ -650,7 +710,11 @@ impl Scene {
                 }
             }
             let (ux, uy) = (sin(kd.ang), -cos(kd.ang));
-            let half = ((kd.x + ux * lift) / (1.001 - ux)).min((c.w - kd.x - ux * lift) / (1.001 + ux)).min((kd.y + uy * lift) / (1.001 - uy)).min((c.h - kd.y - uy * lift) / (1.001 + uy)) - 3.0;
+            let half = ((kd.x + ux * lift) / (1.001 - ux))
+                .min((c.w - kd.x - ux * lift) / (1.001 + ux))
+                .min((kd.y + uy * lift) / (1.001 - uy))
+                .min((c.h - kd.y - uy * lift) / (1.001 + uy))
+                - 3.0;
             let a0 = sprite::get("APE.0");
             let ape = &g.tl.ape;
             let want = 2.3 * (1.0 + 0.08 * g.tail_lv()) * if ape.giant { 1.0 + 0.5 * 1f64.min((t - ape.at) / 1.2) } else { 1.0 };
@@ -660,7 +724,11 @@ impl Scene {
             draw_hero(c, spr, lift + sin(t * 3.2 * std::f64::consts::PI).abs() * 3.0, depth + 30.0, k, kd.x, kd.y, kd.ang);
         } else if g.b.fused.is_some_and(|f| f.1 > t) {
             let look = g.tl.fused_look;
-            let spr = if look == "FUSED.fat" { sprite::get(["FUSED.fat.0", "FUSED.fat.1", "FUSED.fat.2", "FUSED.fat.3"][(t * 4.0).floor() as usize % 4]) } else { sprite::get(look) };
+            let spr = if look == "FUSED.fat" {
+                sprite::get(["FUSED.fat.0", "FUSED.fat.1", "FUSED.fat.2", "FUSED.fat.3"][(t * 4.0).floor() as usize % 4])
+            } else {
+                sprite::get(look)
+            };
             draw_hero(c, spr, lift, depth, 1.05, kd.x, kd.y, kd.ang);
         } else if fly {
             // the flight wish: a white-blue streak along the orbit, the superman pose
@@ -700,7 +768,18 @@ impl Scene {
                                 c.fb.px(x, y, pal[2], 0.5);
                             }
                         } else {
-                            c.fb.px(x, y, if a < 0.45 { pal[0] } else if a < 0.8 { pal[1] } else { pal[2] }, 1.0 - k * k * 0.5);
+                            c.fb.px(
+                                x,
+                                y,
+                                if a < 0.45 {
+                                    pal[0]
+                                } else if a < 0.8 {
+                                    pal[1]
+                                } else {
+                                    pal[2]
+                                },
+                                1.0 - k * k * 0.5,
+                            );
                         }
                         e += 0.5;
                     }
@@ -714,7 +793,9 @@ impl Scene {
                 for _ in 0..3 {
                     let r = 5.0 + g.rng.random() * 7.0;
                     let a = g.rng.random() * 6.28;
-                    g.fx.push(Particle::new(mx + cos(a) * r, my + sin(a) * r * 0.7, &pal).v(-cos(a2) * dir * 30.0, -sin(a2) * dir * 30.0).life(0.4).size(1.0, 1.0));
+                    g.fx.push(
+                        Particle::new(mx + cos(a) * r, my + sin(a) * r * 0.7, &pal).v(-cos(a2) * dir * 30.0, -sin(a2) * dir * 30.0).life(0.4).size(1.0, 1.0),
+                    );
                 }
             }
             draw_hero(c, spr, 0.0, depth, 1.05, mx - sin(a2) * sh / 2.0, my + cos(a2) * sh / 2.0, a2);
@@ -729,7 +810,7 @@ impl Scene {
         }
         if bl >= 0.0 {
             // where he stood: his shape fades out in a shimmer; where he lands, a ring of light pulls in
-            let b = self.blink.as_mut().unwrap();
+            let b = self.itx_fx.as_mut().unwrap();
             if bl < 0.35 {
                 let ghost = itx_ghost(&set.idle, 1.0 - bl / 0.35, t);
                 c.blit_z(&ghost, b.x, b.y, b.ang, b.flip, b.lift, b.z * c.r + 6.0, 1.05);
@@ -750,7 +831,11 @@ impl Scene {
                     let a = g.rng.random() * 6.28;
                     let vx = (g.rng.random() - 0.5) * 12.0;
                     let vy = -16.0 - g.rng.random() * 30.0;
-                    g.fx.push(Particle::new(bx + sin(ba) * 14.0 + cos(a) * 6.0, by - cos(ba) * 14.0 + sin(a) * 9.0, &[0xbff6ff, 0x7ae0f4, 0x2f8ae0]).v(vx, vy).life(0.7));
+                    g.fx.push(
+                        Particle::new(bx + sin(ba) * 14.0 + cos(a) * 6.0, by - cos(ba) * 14.0 + sin(a) * 9.0, &[0xbff6ff, 0x7ae0f4, 0x2f8ae0])
+                            .v(vx, vy)
+                            .life(0.7),
+                    );
                 }
             }
         }
@@ -951,7 +1036,8 @@ const CLOUD_TPL: [&[[f64; 3]]; 7] = [
 fn cloud_lobes(tp: &[[f64; 3]], k: f64, scale: f64) -> Vec<[f64; 3]> {
     let s = (if hash(k * 3.1 + 9.0) < 0.5 { -1.0 } else { 1.0 }) * scale;
     let a = s.abs();
-    let mut lobes: Vec<[f64; 3]> = tp.iter().enumerate().map(|(i, &[dx, dy, r])| [dx * s, dy * a, r * a + js_round(hash(k * 11.0 + i as f64 * 1.7) * 2.0) - 1.0]).collect();
+    let mut lobes: Vec<[f64; 3]> =
+        tp.iter().enumerate().map(|(i, &[dx, dy, r])| [dx * s, dy * a, r * a + js_round(hash(k * 11.0 + i as f64 * 1.7) * 2.0) - 1.0]).collect();
     if tp.len() < 4 && hash(k * 2.3 + 4.0) > 0.6 {
         let mut p = tp[0];
         for &q in &tp[1..] {
@@ -1139,9 +1225,24 @@ fn draw_moon(c: &mut Ctx, m: &planet_core::timeline::Moon) {
             let d = hypot(&[xx, yy]);
             if d <= r - 1.0 {
                 let n = h2(js_round(x + xx) * 3.0, js_round(y + yy) * 5.0);
-                let crater = hypot(&[xx + r * 0.3, yy - r * 0.2]) < r * 0.22 || hypot(&[xx - r * 0.35, yy + r * 0.3]) < r * 0.16 || hypot(&[xx - r * 0.1, yy - r * 0.45]) < r * 0.12;
+                let crater = hypot(&[xx + r * 0.3, yy - r * 0.2]) < r * 0.22
+                    || hypot(&[xx - r * 0.35, yy + r * 0.3]) < r * 0.16
+                    || hypot(&[xx - r * 0.1, yy - r * 0.45]) < r * 0.12;
                 let l = -(xx * 0.5 + yy * 0.6) / r + (n - 0.5) * 0.3;
-                c.fb.px(x + xx, y + yy, if crater { 0xe6c878 } else if l > 0.3 { 0xfffbe6 } else if l > -0.3 { 0xffeab0 } else { 0xf2d07e }, a);
+                c.fb.px(
+                    x + xx,
+                    y + yy,
+                    if crater {
+                        0xe6c878
+                    } else if l > 0.3 {
+                        0xfffbe6
+                    } else if l > -0.3 {
+                        0xffeab0
+                    } else {
+                        0xf2d07e
+                    },
+                    a,
+                );
             } else if d <= r {
                 c.fb.px(x + xx, y + yy, 0xc89a3a, a);
             } else if d <= r + 7.0 && bayer(js_round(x + xx) as i64 as i32, js_round(y + yy) as i64 as i32) < (1.0 - (d - r) / 7.0) * 0.7 * a {
@@ -1157,7 +1258,7 @@ fn draw_moon(c: &mut Ctx, m: &planet_core::timeline::Moon) {
 fn planet(c: &mut Ctx, g: &Game, b: &Built, id: u16) {
     let w = c.world;
     let (gl, rl) = (&c.tones.grass, &c.tones.road);
-    if matches!(w, 5 | 6 | 7 | 8 | 9) || tones::is_w2(w) || gl.len() > 8 || rl.len() > 8 {
+    if matches!(w, 5..=9) || tones::is_w2(w) || gl.len() > 8 || rl.len() > 8 {
         let ax = crate::shade::Axes { n: g.frame3.n, e1: g.frame3.e1, e2: g.frame3.e2, phi: g.phi, top_dmg: crate::scenery::top_dmg(g) };
         c.sphere([0.0, 0.0, 0.0], 1.0, id, &mut |c, n, x, y| crate::shade::planet(c, b, &ax, n, x, y));
         return;
@@ -1228,8 +1329,8 @@ impl Pn {
     }
 }
 
-/// `blinkFx`: where an instant transmission left from, and whether its sparkle has been thrown
-struct Blink {
+/// `itxFx`: where an instant transmission left from, and whether its sparkle has been thrown
+struct ItxFx {
     x: f64,
     y: f64,
     ang: f64,
@@ -1286,6 +1387,19 @@ fn itx_pose(spr: &Sprite) -> Sprite {
 /// `itxGhost`: `a` of the sprite's pixels, in blue light, dropping out row by row.
 fn itx_ghost(spr: &Sprite, a: f64, t: f64) -> Sprite {
     let f = (t * 30.0).floor();
-    let col = spr.col.iter().enumerate().map(|(n, &c)| if c < 0 || h2(n as f64, f) > a { -1 } else if (n / spr.w) % 2 == 1 { 0x4aa8f0 } else { 0xbff6ff }).collect();
+    let col = spr
+        .col
+        .iter()
+        .enumerate()
+        .map(|(n, &c)| {
+            if c < 0 || h2(n as f64, f) > a {
+                -1
+            } else if (n / spr.w) % 2 == 1 {
+                0x4aa8f0
+            } else {
+                0xbff6ff
+            }
+        })
+        .collect();
     Sprite { col, ..spr.clone() }
 }

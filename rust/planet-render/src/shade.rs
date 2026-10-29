@@ -5,8 +5,8 @@ use planet_core::geom::{dot, V3};
 use planet_core::jsmath::{atan2, pow, sin};
 use planet_core::num::js_round;
 
-use crate::scenery::{Built, Pave, Pn};
 use crate::scene::{ap_t, tone, vnoise3, Ctx};
+use crate::scenery::{Built, Pave, Pn};
 use crate::tones::{top, W2P};
 use crate::{bayer, h2};
 
@@ -265,7 +265,8 @@ pub fn dome(c: &Ctx, s: V3, door: V3, n: V3, x: i64, y: i64) -> u32 {
     tone(&t.dome, lum, x, y)
 }
 
-const GLYPH: [(u8, u32); 10] = [(b'C', 0x7927), (b'A', 0x2bed), (b'P', 0x6ba4), (b'S', 0x388e), (b'U', 0x5b6f), (b'L', 0x4927), (b'E', 0x79a7), (b'O', 0x2b6a), (b'R', 0x6bad), (b' ', 0)];
+const GLYPH: [(u8, u32); 10] =
+    [(b'C', 0x7927), (b'A', 0x2bed), (b'P', 0x6ba4), (b'S', 0x388e), (b'U', 0x5b6f), (b'L', 0x4927), (b'E', 0x79a7), (b'O', 0x2b6a), (b'R', 0x6bad), (b' ', 0)];
 const LABEL: &[u8] = b"CAPSULE";
 
 /// `shadeHQ`: capsule corp, lettered round its blue band.
@@ -284,7 +285,7 @@ pub fn hq(c: &Ctx, s: V3, door: V3, side: V3, text: bool, p: Pn, n: V3, x: i64, 
     if up < 0.36 {
         let col = ((ang / 1.7 + 0.5) * LABEL.len() as f64 * 4.0).floor();
         let row = ((0.33 - up) / 0.2 * 5.0).floor();
-        if text && col >= 0.0 && col < LABEL.len() as f64 * 4.0 && (col as i64) % 4 < 3 && row >= 0.0 && row < 5.0 {
+        if text && (0.0..LABEL.len() as f64 * 4.0).contains(&col) && (col as i64) % 4 < 3 && (0.0..5.0).contains(&row) {
             let (ci, ri) = (col as i64, row as i64);
             let gl = GLYPH.iter().find(|g| g.0 == LABEL[(ci >> 2) as usize]).map(|g| g.1).unwrap_or(0) as i64;
             if (gl >> (14 - ri * 3 - ci % 4)) & 1 != 0 {

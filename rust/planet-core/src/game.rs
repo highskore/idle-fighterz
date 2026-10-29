@@ -21,6 +21,7 @@ pub struct Buffs {
     pub kaio_until: f64,
     pub tired_until: f64,
     pub kaio_ready: f64,
+    pub asc_ready: f64,
     pub daily_until: f64,
     pub fuse_until: f64,
     pub fused: Option<(f64, f64)>, // (x, until)
@@ -107,6 +108,8 @@ pub struct Game {
     pub drawn_here: bool,
     /// the capsule houses as game.js last built the scenery (`scenery()`): a wish's free levels don't rebuild it
     pub scenery_house: u32,
+    /// the universes the arena showed erased at game.js's last `topSync()` (a poked `S.uni` doesn't redraw it)
+    pub top_uni: u32,
 }
 
 impl Game {
@@ -151,6 +154,7 @@ impl Game {
             hero_seen: false,
             drawn_here: false,
             scenery_house: 0,
+            top_uni: 0,
         };
         g.sync_shop();
         g
@@ -224,7 +228,7 @@ impl Game {
     }
 
     pub fn zeno_ready(&self) -> bool {
-        self.s.gods >= ZENO_GODS
+        self.s.gods >= ZENO_GODS * (1 + self.s.zeno)
     }
 
     pub fn god_boost_of(n: f64) -> f64 {
@@ -248,7 +252,10 @@ impl Game {
 
     pub fn late_boost(&self) -> f64 {
         let stars = self.s.ustars as f64 * if self.ang(A_STARS) { 2.0 } else { 1.0 };
-        crate::jsmath::pow(STAR_X, stars) * crate::jsmath::pow(MASTERY_X, self.s.mastery as f64) * Self::god_boost_of(self.s.god_total as f64) * crate::jsmath::pow(ZENO_X, self.s.zeno as f64)
+        crate::jsmath::pow(STAR_X, stars)
+            * crate::jsmath::pow(MASTERY_X, self.s.mastery as f64)
+            * Self::god_boost_of(self.s.god_total as f64)
+            * crate::jsmath::pow(ZENO_X, self.s.zeno as f64)
     }
 
     /// The engine the ceiling caps; forms sit outside it.
@@ -266,8 +273,37 @@ impl Game {
         }
     }
 
+    /// His bonus on top of ×1; only his size and time slow past lv 10.
     pub fn ape_x(&self) -> f64 {
-        2.0 + 0.25 * self.tail_lv() + if self.tl.ape.giant { 1.0 } else { 0.0 }
+        2.0 + 0.25 * self.s.lvf(Upg::Tail) + if self.tl.ape.giant { 1.0 } else { 0.0 }
+    }
+
+    /// Crit chance past 100%: each 10% of it is +20% crit damage.
+    pub fn crit_over(&self) -> f64 {
+        (self.s.lvf(Upg::Scouter) * 0.1 + self.lvl(N_CRIT) * 0.08 - 1.0).max(0.0)
+    }
+
+    pub fn crit_hit(&self) -> f64 {
+        (2.0 + self.lvl(N_CRITX)) * (1.0 + 2.0 * self.crit_over())
+    }
+
+    /// A senzu bean's boost at a senzu tree level: ×1.5, +0.1 a level past lv 3 (when beans come round fast enough).
+    pub fn senzu_x_at(lv: f64) -> f64 {
+        (15.0 + (lv - 3.0).max(0.0)) / 10.0
+    }
+
+    pub fn senzu_x(&self) -> f64 {
+        Self::senzu_x_at(self.s.lvf(Upg::Senzu))
+    }
+
+    /// A full charge's pay at a galick level: +5% a level.
+    pub fn beam_x_at(lv: f64) -> f64 {
+        (19.0 + lv.max(1.0)) / 20.0
+    }
+
+    /// A big bang's pay, in full beams, at a level: 1.3, +0.05 a level.
+    pub fn bang_x_at(lv: f64) -> f64 {
+        (25.0 + lv) / 20.0
     }
 
     pub fn kaio_x(&self) -> f64 {
@@ -299,7 +335,7 @@ impl Game {
             1.0 + on(b.car_until, 0.5)
                 + on(b.boost_until, 1.0)
                 + on(b.ape_until, self.ape_x())
-                + on(b.senzu_until, 0.5)
+                + on(b.senzu_until, self.senzu_x() - 1.0)
                 + if self.riding > 0.0 { 0.5 } else { 0.0 }
                 + on(b.kaio_until, self.kaio_x() - 1.0)
                 + on(b.daily_until, 0.25)
@@ -315,7 +351,12 @@ impl Game {
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
-        self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
+        let m = self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake;
+        if m < MAX_MULT {
+            m
+        } else {
+            MAX_MULT
+        }
     }
 
     pub fn lap_value(&self) -> f64 {
@@ -411,8 +452,8 @@ impl Game {
     }
 
     pub fn gain(&mut self, n: f64) {
-        let n = js_round(n).max(1.0);
-        self.s.pl += n;
+        let n = if n > 1.0 { MAX_PL.min(js_round(n)) } else { 1.0 };
+        self.s.pl = MAX_PL.min(self.s.pl + n);
         if self.s.pl > self.s.best {
             self.s.best = self.s.pl;
         }
@@ -546,7 +587,7 @@ impl Game {
         let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots))
             * self.mult(false)
             * self.combo
-            * if crit { 2.0 + self.lvl(N_CRITX) } else { 1.0 }
+            * if crit { self.crit_hit() } else { 1.0 }
             * (1.0 + 0.5 * self.lvl(N_FIST))
             * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
         let k = self.kid_screen(14.0);
@@ -634,14 +675,10 @@ impl Game {
         ITX_WORLDS.into_iter().filter(|w| self.s.been & 1 << w != 0).collect()
     }
 
-    /// game.js `itxCan()`: owned, recharged, at home, and nothing on (a fight, the dragon, the dance, a struggle).
-    pub fn itx_can(&self) -> bool {
+    /// game.js `calm()`: nothing on (no fight, the dragon, the dance or a struggle). Not `self.calm`, reduced motion.
+    pub fn calm(&self) -> bool {
         let tl = &self.tl;
-        self.playing
-            && self.s.lv(Upg::Itx) > 0
-            && self.t >= tl.itx_ready
-            && self.s.world == self.home()
-            && tl.tour.is_none()
+        tl.tour.is_none()
             && tl.shen.is_none()
             && tl.boss.is_none()
             && tl.dance.is_none()
@@ -650,18 +687,28 @@ impl Game {
             && tl.movie.is_none()
     }
 
-    /// game.js `itxOpen()` (the gesture or the button): the picker, or why it won't open.
-    pub fn itx_open(&mut self) {
+    /// game.js `itxCan()`: owned, recharged, at home, and calm.
+    pub fn itx_can(&self) -> bool {
+        self.playing && self.s.lv(Upg::Itx) > 0 && self.t >= self.tl.itx_ready && self.s.world == self.home() && self.calm()
+    }
+
+    /// game.js `itxNo()`: why it won't go (said only once it's owned and the game is on).
+    fn itx_no(&mut self) {
         if self.s.lv(Upg::Itx) == 0 || !self.playing {
             return;
         }
         if self.t < self.tl.itx_ready {
             let msg = format!("instant transmission recharges in {}s", (self.tl.itx_ready - self.t).ceil());
             self.event(msg);
-            return;
-        }
-        if !self.itx_can() {
+        } else {
             self.event("instant transmission only works from home, with no fight on");
+        }
+    }
+
+    /// game.js `itxOpen()` (the gesture or the button): the picker, or why it won't open.
+    pub fn itx_open(&mut self) {
+        if !self.itx_can() {
+            self.itx_no();
             return;
         }
         let list = crate::json::arr(
@@ -670,20 +717,29 @@ impl Game {
         self.cue(crate::hud::Cue::ItxPick(list));
     }
 
-    /// game.js `itxJump(w)`: that world's normal trip, starting now; the cooldown starts when it ends.
+    /// game.js `itxJump(w)`: that world's normal trip, starting now, on top of the natural ones (their timer and power
+    /// mark stay); the cooldown starts when it ends.
     pub fn itx_jump(&mut self, w: u32) {
-        if !self.itx_can() || !self.itx_worlds().contains(&w) {
+        if !self.itx_can() {
+            self.itx_no();
+            return;
+        }
+        if !self.itx_worlds().contains(&w) {
             return;
         }
         let from = self.kid_screen(0.0);
-        self.tl.blink_from = Some((from, self.t + 0.35)); // the arrival plays once the trip's flash fades
-        self.tl.pod_wish = 0;
-        self.s.namek_at = self.s.run_best * 4.0;
-        self.travel(w);
-        self.tl.namek_until = self.t + 45.0;
+        self.tl.itx_fx = Some((from, self.t + 0.35)); // the arrival plays once the trip's flash fades
+        self.trip(w);
         self.tl.itx_trip = true;
         self.ach("itx");
-        self.cue(crate::hud::Cue::Sfx("blink"));
+        self.cue(crate::hud::Cue::Sfx("itx"));
+    }
+
+    /// game.js `itxHome()`: a jumped trip is over, so the cooldown starts.
+    pub(crate) fn itx_home(&mut self) {
+        self.tl.itx_trip = false;
+        self.tl.itx_ready = self.t + self.itx_cd();
+        self.tl.itx_back = self.session;
     }
 
     pub fn kaioken(&mut self) {
@@ -739,6 +795,10 @@ impl Game {
     }
 
     pub fn ascend(&mut self) {
+        if self.t < self.b.asc_ready {
+            return;
+        }
+        self.b.asc_ready = self.t + ASC_CD;
         let gain = self.seeds_now();
         let keep = (self.s.pl * 0.01 * self.lvl(N_HEAD)).floor();
         self.s.ascend += gain;
@@ -797,6 +857,7 @@ impl Game {
             b.fled = true;
             b.t1 = self.t;
         }
+        self.top_sync();
         self.cue(Cue::Form(self.s.form));
         self.scenery();
         let boost = crate::num::fmt_short(Self::god_boost_of(self.s.god_total as f64));
@@ -840,9 +901,13 @@ impl Game {
         self.tl.preview = None;
         self.tl.next_boss = 60.0;
         self.ach("zeno");
+        self.top_sync();
         if self.s.world != 0 {
             self.travel(0);
             self.tl.namek_until = 0.0;
+        }
+        if self.tl.itx_trip {
+            self.itx_home();
         }
         self.flash_t = 1.0;
         self.shake = 1.0;
@@ -964,7 +1029,8 @@ impl Game {
                 self.transform(self.tl.preview.is_some());
             }
             let last = self.forms.len() - 1;
-            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * crate::jsmath::pow(LATE_STEP, self.s.mastery as f64 + 1.0) {
+            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * crate::jsmath::pow(LATE_STEP, self.s.mastery as f64 + 1.0)
+            {
                 self.s.mastery += 1;
                 self.ach("mastery");
                 let next = crate::num::fmt_short(self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0));
@@ -1020,6 +1086,7 @@ impl Game {
             "krillinDead" => s.krillin_dead = v != 0.0,
             "orbs7" => s.orbs7 = v as u32,
             "trips" => s.trips = v as u32,
+            "form" => s.form = v as usize,
             _ => {
                 if let Some(a) = key.strip_prefix("angel.").and_then(angel_ix) {
                     s.angel[a] = v != 0.0;
@@ -1096,7 +1163,9 @@ impl Game {
             self.session = 91.0;
             self.tl.next_roshi = 0.0;
         }
-        for (k, b, trips) in [("paozu", 7e6, 6), ("westcity", 5e6, 4), ("kame", 6e6, 5), ("lookout", 5e6, 8), ("kaiworld", 5e6, 9), ("yardrat", 5e6, 10), ("future", 5e6, 7)] {
+        for (k, b, trips) in
+            [("paozu", 7e6, 6), ("westcity", 5e6, 4), ("kame", 6e6, 5), ("lookout", 5e6, 8), ("kaiworld", 5e6, 9), ("yardrat", 5e6, 10), ("future", 5e6, 7)]
+        {
             if has(k) {
                 trip(self, b, trips);
             }
@@ -1278,6 +1347,9 @@ impl Game {
         if self.s.multi && self.s.world == 0 {
             self.s.world = 9;
             self.cam.layout(9);
+        }
+        if self.s.multi {
+            self.top_sync();
         }
         self.s.run_best = self.s.run_best.max(self.s.best);
     }

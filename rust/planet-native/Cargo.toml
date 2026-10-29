@@ -1,6 +1,6 @@
 [package]
 name = "planet-native"
-description = "Native surface for the Powerrr Tauri widget (wgpu/softbuffer, stage 5)"
+description = "Native surface for the Idle FighterZ Tauri widget (wgpu/softbuffer, stage 5)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

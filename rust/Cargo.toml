@@ -6,7 +6,7 @@ members = ["planet-core", "planet-render", "planet-web", "planet-native"]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/highskore/planet"
+repository = "https://github.com/highskore/idle-fighterz"
 
 [profile.release]
 opt-level = 3

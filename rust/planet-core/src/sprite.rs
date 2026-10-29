@@ -220,51 +220,161 @@ pub struct Hero {
 pub const LATE_HAIR: [(u32, u32); 5] = [(0xa8b0c4, 0xf4f6fa), (0x1f58c8, 0x6aa8f0), (0xf2f0f8, 0xc8a8f8), (0x4a1a8a, 0x9a6ae0), (0xf2dc6a, 0xd8f2ff)];
 
 const IDLE: [&str; 15] = [
-    "...oyyobbbbyyo..", "..oyyyoaaaaoyyo.", "..oYYoaaaaaAoYo.", "..obboaaaaaAobo.", "..obboaaaaaAobo.", "..oggoaaaaaAogo.", "..oGgoBaaaAAoGo.",
-    "...oo.oBbbbBo.o.", "......obbbbBo...", ".....obbo.obBo..", ".....obbo.obBo..", ".....obbo.obBo..", ".....owwo.owWo..", "....owwwo.owwWo.",
+    "...oyyobbbbyyo..",
+    "..oyyyoaaaaoyyo.",
+    "..oYYoaaaaaAoYo.",
+    "..obboaaaaaAobo.",
+    "..obboaaaaaAobo.",
+    "..oggoaaaaaAogo.",
+    "..oGgoBaaaAAoGo.",
+    "...oo.oBbbbBo.o.",
+    "......obbbbBo...",
+    ".....obbo.obBo..",
+    ".....obbo.obBo..",
+    ".....obbo.obBo..",
+    ".....owwo.owWo..",
+    "....owwwo.owwWo.",
     "....ooooo.ooooo.",
 ];
 const RUN_A: [&str; 15] = [
-    "...oyyobbbbyyo..", "..oyyyoaaaaoyyo.", ".oYYoaaaaaaAoYYo", "oggoaaaaaaaAobbo", "oGgoaaaaaaaAobbo", ".oo.aaaaaaaAoggo", "....oBaaaaAAoGo.",
-    "....oBbbbbBo.oo.", "....obbbbbbBo...", "...obbbo..obBBo.", "..obbo.....obBo.", ".obbo.......obBo", "owwo........owWo", "owwwo.......owwo",
+    "...oyyobbbbyyo..",
+    "..oyyyoaaaaoyyo.",
+    ".oYYoaaaaaaAoYYo",
+    "oggoaaaaaaaAobbo",
+    "oGgoaaaaaaaAobbo",
+    ".oo.aaaaaaaAoggo",
+    "....oBaaaaAAoGo.",
+    "....oBbbbbBo.oo.",
+    "....obbbbbbBo...",
+    "...obbbo..obBBo.",
+    "..obbo.....obBo.",
+    ".obbo.......obBo",
+    "owwo........owWo",
+    "owwwo.......owwo",
     "ooooo........ooo",
 ];
 const RUN_B: [&str; 15] = [
-    "...oyyobbbbyyo..", "..oyyyoaaaaoyyo.", "..oYYoaaaaaAoYo.", "...ooaaaaaaAobo.", "...oaaaaaaaAobo.", "...ogoaaaaaAogo.", "...oGoBaaaAAoGo.",
-    "....o.oBbbbBo...", "......obbbbBo...", "......obbbBo....", "......obbBo.....", "......obbBoo....", "......obbBowwo..", ".....owwwowwo...",
+    "...oyyobbbbyyo..",
+    "..oyyyoaaaaoyyo.",
+    "..oYYoaaaaaAoYo.",
+    "...ooaaaaaaAobo.",
+    "...oaaaaaaaAobo.",
+    "...ogoaaaaaAogo.",
+    "...oGoBaaaAAoGo.",
+    "....o.oBbbbBo...",
+    "......obbbbBo...",
+    "......obbbBo....",
+    "......obbBo.....",
+    "......obbBoo....",
+    "......obbBowwo..",
+    ".....owwwowwo...",
     ".....oooooooo...",
 ];
 const RUN_C: [&str; 15] = [
-    "...oyyobbbbyyo..", "..oyyyoaaaaoyyo.", ".oYYoaaaaaaAoYYo", "oggoaaaaaaaAobbo", "oGgoaaaaaaaAobbo", ".oo.aaaaaaaAoggo", "....oBaaaaAAoGo.",
-    ".oo.oBbbbbBo....", "...oBbbbbbbo....", ".oBBbo..obbbo...", ".oBbo.....obbo..", "oBbo.......obbo.", "oWwo........owwo", "owwo.......owwwo",
+    "...oyyobbbbyyo..",
+    "..oyyyoaaaaoyyo.",
+    ".oYYoaaaaaaAoYYo",
+    "oggoaaaaaaaAobbo",
+    "oGgoaaaaaaaAobbo",
+    ".oo.aaaaaaaAoggo",
+    "....oBaaaaAAoGo.",
+    ".oo.oBbbbbBo....",
+    "...oBbbbbbbo....",
+    ".oBBbo..obbbo...",
+    ".oBbo.....obbo..",
+    "oBbo.......obbo.",
+    "oWwo........owwo",
+    "owwo.......owwwo",
     "ooo........ooooo",
 ];
 const POSE_TOP: [&str; 7] =
     ["...oyyobbbbyyo..", "..oyyyoaaaaoyyo.", "..oYYoaaaaaAoYo.", "..obbbbbbbbggoo.", "..oggbbbbbbbbbo.", "...oooaaaaaAoo..", ".....oBaaaAAo..."];
 const BACK_HEAD: [&str; 12] = [
-    "......o...o.....", ".....oho.oho....", "....ohHo.oHho...", "...ohhHhohHhho..", "...ohhhhhhhhho..", "..ohhhhhhhhhhho.", "..ohhHhhhhHhhho.",
-    "...ohhhhhhhhho..", "...ohhhhhhhhho..", "....ohhhhhhho...", "....oShhhhhSo...", ".....oSSSSSo....",
+    "......o...o.....",
+    ".....oho.oho....",
+    "....ohHo.oHho...",
+    "...ohhHhohHhho..",
+    "...ohhhhhhhhho..",
+    "..ohhhhhhhhhhho.",
+    "..ohhHhhhhHhhho.",
+    "...ohhhhhhhhho..",
+    "...ohhhhhhhhho..",
+    "....ohhhhhhho...",
+    "....oShhhhhSo...",
+    ".....oSSSSSo....",
 ];
 
 pub const VEGETA_HEAD: [&str; 16] = [
-    "......o...o.....", ".....oho.oho....", "....ohHo.oHho...", "....ohHhohHhho..", "...ohhHhhhhhho..", "...ohhhhhhhhho..", "...ohhhhhhhhhho.",
-    "....ohhhhhhhhho.", "....ohhhhhhhhKo.", "....ohhsshsshko.", "....ohEEssEEhko.", "....osrEEsLLLko.", "....osssssLlLko.", "....oSssMMsSoK..",
-    ".....oSsssSo....", "......ooSSoo....",
+    "......o...o.....",
+    ".....oho.oho....",
+    "....ohHo.oHho...",
+    "....ohHhohHhho..",
+    "...ohhHhhhhhho..",
+    "...ohhhhhhhhho..",
+    "...ohhhhhhhhhho.",
+    "....ohhhhhhhhho.",
+    "....ohhhhhhhhKo.",
+    "....ohhsshsshko.",
+    "....ohEEssEEhko.",
+    "....osrEEsLLLko.",
+    "....osssssLlLko.",
+    "....oSssMMsSoK..",
+    ".....oSsssSo....",
+    "......ooSSoo....",
 ];
 pub const GOKU_HEAD: [&str; 16] = [
-    "..o.......o.....", ".oho..o..oho....", ".ohHo.ohoohHo..o", "..ohhohHhhhHhooo", ".oohhhhhhhhhhhho", "ohhhhHhhhhhhhho.", ".ohhhhhhhhhhhhho",
-    "..ohhhhhhhhhhho.", "..ohhhhhshhhho..", "...ohhsshsshho..", "...ohEEssEEsho..", "...osrEEsEErso..", "...ossssssssSo..", "...oSsssMMsSo...",
-    "....oSsssSo.....", ".....ooSSoo.....",
+    "..o.......o.....",
+    ".oho..o..oho....",
+    ".ohHo.ohoohHo..o",
+    "..ohhohHhhhHhooo",
+    ".oohhhhhhhhhhhho",
+    "ohhhhHhhhhhhhho.",
+    ".ohhhhhhhhhhhhho",
+    "..ohhhhhhhhhhho.",
+    "..ohhhhhshhhho..",
+    "...ohhsshsshho..",
+    "...ohEEssEEsho..",
+    "...osrEEsEErso..",
+    "...ossssssssSo..",
+    "...oSsssMMsSo...",
+    "....oSsssSo.....",
+    ".....ooSSoo.....",
 ];
 pub const GOHAN_HEAD: [&str; 16] = [
-    "................", "................", ".....o..o.o.....", "....ohoohohoo...", "...ohhHhhhHhho..", "..ohhhhhhhhhhho.", "..ohhhhhhhhhhho.",
-    "...ohhhhhhhhhho.", "...ohhhhhhhhho..", "...ohhsshsshho..", "...ohEEssEEsho..", "...osrEEsEErso..", "...ossssssssSo..", "...oSsssMMsSo...",
-    "....oSsssSo.....", ".....ooSSoo.....",
+    "................",
+    "................",
+    ".....o..o.o.....",
+    "....ohoohohoo...",
+    "...ohhHhhhHhho..",
+    "..ohhhhhhhhhhho.",
+    "..ohhhhhhhhhhho.",
+    "...ohhhhhhhhhho.",
+    "...ohhhhhhhhho..",
+    "...ohhsshsshho..",
+    "...ohEEssEEsho..",
+    "...osrEEsEErso..",
+    "...ossssssssSo..",
+    "...oSsssMMsSo...",
+    "....oSsssSo.....",
+    ".....ooSSoo.....",
 ];
 pub const TRUNKS_HEAD: [&str; 16] = [
-    "................", "................", ".....oooooo.....", "....ohHHhhhoo...", "...ohhhhhhhhho..", "...ohhhhhhhhhho.", "..ohhhhhohhhhho.",
-    "..ohhhhosohhhho.", "..ohhhossssohho.", "..ohhossssssoho.", "..ohhsEEssEEsho.", "..ohhsrEEsrEsho.", "..ohhsssssssSho.", "...ohSssMMsSoho.",
-    "...ohoSsssSo.o..", "....o.ooSSoo....",
+    "................",
+    "................",
+    ".....oooooo.....",
+    "....ohHHhhhoo...",
+    "...ohhhhhhhhho..",
+    "...ohhhhhhhhhho.",
+    "..ohhhhhohhhhho.",
+    "..ohhhhosohhhho.",
+    "..ohhhossssohho.",
+    "..ohhossssssoho.",
+    "..ohhsEEssEEsho.",
+    "..ohhsrEEsrEsho.",
+    "..ohhsssssssSho.",
+    "...ohSssMMsSoho.",
+    "...ohoSsssSo.o..",
+    "....o.ooSSoo....",
 ];
 
 type Rows = Vec<Vec<u8>>;
@@ -282,9 +392,30 @@ fn cat(a: &[&str], b: &Rows) -> Rows {
 /// `makeHero(head, pal, gi)`
 pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
     let base = Pal::new(&[
-        ('o', 0x120c18), ('h', 0x1a1826), ('H', 0x4a5080), ('s', 0xf6c8a2), ('S', 0xd99a73), ('e', 0x120c18), ('m', 0xa8564e), ('b', 0x2b4fc8),
-        ('B', 0x1c3584), ('a', 0xf4f4f6), ('A', 0xc2c6d2), ('y', 0xe8c040), ('Y', 0xa8841a), ('g', 0xffffff), ('G', 0xc8ccda), ('w', 0xffffff),
-        ('W', 0xc8ccda), ('E', 0x120c18), ('L', 0x34d873), ('l', 0xc8ffd8), ('k', 0xdfe3ea), ('K', 0x8e95a4), ('M', 0x5e2824), ('r', 0xffffff),
+        ('o', 0x120c18),
+        ('h', 0x1a1826),
+        ('H', 0x4a5080),
+        ('s', 0xf6c8a2),
+        ('S', 0xd99a73),
+        ('e', 0x120c18),
+        ('m', 0xa8564e),
+        ('b', 0x2b4fc8),
+        ('B', 0x1c3584),
+        ('a', 0xf4f4f6),
+        ('A', 0xc2c6d2),
+        ('y', 0xe8c040),
+        ('Y', 0xa8841a),
+        ('g', 0xffffff),
+        ('G', 0xc8ccda),
+        ('w', 0xffffff),
+        ('W', 0xc8ccda),
+        ('E', 0x120c18),
+        ('L', 0x34d873),
+        ('l', 0xc8ffd8),
+        ('k', 0xdfe3ea),
+        ('K', 0x8e95a4),
+        ('M', 0x5e2824),
+        ('r', 0xffffff),
     ])
     .with(pal);
     // a gi instead of armour: bare arms with wristbands, a belt (u), trousers (p)
@@ -311,11 +442,7 @@ pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
     let (idle, run_a, run_b, run_c, pose) = (body(&IDLE), body(&RUN_A), body(&RUN_B), body(&RUN_C), body(&pose_rows));
     let runs = [&run_a, &run_b, &run_c, &run_b];
     let mk = |r: &Rows, p: &Pal, ax: Option<f64>| make_sprite(r, p, "Ll", ax, None);
-    let set = |p: &Pal| HeroSet {
-        pose: mk(&cat(head, &pose), p, None),
-        idle: mk(&cat(head, &idle), p, None),
-        run: runs.map(|b| mk(&cat(head, b), p, None)),
-    };
+    let set = |p: &Pal| HeroSet { pose: mk(&cat(head, &pose), p, None), idle: mk(&cat(head, &idle), p, None), run: runs.map(|b| mk(&cat(head, b), p, None)) };
     // long hair down the back for super saiyan 3
     let long_hair = |r: Rows| -> Rows {
         let mut g: Rows = r
@@ -330,8 +457,8 @@ pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
             })
             .collect();
         let n = g.len();
-        for j in 1..n - 3 {
-            let Some(first) = g[j].iter().position(|&c| c != b'.') else { continue };
+        for (j, row) in g.iter_mut().enumerate().take(n - 3).skip(1) {
+            let Some(first) = row.iter().position(|&c| c != b'.') else { continue };
             let first = first as i64;
             let w = if j < 4 {
                 2
@@ -343,14 +470,14 @@ pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
             let jag = if j % 3 == 0 { 1 } else { 0 };
             let mut c = first - 1;
             while c >= 1i64.max(first - w - jag) {
-                if g[j][c as usize] == b'.' {
-                    g[j][c as usize] = if c == first - 2 && j % 2 == 1 { b'H' } else { b'h' };
+                if row[c as usize] == b'.' {
+                    row[c as usize] = if c == first - 2 && j % 2 == 1 { b'H' } else { b'h' };
                 }
                 c -= 1;
             }
-            if let Some(edge) = g[j].iter().position(|&c| c != b'.') {
+            if let Some(edge) = row.iter().position(|&c| c != b'.') {
                 if edge > 0 && j < n - 4 {
-                    g[j][edge - 1] = b'o';
+                    row[edge - 1] = b'o';
                 }
             }
         }
@@ -458,7 +585,19 @@ pub fn heroes() -> &'static [(&'static str, Hero); 4] {
                 "goku",
                 make_hero(
                     &GOKU_HEAD,
-                    &[('y', 0xf08a24), ('Y', 0xc0641a), ('a', 0xf08a24), ('A', 0xc0641a), ('g', 0x2b4fc8), ('G', 0x1c3584), ('u', 0x2b4fc8), ('p', 0xf08a24), ('P', 0xc0641a), ('w', 0x2b4fc8), ('W', 0x1c3584)],
+                    &[
+                        ('y', 0xf08a24),
+                        ('Y', 0xc0641a),
+                        ('a', 0xf08a24),
+                        ('A', 0xc0641a),
+                        ('g', 0x2b4fc8),
+                        ('G', 0x1c3584),
+                        ('u', 0x2b4fc8),
+                        ('p', 0xf08a24),
+                        ('P', 0xc0641a),
+                        ('w', 0x2b4fc8),
+                        ('W', 0x1c3584),
+                    ],
                     true,
                 ),
             ),
@@ -467,8 +606,19 @@ pub fn heroes() -> &'static [(&'static str, Hero); 4] {
                 make_hero(
                     &GOHAN_HEAD,
                     &[
-                        ('y', 0x6a3aa8), ('Y', 0x45227a), ('a', 0x6a3aa8), ('A', 0x45227a), ('b', 0x6a3aa8), ('B', 0x45227a), ('g', 0xd8323a), ('G', 0x962028), ('u', 0xd8323a),
-                        ('p', 0x6a3aa8), ('P', 0x45227a), ('w', 0x7a4a2a), ('W', 0x553018),
+                        ('y', 0x6a3aa8),
+                        ('Y', 0x45227a),
+                        ('a', 0x6a3aa8),
+                        ('A', 0x45227a),
+                        ('b', 0x6a3aa8),
+                        ('B', 0x45227a),
+                        ('g', 0xd8323a),
+                        ('G', 0x962028),
+                        ('u', 0xd8323a),
+                        ('p', 0x6a3aa8),
+                        ('P', 0x45227a),
+                        ('w', 0x7a4a2a),
+                        ('W', 0x553018),
                     ],
                     true,
                 ),
@@ -478,8 +628,21 @@ pub fn heroes() -> &'static [(&'static str, Hero); 4] {
                 make_hero(
                     &TRUNKS_HEAD,
                     &[
-                        ('h', 0xb8a0e8), ('H', 0xe2d4ff), ('y', 0x26346e), ('Y', 0x16204a), ('a', 0x26346e), ('A', 0x16204a), ('b', 0x1a1a22), ('B', 0x0c0c12), ('g', 0xf6c8a2),
-                        ('G', 0xd99a73), ('u', 0x8a5a2a), ('p', 0x6a6e7a), ('P', 0x4a4e58), ('w', 0xf2c84a), ('W', 0xc49a24),
+                        ('h', 0xb8a0e8),
+                        ('H', 0xe2d4ff),
+                        ('y', 0x26346e),
+                        ('Y', 0x16204a),
+                        ('a', 0x26346e),
+                        ('A', 0x16204a),
+                        ('b', 0x1a1a22),
+                        ('B', 0x0c0c12),
+                        ('g', 0xf6c8a2),
+                        ('G', 0xd99a73),
+                        ('u', 0x8a5a2a),
+                        ('p', 0x6a6e7a),
+                        ('P', 0x4a4e58),
+                        ('w', 0xf2c84a),
+                        ('W', 0xc49a24),
                     ],
                     true,
                 ),

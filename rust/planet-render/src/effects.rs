@@ -18,7 +18,18 @@ fn ball(c: &mut Ctx, x: f64, y: f64, r: f64) {
         while xx <= r + 2.0 {
             let d = hypot(&[xx, yy]);
             if d <= r {
-                c.fb.px(x + xx, y + yy, if d < r * 0.45 { 0xffffff } else if d < r * 0.8 { 0xd8f0ff } else { 0x8fd8ff }, 1.0);
+                c.fb.px(
+                    x + xx,
+                    y + yy,
+                    if d < r * 0.45 {
+                        0xffffff
+                    } else if d < r * 0.8 {
+                        0xd8f0ff
+                    } else {
+                        0x8fd8ff
+                    },
+                    1.0,
+                );
             } else if d <= r + 2.0 && bayer(js_round(x + xx) as i64 as i32, js_round(y + yy) as i64 as i32) < 0.5 {
                 c.fb.px(x + xx, y + yy, 0x8fd8ff, 0.6);
             }
@@ -93,7 +104,18 @@ pub fn draw(c: &mut Ctx, g: &mut Game) {
                 let ww = w * (1.0 + sin(d * 0.4 - t * 40.0) * 0.12);
                 let mut o = -ww;
                 while o <= ww {
-                    c.fb.px(x0 + dx * d - dy * o, y0 + dy * d + dx * o, if o.abs() < ww * 0.45 { 0xffffff } else if o.abs() < ww * 0.8 { core } else { edge }, 1.0);
+                    c.fb.px(
+                        x0 + dx * d - dy * o,
+                        y0 + dy * d + dx * o,
+                        if o.abs() < ww * 0.45 {
+                            0xffffff
+                        } else if o.abs() < ww * 0.8 {
+                            core
+                        } else {
+                            edge
+                        },
+                        1.0,
+                    );
                     o += 0.6;
                 }
                 d += 0.6;
@@ -157,7 +179,20 @@ pub fn draw(c: &mut Ctx, g: &mut Game) {
                         continue;
                     }
                     let edge = q > 2.2;
-                    c.fb.px(x + xf, y + yf, if edge { 0x2a2a30 } else if xx == 0 { 0x9a9ca4 } else if xx < 0 { 0xffffff } else { 0xd9dbe0 }, 1.0);
+                    c.fb.px(
+                        x + xf,
+                        y + yf,
+                        if edge {
+                            0x2a2a30
+                        } else if xx == 0 {
+                            0x9a9ca4
+                        } else if xx < 0 {
+                            0xffffff
+                        } else {
+                            0xd9dbe0
+                        },
+                        1.0,
+                    );
                 }
             }
             c.fb.px(x + 3.0, y - 4.0, 0xe0332b, 1.0);
