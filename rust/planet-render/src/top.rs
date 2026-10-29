@@ -157,7 +157,8 @@ fn stand(c: &mut Ctx, g: &Game, x: f64, y: f64, u: u32) {
     let mut p = |c: &mut Ctx, i: f64, j: f64, col: u32| c.fb.px(x + i, y + j, col, a);
     if !gone {
         let fig = |c: &mut Ctx, p: &mut dyn FnMut(&mut Ctx, f64, f64, u32), fx: f64, skin: u32, cloth: u32, angel: bool| {
-            let inside = |ii: i64, jj: i64| jj >= 0 && jj < 9 && ii >= 0 && ii < 5 && !((jj == 0 || jj == 3) && (ii == 0 || ii == 4)) && !(jj == 8 && ii == 2);
+            let inside =
+                |ii: i64, jj: i64| (0..9).contains(&jj) && (0..5).contains(&ii) && !((jj == 0 || jj == 3) && (ii == 0 || ii == 4)) && !(jj == 8 && ii == 2);
             for j in 0..9i64 {
                 for i in -1..=5i64 {
                     if inside(i, j) {
@@ -219,8 +220,11 @@ fn stand(c: &mut Ctx, g: &Game, x: f64, y: f64, u: u32) {
     text(c.fb, &s, x + 11.0 - (tw >> 1) as f64, 9.0 + 4.0 + y, if gone { 0x5a5868 } else { 0xffffff }, a);
 }
 
+/// zeno's box, and each stand's spot and universe
+type Places = ((f64, f64), Vec<(f64, f64, u32)>);
+
 /// `topPlaces`: zeno's box over the planet, the stands in an arc round it.
-fn places(c: &Ctx, t: f64) -> ((f64, f64), Vec<(f64, f64, u32)>) {
+fn places(c: &Ctx, t: f64) -> Places {
     let port = c.w / c.h < 0.8;
     let bob = |i: f64| js_round(sin(t * 0.8 + i * 1.7) * 1.5);
     let (r, cx, cy) = (c.r, c.cx, c.cy);

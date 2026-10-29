@@ -601,7 +601,6 @@ impl Scene {
             }
         }
         crate::floats::draw(c.fb, g, dt);
-        drop(c);
         self.tones = Some(tones);
     }
 
@@ -1259,7 +1258,7 @@ fn draw_moon(c: &mut Ctx, m: &planet_core::timeline::Moon) {
 fn planet(c: &mut Ctx, g: &Game, b: &Built, id: u16) {
     let w = c.world;
     let (gl, rl) = (&c.tones.grass, &c.tones.road);
-    if matches!(w, 5 | 6 | 7 | 8 | 9) || tones::is_w2(w) || gl.len() > 8 || rl.len() > 8 {
+    if matches!(w, 5..=9) || tones::is_w2(w) || gl.len() > 8 || rl.len() > 8 {
         let ax = crate::shade::Axes { n: g.frame3.n, e1: g.frame3.e1, e2: g.frame3.e2, phi: g.phi, top_dmg: crate::scenery::top_dmg(g) };
         c.sphere([0.0, 0.0, 0.0], 1.0, id, &mut |c, n, x, y| crate::shade::planet(c, b, &ax, n, x, y));
         return;

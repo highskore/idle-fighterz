@@ -268,7 +268,7 @@ fn framebuffers_match_game_js() {
         };
         let (w, h) = (meta["W"].as_u64().unwrap() as usize, meta["H"].as_u64().unwrap() as usize);
         let (g, got) = rust(&k, w, h);
-        let state_ok = g.rng.draws() as u64 == meta["draws"].as_u64().unwrap() && g.s.world as u64 == meta["world"].as_u64().unwrap();
+        let state_ok = g.rng.draws() == meta["draws"].as_u64().unwrap() && g.s.world as u64 == meta["world"].as_u64().unwrap();
         let px = want.chunks(4).zip(got.chunks(4)).filter(|(a, b)| a != b).count();
         let res = if px == 0 && state_ok {
             "identical".to_string()

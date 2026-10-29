@@ -457,8 +457,8 @@ pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
             })
             .collect();
         let n = g.len();
-        for j in 1..n - 3 {
-            let Some(first) = g[j].iter().position(|&c| c != b'.') else { continue };
+        for (j, row) in g.iter_mut().enumerate().take(n - 3).skip(1) {
+            let Some(first) = row.iter().position(|&c| c != b'.') else { continue };
             let first = first as i64;
             let w = if j < 4 {
                 2
@@ -470,14 +470,14 @@ pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
             let jag = if j % 3 == 0 { 1 } else { 0 };
             let mut c = first - 1;
             while c >= 1i64.max(first - w - jag) {
-                if g[j][c as usize] == b'.' {
-                    g[j][c as usize] = if c == first - 2 && j % 2 == 1 { b'H' } else { b'h' };
+                if row[c as usize] == b'.' {
+                    row[c as usize] = if c == first - 2 && j % 2 == 1 { b'H' } else { b'h' };
                 }
                 c -= 1;
             }
-            if let Some(edge) = g[j].iter().position(|&c| c != b'.') {
+            if let Some(edge) = row.iter().position(|&c| c != b'.') {
                 if edge > 0 && j < n - 4 {
-                    g[j][edge - 1] = b'o';
+                    row[edge - 1] = b'o';
                 }
             }
         }

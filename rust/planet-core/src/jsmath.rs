@@ -396,22 +396,6 @@ pub fn hypot(v: &[f64]) -> f64 {
     sum.sqrt() * max
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn matches_v8() {
-        // values from node 25 on arm64, where a plain (unfused) fdlibm is one ulp off
-        assert_eq!(sin(0.7791953906416893), 0.7027071839262887);
-        assert_eq!(sin(16.43856730312109), -0.6673196248681893);
-        assert_eq!(cos(-14.913382465019822), -0.7005839540352707);
-        assert_eq!(atan2(-7.154588392004371, 18.199517838656902), -0.37456101990228924);
-        assert_eq!(log(3.0), 1.0986122886681096);
-        assert_eq!(hypot(&[3.0, 4.0]), 5.0);
-    }
-}
-
 /// `Math.pow` as node on arm64 computes it: the platform's `pow`, except that ±1 ** ±Infinity is NaN and V8 takes
 /// y = 2 and y = 0.5 itself (x * x and the square root). Matches node over 300k random arguments.
 pub fn pow(x: f64, y: f64) -> f64 {
@@ -485,5 +469,21 @@ pub fn exp(x: f64) -> f64 {
         with_hi((hi(y) as i32 + (k << 20)) as u32, lo(y))
     } else {
         with_hi((hi(y) as i32 + ((k + 1000) << 20)) as u32, lo(y)) * 9.33263618503218878990e-302
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matches_v8() {
+        // values from node 25 on arm64, where a plain (unfused) fdlibm is one ulp off
+        assert_eq!(sin(0.7791953906416893), 0.7027071839262887);
+        assert_eq!(sin(16.43856730312109), -0.6673196248681893);
+        assert_eq!(cos(-14.913382465019822), -0.7005839540352707);
+        assert_eq!(atan2(-7.154588392004371, 18.199517838656902), -0.37456101990228924);
+        assert_eq!(log(3.0), 1.0986122886681096);
+        assert_eq!(hypot(&[3.0, 4.0]), 5.0);
     }
 }

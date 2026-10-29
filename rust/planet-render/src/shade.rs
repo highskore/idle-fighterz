@@ -285,7 +285,7 @@ pub fn hq(c: &Ctx, s: V3, door: V3, side: V3, text: bool, p: Pn, n: V3, x: i64, 
     if up < 0.36 {
         let col = ((ang / 1.7 + 0.5) * LABEL.len() as f64 * 4.0).floor();
         let row = ((0.33 - up) / 0.2 * 5.0).floor();
-        if text && col >= 0.0 && col < LABEL.len() as f64 * 4.0 && (col as i64) % 4 < 3 && row >= 0.0 && row < 5.0 {
+        if text && (0.0..LABEL.len() as f64 * 4.0).contains(&col) && (col as i64) % 4 < 3 && (0.0..5.0).contains(&row) {
             let (ci, ri) = (col as i64, row as i64);
             let gl = GLYPH.iter().find(|g| g.0 == LABEL[(ci >> 2) as usize]).map(|g| g.1).unwrap_or(0) as i64;
             if (gl >> (14 - ri * 3 - ci % 4)) & 1 != 0 {
