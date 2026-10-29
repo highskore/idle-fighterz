@@ -974,6 +974,7 @@ impl Game {
             "krillinDead" => s.krillin_dead = v != 0.0,
             "orbs7" => s.orbs7 = v as u32,
             "trips" => s.trips = v as u32,
+            "form" => s.form = v as usize,
             _ => {
                 if let Some(a) = key.strip_prefix("angel.").and_then(angel_ix) {
                     s.angel[a] = v != 0.0;

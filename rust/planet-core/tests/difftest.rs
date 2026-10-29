@@ -485,6 +485,11 @@ fn wishes() {
 }
 
 #[test]
+fn toptaste() {
+    scenario("toptaste");
+}
+
+#[test]
 fn lookout() {
     scenario("lookout");
 }

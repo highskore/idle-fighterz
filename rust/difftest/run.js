@@ -51,6 +51,22 @@ const SCENARIOS = {
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
     },
   },
+  // a taste of the next form is offered one form short of the top, and the top is reached while the offer waits: picking it
+  // by hand or leaving it to the 20s auto-pick must leave the top form alone and the game running
+  toptaste: {
+    seed: 3, minutes: 12,
+    script(g, f, act) {
+      const top = g.ev('FORMS.length - 1'), fail = m => { throw new Error('toptaste: ' + m) }, k = this.k || (this.k = { hand: 0, auto: 0, waiting: false })
+      if (f === 0) for (const [key, v] of [['pl', 1e5], ['best', 5e19], ['partner', 20], ['house', 10]]) act({ a: 'set', k: key, v })
+      if (g.ev('!shen') && g.ev('S.form') !== top - 1) act({ a: 'set', k: 'form', v: top - 1 })
+      if (f % 150 === 60 && g.ev('!shen')) act({ a: 'summon' })
+      const open = g.ev("!!shen && shen.phase === 'wish'"), has = open && g.offer().some(w => w.key === 'form')
+      if (has && !k.waiting) { k.waiting = true; act({ a: 'set', k: 'form', v: top }); if ((k.hand + k.auto) % 2 === 0) { act({ a: 'pick', k: 'form' }); k.hand++ } else k.auto++ }
+      if (!open) k.waiting = false
+      if (g.ev('S.form') > top || !g.ev('isFinite(mult()) && isFinite(rate())')) fail('the taste ran past the top form')
+      if (f === 30 * 60 * 12 - 1 && (k.hand < 1 || k.auto < 1)) fail('the form wish was not offered often enough: ' + JSON.stringify(k))
+    },
+  },
   // kami's lookout turns only round korin's tower; back home, a vertical drag tilts the planet again
   lookout: {
     seed: 23, minutes: 2,

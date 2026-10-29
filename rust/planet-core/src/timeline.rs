@@ -2442,6 +2442,9 @@ impl Game {
                 self.event("your wish is granted — ×1.25 forever");
             }
             "form" => {
+                if self.s.form >= self.forms.len() - 1 {
+                    return;
+                }
                 let from = self.tl.preview.map_or(self.s.form, |p| p.0);
                 self.tl.preview = Some((from, t + 60.0));
                 self.transform(true);
