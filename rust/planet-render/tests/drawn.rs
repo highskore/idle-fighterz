@@ -33,20 +33,37 @@ fn drawn(name: &str) {
     let mut sc = Scene::new();
     let view = View::site(3.0);
     let (mut f, mut bad, mut first) = (0usize, 0usize, Vec::new());
+    // snake way: frames drawn there, those that differ, and the first few of them
+    let (mut on, mut snake, mut snake_first) = (0usize, 0usize, Vec::new());
     let dump = Path::new(env!("CARGO_MANIFEST_DIR")).join("../target/difftest");
-    replay::scenario_with(&full, &mut |g, dt| {
-        sc.draw(&mut fb, g, &view, dt);
-        if fnv(&fb.buf) != want[f] {
-            bad += 1;
-            if first.len() < 5 {
-                first.push(format!("frame {f} (t={:.2}s)", g.t));
-                let _ = std::fs::create_dir_all(&dump);
-                let _ = std::fs::write(dump.join(format!("{full}-frame{f}.rgba")), fb.rgba());
+    // the frame counts are reported even when the state samples diverge
+    let run = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        replay::scenario_with(&full, &mut |g, dt| {
+            sc.draw(&mut fb, g, &view, dt);
+            on += (g.s.world == 3) as usize;
+            if fnv(&fb.buf) != want[f] {
+                bad += 1;
+                if g.s.world == 3 {
+                    snake += 1;
+                    if snake_first.len() < 5 {
+                        snake_first.push(format!("frame {f} (t={:.2}s)", g.t));
+                        let _ = std::fs::create_dir_all(&dump);
+                        let _ = std::fs::write(dump.join(format!("{full}-frame{f}.rgba")), fb.rgba());
+                    }
+                }
+                if first.len() < 5 {
+                    first.push(format!("frame {f} (t={:.2}s)", g.t));
+                    let _ = std::fs::create_dir_all(&dump);
+                    let _ = std::fs::write(dump.join(format!("{full}-frame{f}.rgba")), fb.rgba());
+                }
             }
-        }
-        f += 1;
-    });
-    eprintln!("{full}: {f} frames drawn, {} identical to game.js's, {bad} differ", f - bad);
+            f += 1;
+        })
+    }));
+    eprintln!("{full}: {f} frames drawn, {} identical to game.js's, {bad} differ ({snake} of {on} on snake way, first {snake_first:?})", f - bad);
+    if let Err(e) = run {
+        std::panic::resume_unwind(e);
+    }
     assert_eq!(f, want.len());
     assert!(bad == 0, "{full}: {bad} of {f} frames differ, first {first:?}");
 }
