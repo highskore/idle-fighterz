@@ -88,6 +88,7 @@ pub fn draw(c: &mut Ctx, g: &mut Game, view: &View, dt: f64) {
     if g.flash_t > 0.0 {
         g.flash_t = 0f64.max(g.flash_t - dt * 1.8);
     }
+    crate::floats::draw_snake(c.fb, g, dt);
 }
 
 fn label(fb: &mut Framebuffer, s: &str, x: f64, y: f64, c: u32, o: u32) {

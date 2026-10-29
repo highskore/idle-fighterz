@@ -51,7 +51,7 @@ fn cases() -> Vec<Case> {
         c("#top", PHONE, 60, true),
         c("#snake", DESK, 400, true),
         c("#snake", PHONE, 400, true),
-        Case { draw: 4, ..c("#snake", DESK, 600, true) },
+        Case { draw: 4, ..c("#snake", DESK, 900, true) },
         c("#snake-nimbus", DESK, 300, true),
         c("#snake", DESK, 1770, true),
         c("#snake", DESK, 1810, true),
@@ -174,6 +174,7 @@ fn rust(k: &Case, w: usize, h: usize) -> (Game, Vec<u8>) {
         if f == k.frames - k.draw {
             // as frame.js does: headless game.js never steps its particles, so both start the drawn frames without them
             g.fx.clear();
+            g.floats.clear();
             g.flash_t = 0.0;
         }
         t += dt;
