@@ -453,6 +453,7 @@ impl Game {
     fn shop_what(&self, key: &str) -> String {
         let s = &self.s;
         match key {
+            "ascend" if self.t < self.b.asc_ready => return format!("ascend again in {}s", num((self.b.asc_ready - self.t).ceil())),
             "ascend" => return format!("reset for +{} ki seeds", num(self.seeds_now())),
             "godki" => return format!("reset for +{} god ki", self.god_now()),
             "zeno" => return format!("erase it all: zeno's favour ×{}", fmt_short(ZENO_X.powf(s.zeno as f64 + 1.0))),
@@ -527,7 +528,7 @@ impl Game {
                 level,
                 label,
                 what: self.shop_what(key),
-                can: s.pl >= cost && (key != "ascend" || s.best >= 1e6),
+                can: s.pl >= cost && (key != "ascend" || s.best >= 1e6 && self.t >= self.b.asc_ready),
                 open: key == "ascend" && self.tree_open(),
                 special: matches!(key, "ascend" | "godki" | "zeno"),
             });
@@ -712,7 +713,8 @@ impl Game {
     pub fn ascend_info_json(&self) -> String {
         let g = self.seeds_now();
         Obj::new()
-            .bool("ok", self.s.pl >= self.ascend_cost() && self.s.best >= 1e6)
+            .bool("ok", self.s.pl >= self.ascend_cost() && self.s.best >= 1e6 && self.t >= self.b.asc_ready)
+            .num("wait", if self.t < self.b.asc_ready { (self.b.asc_ready - self.t).ceil() } else { 0.0 })
             .str("pl", &fmt_short(self.s.pl.floor()))
             .num("seeds", g)
             .str("now", &to_fixed(self.seed_boost(), 1))

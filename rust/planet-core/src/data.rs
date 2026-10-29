@@ -263,6 +263,8 @@ pub const GOD_X: f64 = 1.0;
 pub const MASTERY_X: f64 = 1.25;
 pub const ZENO_X: f64 = 10.0;
 pub const ZENO_GODS: u32 = 2;
+/// seconds between ascends: rank spam can't outrun the ki ceiling, and an idle player checking in now and then never waits
+pub const ASC_CD: f64 = 600.0;
 /// game.js laps at 6.283, a hair short of 2π; kept so lap timing matches
 #[allow(clippy::approx_constant)]
 pub const LAP: f64 = 6.283;

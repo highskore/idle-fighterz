@@ -20,6 +20,7 @@ pub struct Buffs {
     pub kaio_until: f64,
     pub tired_until: f64,
     pub kaio_ready: f64,
+    pub asc_ready: f64,
     pub daily_until: f64,
     pub fuse_until: f64,
     pub fused: Option<(f64, f64)>, // (x, until)
@@ -748,6 +749,10 @@ impl Game {
     }
 
     pub fn ascend(&mut self) {
+        if self.t < self.b.asc_ready {
+            return;
+        }
+        self.b.asc_ready = self.t + ASC_CD;
         let gain = self.seeds_now();
         let keep = (self.s.pl * 0.01 * self.lvl(N_HEAD)).floor();
         self.s.ascend += gain;

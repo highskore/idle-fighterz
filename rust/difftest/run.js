@@ -268,7 +268,7 @@ const SCENARIOS = {
     },
   },
   ascend: {
-    seed: 3, minutes: 12,
+    seed: 3, minutes: 14,
     script(g, f, act) {
       if (f === 0) { act({ a: 'set', k: 'pl', v: 3e6 }); act({ a: 'set', k: 'best', v: 3e6 }) }
       if (f % 4 === 0 && f % 900 < 450) act({ a: 'train' })
@@ -277,6 +277,9 @@ const SCENARIOS = {
       if (f % 30 === 0 && f > 30 * 150 && f < 30 * 590) buyAll(g, act)
       if (f === 30 * 590) act({ a: 'set', k: 'pl', v: 5e7 })
       if (f === 30 * 600) act({ a: 'buy', k: 'ascend' })
+      // the second ascend: refused above (10 minutes haven't passed since the first), allowed once they have
+      if (f === 30 * 755) act({ a: 'set', k: 'pl', v: 5e7 })
+      if (f === 30 * 760) act({ a: 'buy', k: 'ascend' })
     },
   },
   late: {
