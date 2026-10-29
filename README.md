@@ -11,7 +11,7 @@ Your hero runs laps around a planet you can spin, powers up through the forms, v
 [![Play](https://img.shields.io/badge/play-highskore.com-f59e0b)](https://highskore.com)
 [![Desktop widget](https://img.shields.io/badge/desktop-widget-111)](https://github.com/highskore/idle-fighterz-widget)
 ![One HTML file](https://img.shields.io/badge/build-one%20HTML%20file-6b7280)
-![WebAssembly](https://img.shields.io/badge/WebAssembly-pixel%20kernel-654ff0?logo=webassembly&logoColor=white)
+![WebAssembly](https://img.shields.io/badge/WebAssembly-Rust%20engine-654ff0?logo=webassembly&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <img src="docs/hero.png" alt="The planet game on highskore.com: a super saiyan 2 hero flying round King Kai's planet while Raditz raids, the upgrade list on the left and the power level on the right" width="820">
@@ -48,17 +48,21 @@ Open [highskore.com](https://highskore.com), scroll (or press the cue on a phone
 
 ## Build from source
 
-You need Node.
+You need Node, and Rust with the wasm32 target and wasm-bindgen-cli for the engine.
 
 ```sh
-git clone https://github.com/highskore/planet.git && cd planet
+git clone https://github.com/highskore/idle-fighterz.git && cd idle-fighterz
 npm ci                    # esbuild and the font subsetter, pinned
-node build.mjs            # → dist/planet.html
+rustup target add wasm32-unknown-unknown && cargo install wasm-bindgen-cli --version 0.2.129
+npm run wasm:rust         # the Rust engine's wasm build
+node build.mjs --rust     # → dist/planet.html, planet-rust.js, planet-rust.wasm and planet-game.js
 ```
 
-Open `dist/planet.html` in a browser. Locally, preview hooks such as `#raid`, `#namek` or `#lookout` jump straight to an event or a world.
+Serve `dist/` and open `planet.html`. Locally, preview hooks such as `#raid`, `#namek` or `#lookout` jump straight to an event or a world.
 
-For the sources, the widget build, the WebAssembly kernel, every preview hook and the Rust port, see [docs/DEVELOPING.md](docs/DEVELOPING.md). The port's plan is in [rust/PLAN.md](rust/PLAN.md).
+## Contributing
+
+The game is the Rust engine in [`rust/`](rust/PLAN.md): `planet-core` plays it and `planet-render` draws it. Build new features there. `game.js` is frozen, kept only as the fallback for browsers without WebAssembly, and CI rejects changes to it unless they're marked `legacy-js`. For the sources, the widget build, the tests (and the golden traces), every preview hook and the engine, see [docs/DEVELOPING.md](docs/DEVELOPING.md).
 
 ## License
 

@@ -1,4 +1,4 @@
-// JS against Rust in real browsers: every scene played on dist/planet.html and dist/planet.html?rust, headless, over a
+// JS against Rust in real browsers: every scene played on dist/planet.html?js (game.js's fallback) and dist/planet.html, headless, over a
 // local server, in Chromium and WebKit, at desktop size and as a throttled phone. Needs a build with the Rust engine
 // (npm run wasm:rust && node build.mjs). Writes test/bench/results.json and prints a markdown table.
 //
@@ -40,9 +40,9 @@ const PROFILE = {
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true },
 }
 
-// the page without its 3D title, and the Rust engine's two files
+// the page without its 3D title, and its engines' files
 const html = readFileSync(join(ROOT, 'dist', 'planet.html'), 'utf8').replace(/<script id="three">[\s\S]*?<\/script>/, '')
-const files = { '/planet-rust.js': 'text/javascript', '/planet-rust.wasm': 'application/wasm' }
+const files = { '/planet-rust.js': 'text/javascript', '/planet-rust.wasm': 'application/wasm', '/planet-game.js': 'text/javascript' }
 const server = createServer((req, res) => {
   const path = req.url.split('?')[0]
   if (path === '/') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(html) }
@@ -56,7 +56,9 @@ const ORIGIN = `http://127.0.0.1:${server.address().port}`   // a dev host: game
 // that drew the game took) and on the canvas (the first frame drawn)
 const init = () => {
   let s = 1; Math.random = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296
-  const B = window.__bench = { on: false, ticks: [], work: [], puts: 0, firstPut: 0 }
+  const B = window.__bench = { on: false, ticks: [], work: [], puts: 0, firstPut: 0, mounted: 0 }
+  // the game mounted on its engine; on a phone the card starts off screen, so its first frame may wait for the scroll
+  new MutationObserver((_, o) => { if (document.documentElement?.dataset.engine) { B.mounted = performance.now(); o.disconnect() } }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-engine'] })
   const raf = window.requestAnimationFrame.bind(window)
   window.requestAnimationFrame = cb => raf(ts => {
     const p = B.puts, t0 = performance.now(); cb(ts); const t1 = performance.now()
@@ -84,10 +86,11 @@ async function run(browser, name, profile, rust, scene) {
     if (profile === 'phone') await cdp.send('Emulation.setCPUThrottlingRate', { rate: THROTTLE })
   }
   await page.addInitScript(init)
-  await page.goto(ORIGIN + '/' + (rust ? '?rust' : '') + hash, { waitUntil: 'load' })
-  await page.waitForFunction(() => window.__bench.firstPut > 0)
-  const load = await page.evaluate(() => { const n = performance.getEntriesByType('navigation')[0]; return { dcl: n.domContentLoadedEventEnd, load: n.loadEventEnd, tti: window.__bench.firstPut } })
-  if (rust && await page.evaluate(() => document.documentElement.dataset.engine) !== 'rust') throw new Error('?rust ran game.js')
+  await page.goto(ORIGIN + '/' + (rust ? '' : '?js') + hash, { waitUntil: 'load' })
+  await page.waitForFunction(() => window.__bench.mounted > 0)
+  const load = await page.evaluate(() => { const n = performance.getEntriesByType('navigation')[0]; return { dcl: n.domContentLoadedEventEnd, load: n.loadEventEnd, tti: window.__bench.mounted } })
+  const engine = await page.evaluate(() => document.documentElement.dataset.engine)
+  if (engine !== (rust ? 'rust' : 'js')) throw new Error(`the page ran ${engine}`)
   // past the intro and press play, as page.mjs does
   if (profile === 'phone') await page.locator('#cue').click()
   else await page.evaluate(() => scrollTo(0, document.getElementById('scroller').offsetHeight))
@@ -164,7 +167,7 @@ for (let i = 0; i < results.length; i += 2) {
   const [j, r] = [results[i], results[i + 1]], both = g => `${g(j)} / ${g(r)}`
   console.log(`| ${j.browser} | ${j.profile} | ${j.scene} | ${both(x => f(x.work.mean))} | ${both(x => f(x.work.p95))} | ${both(x => f(x.work.p99))} | ${both(x => f(x.work.worst1))} | ${both(x => f(x.droppedPct, 1))} | ${both(x => f(x.busy, 1))} |`)
 }
-console.log(`\n| browser | profile | load: DCL ms JS / Rust | first frame (TTI) ms | idle CPU % (home) | JS heap MB | array buffers MB | wasm memory MB |`)
+console.log(`\n| browser | profile | load: DCL ms JS / Rust | game mounted ms | idle CPU % (home) | JS heap MB | array buffers MB | wasm memory MB |`)
 console.log(`|---|---|---|---|---|---|---|---|`)
 for (const b of BROWSERS) for (const p of PROFILES) {
   const home = results.filter(r => r.browser === b && r.profile === p && r.scene === 'home'), [j, r] = home

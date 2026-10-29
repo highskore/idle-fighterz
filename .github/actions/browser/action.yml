@@ -1,5 +1,5 @@
 name: browser
-description: Node, the npm devDependencies, Playwright's headless Chromium (cached) and dist/planet.html
+description: Node, the npm devDependencies, Playwright's headless Chromium (cached) and dist/planet.html with its engine (the planet-web artifact in rust/planet-web/pkg)
 runs:
   using: composite
   steps:
@@ -22,5 +22,5 @@ runs:
       shell: bash
     - run: npx playwright install-deps chromium
       shell: bash
-    - run: node build.mjs
+    - run: node build.mjs --rust
       shell: bash

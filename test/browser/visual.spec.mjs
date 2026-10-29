@@ -3,11 +3,11 @@
 // Chromium rasterises text and rounded corners (seen as ±2 levels on the card's corners between identical runs).
 // Every run also writes what it rendered to shots/<size>/, named as the baselines are (CI uploads it; copied over
 // __screenshots__ it is a new baseline set). PLANET_SHOTS_ONLY=1 (npm run shots) skips the comparison, for a machine
-// that isn't CI's Linux. When dist has the Rust engine, every state is also played with ?rust (tagged @rust) and must
-// match the same baselines: same seed, same clock, same pixels.
+// that isn't CI's Linux. The page runs the Rust engine (game.js without a wasm build in dist). game.js's fallback gets a
+// smoke test (tagged @js): home with ?js and without WebAssembly must match the same baselines, as game.js is frozen.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
-import { open, start, play, hasRust } from './page.mjs'
+import { open, start, play } from './page.mjs'
 
 const SHOTS_ONLY = !!process.env.PLANET_SHOTS_ONLY
 // the WebGL title is stubbed out (see hooks.spec.mjs), so its no-WebGL fallback heading is hidden too
@@ -35,9 +35,14 @@ const STATES = [
   ['angels', '#godki', async page => { await play(page, 2000); await page.locator('.hud [data-menu]').click(); await page.locator('[data-mt="angels"]').click(); await play(page, 500) }],
 ]
 
-for (const rust of hasRust() ? [false, true] : [false]) for (const [name, hash, act] of STATES) {
-  test(rust ? 'rust ' + name : name, { tag: rust ? '@rust' : [] }, async ({ page }, info) => {
-    const errors = await open(page, hash, { title: false, rust })
+const RUNS = [
+  ...STATES.map(s => ['', s, {}]),
+  ['js ', STATES[0], { js: true }],
+  ['no-wasm ', STATES[0], { wasm: false }],
+]
+for (const [pre, [name, hash, act], how] of RUNS) {
+  test(pre + name, { tag: pre ? '@js' : [] }, async ({ page }, info) => {
+    const errors = await open(page, hash, { title: false, ...how })
     await start(page)
     await act(page)
     await page.addStyleTag({ content: HIDE_TITLE })
@@ -46,7 +51,7 @@ for (const rust of hasRust() ? [false, true] : [false]) for (const [name, hash, 
     const canvas = Buffer.from((await page.evaluate(() => document.querySelector('.stage canvas').toDataURL('image/png'))).split(',')[1], 'base64')
     const dir = `shots/${info.project.name}`
     mkdirSync(dir, { recursive: true })
-    const as = (rust ? 'rust-' : '') + name
+    const as = pre.replace(' ', '-') + name
     writeFileSync(`${dir}/${as}.png`, shot)
     writeFileSync(`${dir}/${as}-canvas.png`, canvas)
     expect(errors).toEqual([])

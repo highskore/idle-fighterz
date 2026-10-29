@@ -1,10 +1,11 @@
-// The Rust engine behind page.html's HUD (`?rust` on the site page). planet-core runs the game and planet-render draws
-// it; this shim hands page.html a `game` object with game.js's API, puts the frames on the canvas and drives page.html's
+// The Rust engine behind page.html's HUD, the site page's engine. planet-core runs the game and planet-render draws it;
+// this shim hands page.html a `game` object with game.js's API, puts the frames on the canvas and drives page.html's
 // `ui` callbacks from planet-core's HUD messages, so the HUD's markup and code are unchanged. See rust/HUD.md.
 // The page's loader (loader.js) calls planetRust once this file has loaded, and mounts the game when it resolves.
-self.planetRust = async ({ GAMES, HEROES, HASH, wasm }) => {
+self.planetRust = async ({ GAMES, HASH, wasm }) => {
   const RUST = wasm_bindgen, { memory } = await RUST({ module_or_path: wasm });
-  const planet = GAMES.find(g => g.id === 'planet');
+  let planet = GAMES.find(g => g.id === 'planet');
+  if (!planet) GAMES.push(planet = { id: 'planet' });
   planet.mount = (st, ui) => {
     // seeded so the game's first random draw is the one Math.random just gave, as game.js would have drawn it (the
     // LCG step backwards): with the test harness's seeded Math.random both engines play the same game
@@ -75,16 +76,18 @@ self.planetRust = async ({ GAMES, HEROES, HASH, wasm }) => {
     deliver();
 
     const menu = () => { const m = JSON.parse(P.menu()); for (const n of m.tree) if (n.max === null) n.max = Infinity; return m; };
-    // game.js's sprite thumbnail, from its hero sprites (the page carries game.js either way)
+    // the hero sprites, from planet-core: [w, h, ...col] as { w, h, col }, game.js's shape
+    const sprite = v => ({ w: v[0], h: v[1], col: v.subarray(2) });
+    // game.js's sprite thumbnail
     const thumb = (id, k = 4) => {
-      const spr = (HEROES[id] || HEROES.vegeta).idle, c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k;
+      const spr = sprite(P.hero_sprite(id)), c = document.createElement('canvas'); c.width = spr.w * k; c.height = spr.h * k;
       const x = c.getContext('2d');
       for (let j = 0; j < spr.h; j++) for (let i = 0; i < spr.w; i++) { const v = spr.col[j * spr.w + i]; if (v < 0) continue; x.fillStyle = '#' + v.toString(16).padStart(6, '0'); x.fillRect(i * k, j * k, k, k); }
       return c;
     };
     const card = () => {
-      const c = JSON.parse(P.card()), [hero, form, fused] = JSON.parse(P.look()), h = HEROES[hero] || HEROES.vegeta;
-      c.spr = (fused ? h.fused : h.forms[form]).idle; c.scene = cv;
+      const c = JSON.parse(P.card());
+      c.spr = sprite(P.card_sprite()); c.scene = cv;
       return c;
     };
     document.documentElement.dataset.engine = 'rust';

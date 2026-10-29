@@ -2,13 +2,15 @@
 // Run: node build.mjs (highskore.com copies the result to its public/planet.html).
 // With --widget it builds the desktop widget's page instead, into dist/index.html under the directory it runs from
 // (the root of highskore/idle-fighterz-widget, which has this repo as its game/ submodule)
-// The site page also carries the Rust engine behind ?rust (rust/planet-web): when its wasm build is there (sh
-// rust/planet-web/build.sh), dist/planet-rust.js and dist/planet-rust.wasm are written next to planet.html, which fetches
-// them only for ?rust, from the top of its <head>. --rust fails the build without them
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+// The site page runs on the Rust engine (rust/planet-web): with its wasm build there (sh rust/planet-web/build.sh),
+// dist/planet-rust.js and dist/planet-rust.wasm are written next to planet.html, which fetches them from the top of its
+// <head>. game.js, frozen, is the fallback where WebAssembly can't run (and for ?js): dist/planet-game.js, fetched only
+// then. --rust fails the build without the wasm build; without it the page runs on planet-game.js
+// The widget's page still carries game.js inline (its rust-core build swaps it for its own hud.js)
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { rustEngine, rustLoader, rustPreload } from './rust/planet-web/assemble.mjs'
+import { gameFile, rustEngine, rustLoader, rustPreload } from './rust/planet-web/assemble.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 // a Windows checkout may have CRLF sources: everything below matches on \n, and the output must not depend on it
@@ -25,7 +27,7 @@ const fence = s => s.replace(/\/\*widget\*\/([\s\S]*?)\/\*\/widget\*\//g, widget
 let page = fence(read('page.html'))
   .replace('__BAGEL__', () => read('bagel.typeface.json'))
   .replace('__WORLD__', () => fence(read('world.js')).replace('__PX__', () => readFileSync(join(here, 'wasm', 'px.wasm')).toString('base64')))
-  .replace('__PLANET__', () => read('shenron.js') + fence(read('game.js')) + (widget ? '' : '\n' + rustLoader()))
+  .replace('__PLANET__', () => widget ? read('shenron.js') + fence(read('game.js')) : rustLoader())
   .replace('__MAIN__', widget ? '(main => main())' : 'planetMain')
 page = widget ? await widgetPage(page) : await sitePage(page)
 const split = page.indexOf('</style>') + '</style>'.length
@@ -66,16 +68,20 @@ if (widget) {
   console.log(join(out, 'index.html'), 'written')
 } else {
   mkdirSync(join(here, 'dist'), { recursive: true })
-  // ?rust's files start downloading before the rest of the page parses
-  const preload = (await (await import('esbuild')).transform(rustPreload(engine), { loader: 'js', minify: true, charset: 'utf8', legalComments: 'none' })).code.trim()
+  const esbuild = await import('esbuild')
+  const min = code => esbuild.transform(code, { loader: 'js', minify: true, charset: 'utf8', legalComments: 'none' }).then(r => r.code)
+  // game.js runs after the page's script as a script of its own, sharing its top-level names (see sitePage)
+  const legacy = gameFile(await min(read('shenron.js') + fence(read('game.js'))))
+  // the engine's files start downloading before the rest of the page parses
+  const preload = (await min(rustPreload(engine, legacy))).trim()
   writeFileSync(join(here, 'dist', 'planet.html'), head + '<script>' + preload + '</script>\n' + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
+  writeFileSync(join(here, 'dist', 'planet-game.js'), legacy.js)
   for (const f of ['planet-rust.js', 'planet-rust.wasm']) rmSync(join(here, 'dist', f), { force: true })
   if (engine) {
-    const esbuild = await import('esbuild')
-    writeFileSync(join(here, 'dist', 'planet-rust.js'), (await esbuild.transform(engine.js, { loader: 'js', minify: true, charset: 'utf8', legalComments: 'none' })).code)
+    writeFileSync(join(here, 'dist', 'planet-rust.js'), await min(engine.js))
     writeFileSync(join(here, 'dist', 'planet-rust.wasm'), engine.wasm)
   }
-  console.log(engine ? 'dist/planet.html, planet-rust.js and planet-rust.wasm written' : 'dist/planet.html written (no wasm build in rust/planet-web/pkg: ?rust falls back to game.js)')
+  console.log(engine ? 'dist/planet.html, planet-rust.js, planet-rust.wasm and planet-game.js written' : 'dist/planet.html and planet-game.js written (no wasm build in rust/planet-web/pkg: the page runs on game.js)')
 }
 
 // the site page fetches nothing before it can play: the fonts are inlined, cut down to the characters the page has (hints
@@ -86,10 +92,15 @@ async function sitePage(page) {
   try { esbuild = await import('esbuild'); subset = (await import('subset-font')).default } catch (_) { throw new Error('the site build minifies and subsets its fonts: run npm ci in ' + here + ' first') }
   page = page.replace(/<link [^>]*fonts\.(googleapis|gstatic)\.com[^>]*>\n/g, '')
   let ascii = ''; for (let c = 32; c < 127; c++) ascii += String.fromCharCode(c)
-  const text = [...new Set(ascii + page)].join('')   // all of ascii too, for numbers and names put together at run time
+  // all of ascii too, for numbers and names put together at run time, and the text either engine shows (planet-core's
+  // strings, game.js's)
+  const engines = ['shenron.js', 'game.js', ...readdirSync(join(here, 'rust/planet-core/src')).map(f => 'rust/planet-core/src/' + f)].map(read).join('')
+  const text = [...new Set(ascii + page + engines)].join('')
   page = page.replace('<style>', '<style>\n' + await faces(here, 'swap', woff2 => subset(woff2, text, { targetFormat: 'woff2' })))
   for (const [all, code] of [...page.matchAll(/<script>\n([\s\S]*?)<\/script>/g)]) {
-    const min = (await esbuild.transform(code, { loader: 'js', format: 'iife', minify: true, charset: 'utf8', legalComments: 'none' })).code.trim()
+    // the game's script keeps its top-level names (world.js's) global, for planet-game.js: no iife around it
+    const game = code.includes('planetMain(')
+    const min = (await esbuild.transform(code, { loader: 'js', format: game ? undefined : 'iife', minify: true, charset: 'utf8', legalComments: 'none' })).code.trim()
     page = page.replace(all, () => '<script>' + min + '</script>')
   }
   // window.THREE with the names the page reads from it; one it doesn't export fails the build

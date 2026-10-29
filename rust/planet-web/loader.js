@@ -1,13 +1,20 @@
-// ?rust (or #rust) runs the planet on the Rust engine, whose files preload.js started fetching from the <head>. The page,
-// its title and intro start at once either way; with the flag only the game's mount waits, for the promise handed to
-// main, and the card shows a ki-charging dragon ball if it's on screen (or start was pressed) before the engine is in.
-// If the engine fails to load, the game runs on game.js as it always does.
+// The site page runs the planet on the Rust engine, whose files preload.js started fetching from the <head>. Where it
+// can't (no WebAssembly, ?js or #js, or the engine failed to load) it runs game.js, the frozen legacy engine, from
+// planet-game.js next to the page. The page, its title and intro start at once either way; only the game's mount waits,
+// for the promise handed to main, and the card shows a ki-charging dragon ball if it's on screen (or start was pressed)
+// before the engine is in.
 const planetMain = main => {
-  const L = self.planetRustLoad;
-  if (!L) return main();
+  const L = self.planetLoad || {}, root = document.documentElement;
+  // game.js's: preview hooks only on dev hosts and branch previews, never on a live copy of the site
+  const hash = location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost|.*-git-.*\.vercel\.app)$/.test(location.hostname) ? location.hash : '';
+  // game.js runs as a script of its own after the page's, sharing its top-level names (world.js's stage and sprites)
+  const legacy = () => new Promise((ok, no) => {
+    const s = document.createElement('script');
+    s.src = L.game; s.onload = ok; s.onerror = no;
+    document.body.append(s);
+  }).then(() => { root.dataset.engine = 'js'; });
   let ready = false, ki = null;
-  const engine = L.js.then(() => self.planetRust({ GAMES, HEROES, HASH, wasm: L.wasm }))
-    .catch(e => console.warn('planet: the Rust engine did not load, running game.js', e || ''))
+  const engine = (L.js ? L.js.then(() => self.planetRust({ GAMES, HASH: hash, wasm: L.wasm })).catch(e => { console.warn('planet: the Rust engine did not load, running game.js', e || ''); return legacy(); }) : legacy())
     .finally(() => { ready = true; if (ki) { ki.remove(); ki = null; } });
   main(engine);
   if (ready) return;

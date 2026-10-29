@@ -1,5 +1,6 @@
 //! Framebuffer diff: game.js (headless, drawing its last frames; rust/difftest/frame.js) against planet-render, same
-//! seed, preview hook, canvas size and frame. The RGBA buffers must match byte for byte. Needs `node`; skips without.
+//! seed, preview hook, canvas size and frame. The RGBA buffers must match byte for byte. game.js is frozen, so this only
+//! holds for the behaviour it has: opt-in with `JS_PARITY=1`, and needs `node`; skips otherwise.
 //! `FRAMEDIFF=<substring>` runs only the cases whose name contains it; `FRAMEDIFF_PNG=1` writes the JS, Rust and diff
 //! images of failing cases under the test's temp dir.
 
@@ -137,6 +138,10 @@ fn name(k: &Case) -> String {
 }
 
 fn js(k: &Case, out: &Path) -> Option<(Value, Vec<u8>)> {
+    // game.js is frozen: this diff only holds for the behaviour it has, so it's opt-in
+    if !std::env::var("JS_PARITY").is_ok_and(|v| v == "1") {
+        return None;
+    }
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../difftest");
     let mut cmd = Command::new("node");
     cmd.arg(dir.join("frame.js")).arg(out);
@@ -263,7 +268,7 @@ fn framebuffers_match_game_js() {
         }
         let out = tmp.join(format!("case{i}"));
         let Some((meta, want)) = js(&k, &out) else {
-            eprintln!("node not found: skipping the framebuffer diff");
+            eprintln!("skipped the framebuffer diff against game.js: needs node and JS_PARITY=1");
             return;
         };
         let (w, h) = (meta["W"].as_u64().unwrap() as usize, meta["H"].as_u64().unwrap() as usize);
