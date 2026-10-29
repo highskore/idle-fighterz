@@ -26,21 +26,20 @@ Dependencies only point downward: `web` and `native` depend on `render`, and `re
 - `Game` holds `Save` (game.js's `S`) plus the runtime closure state from `mount()`: `phi`, `laps`, `sprint`, `combo`, the timed buffs, `session` and so on.
 - `Game::frame(t, dt)` mirrors `frame(t, dt)` statement for statement. Expressions keep JS operand order, so floats round the same way, and the diff test shows they come out bit-identical.
 - **Fixed step.** game.js runs a variable step (`gdt <= 0.05`, at about 30 fps). The port runs a fixed `DT = 1/30`, with `Clock::advance` banking real time. That makes runs replayable and lets the web and native builds agree. In play the difference can't be seen, and the diff harness drives JS at the same fixed step.
-- **RNG.** `Lcg` is the harness's `Math.random` stand-in. game.js spends random draws on cosmetic particles (180 for a transform, 20 for a crit, 80 for kaioken, two a particle for every `burst`, one or two a frame for the space pod's trail). The core burns the same number of draws (`Lcg::skip`) so the gameplay stream stays aligned; the screen-shake jitter is drawn for real, since it moves the hero's screen spot. Once JS parity no longer matters (after cut-over), cosmetic draws can move to a separate render-side generator.
+- **RNG.** `Lcg` is the harness's `Math.random` stand-in. game.js spends random draws on cosmetic particles (a transform, a crit, kaioken, every `burst`, the space pod's trail). The core spawns those particles itself into `Game::fx`, at game.js's spots and in its order, so the gameplay stream stays aligned and planet-render draws them; a burst at a spot only the drawing places (a ghost, a movie henchman) burns its draws unplaced headless; the screen-shake jitter is drawn for real, since it moves the hero's screen spot. Once JS parity no longer matters (after cut-over), cosmetic draws can move to a separate render-side generator.
 - `jsmath`: V8's `Math.sin`, `cos`, `atan2` (fdlibm) and `hypot` (Kahan), bit for bit. V8 for arm64 is built with clang's FP contraction, so the fdlibm port fuses multiply-adds in the same places; it matches node on arm64 over 400k random arguments. On an x86-64 node the geometry may come out one ulp off (the samples log it as inexact).
 - `geom`: the view matrix with its auto spin, the road and cap points, `layout()`, and where the hero lands on screen (`kidScreen`, `handPos`).
 - `num`: JS `Math.round`, `toFixed`, `toExponential` and `toLocaleString`, plus `fmtShort` and page.html's `fmt` and `short`. They are exact, including round-half-up ties.
-- `data`: tables (shop, forms and hero ladders, the training tree, angels, goals) and tuning constants. Stage 1 adds the sprite DSL data (`makeHero`, `shapeSprite` and the palettes) here as plain data, so `planet-render` only rasterises.
+- `data`: tables (shop, forms and hero ladders, the training tree, angels, goals) and tuning constants. The sprites are in `sprite` (stage 1), as plain data, so `planet-render` only rasterises.
 - Outputs to the UI are data, not callbacks: `Game::events` (`ui.event` text) and the timeline's state in `Game::tl` (the dragon's offer in `tl.shen`, what's in the sky, the boss). Stage 4 adds a `HudState` snapshot (what `ui.update` builds today) and the shop rows (`syncShop`).
 
-### planet-render and the perf pass
+### planet-render
 
-Another agent is moving the per-pixel loops (sphere and depth raster, `blitZ` sprite compositing, clouds, the widget rim pass) into a Rust/WASM crate in highskore/planet, probably `wasm/`. To avoid doing that work twice:
-
-- `planet-render` has the buffers and primitives game.js shares: `Framebuffer`, with `buf` (packed ABGR, the same layout as ImageData), `zb`, `ib` and `dm`; `st.px` blending; `PK`; `bayer`; and `h2` with exact JS `|0` and `Math.imul` semantics. These are covered by unit tests against world.js values.
-- The kernels sit behind `trait Raster` (`sphere`, `blit_z`, with clouds and rim to follow), with signatures that mirror game.js.
-- When the perf crate lands, either it implements `Raster` over `Framebuffer`, or its code moves into `planet-render` (preferred: one crate, one owner). In both cases scene building, which turns `Game` into a list of draw calls, stays above the trait and is the part this port writes.
-- The perf crate is `wasm/`: a dependency-free `cdylib` with C-ABI exports (`alloc`, `planet`, `outline`, `rim`, `bbox`, `params`, `palette`) over buffers in its own linear memory, which the page's typed arrays view directly. It has the planet on plain grass worlds, `outline()` and the rim. `blitZ` and the clouds stayed in JS: about 2% of a frame each in the profile. The kernels are statement-for-statement ports of the JS, so folding them into `planet-render` behind `Raster` is a move, not a rewrite.
+- **The perf crate is folded in.** px.wasm's kernels (`planet`, `outline`, `rim`) live in `planet-render/src/px_kernels.rs`; `wasm/src/lib.rs` keeps its exports, statics and `alloc` and `include!`s that file, and `px.wasm` rebuilds byte for byte. `planet-render/src/px.rs` includes the same file over a `Framebuffer` (the kernels keep px.wasm's statics, so calls take a lock). There is no `Raster` trait any more: one source, one owner.
+- `Framebuffer`: `buf` (packed ABGR, ImageData's layout), `zb`, `ib`, `dm`, `st.px` blending, `PK`, `bayer`, `h2`.
+- `scene::Scene::draw(fb, game, view, dt)` is game.js's `frame()` from `// ── draw` to `st.flush()`, in game.js's statement order, spending `Math.random` draws where game.js does (particles), and writing back the screen spots game.js writes while drawing (the hero's lift and facing, piccolo, bubbles, every visitor's `sx`/`sy`, the boss's and the ginyu force's `x`/`y`/`k`, henchmen, the capsule's fall, `ape.k`, the meteors' spin seed). `View` says site or widget (`BARE`), the widget's cloud shape and amount, and the pixel scale.
+- Modules: `tones` (each world's palettes), `scenery` (`scenery()` for every world: spheres, the future's slabs, west city's streets, paozu's river, residents), `shade` (`shadePlanet`, `shadeKame`, `shadeW2`, `shadeTop`, domes, capsule corp, pools), `visitors` (everyone on and over the planet, the boss, the ginyu force, the movies), `effects` (spirit bomb, beam struggle, capsule), `beam` (the charge, its aim line and crackle, and the fired beam), `top` (the arena's void, stands and zeno's box), `snake` (snake way: the road, the cloud rows, orbs, spines and ghosts, king kai's planet and the arrival), `shenron` (shenron.js: the dragon's body and heads, porunga).
+- planet-core gained what the drawing needs: `sprite` (`makeSprite`, the `shapeSprite` DSL, `makeHero`, and every other sprite baked by `difftest/sprites.js` into `data/sprites.bin`), `fx` (one particle list both sides add to), `flash_t`, `night_k`, `zap`, hit flashes, the dance's look, the movie wobble, `Game::preview(hash)` (the preview hooks) and `Game::set_view`. `jsmath` gained `pow` and `exp` as V8 computes them.
 
 ### planet-web
 
@@ -70,7 +69,7 @@ Every scenario also checks what reaches the HUD: the `ui.update` snapshot (with 
 
 The harness never draws, so the screen spots game.js writes while drawing stay unset: npcs' `sx`/`sy`, a boss's `x`/`y`/`k`, movie henchmen, the capsule's fall, `piccoloAt`, `monkeyAt`, `liftNow`/`flipNow`. planet-core keeps them as fields the renderer fills (`Seen`, `Boss::x`, `Game::lift_now` and so on), unset headless, so the two agree. game.js also changes the game in five places while drawing: the big bang lands, a great ape's stomp shakes the screen, a full beam charge makes it tremble while the hero is in view, and a boss's capsule falls and opens itself after 8s. The harness runs those headless too, and planet-core runs them in `Game::draw_step` after the frame, so they're diffed. The renderer should leave them there. The flip side: taps on things only the renderer places (king kai, gregory, yamcha, the car, the door, senzu beans, satan, roshi, pudding, gadgets, the birds, zeno, saibamen, bosses, ginyu members, movie henchmen) are ported but not diffed, and a boss's ki blasts fly at (0, 0) as they do in a headless game.js.
 
-Framebuffer diffing (stages 1 and 5): the same harness can draw (`__skip = false`), so tests compare `st.buf` against `Framebuffer::buf` byte for byte at sampled frames, for fixed camera matrices and a set of scenes.
+Framebuffer diffing (stage 1): `difftest/frame.js` mounts game.js with a preview hook at a canvas size (site or widget, with its cloud shape), runs it headless, clears the cosmetic state headless game.js never steps (particles, the flash), and draws the last frames (`__skip = false`). `planet-render/tests/framediff.rs` does the same in Rust and compares the RGBA bytes; `FRAMEDIFF=<name>` filters cases, `FRAMEDIFF_PNG=1` writes the JS, Rust and diff images of failing ones. `--px` loads px.wasm into the harness, to check its kernels against the JS loops. `planet-render/tests/drawn.rs` runs the state difftest's scenarios with drawing on, on both sides (`run.js <scenario>+draw`); drawn, the script also taps what only drawing places, so the renderer-placed taps are diffed there. The scenarios' replay is shared from `planet-core/tests/replay`.
 
 ## Stages and estimates
 
@@ -78,13 +77,25 @@ Estimates are in focused working days for one person or agent, assuming the perf
 
 | Stage | Scope | Estimate |
 |---|---|---|
-| 1. Renderer and world | Sprite DSL data (`makeSprite`, `shapeSprite`, palettes, heroes and villains) into core. Scene building per world (`scenery`, the 13 worlds' props). Sea, clouds, planet shading. Framebuffer diff harness. The kernels come from the perf crate through `Raster`. | 4–6 days (7–9 if the perf crate doesn't land) |
+| 1. Renderer and world | **Mostly done** (below). Still to do: the time chamber's afterimage, the rest of the timeline's bursts as real particles. | 2–3 days remaining |
 | 2. Hero, laps and economy | **Done** (below), the save and the daily bonus with stage 4. | |
-| 3. Events and bosses | **Done** (below), the beam and big bang inputs with stage 4. Still to do: diffing the renderer-placed taps once stage 1 writes the screen spots back. | |
+| 3. Events and bosses | **Done**. The renderer-placed taps are diffed now (planet-render's drawn difftest). | |
 | 4. HUD bridge and menus | **Done** (below): input, the save, the HUD as data, wasm-bindgen exports, the shim, `build.mjs --rust`. Still to do: cut over (after stage 1). | |
-| 5. Native wgpu widget | `planet-native` on wgpu (softbuffer fallback) in Powerrr, the overlay web view for the HUD, the widget rim pass and menubar power. Pixel-diff it against the web build. | 3–5 days |
+| 5. Native wgpu widget | `planet-native` on wgpu (softbuffer fallback) in Powerrr, the overlay web view for the HUD and menubar power. The widget's drawing (no backdrop, its five cloud shapes and amount, the rim) is in planet-render and diffed already. Pixel-diff the native build against the web one. | 2–4 days |
 
-That's about 18–26 days in all. Stages 1 and 3 can run in parallel once the core API has settled (it has now).
+That leaves about 5–8 days: the rest of stage 1, the cut-over (the `--rust` page drawing with planet-render through `Planet::draw_with_rust`, `step_drawn` and `pixels`, about a day), and stage 5.
+
+## Stage 1: what's ported
+
+- **Sprites.** `makeSprite`, the `shapeSprite` DSL (shenron.js's `kit.grid`: `set`, `rect`, `ell`, `poly`, `line`, `mirror`, the shading and outline pass) and `makeHero` are ported; `makeHero` builds all four heroes' 472 sprites (every form, fused, from behind) and a test checks each against game.js. The other 184 sprites (villains, NPCs, ToP fighters, movie villains, dinos, residents, shenron's heads, porunga) are baked from game.js by `difftest/sprites.js` into `planet-core/data/sprites.bin` (190 KB, palette-indexed, with aliases like `VILLAINS.0.spr`); their paint programs stay in game.js, and six are repainted in Rust as a DSL test. `sprites.js --check` says if the bake is stale.
+- **Worlds.** Every `WORLDS` entry's tones and `scenery()`: king kai's planet, namek, beerus' planet, west city (capsule corp lettering, towers, palms, hover cars, painted streets), kame house (sea, surf, the wake), paozu (karst pillars, forest, river, dinos, the pterodactyl), the future (slabs with window grids and rebar, puddles, smouldering craters, smoke, rain), planet vegeta, the lookout (korin's tower), the kais' world, yardrat (blinking folk), and the tournament of power (the void, nebula, pillars, the stands emptying as universes are erased, the broken floor, zeno's box). The planet uses px.wasm's kernel where game.js does.
+- **Sky.** The cloud sea, front and back, the night fade under the full moon, the moon; on the widget no backdrop and its five cloud shapes with the amount slider, then the rim.
+- **Characters.** The hero (run cycle, pose, every form, fused, flight with its streak, kaioken's aura, the great ape), his aura and sparks, bubbles, piccolo, krillin, king kai and his car, gregory, roshi and his kamehameha, saibamen, the dance, 16 and his birds, 18's date, gadgets, beerus and whis, the pudding, zeno, satan, frieza's ship, yamcha's crater, dr. gero, the boss (bar, name, universe badge), the ginyu force and androids, movie henchmen and their tricks, shenron's four looks and porunga, the spirit bomb, the beam charge (aim line, ball, crackle) and the beam (galick gun, kamehameha, final flash, kaioken red, the great ape's width), the beam struggle, the capsule, ki blasts, meteors, the pod, the nimbus, particles, the flash, the floating gain numbers (planet-core keeps each one where its gain lands, the renderer ages them).
+- **Write-backs.** `liftNow`/`flipNow`, `piccoloAt`, `monkeyAt`, every visitor's `sx`/`sy`, the boss's and the ginyu force's `x`/`y`/`k`, henchmen, `ape.k`, the meteor's spin seed, the capsule's fall, hit flashes.
+
+Drawn difftest: `idle` (9 minutes), `active` (9 minutes) and a new `taps` scenario (8 minutes, 182 taps on pods, king kai, saibamen, the boss and more, all hit-tested on renderer-placed spots) match bit for bit with drawing on, up to the first trip to snake way. `ascend`, `late`, `events`, `multiverse` and `wishes` drawn are `#[ignore]`d for now: game.js takes 10–40 minutes to draw each.
+
+Framebuffer diff results: see the PR. In short, every world, every hero and form, the visitors, raids, sagas, the ginyu force, androids, movies, shenron's looks, the arena, snake way (the run, the nimbus and the arrival) and the widget variants match byte for byte at desktop and phone sizes; `#struggle` doesn't yet.
 
 ## Stage 2: what's ported
 
@@ -119,6 +130,6 @@ All of `frame()`'s timeline, in game.js order and with its short-circuits (a cou
 
 ## Next
 
-1. Recheck the perf crate. Agree on `Raster` with its author, or fold it into `planet-render`.
-2. Stage 1: sprite data, then scenery and planet shading, with the framebuffer diff. Have the scene builder write the screen spots back (see Testing), then diff taps on the renderer-placed npcs.
-3. Stage 5 on the bridge (HUD.md, "What stage 5 needs"); the cut-over once planet-render draws the web page.
+1. Run the drawn difftest through every scenario (snake way is drawn now: `planet-render/src/snake.rs`).
+2. The time chamber's afterimage; the remaining bursts as real particles.
+3. The cut-over: the `--rust` page draws with planet-render instead of the game.js twin (HUD.md), then stage 5 on the bridge.

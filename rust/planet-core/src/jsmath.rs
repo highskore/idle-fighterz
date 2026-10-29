@@ -396,6 +396,82 @@ pub fn hypot(v: &[f64]) -> f64 {
     sum.sqrt() * max
 }
 
+/// `Math.pow` as node on arm64 computes it: the platform's `pow`, except that ±1 ** ±Infinity is NaN and V8 takes
+/// y = 2 and y = 0.5 itself (x * x and the square root). Matches node over 300k random arguments.
+pub fn pow(x: f64, y: f64) -> f64 {
+    if y.is_nan() || (y.is_infinite() && (x == 1.0 || x == -1.0)) {
+        return f64::NAN;
+    }
+    if y == 2.0 {
+        return x * x;
+    }
+    if y == 0.5 && x.is_sign_positive() && !x.is_nan() {
+        return x.sqrt();
+    }
+    x.powf(y)
+}
+
+const LN2_HI: f64 = 6.93147180369123816490e-01;
+const LN2_LO: f64 = 1.90821492927058770002e-10;
+const INVLN2: f64 = 1.44269504088896338700e+00;
+const EP1: f64 = 1.66666666666666019037e-01;
+const EP2: f64 = -2.77777777770155933842e-03;
+const EP3: f64 = 6.61375632143793436117e-05;
+const EP4: f64 = -1.65339022054652515390e-06;
+const EP5: f64 = 4.13813679705723846039e-08;
+
+/// `Math.exp`: fdlibm's e_exp.c (V8's `ieee754::exp`), contracted as clang builds it for arm64.
+pub fn exp(x: f64) -> f64 {
+    let mut hx = hi(x);
+    let xsb = ((hx >> 31) & 1) as usize;
+    hx &= 0x7fffffff;
+    if hx >= 0x40862E42 {
+        if hx >= 0x7ff00000 {
+            if ((hx & 0xfffff) | lo(x)) != 0 {
+                return x + x;
+            }
+            return if xsb == 0 { x } else { 0.0 };
+        }
+        if x > 7.09782712893383973096e+02 {
+            return f64::INFINITY;
+        }
+        if x < -7.45133219101941108420e+02 {
+            return 0.0;
+        }
+    }
+    let (mut x, mut hi_, mut lo_, mut k) = (x, 0.0, 0.0, 0i32);
+    if hx > 0x3fd62e42 {
+        if hx < 0x3FF0A2B2 {
+            // V8 returns E for exp(1), which the reduction below gets a bit wrong
+            if x == 1.0 {
+                return std::f64::consts::E;
+            }
+            hi_ = x - if xsb == 0 { LN2_HI } else { -LN2_HI };
+            lo_ = if xsb == 0 { LN2_LO } else { -LN2_LO };
+            k = 1 - xsb as i32 - xsb as i32;
+        } else {
+            k = INVLN2.mul_add(x, if xsb == 0 { 0.5 } else { -0.5 }) as i32;
+            let t = k as f64;
+            hi_ = (-t).mul_add(LN2_HI, x);
+            lo_ = t * LN2_LO;
+        }
+        x = hi_ - lo_;
+    } else if hx < 0x3e300000 {
+        return 1.0 + x;
+    }
+    let t = x * x;
+    let c = (-t).mul_add(t.mul_add(t.mul_add(t.mul_add(t.mul_add(EP5, EP4), EP3), EP2), EP1), x);
+    if k == 0 {
+        return 1.0 - ((x * c) / (c - 2.0) - x);
+    }
+    let y = 1.0 - ((lo_ - (x * c) / (2.0 - c)) - hi_);
+    if k >= -1021 {
+        with_hi((hi(y) as i32 + (k << 20)) as u32, lo(y))
+    } else {
+        with_hi((hi(y) as i32 + ((k + 1000) << 20)) as u32, lo(y)) * 9.33263618503218878990e-302
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

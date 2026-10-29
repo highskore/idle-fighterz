@@ -48,12 +48,19 @@ impl Bridge {
 
     /// Runs the fixed steps `elapsed` real seconds cover (at most 8, so a stall can't snowball); returns how many.
     pub fn step(&mut self, elapsed: f64, now_ms: f64) -> u32 {
+        let n = self.step_drawn(elapsed, now_ms, &mut |_, _| {});
+        self.game.fx.clear(); // undrawn, nothing ages the particles out
+        n
+    }
+
+    /// `step`, with `draw` run in every step where game.js draws (see `step_one_drawn`).
+    pub fn step_drawn(&mut self, elapsed: f64, now_ms: f64, draw: &mut dyn FnMut(&mut crate::Game, f64)) -> u32 {
         self.clock(now_ms);
         self.bank += elapsed;
         let mut n = 0;
         while self.bank >= DT && n < 8 {
             self.bank -= DT;
-            self.step_one();
+            self.step_one_drawn(draw);
             n += 1;
         }
         if n == 8 {
@@ -64,8 +71,17 @@ impl Bridge {
 
     /// Exactly one fixed step; returns the new time (a renderer stepping in lockstep runs its own frame at it).
     pub fn step_one(&mut self) -> f64 {
+        let t = self.step_one_drawn(&mut |_, _| {});
+        self.game.fx.clear(); // undrawn, nothing ages the particles out
+        t
+    }
+
+    /// One fixed step with `draw` run where game.js draws: after the frame's logic, before the timeouts due.
+    pub fn step_one_drawn(&mut self, draw: &mut dyn FnMut(&mut crate::Game, f64)) -> f64 {
         self.t += DT;
-        self.game.frame(self.t, DT);
+        self.game.sim(self.t, DT);
+        draw(&mut self.game, DT);
+        self.game.timeouts();
         self.t
     }
 

@@ -102,6 +102,8 @@ pub struct Input {
     pub blasts: Vec<Blast>,
     /// the great ape's step (`floor(t·3.2)`): each new one stomps
     pub ape_step: f64,
+    /// whether the great ape stomped this frame (the renderer kicks up dust then)
+    pub stomp: bool,
 }
 
 impl Default for Input {
@@ -121,6 +123,7 @@ impl Default for Input {
             last_tap: (-9.0, 0.0, 0.0),
             blasts: Vec::new(),
             ape_step: 0.0,
+            stomp: false,
         }
     }
 }
@@ -394,10 +397,14 @@ impl Game {
             let s = b.spr();
             if on_line(b.x, b.y - s.h / 2.0 * b.k, s.w / 2.0 * b.k) {
                 let d = self.wall_cap(dmg * 4.0, pts * 4.0);
-                self.hit_boss(d);
+                let (bx, by) = (b.x, b.y - s.h / 2.0 * b.k);
+                self.hit_boss(d, bx, by);
+                let b = self.tl.boss.as_ref().unwrap();
+                let (bx, by) = (b.x, b.y - b.spr().h * b.k);
+                self.buff_pop(d, bx, by);
             }
         }
-        self.gain(pts);
+        self.gain_at(pts, kx, ky - 16.0, true);
         self.cue(crate::hud::Cue::Fx("buy"));
         for i in 0..self.tl.meteors.len() {
             let m = &self.tl.meteors[i];
@@ -407,10 +414,11 @@ impl Game {
             let (rx, ry) = (m.x - kx, m.y - ky);
             let (along, off) = (rx * dir[0] + ry * dir[1], (rx * dir[1] - ry * dir[0]).abs());
             if along > 0.0 && off < 6.0 + c * 3.0 {
+                let (mx, my) = (m.x, m.y);
                 self.tl.meteors[i].dead = true;
                 self.goal("meteor", 1.0, false);
                 let n = self.meteor_pay();
-                self.gain(n);
+                self.gain_at(n, mx, my - 6.0, true);
             }
         }
     }
@@ -427,6 +435,7 @@ impl Game {
     /// falls and opens itself after 8s. None of it on snake way, where
     /// game.js draws the road instead. `dt` is the frame's (time-chamber) step.
     pub(crate) fn draw_step(&mut self, t: f64, dt: f64) {
+        self.inp.stomp = false;
         self.inp.blasts.retain(|b| (t - b.t0) / 0.45 <= 1.0);
         if self.s.world == 3 && self.tl.snk.is_some() {
             return;
@@ -439,9 +448,10 @@ impl Game {
         }
         if self.b.ape_until > t && (t * 3.2).floor() != self.inp.ape_step {
             self.inp.ape_step = (t * 3.2).floor();
+            self.inp.stomp = true;
             self.shake = self.shake.max(0.35);
         }
-        if self.inp.charging >= 2.4 && self.hero_seen {
+        if self.inp.charging >= 2.4 && self.hero_seen && !self.drawn_here {
             self.shake = self.shake.max(0.06);
         }
         if let Some(c) = self.tl.capsule.as_mut() {
@@ -465,7 +475,7 @@ impl Game {
         self.inp.blasts.push(Blast { x, y, r: r * if self.b.ape_until > self.t { 1.6 } else { 1.0 }, t0: self.t, kaio: self.b.kaio_until > self.t });
         self.shake = self.shake.max(0.45);
         let n = self.beam_pay() * Self::bang_x_at(bb);
-        self.gain(n);
+        self.gain_at(n, x, y - 10.0, true);
         for i in 0..self.tl.saibas.len() {
             let sb = &self.tl.saibas[i];
             if !sb.dead && sb.sx.is_some_and(|(sx, sy)| hypot(&[sx - x, sy - 6.0 - y]) < r + 6.0) {
@@ -475,10 +485,11 @@ impl Game {
         for i in 0..self.tl.meteors.len() {
             let m = &self.tl.meteors[i];
             if !m.dead && m.delay <= 0.0 && hypot(&[m.x - x, m.y - y]) < r + 4.0 {
+                let (mx, my) = (m.x, m.y);
                 self.tl.meteors[i].dead = true;
                 self.goal("meteor", 1.0, false);
                 let n = self.meteor_pay();
-                self.gain(n);
+                self.gain_at(n, mx, my - 6.0, true);
             }
         }
         // rate() already adds kaioken and the ape; the bare hit times atk_buff lets them stack as on a beam
@@ -505,7 +516,8 @@ impl Game {
             let s = b.spr();
             if hypot(&[b.x - x, b.y - s.h / 2.0 * b.k - y]) < r + s.w / 2.0 * b.k {
                 let dmg = self.wall_cap(hit(self) * 12.0 * bb, self.rate().max(self.lap_value() * self.mult(false)) * 12.0 * bb);
-                self.hit_boss(dmg);
+                self.hit_boss(dmg, x, y);
+                self.buff_pop(dmg, x, y - 10.0);
             }
         }
         if let Some(s) = self.tl.star.as_ref() {
@@ -514,7 +526,7 @@ impl Game {
                 self.click(sx, sy);
             }
         }
-        self.burst(36);
+        self.burst_at(x, y, &[0xffffff, 0xbfe9ff, 0x6fb0ff, 0x2f6ae0], 36, 220.0);
     }
 
     /// The idle turn and a drag's inertia, both paused while a press is down.
@@ -524,8 +536,8 @@ impl Game {
             let i = &mut self.inp;
             if i.vrx.abs() + i.vry.abs() > 0.001 {
                 self.cam.turn(i.vrx * dt, i.vry * dt);
-                i.vrx *= 0.06f64.powf(dt);
-                i.vry *= 0.06f64.powf(dt);
+                i.vrx *= crate::jsmath::pow(0.06, dt);
+                i.vry *= crate::jsmath::pow(0.06, dt);
             }
             self.cam.spin(dt);
             // the lookout sits on korin's tower, so it only ever turns round its own axis

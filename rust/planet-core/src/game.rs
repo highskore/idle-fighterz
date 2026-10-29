@@ -2,6 +2,7 @@
 //! ascending), with the economy as methods. Expressions keep game.js's operand order so floats round the same way.
 
 use crate::data::*;
+use crate::fx::Particle;
 use crate::geom::{Cam, Frame};
 use crate::hud::{Cue, Hud};
 use crate::input::Input;
@@ -66,6 +67,8 @@ pub struct Game {
     pub last_lap: f64,
     pub sprint: f64,
     pub riding: f64,
+    /// the `#snake-nimbus` preview hook (any hash with `nimbus`): snake way starts riding the nimbus
+    pub snake_nimbus: bool,
     pub acc: f64,
     pub auto_acc: f64,
     pub combo: f64,
@@ -92,8 +95,21 @@ pub struct Game {
     /// how high the hero is drawn off the road and whether he faces left: the renderer sets these
     pub lift_now: f64,
     pub flip_now: bool,
+    /// particles (game.js `fx`): the simulation and the renderer both add, the renderer steps them
+    pub fx: Vec<crate::fx::Particle>,
+    /// the floating gain numbers (game.js `floats`): the simulation adds, the renderer ages them
+    pub floats: Vec<crate::floats::Float>,
+    /// `flashT`: the white flash after a transform, a trip, a big hit; the renderer runs it down
+    pub flash_t: f64,
     /// whether the hero was in view the last time he was drawn (a full beam charge makes the screen tremble then)
     pub hero_seen: bool,
+    /// planet-render draws this game: a full charge's tremble then comes from the drawing, as in game.js, not from
+    /// `draw_step`'s guess from the last frame
+    pub drawn_here: bool,
+    /// the capsule houses as game.js last built the scenery (`scenery()`): a wish's free levels don't rebuild it
+    pub scenery_house: u32,
+    /// the universes the arena showed erased at game.js's last `topSync()` (a poked `S.uni` doesn't redraw it)
+    pub top_uni: u32,
 }
 
 impl Game {
@@ -114,6 +130,7 @@ impl Game {
             last_lap: 0.0,
             sprint: 0.0,
             riding: 0.0,
+            snake_nimbus: false,
             acc: 0.0,
             auto_acc: 0.0,
             combo: 1.0,
@@ -131,7 +148,13 @@ impl Game {
             epoch_ms: 0.0,
             lift_now: 0.0,
             flip_now: false,
+            fx: Vec::new(),
+            floats: Vec::new(),
+            flash_t: 0.0,
             hero_seen: false,
+            drawn_here: false,
+            scenery_house: 0,
+            top_uni: 0,
         };
         g.sync_shop();
         g
@@ -167,7 +190,7 @@ impl Game {
         let l = self.s.lv(u);
         let hit = MS.iter().filter(|&&n| l >= n).count() as f64;
         let past = ((l as f64 - 100.0) / 50.0).floor().max(0.0);
-        2f64.powf(hit + past)
+        crate::jsmath::pow(2f64, hit + past)
     }
 
     pub fn seed_boost_of(&self, a: f64) -> f64 {
@@ -175,7 +198,7 @@ impl Game {
         if b <= SEED_SOFT {
             b
         } else {
-            SEED_SOFT * (b / SEED_SOFT).powf(SEED_EXP)
+            SEED_SOFT * crate::jsmath::pow(b / SEED_SOFT, SEED_EXP)
         }
     }
 
@@ -197,7 +220,7 @@ impl Game {
 
     pub fn seeds_now(&self) -> f64 {
         let p = self.s.pl / 1e4;
-        (if self.ang(A_DIVINE) { p.powf(0.55) } else { p.sqrt() }).floor().max(1.0)
+        (if self.ang(A_DIVINE) { crate::jsmath::pow(p, 0.55) } else { p.sqrt() }).floor().max(1.0)
     }
 
     pub fn god_now(&self) -> u32 {
@@ -214,8 +237,8 @@ impl Game {
 
     /// The ki ceiling: the capped engine shrinks to a small power past it.
     pub fn ceiling(&self) -> f64 {
-        let time = if self.s.multi { CEIL_T.powf(((self.session - self.s.multi_t) / 60.0).max(0.0)) } else { 1.0 };
-        CEIL0 * time * CEIL_STEP.powf(self.s.uni_best as f64)
+        let time = if self.s.multi { crate::jsmath::pow(CEIL_T, ((self.session - self.s.multi_t) / 60.0).max(0.0)) } else { 1.0 };
+        CEIL0 * time * crate::jsmath::pow(CEIL_STEP, self.s.uni_best as f64)
     }
 
     pub fn capped(&self, m: f64) -> f64 {
@@ -223,19 +246,22 @@ impl Game {
         if m <= c {
             m
         } else {
-            c * (m / c).powf(CEIL_EXP)
+            c * crate::jsmath::pow(m / c, CEIL_EXP)
         }
     }
 
     pub fn late_boost(&self) -> f64 {
         let stars = self.s.ustars as f64 * if self.ang(A_STARS) { 2.0 } else { 1.0 };
-        STAR_X.powf(stars) * MASTERY_X.powf(self.s.mastery as f64) * Self::god_boost_of(self.s.god_total as f64) * ZENO_X.powf(self.s.zeno as f64)
+        crate::jsmath::pow(STAR_X, stars)
+            * crate::jsmath::pow(MASTERY_X, self.s.mastery as f64)
+            * Self::god_boost_of(self.s.god_total as f64)
+            * crate::jsmath::pow(ZENO_X, self.s.zeno as f64)
     }
 
     /// The engine the ceiling caps; forms sit outside it.
     pub fn core(&self) -> f64 {
         let w = self.s.wishes as f64;
-        1.15f64.powf(self.s.lvf(Upg::Gravity)) * 1.25f64.powf(w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON
+        crate::jsmath::pow(1.15f64, self.s.lvf(Upg::Gravity)) * crate::jsmath::pow(1.25f64, w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON
     }
 
     pub fn tail_lv(&self) -> f64 {
@@ -382,7 +408,7 @@ impl Game {
 
     pub fn cost(&self, u: Upg) -> f64 {
         let it = &SHOP[u as usize];
-        (it.base * it.k.powf(self.s.lvf(u)) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
+        (it.base * crate::jsmath::pow(it.k, self.s.lvf(u)) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
     }
 
     /// Ascending spends all you hold, 1M at least.
@@ -492,6 +518,7 @@ impl Game {
     }
 
     pub(crate) fn transform(&mut self, preview: bool) {
+        self.flash_t = 1.0;
         self.s.form += 1;
         self.victory();
         if !preview {
@@ -518,7 +545,13 @@ impl Game {
         let msg = format!("{}!  ×{}{}", f.name, f.x, if preview { " — a taste, for 60s" } else { "" });
         self.event(msg);
         self.cue(Cue::Form(self.s.form));
-        self.rng.skip(RNG_TRANSFORM);
+        let fi = ALL_FORMS.iter().position(|f| f.0 == self.forms[self.s.form].name).unwrap_or(0);
+        let q = self.kid_screen(10.0);
+        for _ in 0..90 {
+            let vx = (self.rng.random() - 0.5) * 200.0;
+            let vy = (self.rng.random() - 0.5) * 200.0;
+            self.fx.push(Particle::new(q.x, q.y, &FORM_AURA[fi]).v(vx, vy).drag(2.0).life(1.1));
+        }
     }
 
     /// game.js `train()`: a tap just off the hero, so nothing on the planet takes it and it trains.
@@ -557,10 +590,16 @@ impl Game {
             * if crit { self.crit_hit() } else { 1.0 }
             * (1.0 + 0.5 * self.lvl(N_FIST))
             * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
-        self.gain(n);
+        let k = self.kid_screen(14.0);
+        self.gain_at(n, k.x, k.y - 10.0, crit);
         self.cue(Cue::Sfx("tap"));
         if crit {
-            self.rng.skip(RNG_CRIT);
+            let k = self.kid_screen(14.0);
+            for _ in 0..10 {
+                let vx = (self.rng.random() - 0.5) * 90.0;
+                let vy = -20.0 - self.rng.random() * 60.0;
+                self.fx.push(Particle::new(k.x, k.y - 14.0, &[0xffffff, 0x9cf0b8, 0x34d873]).v(vx, vy).drag(2.0).life(0.5));
+            }
         }
         self.cue(Cue::Bump);
     }
@@ -619,6 +658,9 @@ impl Game {
                     Upg::Armor if first => "saiyan armor on — hit villains harder",
                     _ => "",
                 };
+                if u == Upg::House {
+                    self.scenery();
+                }
                 if !note.is_empty() {
                     self.event(note);
                 }
@@ -685,6 +727,8 @@ impl Game {
         if !self.itx_worlds().contains(&w) {
             return;
         }
+        let from = self.kid_screen(0.0);
+        self.tl.itx_fx = Some((from, self.t + 0.35)); // the arrival plays once the trip's flash fades
         self.trip(w);
         self.tl.itx_trip = true;
         self.ach("itx");
@@ -707,9 +751,11 @@ impl Game {
         self.b.tired_until = self.t + 25.0;
         self.b.kaio_ready = self.t + 45.0;
         self.shake = 0.5;
+        self.flash_t = 0.4;
         let msg = format!("kaioken! ×{}", self.kaio_x());
         self.event(msg);
-        self.rng.skip(RNG_KAIOKEN);
+        let (x, y) = self.hand_pos();
+        self.burst_at(x, y, &[0xffffff, 0xff9a8a, 0xe0332b], 40, 200.0);
     }
 
     fn branch_pts(&self, b: Branch) -> u32 {
@@ -718,7 +764,7 @@ impl Game {
 
     /// Uncapped nodes cost double every 5 ranks.
     pub fn rank_cost(n: &Node, r: u32) -> f64 {
-        TIER_COST[n.tier] as f64 * 2f64.powf((r / 5) as f64)
+        TIER_COST[n.tier] as f64 * crate::jsmath::pow(2f64, (r / 5) as f64)
     }
 
     pub fn node_open(&self, i: usize) -> bool {
@@ -769,6 +815,7 @@ impl Game {
         self.s.form = if self.ang(A_GOLDEN) { 1 } else { 0 };
         self.tl.preview = None;
         self.cue(Cue::Form(self.s.form));
+        self.scenery();
         let msg = format!(
             "ascended — +{gain} ki seed{} (×{} on everything), back to {}",
             if gain > 1.0 { "s" } else { "" },
@@ -785,6 +832,7 @@ impl Game {
         if self.s.form < MUI_FORM || self.god_now() == 0 {
             return;
         }
+        self.flash_t = 1.0;
         let g = self.god_now();
         self.s.godki += g;
         self.s.god_total += g;
@@ -809,7 +857,9 @@ impl Game {
             b.fled = true;
             b.t1 = self.t;
         }
+        self.top_sync();
         self.cue(Cue::Form(self.s.form));
+        self.scenery();
         let boost = crate::num::fmt_short(Self::god_boost_of(self.s.god_total as f64));
         self.event_ms(format!("whis: \"ohoho, not bad.\" — +{g} god ki (×{boost} on everything). back to universe 9: spend god ki in menu → angels"), 5000.0);
         self.cue(Cue::Fx("super"));
@@ -817,6 +867,13 @@ impl Game {
             self.after(5.2, crate::timeline::Later::Event("something tiny and very powerful is watching…".into(), 3500.0));
         }
         self.sync_shop();
+    }
+
+    /// game.js `scenery()`: the scenery is rebuilt from the houses owned now. Korin's tower (and the lookout's turn round
+    /// it) only stands under the lookout.
+    pub(crate) fn scenery(&mut self) {
+        self.scenery_house = self.s.lv(Upg::House);
+        self.inp.w2_pole = self.s.world == 10;
     }
 
     /// The zeno button: everything but his favour (and achievements) is erased.
@@ -844,6 +901,7 @@ impl Game {
         self.tl.preview = None;
         self.tl.next_boss = 60.0;
         self.ach("zeno");
+        self.top_sync();
         if self.s.world != 0 {
             self.travel(0);
             self.tl.namek_until = 0.0;
@@ -851,10 +909,12 @@ impl Game {
         if self.tl.itx_trip {
             self.itx_home();
         }
+        self.flash_t = 1.0;
         self.shake = 1.0;
         self.cue(Cue::Form(self.s.form));
         self.cue(Cue::Fx("super"));
         self.cue(Cue::Sfx("boom"));
+        self.scenery();
         let favour = crate::num::fmt_short(ZENO_X.powf(self.s.zeno as f64));
         self.event_ms(
             match erased {
@@ -869,8 +929,15 @@ impl Game {
 
     // ── the fixed step
 
-    /// One frame of game.js `frame(t, dt)`: `t` is the new time, `dt` the step.
+    /// One frame of game.js `frame(t, dt)`, then the `setTimeout`s that came due: `t` is the new time, `dt` the step.
     pub fn frame(&mut self, t: f64, dt: f64) {
+        self.sim(t, dt);
+        self.timeouts();
+    }
+
+    /// `frame(t, dt)` up to its drawing. A renderer draws between this and `timeouts()`, as game.js draws inside
+    /// `frame()` before the page runs the timeouts that came due (follow-up wishes, the summon after a goal).
+    pub fn sim(&mut self, t: f64, dt: f64) {
         self.t = t;
         let rdt = dt;
         let dt = if self.b.chamber_until > t && self.s.world != 3 { dt * 0.3 } else { dt };
@@ -910,7 +977,8 @@ impl Game {
                     * if self.wished(WishBuff::Laps) { 3.0 } else { 1.0 }
                     * if self.tl.bz.is_some() { 3.0 } else { 1.0 }
                     * if self.b.whis_until > t { 2.0 } else { 1.0 };
-                self.gain(n);
+                let k = self.kid_screen(20.0);
+                self.gain_at(n, k.x, k.y - 14.0, true);
             }
         }
         if self.tl.jump_h > 0.0 || self.tl.jump_v > 0.0 {
@@ -961,7 +1029,8 @@ impl Game {
                 self.transform(self.tl.preview.is_some());
             }
             let last = self.forms.len() - 1;
-            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0) {
+            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * crate::jsmath::pow(LATE_STEP, self.s.mastery as f64 + 1.0)
+            {
                 self.s.mastery += 1;
                 self.ach("mastery");
                 let next = crate::num::fmt_short(self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0));
@@ -987,10 +1056,14 @@ impl Game {
         }
         self.shen_step(t);
         self.draw_step(t, dt);
+    }
+
+    /// The `setTimeout`s due by now.
+    pub fn timeouts(&mut self) {
         self.run_later();
     }
 
-    /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S`.
+    /// Test hook: sets one save field by its game.js name, the way the JS harness pokes `S` (`world` also lays it out).
     pub fn debug_set(&mut self, key: &str, v: f64) {
         let s = &mut self.s;
         match key {
@@ -1024,10 +1097,273 @@ impl Game {
                 }
             }
         }
+        if key == "world" {
+            // as the harness's poke does: the world's layout and scenery, without the trip
+            self.cam.layout(self.s.world);
+            self.scenery();
+        }
     }
 }
 
 impl Game {
+    /// game.js's preview hooks (`#raid`, `#namek`, `#form12`, `#hero-goku`, ...), applied as `mount()` applies them,
+    /// after the world is set up and before `start()`. Of those that wait on a `setTimeout`, `#shenron` is ported;
+    /// `#flight`, `#chamber`, `#buffs` and `#cvlink` aren't.
+    pub fn preview(&mut self, hash: &str) {
+        use crate::data::{Hero, Upg, LADDER, MUI_FORM, VILLAINS};
+        let has = |k: &str| hash.contains(k);
+        let num = |k: &str| -> Option<usize> {
+            let i = hash.find(k)? + k.len();
+            let d: String = hash[i..].chars().take_while(|c| c.is_ascii_digit()).collect();
+            d.parse().ok()
+        };
+        let best = |g: &mut Game, b: f64| g.s.best = g.s.best.max(b);
+        let lv = |g: &mut Game, u: Upg, n: u32| g.s.levels[u as usize] = g.s.levels[u as usize].max(n);
+        let trip = |g: &mut Game, b: f64, trips: u32| {
+            g.s.best = g.s.best.max(b);
+            g.s.namek_at = b;
+            g.s.trips = trips;
+        };
+        let sagas = VILLAINS.len() as u32;
+        if has("ape") {
+            self.session = 41.0;
+            self.tl.next_moon = 0.0;
+        }
+        if has("ozaru") {
+            self.session = 41.0;
+            self.tl.next_moon = 0.0;
+            self.s.ach.insert("ape");
+            best(self, 5e4);
+            lv(self, Upg::Tail, 3);
+            if has("giant") {
+                self.s.big_ape = true;
+            }
+        }
+        if has("ginyu") {
+            self.session = 151.0;
+            best(self, 5e4);
+            self.tl.next_ginyu = 0.0;
+        }
+        if has("visitors") {
+            self.session = 61.0;
+            self.tl.next_greg = 0.0;
+            self.tl.next_kai = 0.0;
+        }
+        if has("raid") {
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+            self.tl.next_saiba = 0.0;
+        }
+        if let Some(n) = num("saga") {
+            self.s.saga = (n as i64 - 1).max(0) as u32;
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+        }
+        if has("roshi") {
+            self.session = 91.0;
+            self.tl.next_roshi = 0.0;
+        }
+        for (k, b, trips) in
+            [("paozu", 7e6, 6), ("westcity", 5e6, 4), ("kame", 6e6, 5), ("lookout", 5e6, 8), ("kaiworld", 5e6, 9), ("yardrat", 5e6, 10), ("future", 5e6, 7)]
+        {
+            if has(k) {
+                trip(self, b, trips);
+            }
+        }
+        if has("androids") {
+            self.session = 201.0;
+            best(self, 2e5);
+            self.tl.next_andro = 0.0;
+        }
+        if has("date") {
+            self.session = 161.0;
+            self.tl.next_date = 0.0;
+        }
+        if has("gero") {
+            self.session = 141.0;
+            self.tl.next_gero = 0.0;
+        }
+        if has("sixteen") {
+            self.session = 101.0;
+            self.tl.next_a16 = 0.0;
+        }
+        if has("beerus") {
+            trip(self, 4e6, 3);
+        }
+        if has("krillin") {
+            self.session = 131.0;
+            self.tl.next_kril = 0.0;
+        }
+        if has("seeds") {
+            self.s.seeds = 40.0;
+        }
+        if has("galick") {
+            lv(self, Upg::Galick, if has("galick5") { 5 } else { 1 });
+        }
+        if let Some(n) = num("universe") {
+            self.s.saga = sagas;
+            self.s.multi = true;
+            self.s.uni = LADDER.iter().position(|l| l.0 as usize == n).unwrap_or(0) as u32;
+            self.s.uni_stage = 2;
+            self.s.ustars = self.s.uni;
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+        }
+        if has("mui") {
+            self.s.pl = 2.1e14;
+            self.s.best = 2.1e14;
+            self.s.form = MUI_FORM - 1;
+        }
+        if let Some(n) = num("form") {
+            let i = n.min(self.forms.len() - 1);
+            self.s.pl = self.forms[i].at * 1.05;
+            self.s.best = self.s.pl;
+            self.s.form = i.max(1) - 1;
+        }
+        if has("godki") {
+            self.s.pl = 2.1e15;
+            self.s.best = 2.1e15;
+            self.s.form = MUI_FORM;
+            self.s.godki = 6;
+            self.s.god_total = 3;
+            self.s.gods = 1;
+            self.s.multi = true;
+            self.s.saga = sagas;
+            self.s.uni = 2;
+            self.s.ustars = 2;
+        }
+        if has("zeno") {
+            self.s.gods = 2;
+            self.s.saga = sagas;
+            self.s.multi = true;
+            self.session = 111.0;
+        }
+        if has("fusion") {
+            lv(self, Upg::Partner, 3);
+            best(self, 5e4);
+            self.tl.next_fuse = 2.0;
+        }
+        if has("namek") || has("porunga") {
+            trip(self, 1e6, 0);
+        }
+        if has("foes") {
+            self.s.foes = ["raditz", "cell", "broly", "goku black"].map(String::from).to_vec();
+        }
+        if has("kaio") {
+            lv(self, Upg::Kaio, 1);
+        }
+        if has("vegeta") {
+            trip(self, 2e6, 1);
+        }
+        if let Some(i) = hash.find("hero-") {
+            let id: String = hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect();
+            if let Some(h) = [("vegeta", Hero::Vegeta), ("goku", Hero::Goku), ("gohan", Hero::Gohan), ("trunks", Hero::Trunks)].iter().find(|h| h.0 == id) {
+                self.s.hero = h.1;
+            }
+        }
+        if has("snake") {
+            trip(self, 3e6, 2);
+        }
+        self.snake_nimbus = has("nimbus");
+        if has("door") {
+            lv(self, Upg::Chamber, 1);
+            self.tl.next_door = 0.0;
+        }
+        if has("car") {
+            self.session = 71.0;
+            self.tl.next_car = 0.0;
+        }
+        if has("pod") {
+            self.session = 13.0;
+            self.tl.next_star = 0.0;
+        }
+        if has("storm") {
+            self.session = 121.0;
+            self.tl.next_storm = 0.0;
+        }
+        if has("spirit") {
+            self.s.spirit = self.s.spirit.max(1);
+            self.tl.spirit = 0.97;
+        }
+        if has("struggle") {
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+            lv(self, Upg::Galick, 1);
+            self.tl.struggle_force = true;
+        }
+        if has("frieza") {
+            self.session = 151.0;
+            self.tl.next_ship = 0.0;
+        }
+        if let Some(m) = ["cooler", "janemba", "bojack"].into_iter().find(|m| has(m)) {
+            self.tl.movie_force = m;
+            self.session = 241.0;
+            self.tl.home_since = self.session;
+            best(self, 3e5);
+            self.tl.next_movie = 0.0;
+        }
+        if has("yamcha") {
+            self.session = 101.0;
+            self.tl.next_yam = 0.0;
+        }
+        if has("cling") {
+            self.session = 151.0;
+            self.tl.next_cling = 0.0;
+        }
+        if has("dance") {
+            self.session = 201.0;
+            self.tl.next_dance = 0.0;
+            best(self, 2e5);
+        }
+        if has("gregory") {
+            self.session = 61.0;
+            self.tl.next_greg = 0.0;
+        }
+        if has("#top") {
+            self.s.world = 9;
+            self.cam.layout(9);
+            self.tl.namek_until = 1e9;
+        }
+        if let Some(i) = hash.find("shenron") {
+            // `setTimeout(() => summon(look), 800)`
+            if let Some(d) = hash[i + 7..].chars().next().and_then(|c| c.to_digit(10)) {
+                self.tl.shen_look = d as usize;
+            }
+            self.tl.later.push((0.8, crate::timeline::Later::Summon));
+        }
+        if has("itx") {
+            // (and opens the picker 1.5s in: a cue only)
+            lv(self, Upg::Itx, 3);
+            self.s.ach.insert("yardrat");
+            self.s.been = crate::data::ITX_WORLDS.iter().fold(0, |m, w| m | 1 << w);
+        }
+        if has("tournament") {
+            self.session = 76.0;
+            best(self, 3000.0);
+            self.tl.next_tour = 0.0;
+        }
+        self.forms = ladder_of(self.s.hero);
+        self.s.form = self.s.form.min(self.forms.len() - 1);
+        if self.s.multi && self.s.world == 0 {
+            self.s.world = 9;
+            self.cam.layout(9);
+        }
+        if self.s.multi {
+            self.top_sync();
+        }
+        self.s.run_best = self.s.run_best.max(self.s.best);
+    }
+}
+
+impl Game {
+    /// The canvas the game draws on, in its big pixels (`st.W`×`st.H`), and whether it's the desktop widget.
+    pub fn set_view(&mut self, w: f64, h: f64, widget: bool) {
+        self.cam.w = w;
+        self.cam.h = h;
+        self.cam.widget = widget;
+        self.cam.layout(self.s.world);
+    }
+
     /// `layout()` for a new canvas: `w`×`h` buffer pixels at `scale` CSS pixels each.
     pub fn resize(&mut self, w: f64, h: f64, scale: f64) {
         (self.cam.w, self.cam.h, self.cam.scale) = (w, h, scale);

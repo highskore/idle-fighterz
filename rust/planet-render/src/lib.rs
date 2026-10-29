@@ -1,9 +1,23 @@
-//! planet-render: the software raster both targets share, so the art stays pixel-identical to game.js.
+//! planet-render: the software raster both targets share, pixel-identical to game.js and world.js.
 //!
-//! Stage 1 owns this crate. The per-pixel kernels (sphere/depth raster, `blitZ` sprite compositing, clouds, the
-//! widget rim pass) are being moved into Rust by the perf pass in highskore/planet (`wasm/`). Rather than write them
-//! twice, they sit behind the `Raster` trait: that crate implements it (or moves in here) once it lands, and
-//! everything above this boundary (scene building from `planet_core::Game`, the HUD bridge) only sees the trait.
+//! `px` holds px.wasm's kernels (the same source file builds both), `scene` turns a `planet_core::Game` into pixels.
+
+// game.js's literals (6.28, 3.1416) and its `!(a > b)` tests, which differ from `a <= b` on NaN, are kept as written so the
+// pixels stay bit-identical; ports of game.js's drawing functions keep their parameter lists
+#![allow(clippy::approx_constant, clippy::neg_cmp_op_on_partial_ord, clippy::too_many_arguments)]
+
+pub mod beam;
+pub mod effects;
+pub mod floats;
+pub mod px;
+pub mod scene;
+pub mod scenery;
+pub mod shade;
+pub mod shenron;
+pub mod snake;
+pub mod tones;
+pub mod top;
+pub mod visitors;
 
 /// The buffers game.js keeps per stage: packed ABGR pixels as `ImageData` wants them (`st.buf`), depth (`zb`),
 /// object ids (`ib`) and the dither mask (`dm`).
@@ -15,12 +29,14 @@ pub struct Framebuffer {
     pub zb: Vec<f32>,
     pub ib: Vec<u16>,
     pub dm: Vec<u8>,
+    /// the px kernels' caches
+    pub px: px::PxCache,
 }
 
 impl Framebuffer {
     pub fn new(w: usize, h: usize) -> Self {
         let n = w * h;
-        Framebuffer { w, h, buf: vec![0; n], zb: vec![-1e9; n], ib: vec![0; n], dm: vec![0; n] }
+        Framebuffer { w, h, buf: vec![0; n], zb: vec![-1e9; n], ib: vec![0; n], dm: vec![0; n], px: px::PxCache::default() }
     }
 
     /// The start of every drawn frame: `st.clear(); zb.fill(-1e9); ib.fill(0);`
@@ -64,24 +80,6 @@ impl Framebuffer {
         // SAFETY: u32 has no padding and u8 has alignment 1; the length is exact.
         unsafe { std::slice::from_raw_parts(self.buf.as_ptr() as *const u8, self.buf.len() * 4) }
     }
-}
-
-/// The kernels the perf pass is porting. Signatures mirror game.js; scene types fill in during stage 1.
-pub trait Raster {
-    /// `sphere(o, id, shade)`: a depth-tested, dithered, shaded sphere.
-    fn sphere(&mut self, fb: &mut Framebuffer, centre: [f64; 3], r: f64, id: u16, shade: &dyn Fn([f64; 3], f64) -> u32);
-    /// `blitZ(spr, bx, by, ang, flip, lift, depth, k, raw)`: a sprite against the depth buffer.
-    #[allow(clippy::too_many_arguments)]
-    fn blit_z(&mut self, fb: &mut Framebuffer, spr: &Sprite, bx: f64, by: f64, ang: f64, flip: bool, lift: f64, depth: f64, k: f64, raw: bool);
-}
-
-/// `makeSprite` output: colours (-1 transparent) and which pixels emit light (skip night tint).
-#[derive(Clone, Debug)]
-pub struct Sprite {
-    pub w: usize,
-    pub h: usize,
-    pub col: Vec<i32>,
-    pub emit: Vec<bool>,
 }
 
 /// `PK`: 0xRRGGBB plus alpha to the little-endian ABGR word ImageData stores.

@@ -3,6 +3,8 @@
 
 pub mod bridge;
 pub mod data;
+pub mod floats;
+pub mod fx;
 pub mod game;
 pub mod geom;
 pub mod hud;
@@ -13,6 +15,7 @@ pub mod num;
 pub mod rng;
 pub mod save;
 pub mod spots;
+pub mod sprite;
 pub mod state;
 pub mod timeline;
 

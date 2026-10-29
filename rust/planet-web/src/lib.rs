@@ -13,14 +13,21 @@ use wasm_bindgen::prelude::*;
 
 /// The running game, as page.html's shim sees it.
 #[wasm_bindgen]
-pub struct Planet(Bridge);
+pub struct Planet(Bridge, Option<Drawn>);
+
+/// planet-render drawing the game into a framebuffer the page puts on its canvas (replacing the game.js twin).
+struct Drawn {
+    scene: planet_render::scene::Scene,
+    fb: Framebuffer,
+    view: planet_render::scene::View,
+}
 
 #[wasm_bindgen]
 impl Planet {
     /// A game on a `w`×`h` buffer (`st.W`×`st.H`) at `scale` CSS pixels a buffer pixel.
     #[wasm_bindgen(constructor)]
     pub fn new(seed: u32, w: f64, h: f64, scale: f64) -> Planet {
-        Planet(Bridge::new(seed, w, h, scale))
+        Planet(Bridge::new(seed, w, h, scale), None)
     }
 
     /// The stored save's text (`localStorage['hs-power']`); a new visit keeps its daily bonus date.
@@ -59,6 +66,10 @@ impl Planet {
 
     pub fn resize(&mut self, w: f64, h: f64, scale: f64) {
         self.0.game.resize(w, h, scale);
+        if let Some(d) = self.1.as_mut() {
+            d.fb = Framebuffer::new(w as usize, h as usize);
+            d.view.scale = scale;
+        }
     }
 
     // ── input: (x, y) in CSS pixels (clientX/Y), (bx, by) in buffer pixels (st.toBuf), the pointerId, and for a
@@ -169,7 +180,37 @@ impl Planet {
         self.0.game.playing
     }
 
-    // ── the temporary renderer bridge (until stage 1 draws in Rust)
+    // ── drawing with planet-render (stage 1): replaces the lockstep game.js twin
+
+    /// Draw the game with planet-render from now on, into a buffer of the game's size. `widget` is the floating
+    /// widget (no backdrop); `clouds` its cloud shape ('a'..'e', or empty) and `amount` (1-5). The drawing's random
+    /// numbers come from their own generator, so the game's stream stays what it is headless.
+    pub fn draw_with_rust(&mut self, widget: bool, clouds: &str, amount: f64) {
+        let c = &self.0.game.cam;
+        let (w, h, scale) = (c.w as usize, c.h as usize, c.scale);
+        self.0.game.set_view(c.w, c.h, widget);
+        let mut scene = planet_render::scene::Scene::new();
+        scene.own_rng = Some(planet_core::rng::Lcg::new(0x9e3779b9));
+        let view = planet_render::scene::View { scale, bare: widget, clouds: clouds.chars().next(), cloud_amt: amount };
+        self.1 = Some(Drawn { scene, fb: Framebuffer::new(w, h), view });
+    }
+
+    /// `step`, drawing every step with planet-render (call `draw_with_rust` first). Then `pixels` holds the frame.
+    pub fn step_drawn(&mut self, elapsed: f64, now_ms: f64) -> u32 {
+        let Some(d) = self.1.as_mut() else { return self.0.step(elapsed, now_ms) };
+        self.0.step_drawn(elapsed, now_ms, &mut |g, dt| d.scene.draw(&mut d.fb, g, &d.view, dt))
+    }
+
+    /// The frame's RGBA bytes, as ImageData takes them (the widget's rim applied when it's bare).
+    pub fn pixels(&mut self) -> Vec<u8> {
+        let Some(d) = self.1.as_mut() else { return Vec::new() };
+        if d.view.bare {
+            planet_render::px::rim(&mut d.fb);
+        }
+        d.fb.rgba().to_vec()
+    }
+
+    // ── the temporary renderer bridge (until the page draws with planet-render)
 
     /// Screen spots from a renderer drawing the same game (planet-core's `spots.rs`).
     pub fn spots(&mut self, json: &str) {

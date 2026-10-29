@@ -124,6 +124,8 @@ pub struct Cam {
     pub cy: f64,
     pub m: M3,
     pub bob: f64,
+    /// the desktop widget sits the planet at the site's size, centred
+    pub widget: bool,
     /// CSS pixels per buffer pixel (`st.scale`): a drag turns the planet by its on-screen size
     pub scale: f64,
 }
@@ -140,7 +142,7 @@ pub struct Spot {
 impl Cam {
     /// A view of a `w`×`h` buffer (game.js's `st.W`×`st.H`, in its big pixels).
     pub fn new(w: f64, h: f64) -> Self {
-        let mut c = Cam { w, h, r: 40.0, cx: 0.0, cy: 0.0, m: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], bob: 0.0, scale: 3.0 };
+        let mut c = Cam { w, h, r: 40.0, cx: 0.0, cy: 0.0, m: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], bob: 0.0, scale: 3.0, widget: false };
         c.layout(0);
         c
     }
@@ -159,6 +161,10 @@ impl Cam {
         });
         self.cx = js_round(w * fcx);
         self.cy = js_round(h * if wide || w / h < 0.8 { 0.5 } else { 0.55 });
+        if self.widget {
+            self.r = 56f64.max(70f64.min(js_round(w.min(h) * 0.2)));
+            self.cy = js_round(h * 0.5);
+        }
         if let Some(&(_, zoom, dy)) = W2L.iter().find(|l| l.0 == world) {
             self.r = js_round(self.r * zoom);
             self.cy += js_round(h * dy);

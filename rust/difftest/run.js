@@ -51,20 +51,33 @@ const SCENARIOS = {
       if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 3 && st.t - shen.phaseT < 3.04") && g.ev("S.granted % 2 === 0")) { const o = g.offer(); act({ a: 'pick', k: o[o.length - 1].key }) }
     },
   },
+  // eight minutes that tap whatever is up: drawn, that's the visitors, saibamen, the boss and the ginyu force too
+  taps: {
+    seed: 13, minutes: 8,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 3e4], ['best', 3e4], ['partner', 4], ['piccolo', 1], ['galick', 1]]) act({ a: 'set', k, v })
+      if (f % 6 === 0 && f % 300 < 150) act({ a: 'train' })
+      if (f % 3 === 0) clickTargets(g, act)
+      if (f % 30 === 0) buyAll(g, act)
+    },
+  },
   // a taste of the next form is offered one form short of the top, and the top is reached while the offer waits: picking it
-  // by hand or leaving it to the 20s auto-pick must leave the top form alone and the game running
+  // by hand or leaving it to the 20s auto-pick must leave the top form alone and the game running. The form wish is
+  // forced into every offer it's ok for, so both happen whatever the random stream (drawing spends draws of its own)
   toptaste: {
     seed: 3, minutes: 12,
     script(g, f, act) {
-      const top = g.ev('FORMS.length - 1'), fail = m => { throw new Error('toptaste: ' + m) }, k = this.k || (this.k = { hand: 0, auto: 0, waiting: false })
-      if (f === 0) for (const [key, v] of [['pl', 1e5], ['best', 5e19], ['partner', 20], ['house', 10]]) act({ a: 'set', k: key, v })
+      const top = g.ev('FORMS.length - 1'), fail = m => { throw new Error('toptaste: ' + m) }, k = this.k || (this.k = { hand: 0, left: 0, auto: 0, waiting: false })
+      if (f === 0) { for (const [key, v] of [['pl', 1e5], ['best', 5e19], ['partner', 20], ['house', 10]]) act({ a: 'set', k: key, v }); act({ a: 'force', k: 'wish', v: 'form' }) }
       if (g.ev('!shen') && g.ev('S.form') !== top - 1) act({ a: 'set', k: 'form', v: top - 1 })
       if (f % 150 === 60 && g.ev('!shen')) act({ a: 'summon' })
       const open = g.ev("!!shen && shen.phase === 'wish'"), has = open && g.offer().some(w => w.key === 'form')
-      if (has && !k.waiting) { k.waiting = true; act({ a: 'set', k: 'form', v: top }); if ((k.hand + k.auto) % 2 === 0) { act({ a: 'pick', k: 'form' }); k.hand++ } else k.auto++ }
+      if (has && !k.waiting) { k.waiting = true; act({ a: 'set', k: 'form', v: top }); if ((k.hand + k.left) % 2 === 0) { act({ a: 'pick', k: 'form' }); k.hand++ } else k.left++ }
       if (!open) k.waiting = false
       if (g.ev('S.form') > top || !g.ev('isFinite(mult()) && isFinite(rate())')) fail('the taste ran past the top form')
-      if (f === 30 * 60 * 12 - 1 && (k.hand < 1 || k.auto < 1)) fail('the form wish was not offered often enough: ' + JSON.stringify(k))
+      // auto: the 20s auto-pick granted the taste itself (it takes the rarest, so an epic beside it wins)
+      k.auto = g.events.filter(e => /no answer — the dragon grants the rarest: a taste of /.test(e[1])).length
+      if (f === 30 * 60 * 12 - 1) { if (k.hand < 1 || k.auto < 1) fail('the form wish was not picked by hand and by the auto-pick: ' + JSON.stringify(k)); console.error('toptaste: ' + JSON.stringify(k)) }
     },
   },
   // the side upgrades past their old caps: crits past 100% chance, senzu past full uptime (the dragon's bag of senzu), beams
@@ -108,7 +121,9 @@ const SCENARIOS = {
   // a tap); then it's bought and every second a gesture is tried (a two-thumb tap, a right-click, two thumbs too far
   // apart in time, two thumbs with one sliding) and a jump picked from the last picker, home or away, in a fight or not.
   // It checks that jumps land and leave the natural trips alone, the cooldown at lv 1 and its 90s floor at lv 40, the
-  // refusals, that a natural trip due during a jump waits 84s at home, and that two thumbs in a struggle stay taps
+  // refusals, that a natural trip due during a jump waits 84s at home, and that two thumbs in a struggle stay taps. While
+  // it doesn't jump, a villain is called and every villain fires back (forced) and isn't tapped before he does, so a
+  // struggle comes whatever the random stream (drawing spends draws of its own)
   itx: {
     seed: 13, minutes: 20,
     script(g, f, act) {
@@ -122,7 +137,8 @@ const SCENARIOS = {
         const lv = g.ev('S.itx'), late = g.ev('st.t + ' + cd(lv)), due = g.ev('session - homeSince > TRIP_WAIT * soon() || S.runBest >= (S.namekAt || PLANET_EVERY)')
         if (g.ev('itxReady') !== late) fail(`cooldown at lv ${lv}: ${g.ev('itxReady - st.t')}s, not ${cd(lv)}s`)
         if (g.ev('homeSince') !== k.hs || g.ev('S.namekAt') !== k.na) fail('a jump moved the natural trips\' timer or power mark')
-        if (lv === 1) k.end1++; if (lv === 40) k.end40++; if (due) k.deferred++
+        // end1 and end40: below its 90s floor and at it (a capsule corp wish can add a level to either)
+        if (cd(lv) > 90) k.end1++; else k.end40++; if (due) k.deferred++
         k.back = g.ev('session')
       }
       if (trips !== k.trips && f > 30 * 12) { if (g.ev('session') - k.back < FLOOR) fail(`a natural trip ${g.ev('session') - k.back}s after a jump`) }
@@ -133,7 +149,9 @@ const SCENARIOS = {
       if (f === 30 * 10) act({ a: 'buy', k: 'itx' })
       if (f === 30 * 600) act({ a: 'set', k: 'itx', v: 40 })
       if (f % 300 < 150 && f % 6 === 0) act({ a: 'train' })
-      if (f % 3 === 0) clickTargets(g, act)
+      if (f === 30 * 700) { act({ a: 'force', k: 'struggle', v: true }); act({ a: 'force', k: 'boss' }) }
+      if (f === 30 * 880) act({ a: 'force', k: 'struggle', v: false })
+      if (f % 3 === 0 && !(f >= 30 * 700 && f < 30 * 880 && g.ev('!!boss && !boss.dead && !boss.struggled'))) clickTargets(g, act)
       if (f % 30 === 0 && f > 30 * 10) { buyAll(g, act, POLICY); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
       if (g.ev('S.itx > 0')) {
         // may: what itxCan() should say, written out here so a broken itxCan can't vouch for itself
@@ -293,8 +311,15 @@ const SCENARIOS = {
   },
 }
 
-// taps the things game.js can hit-test without drawing: the space pod, a falling meteor, the full moon, dr. gero
+// taps the things game.js can hit-test without drawing: the space pod, a falling meteor, the full moon, dr. gero; drawn,
+// also gregory, king kai, his car, a saibaman, the boss and the ginyu force, the door, a senzu bean, yamcha
+let DRAWN = false
+const PLACED = `greg && greg.sx !== undefined ? [greg.sx, greg.sy - 4] : kai && kai.sx !== undefined && !kai.laughed ? [kai.sx, kai.sy - 8] : car && car.sx !== undefined ? [car.sx, car.sy - 6]
+  : saibas.find(s => !s.dead && s.sx !== undefined) ? (s => [s.sx, s.sy - 5])(saibas.find(s => !s.dead && s.sx !== undefined))
+  : boss && !boss.dead && boss.x ? [boss.x, boss.y - boss.spr.h / 2 * boss.k] : ginyu && ginyu.members.find(m => !m.dead && m.x) ? (m => [m.x, m.y - m.spr.h / 2 * m.k])(ginyu.members.find(m => !m.dead && m.x))
+  : door && door.sx !== undefined ? [door.sx, door.sy - 8] : bean && bean.sx !== undefined ? [bean.sx, bean.sy - 4] : yam && yam.sx !== undefined ? [yam.sx, yam.sy] : null`
 function clickTargets(g, act) {
+  if (DRAWN) { const q = g.ev(PLACED); if (q) return act({ a: 'click', x: q[0], y: q[1] }) }
   const p = g.ev(`star ? [star.x, star.y] : meteors.find(m => !m.dead && m.delay <= 0 && m.y > 0) ? (m => [m.x, m.y])(meteors.find(m => !m.dead && m.delay <= 0 && m.y > 0))
     : moon && moon.a > .5 && !moon.leaving ? [moon.x, moon.y] : gero && st.t - gero.t0 > 2 ? [gero.x, gero.y - gero.spr.h / 2] : null`)
   if (p) act({ a: 'click', x: p[0], y: p[1] })
@@ -341,10 +366,12 @@ function apply(g, i) {
   else if (i.a === 'auto') g.game.autoNext()
   else if (i.a === 'hero') g.game.pick(i.k)
   // a poked world is where the page opened: game.js's mount hands it to ui.world
-  else if (i.a === 'set') { g.ev(`S.${i.k} = ${JSON.stringify(i.v)}`); if (i.k === 'world') g.ev('ui.world(S.world)') }
+  else if (i.a === 'set') { g.ev(`S.${i.k} = ${JSON.stringify(i.v)}`); if (i.k === 'world') g.ev('useWorld(S.world); layout(); scenery(); ui.world(S.world)') }   // the world as a trip leaves it, so the drawing matches
   else if (i.a === 'click') g.ev(`onClick(${i.x}, ${i.y})`)
   else if (i.a === 'summon') g.ev('summon()')
   else if (i.a === 'pick') g.pick(i.k)
+  // a forced event: 'struggle' on or off and 'wish' with the wish's key (as harness.js wires them), 'boss' raids now
+  else if (i.a === 'force') i.k === 'boss' ? g.ev('nextBoss = 0') : g.ctx['__' + i.k] = i.v
   // a world from the last picker game.js opened (the harness keeps its callback)
   else if (i.a === 'jump') { if (!g.itx || !g.itx.worlds.some(w => w.key === i.k)) throw new Error('no picker with world ' + i.k); g.itx.jump(i.k) }
   else if (i.a === 'down') g.input.down(i.x, i.y, i.id, i.button, i.touch)
@@ -367,21 +394,32 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['movie', movie ? movie.boss.hp : null], ['storm', storm ? storm.hit : null], ['snake', snk ? snk.p : null], ['greg', greg ? greg.c[0] : null], ['gero', gero ? gero.x : null], ['dance', dance ? dance.hits : null],
     ['struggle', struggle ? struggle.p : null], ['m0', M[0]], ['m2', M[2]], ['bob', st.bob], ['namekUntil', namekUntil], ['nextBoss', nextBoss], ['fused', fused ? fused.x : null], ['preview', preview ? preview.until : null], ['jumpH', jumpH],
     ['charging', charging], ['dragged', drag ? drag.moved : null], ['vrx', vrx], ['vry', vry], ['m4', M[4]], ['beam', beam ? beam.c : null], ['beamDx', beam ? beam.dx : null],
-    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['itxReady', itxReady], ['itxTrip', +itxTrip], ['itxBack', isFinite(itxBack) ? itxBack : null], ['two', two ? two.moved[0] + two.moved[1] + (two.lift ? 100 : 0) : null], ['been', S.been], ['nextStar', nextStar], ['nextCloud', nextCloud]] })`
+    ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['itxReady', itxReady], ['itxTrip', +itxTrip], ['itxBack', isFinite(itxBack) ? itxBack : null], ['two', two ? two.moved[0] + two.moved[1] + (two.lift ? 100 : 0) : null], ['been', S.been], ['nextStar', nextStar], ['nextCloud', nextCloud],
+    ['floats', floats.length], ['floatXY', floats.reduce((a, f) => a + f.x * 3 + f.y, 0)], ['floatLife', floats.reduce((a, f) => a + f.life, 0)],
+    ['floatS', floats.length ? [...floats[floats.length - 1].s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0) : null],
+    ['floatTone', floats.length ? (f => f.red ? 2 : f.gold ? 1 : 0)(floats[floats.length - 1]) : null], ['sceneryHouse', __sceneryHouse]] })`
 
+// name+draw: game.js draws every frame (planet-render's drawn difftest), so the screen spots it writes while drawing are
+// set, and the script also taps what only the drawing places (the visitors, the boss, the ginyu force)
 function run(name) {
-  const sc = SCENARIOS[name]; if (!sc) throw new Error('no scenario ' + name)
+  const drawn = name.endsWith('+draw'), base = drawn ? name.slice(0, -5) : name
+  const sc = SCENARIOS[base]; if (!sc) throw new Error('no scenario ' + name)
   const g = mount({ seed: sc.seed, saved: sc.saved, calm: !!sc.calm })
-  const frames = Math.round(sc.minutes * 60 / DT), inputs = [], samples = []
+  // drawn, a hash of every frame game.js draws (FNV-1a over its pixels), for planet-render to match
+  const hashes = [], fnv = b => { let h = 0x811c9dc5; for (let k = 0; k < b.length; k++) h = Math.imul(h ^ b[k], 16777619) >>> 0; return h }
+  if (drawn) { g.ctx.__skip = false; g.ctx.BARE = false; DRAWN = true }
+  const frames = Math.round(sc.minutes * 60 / DT); const inputs = [], samples = []
   for (let f = 0; f < frames; f++) {
     sc.script(g, f, i => { inputs.push({ f, ...i }); apply(g, i) })
     g.step(DT)
+    if (drawn) hashes.push(fnv(g.ev('st.buf')))
     // every tenth second also the save, as JSON.stringify(S) writes it to localStorage
     // and the HUD: what ui.update and ui.shop last got, every second; the menus and confirm boxes every tenth
     if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE), hud: g.update, side: g.side, shop: g.shop, offer: g.ev("!!shen && shen.phase === 'wish'") ? g.offer() : null, ...((f + 1) % 300 === 0 ? { save: JSON.parse(g.ev('JSON.stringify(S)')), menus: menus(g) } : {}) })
   }
   if (g.errors.length) throw new Error(g.errors.join('\n'))
-  return { name, seed: sc.seed, calm: !!sc.calm, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.map(([t, e, ms]) => [+t.toFixed(2), e, ms]), cues: g.cues.map(([t, ...c]) => [+t.toFixed(2), ...c]) }
+  const kept = t => t <= frames * DT + 1e-6
+  return { name, seed: sc.seed, calm: !!sc.calm, dt: DT, frames, today: g.today, epoch: g.ev('Date.now()') - Math.floor(g.T * 1000), saved: sc.saved || null, stored: g.store['hs-power'], inputs, samples, events: g.events.filter(([t]) => kept(t)).map(([t, e, ms]) => [+t.toFixed(2), e, ms]), cues: g.cues.filter(([t]) => kept(t)).map(([t, ...c]) => [+t.toFixed(2), ...c]), ...(drawn ? { hashes: hashes.slice(0, frames) } : {}) }
 }
 
 // number formatting: the game's fmtShort, and the HUD's big/short from page.html

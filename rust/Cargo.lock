@@ -52,6 +52,7 @@ name = "planet-render"
 version = "0.1.0"
 dependencies = [
  "planet-core",
+ "serde_json",
 ]
 
 [[package]]
