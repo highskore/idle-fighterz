@@ -5,7 +5,9 @@ One Rust codebase built two ways:
 - **Web:** compiled to WebAssembly. It draws into the existing canvas on highskore.com, and the HTML HUD stays.
 - **Widget:** compiled natively inside the Idle FighterZ widget (Tauri). It draws through wgpu (or softbuffer) instead of a web view's canvas.
 
-The JS game (`game.js`, `world.js`, `shenron.js`, `page.html`) stays the live game until the port reaches parity. The site page carries both: with `?rust` in the URL the top of the page starts fetching and compiling the wasm build while the page, its 3D title and intro start as they always do, and once it is in planet-core runs the game, drawn by planet-render, behind the HTML HUD ([HUD.md](HUD.md)); a card that is on screen (or pressed) before then shows a ki-charging dragon ball. Without the flag nothing more is fetched and game.js runs. `npm run bench` compares the two in Chromium and WebKit ([test/bench/README.md](../test/bench/README.md)).
+**The Rust engine is the game.** The site page runs it by default: the top of the page starts fetching and compiling the wasm build while the page, its 3D title and intro start, and once it is in planet-core runs the game, drawn by planet-render, behind the HTML HUD ([HUD.md](HUD.md)); a card that is on screen (or pressed) before then shows a ki-charging dragon ball.
+
+**game.js is frozen.** It (with `shenron.js`) is the legacy fallback: `dist/planet-game.js`, fetched only where WebAssembly can't run, if the engine fails to load, or with `?js` (for comparison), and still the widget's web-view build until the widget draws natively by default. Every new feature is built once, here in `rust/`; CI fails a pull request that touches game.js without the `legacy-js` label or a `Legacy-JS: <why>` commit trailer. page.html (the HUD) and world.js (the stage it hands the engine) stay shared. `npm run bench` compares the two engines in Chromium and WebKit ([test/bench/README.md](../test/bench/README.md)).
 
 ## Workspace
 
@@ -16,7 +18,8 @@ rust/
   planet-render/      software framebuffer raster shared by both targets (pixel-identical to world.js/game.js)
   planet-web/         wasm-bindgen entry: canvas putImageData, input, HUD bridge to page.html
   planet-native/      wgpu/softbuffer surface for the Tauri widget
-  difftest/           headless JS harness + scenarios the Rust tests diff against
+  difftest/           headless JS harness + scenarios: the scripts golden/ replays, and the optional JS diff
+  golden/             recorded Rust traces (per-frame hashes and state samples) the regression tests check
 ```
 
 Dependencies only point downward: `web` and `native` depend on `render`, and `render` depends on `core`. `planet-core` has no dependencies and never touches pixels. It can run headless in tests, on a server, or in a worker.
@@ -54,12 +57,14 @@ Dependencies only point downward: `web` and `native` depend on `render`, and `re
 
 ## Testing
 
-**Differential testing is the main safety net.** `rust/difftest/harness.js` mounts world.js, shenron.js and game.js headless in a `vm`, using the same LCG `Math.random`, and never draws. `run.js <scenario>` runs a scripted policy: training taps, a cheapest-first buy loop, kaioken, tree learning, ascending, and test-only state pokes for late-game setups. It prints:
+**Golden traces are the regression test.** game.js is frozen and Rust will gain what it doesn't have, so the tests that must pass check Rust against itself: `planet-render/tests/golden.rs` replays each of the 18 scenarios' scripts (`golden/<name>.inputs.json`: the inputs game.js's drawn run applied, frame by frame, written by `golden/script.mjs`) with planet-render drawing every frame, and compares with `golden/<name>.trace`, a line per simulated second: the world, the form, the power, the random draws, a hash of the whole state sample (all the difftest samples below: the timeline, the economy, upgrades and tree, the HUD snapshot, the shop, the dragon's offer, that second's toasts and cues, and every ten seconds the save and the menus), and an FNV-1a hash of each of its 30 frames. 441,000 frames in all, 3.9 MB of text (2.3 MB gzipped); about 4 CPU minutes. When recorded, every frame hash was game.js's. A change that means to change what the game does or draws re-records them with `npm run golden:update` and commits the traces with it, so review sees which scenarios moved and from which second; a failure names the first second and frame that differ. The scripts don't change when Rust's behaviour does (a scripted input that no longer applies does nothing); a new scenario needs a script (from run.js, or written by hand).
+
+**Differential testing against game.js** was the safety net of the port, and stays runnable while behaviour is game.js's: it's opt-in (`JS_PARITY=1`, `npm run difftest:js`), expected to pass only for frozen behaviour, and CI runs the headless one without failing the run. `rust/difftest/harness.js` mounts world.js, shenron.js and game.js headless in a `vm`, using the same LCG `Math.random`, and never draws. `run.js <scenario>` runs a scripted policy: training taps, a cheapest-first buy loop, kaioken, tree learning, ascending, and test-only state pokes for late-game setups. It prints:
 
 - the inputs it actually applied, frame by frame
 - a state sample every simulated second
 
-`planet-core/tests/difftest.rs` replays the inputs in Rust and compares each sample. The sample covers power, best, `rate()`, `wrate()`, `mult()` with and without timed buffs, laps, phi, sprint, combo, form, mastery, seeds, the goal and its progress, every upgrade level and cost, every tree rank, and the RNG draw count. Counts must match exactly; floats are allowed a relative error of 1e-9. `cargo test` runs node; without node, those tests skip.
+`planet-core/tests/difftest.rs` replays the inputs in Rust and compares each sample. The sample covers power, best, `rate()`, `wrate()`, `mult()` with and without timed buffs, laps, phi, sprint, combo, form, mastery, seeds, the goal and its progress, every upgrade level and cost, every tree rank, and the RNG draw count. Counts must match exactly; floats are allowed a relative error of 1e-9. With `JS_PARITY=1` `cargo test` runs node; otherwise (or without node) those tests skip.
 
 Stage 3 split the harness's timeline patch into a gate per system (31 spawn points), mirrored them in planet-core, and removed them one commit at a time, each diffing bit-identical. Now the whole of `frame()` is diffed with no patches. The sample also covers the timeline: the world, sagas, universes, wishes, bosses, trips, the boss's and the ginyu force's hp, the dragon's phase, how many orbs, meteors, saibamen and ki blasts are out, the space pod, the nimbus, the moon, the great ape, the tournament, movies, the storm, snake way, gregory, dr. gero, the dance, the struggle, the view matrix and the screen shake.
 
@@ -80,7 +85,7 @@ Estimates are in focused working days for one person or agent, assuming the perf
 | 1. Renderer and world | **Mostly done** (below). Still to do: the time chamber's afterimage, the rest of the timeline's bursts as real particles. | 2–3 days remaining |
 | 2. Hero, laps and economy | **Done** (below), the save and the daily bonus with stage 4. | |
 | 3. Events and bosses | **Done**. The renderer-placed taps are diffed now (planet-render's drawn difftest). | |
-| 4. HUD bridge and menus | **Done** (below): input, the save, the HUD as data, wasm-bindgen exports, the shim, and the cut-over: `?rust` on the site page draws with planet-render. | |
+| 4. HUD bridge and menus | **Done** (below): input, the save, the HUD as data, wasm-bindgen exports, the shim, and the cut-over: the site page runs on Rust by default, game.js its frozen fallback. | |
 | 5. Native wgpu widget | `planet-native` on wgpu (softbuffer fallback) in Powerrr, the overlay web view for the HUD and menubar power. The widget's drawing (no backdrop, its five cloud shapes and amount, the rim) is in planet-render and diffed already. Pixel-diff the native build against the web one. | 2–4 days |
 
 That leaves about 4–7 days: the rest of stage 1 and stage 5.
@@ -93,7 +98,7 @@ That leaves about 4–7 days: the rest of stage 1 and stage 5.
 - **Characters.** The hero (run cycle, pose, every form, fused, flight with its streak, kaioken's aura, the great ape), his aura and sparks, bubbles, piccolo, krillin, king kai and his car, gregory, roshi and his kamehameha, saibamen, the dance, 16 and his birds, 18's date, gadgets, beerus and whis, the pudding, zeno, satan, frieza's ship, yamcha's crater, dr. gero, the boss (bar, name, universe badge), the ginyu force and androids, movie henchmen and their tricks, shenron's four looks and porunga, the spirit bomb, the beam charge (aim line, ball, crackle) and the beam (galick gun, kamehameha, final flash, kaioken red, the great ape's width), the beam struggle, the capsule, ki blasts, meteors, the pod, the nimbus, particles, the flash, the floating gain numbers (planet-core keeps each one where its gain lands, the renderer ages them).
 - **Write-backs.** `liftNow`/`flipNow`, `piccoloAt`, `monkeyAt`, every visitor's `sx`/`sy`, the boss's and the ginyu force's `x`/`y`/`k`, henchmen, `ape.k`, the meteor's spin seed, the capsule's fall, hit flashes.
 
-Drawn difftest: `idle` (9 minutes), `active` (9 minutes) and a new `taps` scenario (8 minutes, 182 taps on pods, king kai, saibamen, the boss and more, all hit-tested on renderer-placed spots) match bit for bit with drawing on, up to the first trip to snake way. `ascend`, `late`, `events`, `multiverse` and `wishes` drawn are `#[ignore]`d for now: game.js takes 10–40 minutes to draw each.
+Drawn difftest: all 18 scenarios (`taps` is 8 minutes and 182 taps on pods, king kai, saibamen, the boss and more, all hit-tested on renderer-placed spots) matched game.js bit for bit with drawing on, every one of their 441,000 frames; those frames are the golden traces' first recording. game.js takes 10–40 minutes to draw the long ones, so its traces are cached under `rust/target/difftest`.
 
 Framebuffer diff results: see the PR. In short, every world, every hero and form, the visitors, raids, sagas, the ginyu force, androids, movies, shenron's looks, the arena, snake way (the run, the nimbus and the arrival) and the widget variants match byte for byte at desktop and phone sizes; `#struggle` doesn't yet.
 
@@ -126,10 +131,10 @@ All of `frame()`'s timeline, in game.js order and with its short-circuits (a cou
 - The save (`save.rs`, `json.rs`): `JSON.stringify(S)` key for key, numbers as JS prints them; `load_json` keeps what game.js keeps; `start_on(today)` gives the daily bonus. Achievements carry their time (`epoch_ms`, from the host).
 - The HUD (`hud.rs`): the `ui.update` snapshot (`Hud`, rebuilt where game.js calls it), the buffs line and the run's standing, the shop rows, the dragon's offer, the menu, the angels (`learn_angel`, `auto_next`), the hero pick, the confirm boxes and the share card; toasts with their durations, game.js's delayed ones included; cues for `ui.sfx`, `ui.fx`, `bump`, `achieved`, `zeno`, `treeGift`, `wishDone` and the widget's `notify`.
 - The bridge (`bridge.rs`): the fixed-step owner the web and native hosts drive, with a delta message per frame. `spots.rs` takes screen spots from a renderer that isn't planet-render.
-- The web build (`planet-web`, `shim.js`, `loader.js`, `assemble.mjs`, `build.sh`): `?rust` on the site page. Every browser pixel baseline is played again with `?rust` and must match game.js's.
+- The web build (`planet-web`, `shim.js`, `preload.js`, `loader.js`, `assemble.mjs`, `build.sh`): the site page's default engine, with game.js as `planet-game.js`, its fallback (`?js` forces it). Every browser pixel baseline renders the Rust engine and matches what game.js drew; `@js` smoke tests play the fallback.
 
 ## Next
 
-1. Run the drawn difftest through every scenario (snake way is drawn now: `planet-render/src/snake.rs`).
-2. The time chamber's afterimage; the remaining bursts as real particles.
-3. Stage 5 on the bridge.
+1. The time chamber's afterimage; the remaining bursts as real particles (the cosmetic draws can move to a render-side generator now that JS parity is optional).
+2. Stage 5 on the bridge, and the widget's native drawing as its default: then its page drops game.js too (see docs/DEVELOPING.md).
+3. New features, in Rust only.

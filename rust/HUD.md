@@ -4,19 +4,20 @@ page.html's HUD (power, rate, forms, the shop, the training tree and the angels,
 the share card, the ascend, god ki and zeno boxes, toasts) stays HTML. The game behind it is planet-core. They talk
 through one API, `planet_core::bridge::Bridge`, with plain calls in and JSON strings out:
 
-- **Web** (`?rust` on the site page, [below](#the-web-page-rust)): `planet-web` exports `Bridge` to wasm-bindgen as `Planet`.
+- **Web** (the site page's engine, [below](#the-web-page)): `planet-web` exports `Bridge` to wasm-bindgen as `Planet`.
   `rust/planet-web/shim.js` hands page.html a `game` object with game.js's API and turns the bridge's messages into
   page.html's `ui.*` calls. page.html's markup and code are unchanged.
 - **Native widget** (stage 5): the same `Bridge` behind Tauri commands, with a transparent web view that loads only
   the HUD. That view uses the same shim, with the `Planet` calls swapped for `invoke`. Every argument and result is a
   number, a bool or a JSON string, so the messages are identical.
 
-Everything planet-core sends the HUD is checked against game.js, in every scenario. Every second the difftest compares
+Everything planet-core sends the HUD was checked against game.js, in every scenario, and the golden traces
+(`rust/golden`) now hold it to what it sent then; the JS difftest stays runnable while the behaviour is game.js's. Every second the difftest compares
 the snapshot (with `night`, `world`, `shen` and `look` against `ui.night`, `ui.world` and the body classes as they stood
 when game.js called `ui.update`) and the shop (`Game::shop`, the same string the bridge ships). It compares the dragon's
 offer while it waits, and the menu, angels, confirm boxes and share card every ten seconds. Every toast (text, time,
 duration) and every cue (call, time, arguments) is compared in order. The pictures the HUD shows (`thumb` and the card's
-`spr`) are game.js's hero sprites, which the site page carries either way, and the card's `scene` is the canvas.
+`spr`) are planet-core's hero sprites (`make_hero`, checked against game.js's), and the card's `scene` is the canvas.
 
 ## Calls
 
@@ -46,7 +47,8 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `learn_angel(id)`, `auto_next()` | the angels' tab |
 | `pick_wish(key)`, `itx_jump(w)` | the wish box's and the transmission picker's callbacks |
 | `pick_hero(id) → bool` | the characters tab |
-| `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures: `look()` says which sprite (`[hero, form, fused]`) |
+| `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures: `card_sprite()` is the sprite |
+| `hero_sprite(id)`, `card_sprite()` | `thumb(id)`'s sprite (`HEROES[id].idle`) and `card().spr` (the hero's form, or fused), as an `Int32Array` `[w, h, ...col]` (`col` 0xRRGGBB a pixel, -1 for none); the shim makes game.js's `{ w, h, col }` of it |
 | `save() → text` | what to store under `hs-power`: `JSON.stringify(S)`, key for key |
 | `playing() → bool` | |
 
@@ -95,20 +97,23 @@ as game.js's `KEEP` does. The difftest compares the save with game.js's `S` ever
 through game.js both ways. The shim saves every 3 s of play (as game.js does) and on `pagehide`. Natively, put the
 same text in a file in the app's data directory.
 
-## The web page (`?rust`)
+## The web page
 
-The site build carries both engines. `node build.mjs` writes `dist/planet-rust.js` (wasm-bindgen's glue and `shim.js`)
+The site page runs on the Rust engine. `node build.mjs` writes `dist/planet-rust.js` (wasm-bindgen's glue and `shim.js`)
 and `dist/planet-rust.wasm` next to `planet.html` when there's a wasm build (`sh rust/planet-web/build.sh`; `--rust`
-fails without one). The page carries game.js and `loader.js`: with `?rust` (or `#rust`) in the URL the loader fetches
-the two files, the shim swaps the planet's `mount` for the Rust engine, and page.html's code starts once they're in.
-Without the flag nothing is fetched; if the files don't load, the page runs game.js.
+fails without one), and `dist/planet-game.js`, game.js and shenron.js minified, the fallback. The page doesn't carry
+game.js. `preload.js`, at the top of its `<head>`, starts the engine's two files (each asked for with a hash of the
+build in its URL); `loader.js` hands them to the shim, which adds the planet's `mount` to `GAMES`, and page.html's game
+mounts once they're in. Where WebAssembly can't run, with `?js` (or `#js`), in a build without the wasm, or if the
+engine fails to load, the loader runs `planet-game.js` instead, as a script of its own after the page's (the page's
+script isn't wrapped in a function, so game.js sees world.js's names). `<html data-engine>` says which one runs.
 
 - The shim's `frame(t, dt)` is `frame_drawn(t, dt, Date.now())`, then `putImageData` of an `ImageData` over the module's
   memory, then `frame()`'s message onto `ui`. page.html's own loop decides when to call it, as it does for game.js.
 - The game's seed continues the page's `Math.random`: the shim draws once and steps the LCG back, so planet-core's first
   draw is the one game.js would have made. Under the browser tests' seeded `Math.random` and fake clock both engines
-  play the same game, and the `@rust` copy of every state in `test/browser/visual.spec.mjs` must match the JS baselines,
-  canvas and page.
+  play the same game: every state in `test/browser/visual.spec.mjs` draws the baselines game.js drew, canvas and page,
+  and the `@js` smoke tests play game.js's fallback against the same baselines.
 - planet-render places what taps and beams aim at (planet-core's `spots`) as it draws, and draws with the game's random
   numbers, as game.js does.
 
@@ -119,9 +124,8 @@ Without the flag nothing is fetched; if the files don't load, the page runs game
 - **The HUD-only web view**: page.html's HUD markup with the shim. Swap the `Planet` calls for `invoke`, and drop
   the frame loop and `putImageData` (the native side steps and draws). Pointer events on the native window go to
   `pointer_*` with both coordinate pairs. The widget's own `ui.notify` handles the `notify` cues.
-- **Pictures the HUD shows that come from game.js today**: `thumb(id)` (the characters tab) and the card's `spr` and
-  `scene`. These need stage 1's sprite data in planet-core: an RGBA hero sprite per form and a copy of the framebuffer.
-  Until then the native HUD can leave the thumbnails blank.
+- **Pictures the HUD shows**: `thumb(id)` (the characters tab) and the card's `spr` come from planet-core's hero sprites
+  (`hero_sprite`, `card_sprite`; the widget's `planet_sprite`), the card's `scene` from the framebuffer.
 - **Time**: pass the wall clock (`Date.now()`, or the system clock in ms) with `start` and `step`, and today's date as
   `toDateString()` would print it (`Wed Oct 28 2026`).
 - **The save**: the `save()` text in a file, read back with `load()`.
