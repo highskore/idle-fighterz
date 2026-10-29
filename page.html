@@ -191,6 +191,11 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
   .shop-toggle:focus-visible, .menu-btn:focus-visible, .tabbar button:focus-visible, .mswitch button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .shop { display: none; bottom: 54px; grid-template-columns: 1fr 1fr; gap: 5px; width: calc(100% - 20px); }
   .shop.open { display: grid; }
+  /* a long list scrolls inside the sheet instead of running up under the links bar; the 4px padding (taken back from
+     bottom and width) keeps the cards where they were and their focus rings inside the scroll box */
+  .shop { bottom: 50px; width: calc(100% - 12px); padding: 4px; max-height: calc(100% - 60px); align-content: start; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+  .menu { padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .menu-body, .asc-body { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
   .shop button { min-width: 0; padding: 6px 9px; border-radius: 10px; flex-direction: column; gap: 0; }
   .shop b { font-size: 11px; white-space: normal; }
   .shop span { display: block; font-size: 9.5px; line-height: 1.2; }
