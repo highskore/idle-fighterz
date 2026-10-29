@@ -5,7 +5,9 @@
 //! and planet-render's frame must hash the same; a frame that doesn't is saved under rust/target/difftest for a look.
 //!
 //! game.js's traces are cached under rust/target/difftest, keyed by a hash of the JS, so a Rust-only change replays
-//! against them in seconds. Each scenario is its own test: run them side by side with `--test-threads=4`.
+//! against them in seconds. Each scenario is its own test: run them side by side with `--test-threads=4`. A trace
+//! can't be cut into chunks run side by side: game.js's state lives in `mount()`'s closure, so it can't be saved, and a
+//! fast headless run doesn't reach the drawn state (drawing spends random draws and writes screen spots back).
 //! Needs `node`; skips without.
 
 #[path = "../../planet-core/tests/replay/mod.rs"]
@@ -103,31 +105,36 @@ fn itx_drawn() {
 }
 
 #[test]
-#[ignore = "game.js takes over 10 minutes to draw it; cargo test -- --ignored"]
 fn ascend_drawn() {
     drawn("ascend");
 }
 
 #[test]
-#[ignore = "game.js takes over 10 minutes to draw it; cargo test -- --ignored"]
 fn late_drawn() {
     drawn("late");
 }
 
 #[test]
-#[ignore = "game.js takes over 10 minutes to draw it; cargo test -- --ignored"]
 fn events_drawn() {
     drawn("events");
 }
 
 #[test]
-#[ignore = "game.js takes over 10 minutes to draw it; cargo test -- --ignored"]
 fn multiverse_drawn() {
     drawn("multiverse");
 }
 
 #[test]
-#[ignore = "game.js takes over 10 minutes to draw it; cargo test -- --ignored"]
 fn wishes_drawn() {
     drawn("wishes");
+}
+
+#[test]
+fn snake_drawn() {
+    drawn("snake");
+}
+
+#[test]
+fn daily_drawn() {
+    drawn("daily");
 }

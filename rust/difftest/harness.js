@@ -39,6 +39,8 @@ function mount({ seed = 1, W = 600, H = 400, traceRng = false, saved = null, cal
   // px: inline px.wasm the way build.mjs does, so world.js loads it. Widget-only code stays in, as WIDGET and BARE turn it off
   if (px) src = patch(src, "atob('__PX__')", "atob('" + fs.readFileSync(path.join(ROOT, 'wasm', 'px.wasm')).toString('base64') + "')")
   src = patch(src, '    return { menu, learn, respec,', '    globalThis.__ev = s => eval(s);\n    return { menu, learn, respec,')
+  // the houses scenery() last built: a wish's free levels don't rebuild it, so the drawing keeps the old ones
+  src = patch(src, '    function scenery() {', '    function scenery() { globalThis.__sceneryHouse = S.house;')
   // what game.js does to the game while drawing happens just before the drawing, headless or not (snake way draws the road
   // instead, so none of it there): the big bang lands, a great ape's stomp shakes the screen (so does a full beam charge,
   // if the hero is in view: never, headless), the capsule falls and opens itself after 8s. planet-core runs the same after

@@ -304,7 +304,7 @@ const SAMPLE = `({ t: st.t, session, pl: S.pl, best: S.best, runBest: S.runBest,
     ['bang', bang ? bang.x1 : null], ['bangReady', bangReady], ['lastTap', lastTap.t], ['daily', dailyUntil], ['pole', (a => Math.hypot(a[0] - N[0], a[1] - N[1], a[2] - N[2]))(M3.ap(M, N))], ['itxReady', itxReady], ['itxTrip', +itxTrip], ['been', S.been], ['nextStar', nextStar], ['nextCloud', nextCloud],
     ['floats', floats.length], ['floatXY', floats.reduce((a, f) => a + f.x * 3 + f.y, 0)], ['floatLife', floats.reduce((a, f) => a + f.life, 0)],
     ['floatS', floats.length ? [...floats[floats.length - 1].s].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0) : null],
-    ['floatTone', floats.length ? (f => f.red ? 2 : f.gold ? 1 : 0)(floats[floats.length - 1]) : null]] })`
+    ['floatTone', floats.length ? (f => f.red ? 2 : f.gold ? 1 : 0)(floats[floats.length - 1]) : null], ['sceneryHouse', __sceneryHouse]] })`
 
 // name+draw: game.js draws every frame (planet-render's drawn difftest), so the screen spots it writes while drawing are
 // set, and the script also taps what only the drawing places (the visitors, the boss, the ginyu force)

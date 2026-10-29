@@ -1,7 +1,6 @@
 //! Each world's props (game.js `scenery()` and its per-world builders): spheres on the planet, the future's slabs,
 //! west city's painted streets, paozu's river, and the residents that stand on the cap.
 
-use planet_core::data::Upg;
 use planet_core::geom::{add, cross, dot, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, sin};
 use planet_core::Game;
@@ -213,7 +212,7 @@ impl B<'_> {
         dome(self, 0.3, 2.5, 0.25);
         dome(self, 0.82, 3.55, 0.17);
         let spots = [[0.75, 1.9, 0.15], [0.6, 5.1, 0.16], [1.05, 4.0, 0.13], [2.0, 2.2, 0.16], [2.3, 4.2, 0.15], [1.9, 0.05, 0.14], [2.6, 5.8, 0.13], [3.0, 2.4, 0.15], [1.25, 2.65, 0.12]];
-        let n = (self.g.s.lv(Upg::House) as usize).min(9);
+        let n = (self.g.scenery_house as usize).min(9);
         for [a, b, r] in &spots[..n] {
             dome(self, *a, *b, *r);
         }
@@ -376,7 +375,7 @@ impl B<'_> {
         self.bush(0.55, 5.6, 0.04);
         self.bush(0.2, 0.6, 0.045);
         let spots = [[1.0, 3.5, 0.1], [0.45, 5.3, 0.1], [1.15, 4.5, 0.1], [1.25, 3.85, 0.09], [0.3, 5.85, 0.09], [0.85, 0.9, 0.1], [1.25, 5.2, 0.1], [0.85, 2.8, 0.09], [1.25, 0.2, 0.1]];
-        let n = (self.g.s.lv(Upg::House) as usize).min(spots.len());
+        let n = (self.g.scenery_house as usize).min(spots.len());
         for (i, [a, b, r]) in spots[..n].iter().enumerate() {
             hq(self, *a, *b, *r, false, [Pn::Hull, Pn::Peach, Pn::Aqua][i % 3]);
         }
