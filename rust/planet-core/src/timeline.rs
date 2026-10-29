@@ -1544,6 +1544,7 @@ impl Game {
             self.s.multi = true;
             self.s.multi_t = session;
             self.tl.next_boss = self.tl.next_boss.min(20.0);
+            self.top_sync();
             if self.s.world == 0 {
                 self.travel(9);
             }
@@ -2012,6 +2013,7 @@ impl Game {
                     self.s.uni += 1;
                     self.s.ustars += 1;
                     self.s.uni_best = self.s.uni_best.max(self.s.uni);
+                    self.top_sync();
                     self.ach("universe");
                     if self.s.uni as usize >= LADDER.len() {
                         self.ach("multiverse");
@@ -2202,6 +2204,13 @@ impl Game {
         }
     }
 
+    /// game.js `topSync()`: in the arena, the scenery is rebuilt (the stands empty as universes are erased).
+    fn top_sync(&mut self) {
+        if self.s.world == 9 {
+            self.scenery();
+        }
+    }
+
     /// `travel(w)`: off to another world (or home).
     pub(crate) fn travel(&mut self, w: u32) {
         if !self.playing {
@@ -2212,7 +2221,7 @@ impl Game {
             self.s.been |= 1 << w;
         }
         self.cam.layout(w);
-        self.inp.w2_pole = w == 10; // game.js's scenery() rebuild: korin's tower only under the lookout
+        self.scenery();
         self.flash_t = 1.0;
         self.shake = 0.5;
         let (x, y) = self.hand_pos();

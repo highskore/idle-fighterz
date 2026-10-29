@@ -103,6 +103,8 @@ pub struct Game {
     /// planet-render draws this game: a full charge's tremble then comes from the drawing, as in game.js, not from
     /// `draw_step`'s guess from the last frame
     pub drawn_here: bool,
+    /// the capsule houses as game.js last built the scenery (`scenery()`): a wish's free levels don't rebuild it
+    pub scenery_house: u32,
 }
 
 impl Game {
@@ -145,6 +147,7 @@ impl Game {
             flash_t: 0.0,
             hero_seen: false,
             drawn_here: false,
+            scenery_house: 0,
         };
         g.sync_shop();
         g
@@ -611,6 +614,9 @@ impl Game {
                     Upg::Armor if first => "saiyan armor on — hit villains harder",
                     _ => "",
                 };
+                if u == Upg::House {
+                    self.scenery();
+                }
                 if !note.is_empty() {
                     self.event(note);
                 }
@@ -746,6 +752,7 @@ impl Game {
         self.s.form = if self.ang(A_GOLDEN) { 1 } else { 0 };
         self.tl.preview = None;
         self.cue(Cue::Form(self.s.form));
+        self.scenery();
         let msg = format!(
             "ascended — +{gain} ki seed{} (×{} on everything), back to {}",
             if gain > 1.0 { "s" } else { "" },
@@ -788,6 +795,7 @@ impl Game {
             b.t1 = self.t;
         }
         self.cue(Cue::Form(self.s.form));
+        self.scenery();
         let boost = crate::num::fmt_short(Self::god_boost_of(self.s.god_total as f64));
         self.event_ms(format!("whis: \"ohoho, not bad.\" — +{g} god ki (×{boost} on everything). back to universe 9: spend god ki in menu → angels"), 5000.0);
         self.cue(Cue::Fx("super"));
@@ -795,6 +803,13 @@ impl Game {
             self.after(5.2, crate::timeline::Later::Event("something tiny and very powerful is watching…".into(), 3500.0));
         }
         self.sync_shop();
+    }
+
+    /// game.js `scenery()`: the scenery is rebuilt from the houses owned now. Korin's tower (and the lookout's turn round
+    /// it) only stands under the lookout.
+    pub(crate) fn scenery(&mut self) {
+        self.scenery_house = self.s.lv(Upg::House);
+        self.inp.w2_pole = self.s.world == 10;
     }
 
     /// The zeno button: everything but his favour (and achievements) is erased.
@@ -831,6 +846,7 @@ impl Game {
         self.cue(Cue::Form(self.s.form));
         self.cue(Cue::Fx("super"));
         self.cue(Cue::Sfx("boom"));
+        self.scenery();
         let favour = crate::num::fmt_short(ZENO_X.powf(self.s.zeno as f64));
         self.event_ms(
             match erased {
@@ -1014,7 +1030,7 @@ impl Game {
         if key == "world" {
             // as the harness's poke does: the world's layout and scenery, without the trip
             self.cam.layout(self.s.world);
-            self.inp.w2_pole = self.s.world == 10;
+            self.scenery();
         }
     }
 }
