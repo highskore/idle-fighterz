@@ -5,8 +5,8 @@ use planet_core::geom::{dot, V3};
 use planet_core::jsmath::{atan2, pow, sin};
 use planet_core::num::js_round;
 
-use crate::scenery::{Built, Pave, Pn};
 use crate::scene::{ap_t, tone, vnoise3, Ctx};
+use crate::scenery::{Built, Pave, Pn};
 use crate::tones::{top, W2P};
 use crate::{bayer, h2};
 
@@ -265,7 +265,8 @@ pub fn dome(c: &Ctx, s: V3, door: V3, n: V3, x: i64, y: i64) -> u32 {
     tone(&t.dome, lum, x, y)
 }
 
-const GLYPH: [(u8, u32); 10] = [(b'C', 0x7927), (b'A', 0x2bed), (b'P', 0x6ba4), (b'S', 0x388e), (b'U', 0x5b6f), (b'L', 0x4927), (b'E', 0x79a7), (b'O', 0x2b6a), (b'R', 0x6bad), (b' ', 0)];
+const GLYPH: [(u8, u32); 10] =
+    [(b'C', 0x7927), (b'A', 0x2bed), (b'P', 0x6ba4), (b'S', 0x388e), (b'U', 0x5b6f), (b'L', 0x4927), (b'E', 0x79a7), (b'O', 0x2b6a), (b'R', 0x6bad), (b' ', 0)];
 const LABEL: &[u8] = b"CAPSULE";
 
 /// `shadeHQ`: capsule corp, lettered round its blue band.

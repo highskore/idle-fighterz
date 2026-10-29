@@ -555,4 +555,3 @@ impl Game {
         self.inp.w2_pole
     }
 }
-

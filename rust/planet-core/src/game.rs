@@ -248,7 +248,10 @@ impl Game {
 
     pub fn late_boost(&self) -> f64 {
         let stars = self.s.ustars as f64 * if self.ang(A_STARS) { 2.0 } else { 1.0 };
-        crate::jsmath::pow(STAR_X, stars) * crate::jsmath::pow(MASTERY_X, self.s.mastery as f64) * Self::god_boost_of(self.s.god_total as f64) * crate::jsmath::pow(ZENO_X, self.s.zeno as f64)
+        crate::jsmath::pow(STAR_X, stars)
+            * crate::jsmath::pow(MASTERY_X, self.s.mastery as f64)
+            * Self::god_boost_of(self.s.god_total as f64)
+            * crate::jsmath::pow(ZENO_X, self.s.zeno as f64)
     }
 
     /// The engine the ceiling caps; forms sit outside it.
@@ -982,7 +985,8 @@ impl Game {
                 self.transform(self.tl.preview.is_some());
             }
             let last = self.forms.len() - 1;
-            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * crate::jsmath::pow(LATE_STEP, self.s.mastery as f64 + 1.0) {
+            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * crate::jsmath::pow(LATE_STEP, self.s.mastery as f64 + 1.0)
+            {
                 self.s.mastery += 1;
                 self.ach("mastery");
                 let next = crate::num::fmt_short(self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0));
@@ -1114,7 +1118,9 @@ impl Game {
             self.session = 91.0;
             self.tl.next_roshi = 0.0;
         }
-        for (k, b, trips) in [("paozu", 7e6, 6), ("westcity", 5e6, 4), ("kame", 6e6, 5), ("lookout", 5e6, 8), ("kaiworld", 5e6, 9), ("yardrat", 5e6, 10), ("future", 5e6, 7)] {
+        for (k, b, trips) in
+            [("paozu", 7e6, 6), ("westcity", 5e6, 4), ("kame", 6e6, 5), ("lookout", 5e6, 8), ("kaiworld", 5e6, 9), ("yardrat", 5e6, 10), ("future", 5e6, 7)]
+        {
             if has(k) {
                 trip(self, b, trips);
             }

@@ -43,7 +43,15 @@ fn gods(u: u32) -> [u32; 4] {
     }
 }
 
-const PILLARS: [[f64; 4]; 7] = [[0.06, 0.5, 16.0, 48.0], [0.17, 0.2, 9.0, 22.0], [0.9, 0.58, 18.0, 54.0], [0.8, 0.14, 8.0, 18.0], [0.3, 0.82, 7.0, 16.0], [0.97, 0.28, 9.0, 26.0], [0.66, 0.9, 8.0, 14.0]];
+const PILLARS: [[f64; 4]; 7] = [
+    [0.06, 0.5, 16.0, 48.0],
+    [0.17, 0.2, 9.0, 22.0],
+    [0.9, 0.58, 18.0, 54.0],
+    [0.8, 0.14, 8.0, 18.0],
+    [0.3, 0.82, 7.0, 16.0],
+    [0.97, 0.28, 9.0, 26.0],
+    [0.66, 0.9, 8.0, 14.0],
+];
 
 /// `TOP.erased`, as `topSync` keeps it: the universes cleared this cycle (none outside the multiverse).
 fn erased(g: &Game, u: u32) -> bool {
@@ -57,7 +65,13 @@ pub fn bake(w: usize, h: usize) -> Vec<u32> {
     for y in 0..h {
         for x in 0..w {
             let g = y as f64 / h as f64 + (bayer(x as i32, y as i32) - 0.5) * 0.18;
-            let mut c = if g < 0.45 { top::BG[0] } else if g < 0.8 { top::BG[1] } else { top::BG[2] };
+            let mut c = if g < 0.45 {
+                top::BG[0]
+            } else if g < 0.8 {
+                top::BG[1]
+            } else {
+                top::BG[2]
+            };
             let (xx, yy) = (x as f64 * k0, y as f64 * k0);
             let n = vnoise(xx * 0.018 + 3.0, yy * 0.026) * 0.7 + vnoise(xx * 0.05, yy * 0.07) * 0.35;
             let bb = bayer(x as i32, y as i32) * 0.14;
@@ -116,8 +130,21 @@ fn pillar(c: &mut Ctx, x0: f64, y0: f64, w: f64, h: f64, seed: f64) {
 }
 
 const STAND: [&str; 16] = [
-    "..oooooooooooooooooo..", ".owwwwwwwwwwwwwwwwwwo.", "owwwwwwwwwwwwwwwwwwwwo", "oWWWWWWWWWWWWWWWWWWWWo", "obbbbbbbbbbbbbbbbbbbbo", "obbbbbbbbbbbbbbbbbbbbo", "obbbbbbbbbbbbbbbbbbbbo",
-    "obbbbbbbbbbbbbbbbbbbbo", "obbbbbbbbbbbbbbbbbbbbo", ".oBBBBBBBBBBBBBBBBBBo.", "..oorrrrrrrrrrrrrroo..", "....orrrrrrrrrrrro....", ".....orrrrrrrrrro.....", "......orrrRrrrro......", "........orrro.........",
+    "..oooooooooooooooooo..",
+    ".owwwwwwwwwwwwwwwwwwo.",
+    "owwwwwwwwwwwwwwwwwwwwo",
+    "oWWWWWWWWWWWWWWWWWWWWo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    "obbbbbbbbbbbbbbbbbbbbo",
+    ".oBBBBBBBBBBBBBBBBBBo.",
+    "..oorrrrrrrrrrrrrroo..",
+    "....orrrrrrrrrrrro....",
+    ".....orrrrrrrrrro.....",
+    "......orrrRrrrro......",
+    "........orrro.........",
     ".........oro..........",
 ];
 

@@ -156,7 +156,11 @@ fn js(k: &Case, out: &Path) -> Option<(Value, Vec<u8>)> {
 fn rust(k: &Case, w: usize, h: usize) -> (Game, Vec<u8>) {
     let widget = k.widget.is_some();
     let scale = if widget {
-        if k.w >= 520 { 2.0 } else { 1.0 }
+        if k.w >= 520 {
+            2.0
+        } else {
+            1.0
+        }
     } else if k.w < 560 {
         2.0
     } else {
@@ -231,7 +235,11 @@ fn png(path: &Path, w: usize, h: usize, rgba: &[u8]) {
     }
     z.extend_from_slice(&((b << 16) | a).to_be_bytes());
     let mut out = vec![137, 80, 78, 71, 13, 10, 26, 10];
-    for (ty, data) in [(&b"IHDR"[..], [(w as u32).to_be_bytes(), (h as u32).to_be_bytes(), [8, 2, 0, 0], [0, 0, 0, 0]].concat()[..13].to_vec()), (&b"IDAT"[..], z), (&b"IEND"[..], vec![])] {
+    for (ty, data) in [
+        (&b"IHDR"[..], [(w as u32).to_be_bytes(), (h as u32).to_be_bytes(), [8, 2, 0, 0], [0, 0, 0, 0]].concat()[..13].to_vec()),
+        (&b"IDAT"[..], z),
+        (&b"IEND"[..], vec![]),
+    ] {
         out.extend_from_slice(&(data.len() as u32).to_be_bytes());
         let mut td = ty.to_vec();
         td.extend_from_slice(&data);
@@ -270,7 +278,8 @@ fn framebuffers_match_game_js() {
         if (px != 0 || !state_ok) && std::env::var("FRAMEDIFF_PNG").is_ok() {
             png(&out.with_extension("js.png"), w, h, &want);
             png(&out.with_extension("rust.png"), w, h, &got);
-            let diff: Vec<u8> = want.chunks(4).zip(got.chunks(4)).flat_map(|(a, b)| if a == b { [a[0] / 4, a[1] / 4, a[2] / 4, 255] } else { [255, 0, 255, 255] }).collect();
+            let diff: Vec<u8> =
+                want.chunks(4).zip(got.chunks(4)).flat_map(|(a, b)| if a == b { [a[0] / 4, a[1] / 4, a[2] / 4, 255] } else { [255, 0, 255, 255] }).collect();
             png(&out.with_extension("diff.png"), w, h, &diff);
         }
         rows.push(format!("{:>4} {:<44} {}x{} {}", if k.must { "must" } else { "" }, nm, w, h, res));

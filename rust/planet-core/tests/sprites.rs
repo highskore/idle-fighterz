@@ -143,7 +143,16 @@ fn shape_sprite_dsl_matches_the_bake() {
                 g.ell(10.0, 29.0, 1.3, 1.2, 'p');
                 g.ell(16.0, 29.0, 1.3, 1.2, 'p');
             },
-            &Pal::new(&[('o', 0x1d1030), ('w', 0xf6f4fa), ('W', 0xb8b0cc), ('p', 0xa25ae8), ('P', 0x5a1f8a), ('q', 0xe6d0ff), ('r', 0xe0302a), ('k', 0x2a1840)]),
+            &Pal::new(&[
+                ('o', 0x1d1030),
+                ('w', 0xf6f4fa),
+                ('W', 0xb8b0cc),
+                ('p', 0xa25ae8),
+                ('P', 0x5a1f8a),
+                ('q', 0xe6d0ff),
+                ('r', 0xe0302a),
+                ('k', 0x2a1840),
+            ]),
             &[('w', 'W'), ('p', 'P')],
         ),
     );

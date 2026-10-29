@@ -905,7 +905,9 @@ impl Game {
             self.tl.next_greg = 80.0 + self.r() * 40.0;
         }
         if let Some(g) = self.tl.greg.clone() {
-            if t > g.until { if let Some((x, y)) = g.sx { self.burst_at(x, y, &[0xffffff, 0xd8a868], 8, 60.0);
+            if t > g.until {
+                if let Some((x, y)) = g.sx {
+                    self.burst_at(x, y, &[0xffffff, 0xd8a868], 8, 60.0);
                 }
                 self.tl.greg = None;
                 self.event("gregory got away");
@@ -959,7 +961,10 @@ impl Game {
                 self.event("kamehameha! roshi clears the sky — ×1.5 for 20s");
                 for i in 0..self.tl.meteors.len() {
                     let m = &mut self.tl.meteors[i];
-                    if !m.dead && m.delay <= 0.0 { m.dead = true; let (x, y) = (m.x, m.y); self.burst_at(x, y, &[0xffffff, 0x9fdcff, 0x2f9ae0], 8, 80.0);
+                    if !m.dead && m.delay <= 0.0 {
+                        m.dead = true;
+                        let (x, y) = (m.x, m.y);
+                        self.burst_at(x, y, &[0xffffff, 0x9fdcff, 0x2f9ae0], 8, 80.0);
                     }
                 }
                 for i in 0..self.tl.saibas.len() {
@@ -1175,7 +1180,8 @@ impl Game {
             if y.boom != 0.0 && t > y.boom {
                 self.tl.yam.as_mut().unwrap().boom = 0.0;
                 self.shake = 0.6;
-                if let Some((x, yy)) = y.sx { self.burst_at(x, yy - 6.0, &[0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160.0);
+                if let Some((x, yy)) = y.sx {
+                    self.burst_at(x, yy - 6.0, &[0xffffff, 0xffe08a, 0xa6e67e, 0x58b848], 30, 160.0);
                 }
                 self.cue(Cue::Sfx("boom"));
                 self.event("BOOM. yamcha got wrecked again — tap him");
@@ -1334,7 +1340,11 @@ impl Game {
         {
             self.krillin_hit("the ginyu force");
             let hp = 300f64.max(self.wrate() * 9.0);
-            let members = GINYU.iter().enumerate().map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 }).collect();
+            let members = GINYU
+                .iter()
+                .enumerate()
+                .map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 })
+                .collect();
             self.tl.ginyu = Some(Ginyu { androids: false, members, max: hp * 5.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0 });
             self.event("the ginyu force strikes a pose!");
             self.cue(Cue::Sfx("boss"));
@@ -1376,7 +1386,8 @@ impl Game {
             let sb = &mut self.tl.saibas[i];
             if !sb.dead && t - sb.born > sb.life {
                 sb.dead = true;
-                if let Some((x, y)) = sb.sx { self.burst_at(x, y - 4.0, &[0xe7e2d4, 0xcfc8b6], 8, 50.0);
+                if let Some((x, y)) = sb.sx {
+                    self.burst_at(x, y - 4.0, &[0xe7e2d4, 0xcfc8b6], 8, 50.0);
                 }
             }
         }
@@ -2727,8 +2738,11 @@ impl Game {
         b.movie = true;
         b.struggled = true;
         self.new_boss(b);
-        let minions =
-            o.minions.iter().map(|&name| Henchman { name, spr: movie_dim(name), hp: mh, max: mh, twin: false, dead: false, x: None, y: 0.0, k: 1.0, flash: 0.0 }).collect();
+        let minions = o
+            .minions
+            .iter()
+            .map(|&name| Henchman { name, spr: movie_dim(name), hp: mh, max: mh, twin: false, dead: false, x: None, y: 0.0, k: 1.0, flash: 0.0 })
+            .collect();
         self.tl.movie = Some(Movie {
             o,
             boss: self.tl.boss_ids,
