@@ -35,7 +35,7 @@ node build.mjs            # → dist/planet.html, the highskore.com homepage
 node build.mjs --widget   # → dist/index.html under the current directory, the powerrr widget's page
 ```
 
-The site build minifies the page's scripts with esbuild and inlines its fonts, cut down to the characters the page has (`subset-font`), so it loads nothing from Google Fonts; three.js still comes from the CDN, deferred, so the game is playable before the title is built. Only the shipped page is minified: the sources the Rust difftest reads stay as they are. `wasm/px.wasm` is committed and inlined as base64, so the page stays one file. After changing `wasm/src/lib.rs`, rebuild it with `npm run wasm` (Rust and `rustup target add wasm32-unknown-unknown`). The module has no dependencies and imports only `Math.pow`; each function is a line-for-line port of a JS loop that stays as the fallback (no WebAssembly, or a CSP without `wasm-unsafe-eval`), and both draw the same pixels. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build also leaves out the CDN three.js and Google Fonts and inlines the fonts from `@fontsource` in the `node_modules` of the directory it runs from.
+The site page fetches nothing: the build inlines its fonts, cut down to the characters the page has (`subset-font`), and three.js, bundled by esbuild with just what the title uses and placed after the game's script, so the game is playable before the title is built; then it minifies the scripts. Only the shipped page is minified: the sources the Rust difftest reads stay as they are. `wasm/px.wasm` is committed and inlined as base64, so the page stays one file. After changing `wasm/src/lib.rs`, rebuild it with `npm run wasm` (Rust and `rustup target add wasm32-unknown-unknown`). The module has no dependencies and imports only `Math.pow`; each function is a line-for-line port of a JS loop that stays as the fallback (no WebAssembly, or a CSP without `wasm-unsafe-eval`), and both draw the same pixels. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build leaves out three.js and inlines the full fonts from `@fontsource` in the `node_modules` of the directory it runs from.
 
 Open `dist/planet.html` in a browser to play it locally.
 
@@ -85,6 +85,19 @@ npm run wasm:rust    # sh rust/planet-web/build.sh
 npm run build:rust   # node build.mjs --rust: planet-core runs the game behind the HTML HUD
 npm run test:rust    # node rust/planet-web/test.mjs
 ```
+
+## Tests
+
+CI (`.github/workflows/ci.yml`) runs on every pull request and push to main: both page builds; rustfmt, clippy and the JS-vs-Rust difftest; the wasm builds (`wasm/px.wasm` must match its source) and `rust/planet-web/test.mjs`; every preview hook in headless Chromium; and the pixel baselines.
+
+```sh
+npm test             # both builds, rustfmt and the difftest
+npm run test:hooks   # every preview hook (each "// preview hook" in game.js) at 1280×800 and 390×844: no page or console errors
+npm run test:visual  # the pixel baselines in test/browser/__screenshots__ (Linux only: they're rendered on CI)
+npm run shots        # the same screenshots into shots/, without comparing
+```
+
+The browser tests (`test/browser/`, Playwright) serve the page from disk, run the game on Playwright's fake clock and seed `Math.random` with the difftest's LCG, so a state draws the same pixels every run. The 3D title is stubbed out (software WebGL takes seconds a frame) except in one hooks test. A visual state's canvas must match its baseline exactly; the whole page may differ by a shade where Chromium anti-aliases text and rounded corners. Every CI run uploads its screenshots as the `screenshots` artifact and links them on the pull request. To take new baselines, run the workflow by hand with *update baselines* (it commits them to the branch), or copy a run's `screenshots` artifact over `test/browser/__screenshots__`.
 
 ## Where it's used
 

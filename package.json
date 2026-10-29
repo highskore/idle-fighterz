@@ -9,12 +9,17 @@
     "wasm": "sh wasm/build.sh",
     "build:rust": "node build.mjs --rust",
     "wasm:rust": "sh rust/planet-web/build.sh",
-    "test:rust": "node rust/planet-web/test.mjs"
+    "test:rust": "node rust/planet-web/test.mjs",
+    "test": "node build.mjs && node build.mjs --widget && cargo fmt --manifest-path rust/Cargo.toml --all --check && cargo test --manifest-path rust/Cargo.toml -p planet-core --release",
+    "test:hooks": "node build.mjs && playwright test hooks",
+    "test:visual": "node build.mjs && playwright test visual",
+    "shots": "node build.mjs && PLANET_SHOTS_ONLY=1 playwright test visual"
   },
   "devDependencies": {
     "@fontsource/fragment-mono": "5.2.8",
     "@fontsource/instrument-serif": "5.2.8",
     "@fontsource/press-start-2p": "5.2.7",
+    "@playwright/test": "1.64.1",
     "esbuild": "0.28.2",
     "subset-font": "2.9.0",
     "three": "0.147.0"
