@@ -2,6 +2,8 @@
   // about. a press on empty sky (or ⌥/⌘-press anywhere) drags the window instead of training. settings live in the
   // app (desktop/src-tauri); notifications for big moments go out through it too
   if (WIDGET) {
+    // WebView2 draws a transparent window's text without ClearType: thin grey strokes, so widget.css darkens it there
+    if (/Windows/.test(navigator.userAgent)) root.classList.add('win');
     const tauri = window.__TAURI__, invoke = tauri ? tauri.core.invoke : () => Promise.resolve();
     let conf = { layout: 7, hud: 'hover', opacity: 1, notify: {}, quiet: {} };
     // the frame rate setting is the idle rate: 60 (smooth), 30 (balanced, the default) or 15 (battery saver). while the
