@@ -2054,7 +2054,7 @@ impl Game {
         let t = self.t;
         if roll < 0.3 {
             self.b.senzu_until = t + 15.0 + 5.0 * self.lvl(N_SENZU);
-            let msg = format!("capsule: senzu beans — ×1.5 for {}s", 15.0 + 5.0 * self.lvl(N_SENZU));
+            let msg = format!("capsule: senzu beans — ×{} for {}s", self.senzu_x(), 15.0 + 5.0 * self.lvl(N_SENZU));
             self.event(msg);
         } else if roll < 0.6 {
             let g = self.wrate() * 150.0;
@@ -2501,7 +2501,8 @@ impl Game {
             "combo" => self.buff(WishBuff::Combo, 120.0, "max combo for 2 minutes"),
             "senzu" => {
                 self.b.senzu_until = self.b.senzu_until.max(t + 120.0);
-                self.event("your wish is granted — senzu ×1.5 for 2 minutes");
+                let msg = format!("your wish is granted — senzu ×{} for 2 minutes", self.senzu_x());
+                self.event(msg);
             }
             "fuse" => {
                 self.b.fuse_until = t + 30.0;
@@ -2923,7 +2924,8 @@ impl Game {
                 self.b.senzu_until = self.b.senzu_until.max(t + 10.0);
                 let g = 200f64.max(self.wrate() * 40.0);
                 self.gain(g);
-                self.event("yamcha: \"i'm fine!\" — senzu ×1.5 for 10s");
+                let msg = format!("yamcha: \"i'm fine!\" — senzu ×{} for 10s", self.senzu_x());
+                self.event(msg);
                 self.cue(Cue::Sfx("coin"));
                 return;
             }
@@ -3139,7 +3141,7 @@ impl Game {
         if let Some((x, y)) = self.tl.bean.as_ref().and_then(|b| b.sx) {
             if hypot(&[px - x, py - (y - 6.0)]) < 13.0 {
                 self.b.senzu_until = t + 15.0 + 5.0 * self.lvl(N_SENZU);
-                let msg = format!("senzu bean — ×1.5 for {}s", 15.0 + 5.0 * self.lvl(N_SENZU));
+                let msg = format!("senzu bean — ×{} for {}s", self.senzu_x(), 15.0 + 5.0 * self.lvl(N_SENZU));
                 self.event(msg);
                 self.rng.skip(36);
                 self.tl.bean = None;

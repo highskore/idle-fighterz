@@ -333,7 +333,7 @@ impl Game {
             fx.push(format!("boost ×2 {}s", secs(b.boost_until)));
         }
         if b.senzu_until > t {
-            fx.push(format!("senzu ×1.5 {}s", secs(b.senzu_until)));
+            fx.push(format!("senzu ×{} {}s", num(self.senzu_x()), secs(b.senzu_until)));
         }
         if self.riding > 0.0 {
             fx.push("nimbus ×1.5".into());
@@ -471,10 +471,28 @@ impl Game {
         match u {
             Upg::Chamber if l > 0 => format!("train ×{} inside · next ×{}", num(self.chamber_x()), num(1.5 + 0.5 * (s.lvf(u) + 1.0))),
             Upg::Kaio if l > 0 => format!("×{} for 15s, then ×0.75", num(self.kaio_x())),
-            Upg::Bigbang if l > 0 => format!("blast radius +{}%", l * 25),
-            Upg::Galick if l == 4 => format!("beams hit harder · next: {}", if self.kame() { "super kamehameha" } else { "final flash" }),
-            Upg::Galick if l >= 5 => "beams hit harder · full charge ×1.25".into(),
-            Upg::Galick if l > 0 => "beams hit harder".into(),
+            Upg::Bigbang if l > 0 => format!("pays {} beams · next {}, bigger blast", num(Self::bang_x_at(s.lvf(u))), num(Self::bang_x_at(s.lvf(u) + 1.0))),
+            Upg::Galick if l > 0 => format!(
+                "beams ×{} · next ×{}{}",
+                num(Self::beam_x_at(s.lvf(u))),
+                num(Self::beam_x_at(s.lvf(u) + 1.0)),
+                if l == 4 {
+                    if self.kame() {
+                        " and super kamehameha"
+                    } else {
+                        " and final flash"
+                    }
+                } else if l >= 5 {
+                    " · full charge ×1.25"
+                } else {
+                    ""
+                }
+            ),
+            Upg::Scouter if self.crit_over() > 0.0 => {
+                let x: f64 = to_fixed(self.crit_hit(), 2).parse().unwrap();
+                format!("crits always, ×{} · next +20% crit damage", num(x))
+            }
+            Upg::Senzu if l >= 3 => format!("beans ×{} · next ×{}", num(self.senzu_x()), num(Self::senzu_x_at(s.lvf(u) + 1.0))),
             _ => base.into(),
         }
     }
@@ -549,6 +567,7 @@ impl Game {
             }
             "seeds" => (label.into(), format!("+{} ki seeds, kept forever", num(3f64.max((self.seeds_now() / 5.0).ceil())))),
             "kaio" => (label.into(), format!("kaioken ×{} now, no tiredness after", num(self.kaio_x()))),
+            "senzu" => (label.into(), format!("senzu ×{} for 2 minutes", num(self.senzu_x()))),
             "krillin" => (label.into(), format!("he trains with you: idle ×1.5 and destructo discs. next death: rage ×{}", 3 + self.s.krillin_revives)),
             _ => (label.into(), what.into()),
         };

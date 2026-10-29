@@ -71,7 +71,7 @@ pub const SHOP: [ShopItem; 15] = [
     ShopItem { key: "bigbang", base: 60000.0, k: 2.5, label: "big bang attack", what: "double-tap: an exploding ki ball" },
     ShopItem { key: "piccolo", base: 30000.0, k: 2.4, label: "piccolo", what: "+60/s, zaps meteors" },
     ShopItem { key: "chamber", base: 150000.0, k: 2.8, label: "time chamber", what: "a door appears: train ×2 for 15s inside" },
-    ShopItem { key: "tail", base: 40000.0, k: 2.5, label: "tail training", what: "great ape: +8% size, +2s, +×0.25 (less past lv 10)" },
+    ShopItem { key: "tail", base: 40000.0, k: 2.5, label: "tail training", what: "great ape: +×0.25, +8% size, +2s (size and time slow past lv 10)" },
     ShopItem { key: "itx", base: 5e6, k: 2.6, label: "instant transmission", what: "two-finger tap or right-click: jump to a world you've been" },
 ];
 

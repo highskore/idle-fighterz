@@ -246,8 +246,37 @@ impl Game {
         }
     }
 
+    /// His bonus on top of ×1; only his size and time slow past lv 10.
     pub fn ape_x(&self) -> f64 {
-        2.0 + 0.25 * self.tail_lv() + if self.tl.ape.giant { 1.0 } else { 0.0 }
+        2.0 + 0.25 * self.s.lvf(Upg::Tail) + if self.tl.ape.giant { 1.0 } else { 0.0 }
+    }
+
+    /// Crit chance past 100%: each 10% of it is +20% crit damage.
+    pub fn crit_over(&self) -> f64 {
+        (self.s.lvf(Upg::Scouter) * 0.1 + self.lvl(N_CRIT) * 0.08 - 1.0).max(0.0)
+    }
+
+    pub fn crit_hit(&self) -> f64 {
+        (2.0 + self.lvl(N_CRITX)) * (1.0 + 2.0 * self.crit_over())
+    }
+
+    /// A senzu bean's boost at a senzu tree level: ×1.5, +0.1 a level past lv 3 (when beans come round fast enough).
+    pub fn senzu_x_at(lv: f64) -> f64 {
+        (15.0 + (lv - 3.0).max(0.0)) / 10.0
+    }
+
+    pub fn senzu_x(&self) -> f64 {
+        Self::senzu_x_at(self.s.lvf(Upg::Senzu))
+    }
+
+    /// A full charge's pay at a galick level: +5% a level.
+    pub fn beam_x_at(lv: f64) -> f64 {
+        (19.0 + lv.max(1.0)) / 20.0
+    }
+
+    /// A big bang's pay, in full beams, at a level: 1.3, +0.05 a level.
+    pub fn bang_x_at(lv: f64) -> f64 {
+        (25.0 + lv) / 20.0
     }
 
     pub fn kaio_x(&self) -> f64 {
@@ -279,7 +308,7 @@ impl Game {
             1.0 + on(b.car_until, 0.5)
                 + on(b.boost_until, 1.0)
                 + on(b.ape_until, self.ape_x())
-                + on(b.senzu_until, 0.5)
+                + on(b.senzu_until, self.senzu_x() - 1.0)
                 + if self.riding > 0.0 { 0.5 } else { 0.0 }
                 + on(b.kaio_until, self.kaio_x() - 1.0)
                 + on(b.daily_until, 0.25)
@@ -524,7 +553,7 @@ impl Game {
         let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots))
             * self.mult(false)
             * self.combo
-            * if crit { 2.0 + self.lvl(N_CRITX) } else { 1.0 }
+            * if crit { self.crit_hit() } else { 1.0 }
             * (1.0 + 0.5 * self.lvl(N_FIST))
             * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
         self.gain(n);

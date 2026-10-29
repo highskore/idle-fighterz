@@ -490,6 +490,11 @@ fn toptaste() {
 }
 
 #[test]
+fn sides() {
+    scenario("sides");
+}
+
+#[test]
 fn lookout() {
     scenario("lookout");
 }

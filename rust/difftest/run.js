@@ -67,6 +67,23 @@ const SCENARIOS = {
       if (f === 30 * 60 * 12 - 1 && (k.hand < 1 || k.auto < 1)) fail('the form wish was not offered often enough: ' + JSON.stringify(k))
     },
   },
+  // the side upgrades past their old caps: crits past 100% chance, senzu past full uptime (the dragon's bag of senzu), beams
+  // and big bangs at high levels, tail training past lv 10; the shop words what each next level does
+  sides: {
+    seed: 7, minutes: 10,
+    script(g, f, act) {
+      if (f === 0) for (const [k, v] of [['pl', 4e6], ['best', 4e6], ['scouter', 12], ['senzu', 6], ['galick', 7], ['bigbang', 4], ['tail', 14], ['partner', 20], ['house', 10], ['boots', 30], ['kaio', 1]]) act({ a: 'set', k, v })
+      const p = f % 120, [tx, ty] = target(g)
+      if (f % 4 === 0 && p < 60) act({ a: 'train' })
+      if (p === 60) press(g, act, 'down', tx * 3, ty * 3)
+      if (p === 100) press(g, act, 'up', tx * 3, ty * 3)
+      if (p === 105 || p === 108) { press(g, act, 'down', tx * 3, ty * 3); press(g, act, 'up', tx * 3, ty * 3) }
+      if (f % 3 === 0) clickTargets(g, act)
+      if (f % 30 === 0) { buyAll(g, act, [...POLICY, 'tail']); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
+      if (f % (30 * 40) === 30 * 5 && g.ev('!shen')) act({ a: 'summon' })
+      if (g.ev("!!shen && shen.phase === 'wish' && st.t - shen.phaseT > 2 && st.t - shen.phaseT < 2.04")) { const o = g.offer(), w = o.find(w => w.key === 'senzu') || o[o.length - 1]; act({ a: 'pick', k: w.key }) }
+    },
+  },
   // kami's lookout turns only round korin's tower; back home, a vertical drag tilts the planet again
   lookout: {
     seed: 23, minutes: 2,
