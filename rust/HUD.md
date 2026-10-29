@@ -4,7 +4,7 @@ page.html's HUD (power, rate, forms, the shop, the training tree and the angels,
 the share card, the ascend, god ki and zeno boxes, toasts) stays HTML. The game behind it is planet-core. They talk
 through one API, `planet_core::bridge::Bridge`, with plain calls in and JSON strings out:
 
-- **Web** (`node build.mjs --rust`): `planet-web` exports `Bridge` to wasm-bindgen as `Planet`.
+- **Web** (`?rust` on the site page, [below](#the-web-page-rust)): `planet-web` exports `Bridge` to wasm-bindgen as `Planet`.
   `rust/planet-web/shim.js` hands page.html a `game` object with game.js's API and turns the bridge's messages into
   page.html's `ui.*` calls. page.html's markup and code are unchanged.
 - **Native widget** (stage 5): the same `Bridge` behind Tauri commands, with a transparent web view that loads only
@@ -15,8 +15,8 @@ Everything planet-core sends the HUD is checked against game.js, in every scenar
 the snapshot (with `night`, `world`, `shen` and `look` against `ui.night`, `ui.world` and the body classes as they stood
 when game.js called `ui.update`) and the shop (`Game::shop`, the same string the bridge ships). It compares the dragon's
 offer while it waits, and the menu, angels, confirm boxes and share card every ten seconds. Every toast (text, time,
-duration) and every cue (call, time, arguments) is compared in order. The pictures the HUD shows (`thumb`, the card's
-`spr` and `scene`) still come from game.js and aren't planet-core's.
+duration) and every cue (call, time, arguments) is compared in order. The pictures the HUD shows (`thumb` and the card's
+`spr`) are game.js's hero sprites, which the site page carries either way, and the card's `scene` is the canvas.
 
 ## Calls
 
@@ -29,8 +29,12 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `load(text)` | the stored `localStorage['hs-power']`. A new visit keeps only the daily bonus's date, as game.js does. Text over 1 MB, nested deeper than 64 or with a number past a double's range is ignored |
 | `set_calm(on)` | page.html's `st.calm` (prefers-reduced-motion): no screen shake, and no random draw for it, as in game.js. Set it before `start` |
 | `start(today, now_ms)` | `start()`: `today` is `new Date().toDateString()` (the daily bonus), `now_ms` is `Date.now()` |
-| `step(elapsed_s, now_ms) → steps` | `frame(t, dt)`. Fixed 1/30 s steps, at most 8 a call. For the native widget (stage 5); the web page doesn't call it yet |
-| `step_one(now_ms) → t` | one fixed step. The web shim calls this, one step at a time, because the twin below steps in lockstep |
+| `set_cx(fcx)` | the page's `data-cx`: where across the canvas the planet sits, as `layout()` reads it |
+| `preview(hash)` | game.js's preview hooks, from `location.hash` on dev hosts. Call it before `start` |
+| `draw_with_rust(widget, clouds, amount)` | draw with planet-render from now on, into a framebuffer of the game's size; the drawing shares the game's random numbers, as game.js does |
+| `frame_drawn(t, dt, now_ms)` | `frame(t, dt)` as page.html calls it, every animation frame with its own `t` and `dt`, drawn. The timeouts due by `t` run first, as a page's `setTimeout`s fire between frames |
+| `pixels_ptr() → ptr` | where the frame's RGBA bytes are in the module's memory (`w`×`h`×4), for an `ImageData` over them |
+| `step(elapsed_s, now_ms) → steps`, `step_drawn(elapsed_s, now_ms) → steps` | fixed 1/30 s steps, at most 8 a call, undrawn or drawn. For the native widget (stage 5) |
 | `frame() → message` | see below; call it after stepping and after every command |
 | `resize(w, h, scale)` | `resize()` (`layout()`) |
 | `pointer_down(x, y, bx, by, id, button, touch)`, `pointer_move(x, y, bx, by, id)`, `pointer_up(bx, by, id)`, `pointer_cancel()` | the canvas's pointer listeners, with `pointerId`, `button` and `pointerType === 'touch'`: tap, double tap (big bang), drag (spin, with inertia), hold (beam charge); on snake way the press acts. Once instant transmission is owned, a right-click opens it, and so does a two-finger tap at home with nothing on (two touches landing within 0.12 s and lifting within 0.25 s, unmoved) |
@@ -41,10 +45,9 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `learn_angel(id)`, `auto_next()` | the angels' tab |
 | `pick_wish(key)`, `itx_jump(w)` | the wish box's and the transmission picker's callbacks |
 | `pick_hero(id) → bool` | the characters tab |
-| `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures (see stage 5) |
+| `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures: `look()` says which sprite (`[hero, form, fused]`) |
 | `save() → text` | what to store under `hs-power`: `JSON.stringify(S)`, key for key |
 | `playing() → bool` | |
-| `spots(json)`, `probe() → json` | the temporary renderer bridge (below). `spots` ignores what `load` ignores; `probe` is `{t, pl, draws, mult, passive}` |
 
 ## The frame message
 
@@ -91,47 +94,29 @@ as game.js's `KEEP` does. The difftest compares the save with game.js's `S` ever
 through game.js both ways. The shim saves every 3 s of play (as game.js does) and on `pagehide`. Natively, put the
 same text in a file in the app's data directory.
 
-## The temporary renderer bridge (web, until stage 1)
+## The web page (`?rust`)
 
-planet-render can't draw the game yet, so the `--rust` page keeps game.js as its renderer. It runs a second copy of
-game.js (the twin) in lockstep with the Rust game:
+The site build carries both engines. `node build.mjs` writes `dist/planet-rust.js` (wasm-bindgen's glue and `shim.js`)
+and `dist/planet-rust.wasm` next to `planet.html` when there's a wasm build (`sh rust/planet-web/build.sh`; `--rust`
+fails without one). The page carries game.js and `loader.js`: with `?rust` (or `#rust`) in the URL the loader fetches
+the two files, the shim swaps the planet's `mount` for the Rust engine, and page.html's code starts once they're in.
+Without the flag nothing is fetched; if the files don't load, the page runs game.js.
 
-- Same fixed steps (the shim steps both: planet-core first, then the twin at the same `t`), the same inputs at the same
-  moments, and the same seeded LCG while simulating. While drawing, the twin's randomness is `Math.random`, so drawing
-  doesn't move the game's random stream.
-- Its `ui`, storage, timers, preview hooks, body classes and listeners are its own. `assemble.mjs` wraps game.js in a
-  function that shadows `Math`, `setTimeout`, `localStorage`, `location`, `document` and `addEventListener`. Its timers
-  run on simulated time, the way the difftest harness runs them.
-- game.js changes the game in five places while drawing: the big bang lands, a great ape's stomp shakes the screen, a
-  full beam charge makes it tremble while the hero is in view, and the capsule a boss drops falls and opens itself
-  after 8 s. planet-core does these in `Game::draw_step` after
-  the frame. The difftest harness and the twin both run them just before drawing, so drawing a frame or skipping it
-  changes nothing.
-- It reports where it drew what taps and beams aim at, after every step: `spots(json)` (planet-core's `spots.rs`),
-  giving the hero's lift and facing, piccolo, bubbles, the boss, the ginyu force, movie henchmen, the visitors,
-  saibamen, birds, gadgets and snake way's ghosts.
-- `start` reads the clock once: planet-core gets that date, and the twin runs `start()` with its `Date` pinned to the
-  same moment, so a start across midnight gives both the same day. `st.calm` goes to `set_calm`; the twin reads it from
-  the shared stage.
-- Once a second the shim compares planet-core's power and random draws (`probe()`) with the twin's. On a mismatch it
-  logs `planet: the drawing drifted from the game` once.
-
-`node rust/planet-web/test.mjs [minutes] [seed]` runs exactly what `build.mjs --rust` ships, in a vm with a stub DOM and
-drawing on. It plays through the page's entry points (taps on whatever the twin drew, drags, held beams, double taps,
-keys, the shop, wishes, the tree) and checks power and draws every frame, and that the HUD the Rust side sent matches
-the twin's last `ui.update` field for field. Its clock starts 2 ms before a midnight with a save stamped with the coming
-day, so it also checks that both sides start on the same day.
-
-When stage 1 lands, `spots` becomes planet-render writing the same fields, and `draw_step` stays in planet-core. The
-twin, `assemble.mjs`'s wrapping and the shim's lockstep loop go away. The shim's frame becomes `step()` and a
-`putImageData` of planet-web's framebuffer.
+- The shim's `frame(t, dt)` is `frame_drawn(t, dt, Date.now())`, then `putImageData` of an `ImageData` over the module's
+  memory, then `frame()`'s message onto `ui`. page.html's own loop decides when to call it, as it does for game.js.
+- The game's seed continues the page's `Math.random`: the shim draws once and steps the LCG back, so planet-core's first
+  draw is the one game.js would have made. Under the browser tests' seeded `Math.random` and fake clock both engines
+  play the same game, and the `@rust` copy of every state in `test/browser/visual.spec.mjs` must match the JS baselines,
+  canvas and page.
+- planet-render places what taps and beams aim at (planet-core's `spots`) as it draws, and draws with the game's random
+  numbers, as game.js does.
 
 ## What stage 5 needs
 
 - **Tauri commands**: one for each row of the calls table, on a `Mutex<Bridge>`. Return the same strings. Push
   `frame()`'s message to the HUD web view as a Tauri event after each tick, rather than having the view poll.
-- **The HUD-only web view**: page.html's HUD markup with the shim. Swap the `RUST.Planet` calls for `invoke`, and drop
-  the twin and the lockstep loop (the native side steps and draws). Pointer events on the native window go to
+- **The HUD-only web view**: page.html's HUD markup with the shim. Swap the `Planet` calls for `invoke`, and drop
+  the frame loop and `putImageData` (the native side steps and draws). Pointer events on the native window go to
   `pointer_*` with both coordinate pairs. The widget's own `ui.notify` handles the `notify` cues.
 - **Pictures the HUD shows that come from game.js today**: `thumb(id)` (the characters tab) and the card's `spr` and
   `scene`. These need stage 1's sprite data in planet-core: an RGBA hero sprite per form and a copy of the framebuffer.
