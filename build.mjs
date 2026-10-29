@@ -66,8 +66,8 @@ if (widget) {
   console.log(rust ? 'dist/planet.html written (the Rust core)' : 'dist/planet.html written')
 }
 
-// the site page fetches nothing before it can play: the fonts are inlined, cut down to the characters the page has and
-// unhinted (as Google Fonts serves them outside Windows); three.js is bundled with just what the title uses, after the game's
+// the site page fetches nothing before it can play: the fonts are inlined, cut down to the characters the page has (hints
+// kept: Linux and Windows use them); three.js is bundled with just what the title uses, after the game's
 // script; and the scripts are minified. Only this output is: the difftest reads the sources
 async function sitePage(page) {
   let esbuild, subset
@@ -75,7 +75,7 @@ async function sitePage(page) {
   page = page.replace(/<link [^>]*fonts\.(googleapis|gstatic)\.com[^>]*>\n/g, '')
   let ascii = ''; for (let c = 32; c < 127; c++) ascii += String.fromCharCode(c)
   const text = [...new Set(ascii + page)].join('')   // all of ascii too, for numbers and names put together at run time
-  page = page.replace('<style>', '<style>\n' + await faces(here, 'swap', woff2 => subset(woff2, text, { targetFormat: 'woff2', noHinting: true })))
+  page = page.replace('<style>', '<style>\n' + await faces(here, 'swap', woff2 => subset(woff2, text, { targetFormat: 'woff2' })))
   for (const [all, code] of [...page.matchAll(/<script>\n([\s\S]*?)<\/script>/g)]) {
     const min = (await esbuild.transform(code, { loader: 'js', format: 'iife', minify: true, charset: 'utf8', legalComments: 'none' })).code.trim()
     page = page.replace(all, () => '<script>' + min + '</script>')
@@ -87,14 +87,14 @@ async function sitePage(page) {
   const entry = `import { ${core.join(', ')} } from 'three'\n` + used.filter(k => examples[k]).map(k => `import { ${k} } from 'three/examples/jsm/${examples[k]}'\n`).join('') + `window.THREE = { ${used.join(', ')} }\n`
   const three = (await esbuild.build({ stdin: { contents: entry, resolveDir: here }, bundle: true, format: 'iife', minify: true, charset: 'utf8', legalComments: 'none', write: false, logLevel: 'error' })).outputFiles[0].text.trim()
   if (three.includes('</script')) throw new Error('three.js bundle closes its script tag')
-  return page.replace('<script>__THREE__</script>', () => '<script>' + three + '</script>')
+  return page.replace('<script id="three">__THREE__</script>', () => '<script id="three">' + three + '</script>')
 }
 
 // the widget runs offline and has no title, so no three.js, and the fonts are inlined from @fontsource (installed with
 // the widget's own dependencies, in node_modules where it runs)
 async function widgetPage(page) {
   page = page.replace('__WIDGET_CSS__', () => read('widget.css')).replace('__WIDGET_JS__', () => read('widget.js'))
-  page = page.replace(/<link [^>]*fonts\.(googleapis|gstatic)\.com[^>]*>\n/g, '').replace('<script>__THREE__</script>\n', '')
+  page = page.replace(/<link [^>]*fonts\.(googleapis|gstatic)\.com[^>]*>\n/g, '').replace('<script id="three">__THREE__</script>\n', '')
   if (/<(script|link)[^>]+(src|href)="https?:/.test(page)) throw new Error('the widget page still loads something remote')
   return page.replace('<style>', '<style>\n' + await faces(process.cwd(), 'block'))
 }

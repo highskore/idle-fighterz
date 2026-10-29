@@ -27,14 +27,13 @@ const init = ([seed, epoch]) => {
   window.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} }
 }
 
-// the page, and nothing else
-const serve = async route => {
+// the page, and nothing else; with no title, without its three.js, so the title falls back as it does without WebGL (and
+// three.js's start-up draws nothing from the seeded Math.random)
+const serve = title => async route => {
   if (route.request().url().split('#')[0] !== ORIGIN + '/') return route.abort('blockedbyclient')
-  return route.fulfill({ contentType: 'text/html', body: readFileSync(join(ROOT, 'dist', 'planet.html')) })
+  const html = readFileSync(join(ROOT, 'dist', 'planet.html'), 'utf8')
+  return route.fulfill({ contentType: 'text/html', body: title ? html : html.replace(/<script id="three">[\s\S]*?<\/script>/, '') })
 }
-
-// no title: the page's three.js can't set window.THREE, so the title falls back as it does without WebGL
-const noTitle = () => Object.defineProperty(window, 'THREE', { get() {}, set() {} })
 
 // errors collects every uncaught exception, console.error and blocked request
 export async function open(page, hash = '', { seed = 1, title = true } = {}) {
@@ -42,11 +41,10 @@ export async function open(page, hash = '', { seed = 1, title = true } = {}) {
   page.on('pageerror', e => errors.push('pageerror: ' + (e.stack || e.message)))
   page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text()) })
   page.on('requestfailed', r => errors.push('request failed: ' + r.url()))
-  await page.route('**/*', serve)
+  await page.route('**/*', serve(title))
   await page.clock.install({ time: EPOCH })
   await page.clock.pauseAt(EPOCH + 1000)
   await page.addInitScript(init, [seed, EPOCH])
-  if (!title) await page.addInitScript(noTitle)
   await page.goto(ORIGIN + '/' + hash, { waitUntil: 'load' })
   await page.evaluate(() => Promise.all(['16px "Fragment Mono"', 'italic 16px "Fragment Mono"', '16px "Instrument Serif"', 'italic 16px "Instrument Serif"', '16px "Press Start 2P"'].map(f => document.fonts.load(f))))
   await settle(page)
