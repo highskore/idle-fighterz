@@ -388,7 +388,7 @@ impl Scene {
 
     /// The scenery's solids for the game's world and the houses game.js last built (`Game::scenery_house`).
     fn sync(&mut self, g: &Game) {
-        let key = (g.s.world, g.scenery_house.min(9), if g.s.world == 9 { g.s.uni } else { 0 });
+        let key = (g.s.world, g.scenery_house.min(9), if g.s.world == 9 { g.top_uni } else { 0 });
         if self.key != Some(key) {
             self.key = Some(key);
             self.built = crate::scenery::build(g);

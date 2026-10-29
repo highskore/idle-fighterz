@@ -747,10 +747,10 @@ pub fn top_dmg(g: &Game) -> f64 {
         return 0.0;
     }
     let n = planet_core::data::LADDER.len() as f64;
-    if g.s.uni as f64 >= n {
+    if g.top_uni as f64 >= n {
         1.0
     } else {
-        0.7 * g.s.uni as f64 / (n - 1.0)
+        0.7 * g.top_uni as f64 / (n - 1.0)
     }
 }
 

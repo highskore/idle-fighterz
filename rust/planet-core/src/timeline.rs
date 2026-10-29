@@ -2225,8 +2225,9 @@ impl Game {
         }
     }
 
-    /// game.js `topSync()`: in the arena, the scenery is rebuilt (the stands empty as universes are erased).
-    fn top_sync(&mut self) {
+    /// game.js `topSync()`: the arena takes the universes erased so far, and is rebuilt if it's up.
+    pub(crate) fn top_sync(&mut self) {
+        self.top_uni = self.s.uni;
         if self.s.world == 9 {
             self.scenery();
         }

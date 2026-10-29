@@ -55,7 +55,7 @@ const PILLARS: [[f64; 4]; 7] = [
 
 /// `TOP.erased`, as `topSync` keeps it: the universes cleared this cycle (none outside the multiverse).
 fn erased(g: &Game, u: u32) -> bool {
-    g.s.multi && LADDER[..(g.s.uni as usize).min(LADDER.len())].iter().any(|l| l.0 == u)
+    g.s.multi && LADDER[..(g.top_uni as usize).min(LADDER.len())].iter().any(|l| l.0 == u)
 }
 
 /// The baked void (`bakeVoid`): a dithered gradient with nebula.

@@ -108,6 +108,8 @@ pub struct Game {
     pub drawn_here: bool,
     /// the capsule houses as game.js last built the scenery (`scenery()`): a wish's free levels don't rebuild it
     pub scenery_house: u32,
+    /// the universes the arena showed erased at game.js's last `topSync()` (a poked `S.uni` doesn't redraw it)
+    pub top_uni: u32,
 }
 
 impl Game {
@@ -152,6 +154,7 @@ impl Game {
             hero_seen: false,
             drawn_here: false,
             scenery_house: 0,
+            top_uni: 0,
         };
         g.sync_shop();
         g
@@ -854,6 +857,7 @@ impl Game {
             b.fled = true;
             b.t1 = self.t;
         }
+        self.top_sync();
         self.cue(Cue::Form(self.s.form));
         self.scenery();
         let boost = crate::num::fmt_short(Self::god_boost_of(self.s.god_total as f64));
@@ -897,6 +901,7 @@ impl Game {
         self.tl.preview = None;
         self.tl.next_boss = 60.0;
         self.ach("zeno");
+        self.top_sync();
         if self.s.world != 0 {
             self.travel(0);
             self.tl.namek_until = 0.0;
@@ -1342,6 +1347,9 @@ impl Game {
         if self.s.multi && self.s.world == 0 {
             self.s.world = 9;
             self.cam.layout(9);
+        }
+        if self.s.multi {
+            self.top_sync();
         }
         self.s.run_best = self.s.run_best.max(self.s.best);
     }
