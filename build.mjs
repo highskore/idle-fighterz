@@ -1,7 +1,7 @@
 // Builds dist/planet.html — the whole highskore.com homepage as one self-contained file — from the sources here.
 // Run: node build.mjs (highskore.com copies the result to its public/planet.html).
 // With --widget it builds the desktop widget's page instead, into dist/index.html under the directory it runs from
-// (the root of highskore/powerrr, which has this repo as its game/ submodule)
+// (the root of highskore/idle-fighterz-widget, which has this repo as its game/ submodule)
 // With --rust the planet runs on the Rust core (rust/planet-web, built first with sh rust/planet-web/build.sh) behind the
 // same HTML HUD; game.js stays in the page only to draw, in lockstep, until the Rust renderer lands (rust/HUD.md)
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -58,7 +58,7 @@ const head = `<!doctype html>
 if (widget) {
   const out = join(process.cwd(), 'dist')
   mkdirSync(out, { recursive: true })
-  writeFileSync(join(out, 'index.html'), '<!doctype html>\n<html lang="en" class="widget">\n<head>\n<meta charset="utf-8">\n<title>powerrr</title>\n' + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
+  writeFileSync(join(out, 'index.html'), '<!doctype html>\n<html lang="en" class="widget">\n<head>\n<meta charset="utf-8">\n<title>Idle FighterZ</title>\n' + page.slice(0, split) + '\n</head>\n<body>\n' + page.slice(split) + '\n</body>\n</html>\n')
   console.log(join(out, 'index.html'), 'written')
 } else {
   mkdirSync(join(here, 'dist'), { recursive: true })

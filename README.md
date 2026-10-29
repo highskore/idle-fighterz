@@ -2,14 +2,14 @@
 
 <img src="docs/icon.png" width="96" alt="">
 
-# planet
+# Idle FighterZ
 
 **A pixel-art idle game on a tiny planet.**
 
-Your hero runs laps around a planet you can spin, powers up through the forms, visits other worlds and fights off villain raids. It's the homepage of [highskore.com](https://highskore.com), and the [Powerrr](https://github.com/highskore/powerrr) desktop widget is built from it too.
+Your hero runs laps around a planet you can spin, powers up through the forms, visits other worlds and fights off villain raids. It's the homepage of [highskore.com](https://highskore.com), and the [Idle FighterZ widget](https://github.com/highskore/idle-fighterz-widget) for the desktop is built from it too.
 
 [![Play](https://img.shields.io/badge/play-highskore.com-f59e0b)](https://highskore.com)
-[![Desktop widget](https://img.shields.io/badge/desktop-powerrr-111)](https://github.com/highskore/powerrr)
+[![Desktop widget](https://img.shields.io/badge/desktop-widget-111)](https://github.com/highskore/idle-fighterz-widget)
 ![One HTML file](https://img.shields.io/badge/build-one%20HTML%20file-6b7280)
 ![WebAssembly](https://img.shields.io/badge/WebAssembly-pixel%20kernel-654ff0?logo=webassembly&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -33,7 +33,7 @@ Your hero runs laps around a planet you can spin, powers up through the forms, v
 
 ## Play
 
-Open [highskore.com](https://highskore.com), scroll (or press the cue on a phone), then press start. Every visit starts from zero, so there's nothing to install and nothing to lose. For the desktop, get [Powerrr](https://github.com/highskore/powerrr).
+Open [highskore.com](https://highskore.com), scroll (or press the cue on a phone), then press start. Every visit starts from zero, so there's nothing to install and nothing to lose. For the desktop, get the [Idle FighterZ widget](https://github.com/highskore/idle-fighterz-widget).
 
 | | |
 |---|---|
