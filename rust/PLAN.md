@@ -3,7 +3,7 @@
 One Rust codebase built two ways:
 
 - **Web:** compiled to WebAssembly. It draws into the existing canvas on highskore.com, and the HTML HUD stays.
-- **Widget:** compiled natively inside the Powerrr Tauri app. It draws through wgpu (or softbuffer) instead of a web view's canvas.
+- **Widget:** compiled natively inside the Idle FighterZ widget (Tauri). It draws through wgpu (or softbuffer) instead of a web view's canvas.
 
 The JS game (`game.js`, `world.js`, `shenron.js`, `page.html`) stays the live game until the port reaches parity. `node build.mjs --rust` builds a page where planet-core runs the game behind the HTML HUD (stage 4, [HUD.md](HUD.md)); the default build doesn't touch `rust/`.
 

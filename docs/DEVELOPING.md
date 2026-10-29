@@ -30,12 +30,12 @@ The game is one self-contained HTML page, stitched together from these sources:
 | `build.mjs` | stitches them into one page |
 
 ```sh
+npm ci                    # once: esbuild, subset-font and the fonts (@fontsource)
 node build.mjs            # → dist/planet.html, the highskore.com homepage
-npm install               # once, for the widget's inlined fonts (@fontsource)
 node build.mjs --widget   # → dist/index.html under the current directory, the powerrr widget's page
 ```
 
-No dependencies for the site build: `wasm/px.wasm` is committed and inlined as base64, so the page stays one file. After changing `wasm/src/lib.rs`, rebuild it with `npm run wasm` (Rust and `rustup target add wasm32-unknown-unknown`). The module has no dependencies and imports only `Math.pow`; each function is a line-for-line port of a JS loop that stays as the fallback (no WebAssembly, or a CSP without `wasm-unsafe-eval`), and both draw the same pixels. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build also leaves out the CDN three.js and Google Fonts and inlines the fonts from `@fontsource` in the `node_modules` of the directory it runs from.
+The site page fetches nothing: the build inlines its fonts, cut down to the characters the page has (`subset-font`), and three.js, bundled by esbuild with just what the title uses and placed after the game's script, so the game is playable before the title is built; then it minifies the scripts. Only the shipped page is minified: the sources the Rust difftest reads stay as they are. `wasm/px.wasm` is committed and inlined as base64, so the page stays one file. After changing `wasm/src/lib.rs`, rebuild it with `npm run wasm` (Rust and `rustup target add wasm32-unknown-unknown`). The module has no dependencies and imports only `Math.pow`; each function is a line-for-line port of a JS loop that stays as the fallback (no WebAssembly, or a CSP without `wasm-unsafe-eval`), and both draw the same pixels. Code fenced by `/*widget*/…/*/widget*/` in `page.html`, `game.js` and `world.js` is kept only in the widget build; the site build drops it whole, so its output doesn't change. The widget build leaves out three.js and inlines the full fonts from `@fontsource` in the `node_modules` of the directory it runs from.
 
 Open `dist/planet.html` in a browser to play it locally.
 
@@ -78,7 +78,7 @@ grep -n 'preview hook' game.js
 
 ## The Rust port
 
-`rust/` is a port of the game to Rust, built two ways: to WebAssembly for the site, and natively for the powerrr widget. The JS game stays the live game until the port reaches parity; the default build doesn't touch `rust/`. The plan and its stages are in [rust/PLAN.md](../rust/PLAN.md), and the HUD bridge in [rust/HUD.md](../rust/HUD.md).
+`rust/` is a port of the game to Rust, built two ways: to WebAssembly for the site, and natively for the Idle FighterZ widget. The JS game stays the live game until the port reaches parity; the default build doesn't touch `rust/`. The plan and its stages are in [rust/PLAN.md](../rust/PLAN.md), and the HUD bridge in [rust/HUD.md](../rust/HUD.md).
 
 ```sh
 npm run wasm:rust    # sh rust/planet-web/build.sh
@@ -97,9 +97,9 @@ npm run test:visual  # the pixel baselines in test/browser/__screenshots__ (Linu
 npm run shots        # the same screenshots into shots/, without comparing
 ```
 
-The browser tests (`test/browser/`, Playwright) serve the page, its fonts (from `@fontsource`) and three.js from disk, run the game on Playwright's fake clock and seed `Math.random` with the difftest's LCG, so a state draws the same pixels every run. The 3D title is stubbed out (software WebGL takes seconds a frame) except in one hooks test. A visual state's canvas must match its baseline exactly; the whole page may differ by a shade where Chromium anti-aliases text and rounded corners. Every CI run uploads its screenshots as the `screenshots` artifact and links them on the pull request. To take new baselines, run the workflow by hand with *update baselines* (it commits them to the branch), or copy a run's `screenshots` artifact over `test/browser/__screenshots__`.
+The browser tests (`test/browser/`, Playwright) serve the page from disk, run the game on Playwright's fake clock and seed `Math.random` with the difftest's LCG, so a state draws the same pixels every run. The 3D title is stubbed out (software WebGL takes seconds a frame) except in one hooks test. A visual state's canvas must match its baseline exactly; the whole page may differ by a shade where Chromium anti-aliases text and rounded corners. Every CI run uploads its screenshots as the `screenshots` artifact and links them on the pull request. To take new baselines, run the workflow by hand with *update baselines* (it commits them to the branch), or copy a run's `screenshots` artifact over `test/browser/__screenshots__`.
 
 ## Where it's used
 
-- **highskore.com** has this repo as a submodule at `games/planet`; its `pnpm build:planet` runs `node build.mjs` and copies `dist/planet.html` to `public/planet.html`.
+- **highskore.com** has this repo as a submodule at `games/planet`; its `pnpm build:planet` runs `npm ci` here, then `node build.mjs`, and copies `dist/planet.html` to `public/planet.html`.
 - **[powerrr](https://github.com/highskore/powerrr)** has it as a submodule at `game/`, and builds the widget page with `node game/build.mjs --widget`.
