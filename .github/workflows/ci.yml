@@ -91,6 +91,7 @@ jobs:
         run: sh wasm/build.sh && git diff --exit-code --stat wasm/px.wasm
       - name: planet-web
         run: sh rust/planet-web/build.sh
+      - run: npm ci
       - name: The --rust page
         run: node build.mjs --rust
       - name: The --rust page's game against the drawing

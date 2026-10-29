@@ -1,6 +1,5 @@
-// Opens dist/planet.html in Chromium with no network: the page, its Google Fonts (from @fontsource) and three.js (from
-// node_modules) are all served from disk. Time is Playwright's fake clock and Math.random is the difftest harness's LCG,
-// so the same steps draw the same pixels.
+// Opens dist/planet.html in Chromium with no network: the page carries its fonts and three.js. Time is Playwright's fake
+// clock and Math.random is the difftest harness's LCG, so the same steps draw the same pixels.
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -16,11 +15,6 @@ export const SIZES = {
   phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
 }
 
-const nm = p => join(ROOT, 'node_modules', p)
-const FONT_CSS = ['fragment-mono/400.css', 'fragment-mono/400-italic.css', 'instrument-serif/400.css', 'instrument-serif/400-italic.css', 'press-start-2p/400.css']
-  .map(f => readFileSync(nm('@fontsource/' + f), 'utf8').replaceAll('url(./files/', `url(${ORIGIN}/fontsource/${f.split('/')[0]}/files/`)).join('\n')
-const THREE = 'https://cdn.jsdelivr.net/npm/three@0.147.0/'
-
 // before any page script, over the fake clock: the harness's LCG (planet-core's Lcg) as Math.random; performance.now
 // counted from EPOCH and animation frames as 16ms timers on the fake clock (its own origin and frame phase drift with the
 // real page load); and
@@ -33,16 +27,12 @@ const init = ([seed, epoch]) => {
   window.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} }
 }
 
+// the page, and nothing else; with no title, without its three.js, so the title falls back as it does without WebGL (and
+// three.js's start-up draws nothing from the seeded Math.random)
 const serve = title => async route => {
-  const url = route.request().url()
-  if (!title && url.startsWith(THREE)) return route.fulfill({ contentType: 'text/javascript', body: '' })
-  const file = url.startsWith(ORIGIN + '/fontsource/') ? nm('@fontsource/' + url.slice(ORIGIN.length + 12))
-    : url.startsWith(THREE) ? nm('three/' + url.slice(THREE.length))
-    : url.split('#')[0] === ORIGIN + '/' ? join(ROOT, 'dist', 'planet.html') : null
-  if (url.startsWith('https://fonts.googleapis.com/')) return route.fulfill({ contentType: 'text/css', body: FONT_CSS })
-  if (!file) return route.abort('blockedbyclient')
-  const type = file.endsWith('.html') ? 'text/html' : file.endsWith('.js') ? 'text/javascript' : file.endsWith('.woff2') ? 'font/woff2' : 'font/woff'
-  return route.fulfill({ contentType: type, body: readFileSync(file) })
+  if (route.request().url().split('#')[0] !== ORIGIN + '/') return route.abort('blockedbyclient')
+  const html = readFileSync(join(ROOT, 'dist', 'planet.html'), 'utf8')
+  return route.fulfill({ contentType: 'text/html', body: title ? html : html.replace(/<script id="three">[\s\S]*?<\/script>/, '') })
 }
 
 // errors collects every uncaught exception, console.error and blocked request
