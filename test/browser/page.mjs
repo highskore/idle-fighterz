@@ -1,6 +1,7 @@
-// Opens dist/planet.html in Chromium with no network: the page carries its fonts and three.js. Time is Playwright's fake
-// clock and Math.random is the difftest harness's LCG, so the same steps draw the same pixels.
-import { readFileSync } from 'node:fs'
+// Opens dist/planet.html in Chromium with no network: the page carries its fonts and three.js (and ?rust fetches its two
+// files from dist). Time is Playwright's fake clock and Math.random is the difftest harness's LCG, so the same steps draw
+// the same pixels.
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -27,16 +28,24 @@ const init = ([seed, epoch]) => {
   window.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} }
 }
 
-// the page, and nothing else; with no title, without its three.js, so the title falls back as it does without WebGL (and
-// three.js's start-up draws nothing from the seeded Math.random)
+// the page and the Rust engine's files, and nothing else; with no title, without its three.js, so the title falls back as
+// it does without WebGL (and three.js's start-up draws nothing from the seeded Math.random)
+export const RUST_FILES = { '/planet-rust.js': 'text/javascript', '/planet-rust.wasm': 'application/wasm' }
 const serve = title => async route => {
-  if (route.request().url().split('#')[0] !== ORIGIN + '/') return route.abort('blockedbyclient')
+  const url = new URL(route.request().url())
+  if (url.origin !== ORIGIN) return route.abort('blockedbyclient')
+  if (RUST_FILES[url.pathname]) return route.fulfill({ contentType: RUST_FILES[url.pathname], body: readFileSync(join(ROOT, 'dist', url.pathname)) })
+  if (url.pathname !== '/') return route.abort('blockedbyclient')
   const html = readFileSync(join(ROOT, 'dist', 'planet.html'), 'utf8')
   return route.fulfill({ contentType: 'text/html', body: title ? html : html.replace(/<script id="three">[\s\S]*?<\/script>/, '') })
 }
 
-// errors collects every uncaught exception, console.error and blocked request
-export async function open(page, hash = '', { seed = 1, title = true } = {}) {
+// whether dist has the ?rust engine (a wasm build was there when build.mjs ran)
+export const hasRust = () => existsSync(join(ROOT, 'dist', 'planet-rust.wasm'))
+
+// errors collects every uncaught exception, console.error and blocked request; rust opens the page with ?rust and waits
+// for its engine
+export async function open(page, hash = '', { seed = 1, title = true, rust = false } = {}) {
   const errors = []
   page.on('pageerror', e => errors.push('pageerror: ' + (e.stack || e.message)))
   page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text()) })
@@ -45,7 +54,8 @@ export async function open(page, hash = '', { seed = 1, title = true } = {}) {
   await page.clock.install({ time: EPOCH })
   await page.clock.pauseAt(EPOCH + 1000)
   await page.addInitScript(init, [seed, EPOCH])
-  await page.goto(ORIGIN + '/' + hash, { waitUntil: 'load' })
+  await page.goto(ORIGIN + '/' + (rust ? '?rust' : '') + hash, { waitUntil: 'load' })
+  if (rust) await page.waitForSelector('html[data-engine="rust"]', { state: 'attached' })
   await page.evaluate(() => Promise.all(['16px "Fragment Mono"', 'italic 16px "Fragment Mono"', '16px "Instrument Serif"', 'italic 16px "Instrument Serif"', '16px "Press Start 2P"'].map(f => document.fonts.load(f))))
   await settle(page)
   return errors
