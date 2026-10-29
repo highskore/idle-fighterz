@@ -204,7 +204,7 @@ impl Game {
     }
 
     pub fn zeno_ready(&self) -> bool {
-        self.s.gods >= ZENO_GODS
+        self.s.gods >= ZENO_GODS * (1 + self.s.zeno)
     }
 
     pub fn god_boost_of(n: f64) -> f64 {
@@ -295,7 +295,12 @@ impl Game {
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
-        self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
+        let m = self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake;
+        if m < MAX_MULT {
+            m
+        } else {
+            MAX_MULT
+        }
     }
 
     pub fn lap_value(&self) -> f64 {
@@ -391,8 +396,8 @@ impl Game {
     }
 
     pub fn gain(&mut self, n: f64) {
-        let n = js_round(n).max(1.0);
-        self.s.pl += n;
+        let n = if n > 1.0 { MAX_PL.min(js_round(n)) } else { 1.0 };
+        self.s.pl = MAX_PL.min(self.s.pl + n);
         if self.s.pl > self.s.best {
             self.s.best = self.s.pl;
         }

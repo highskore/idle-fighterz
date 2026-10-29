@@ -21,11 +21,11 @@ const SCENARIOS = {
       if (f % 30 === 0) { buyAll(g, act, [...POLICY, 'tail']); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }
     },
   },
-  // ultra instinct opens the multiverse: universe fights, then god ki (a second reset brings zeno) and the zeno erase
+  // ultra instinct opens the multiverse: universe fights, then god ki (after one erase, a fourth reset brings zeno back) and the zeno erase
   multiverse: {
     seed: 5, minutes: 14,
     script(g, f, act) {
-      if (f === 0) for (const [k, v] of [['pl', 5e19], ['best', 5e19], ['gravity', 60], ['wishes', 12], ['ascend', 400], ['seeds', 30], ['house', 40], ['partner', 60], ['piccolo', 25], ['boots', 70], ['scouter', 4], ['kaio', 3], ['galick', 5], ['armor', 12], ['gods', 1], ['zeno', 1], ['godTotal', 3], ['ustars', 2]]) act({ a: 'set', k, v })
+      if (f === 0) for (const [k, v] of [['pl', 5e19], ['best', 5e19], ['gravity', 60], ['wishes', 12], ['ascend', 400], ['seeds', 30], ['house', 40], ['partner', 60], ['piccolo', 25], ['boots', 70], ['scouter', 4], ['kaio', 3], ['galick', 5], ['armor', 12], ['gods', 3], ['zeno', 1], ['godTotal', 3], ['ustars', 2]]) act({ a: 'set', k, v })
       if (f % 4 === 0 && f % 600 < 400) act({ a: 'train' })
       if (f % 3 === 0) clickTargets(g, act)
       if (f % 30 === 0 && f >= 60) { buyAll(g, act); if (g.ev('S.kaio > 0 && st.t >= kaioReady')) act({ a: 'kaio' }) }

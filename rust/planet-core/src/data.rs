@@ -249,6 +249,9 @@ pub const GOALS: [Goal; 9] = [
 
 // economy tuning
 pub const ECON: f64 = 0.35;
+/// power and its multiplier stop short of Infinity, so costs and resets never go NaN
+pub const MAX_MULT: f64 = 1e200;
+pub const MAX_PL: f64 = 1e300;
 pub const SEED_SOFT: f64 = 10.0;
 pub const SEED_EXP: f64 = 0.5;
 pub const CEIL0: f64 = 20.0;
@@ -258,7 +261,7 @@ pub const CEIL_EXP: f64 = 0.15;
 pub const STAR_X: f64 = 1.5;
 pub const GOD_X: f64 = 1.0;
 pub const MASTERY_X: f64 = 1.25;
-pub const ZENO_X: f64 = 1000.0;
+pub const ZENO_X: f64 = 10.0;
 pub const ZENO_GODS: u32 = 2;
 /// game.js laps at 6.283, a hair short of 2π; kept so lap timing matches
 #[allow(clippy::approx_constant)]

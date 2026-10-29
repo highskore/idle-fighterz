@@ -2945,9 +2945,9 @@ GAMES.push({
       { id: 'stars', who: 'vados', tier: 1, cost: 2, name: 'twin stars', what: 'universe stars count double' },
       { id: 'priest', who: 'vados', tier: 2, cost: 3, name: "grand priest's nod", what: 'every god ki reset pays double' },
     ];
-    const AUTO_AT = [0, 1e9, 1e12, 1e15, 1e18, 1e21], GOD_X = 1, MASTERY_X = 1.25, ZENO_X = 1000, ZENO_GODS = 2;   // zeno shows up after this many god ki resets
+    const AUTO_AT = [0, 1e9, 1e12, 1e15, 1e18, 1e21], GOD_X = 1, MASTERY_X = 1.25, ZENO_X = 10, ZENO_GODS = 2;   // zeno shows up after this many god ki resets, and that many more after each erase
     const godNow = () => Math.max(S.gods ? 0 : 1, S.uni) * (ang('priest') ? 2 : 1);   // one per universe cleared this cycle (the very first reset pays one regardless)
-    const angelOpen = a => ANGELS.filter(x => x.who === a.who && ang(x.id)).length >= a.tier, zenoReady = () => S.gods >= ZENO_GODS;
+    const angelOpen = a => ANGELS.filter(x => x.who === a.who && ang(x.id)).length >= a.tier, zenoReady = () => S.gods >= ZENO_GODS * (1 + S.zeno);
     const godBoostOf = n => 1 + GOD_X * n;   // each god ki ever earned: +100% on everything, spent or not
     // the ki ceiling: gravity, wishes and seeds only push so far, then shrink to a small power. it rises with every minute in the multiverse and a little per universe cleared, so the walls set the late pace
     const CEIL0 = 20, CEIL_T = 1.08, CEIL_STEP = 2, CEIL_EXP = .15;   // the step counts your best universe this run, so god ki doesn't take it back
@@ -2955,6 +2955,7 @@ GAMES.push({
     const lateBoost = () => STAR_X ** (S.ustars * (ang('stars') ? 2 : 1)) * MASTERY_X ** S.mastery * godBoostOf(S.godTotal) * ZENO_X ** S.zeno;
     const chamberLen = () => 15, chamberX = (lv = S.chamber) => 1.5 + .5 * lv;   // a fixed 15s visit: the shop raises what training inside pays, the tree brings the door round sooner
     const ECON = .35;   // every gain runs through mult(); an active player reaches super saiyan god in about half an hour
+    const MAX_MULT = 1e200, MAX_PL = 1e300;   // power and its multiplier stop short of Infinity, so costs and resets never go NaN
     const core = () => Math.pow(1.15, S.gravity) * Math.pow(1.25, S.wishes) * (1 + .05 * lvl('wish') * S.wishes) * seedBoost() * ECON;   // the engine the ki ceiling caps; forms sit outside it; shenron's favour adds per wish, compounding it snowballed
     // the great ape: tail training (shop) makes him bigger, longer and stronger; shenron's "bigger great ape" makes the next one a giant on top
     let ape = { cd: 0, rage: 0, giant: false, at: 0, k: 2.3 };
@@ -2963,7 +2964,8 @@ GAMES.push({
     const apeWant = () => 2.3 * (1 + .08 * tailLv()) * (ape.giant ? 1 + .5 * Math.min(1, (st.t - ape.at) / 1.2) : 1);
     const mult = (bare) => {   // permanent boosts multiply; temporary ones add their bonuses, so a pile of buffs can't explode
       const T = st.t, b = bare ? 1 : 1 + (carUntil > T) * .5 + (boostUntil > T) * 1 + (apeUntil > T) * apeX() + (senzuUntil > T) * .5 + (riding > 0) * .5 + (kaioUntil > T ? KAIO() - 1 : 0) + (dailyUntil > T) * .25 + (fuseUntil > T) * 1 + (fused && fused.until > T ? fused.x - 1 : 0) + (laughUntil > T) * .25 + (chamberUntil > T) * (chamberX() - 1) + (rageUntil > T) * (rage - 1) + (chiUntil > T) * .5 + (roshiUntil > T) * .5 + (calmUntil > T) * .25 + (gadgetUntil > T) * .5;
-      return capped(core()) * FORMS[S.form].x * lateBoost() * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1);
+      const m = capped(core()) * FORMS[S.form].x * lateBoost() * b * (kaioUntil <= T && tiredUntil > T ? .75 : 1) * (bz && bz.awake ? .25 : 1);
+      return m < MAX_MULT ? m : MAX_MULT;
     };
     const lapValue = () => 30 * (1 + S.boots * ms('boots'));
     const passive = () => (S.partner * 4 * ms('partner') + S.house * 40 * ms('house') + S.piccolo * 60 * ms('piccolo')) * (1 + .5 * lvl('idle')) * (wished('idle') ? 3 : 1) * (lvl('eternal') ? 3 : 1) * (S.krillinAlly ? 1.5 : 1);
@@ -3300,7 +3302,7 @@ GAMES.push({
       setTimeout(() => ui.event(`achievement — ${a.name}` + (c ? ` · ${c.name} unlocked` : ''), 3200), 900); ui.sfx && ui.sfx('coin'); ui.achieved && ui.achieved(); save();
     }
     const once = (key, text) => { if (seen.has(key)) return; seen.add(key); ui.event(text); };
-    const gain = (n, x, y, gold) => { n = Math.max(1, Math.round(n)); S.pl += n; if (S.pl > S.best) S.best = S.pl; if (S.pl > S.runBest) S.runBest = S.pl; if (x !== undefined) floats.push({ x, y, s: '+' + fmtShort(n), life: 1, gold }); };
+    const gain = (n, x, y, gold) => { n = n > 1 ? Math.min(MAX_PL, Math.round(n)) : 1; S.pl = Math.min(MAX_PL, S.pl + n); if (S.pl > S.best) S.best = S.pl; if (S.pl > S.runBest) S.runBest = S.pl; if (x !== undefined) floats.push({ x, y, s: '+' + fmtShort(n), life: 1, gold }); };
     const SUF = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
     const fmtShort = n => { if (n < 1e4) return String(n); let e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); if (+m.toFixed(m < 100 ? 1 : 0) >= 1000) { e++; m /= 1000; } return e < SUF.length ? m.toFixed(m < 100 ? 1 : 0) + SUF[e] : n.toExponential(1).replace('+', ''); };
     const floats = [];
