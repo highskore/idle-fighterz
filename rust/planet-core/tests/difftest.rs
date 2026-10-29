@@ -49,6 +49,16 @@ fn wishes() {
 }
 
 #[test]
+fn toptaste() {
+    scenario("toptaste");
+}
+
+#[test]
+fn sides() {
+    scenario("sides");
+}
+
+#[test]
 fn lookout() {
     scenario("lookout");
 }

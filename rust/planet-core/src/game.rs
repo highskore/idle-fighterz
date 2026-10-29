@@ -21,6 +21,7 @@ pub struct Buffs {
     pub kaio_until: f64,
     pub tired_until: f64,
     pub kaio_ready: f64,
+    pub asc_ready: f64,
     pub daily_until: f64,
     pub fuse_until: f64,
     pub fused: Option<(f64, f64)>, // (x, until)
@@ -224,7 +225,7 @@ impl Game {
     }
 
     pub fn zeno_ready(&self) -> bool {
-        self.s.gods >= ZENO_GODS
+        self.s.gods >= ZENO_GODS * (1 + self.s.zeno)
     }
 
     pub fn god_boost_of(n: f64) -> f64 {
@@ -269,8 +270,37 @@ impl Game {
         }
     }
 
+    /// His bonus on top of ×1; only his size and time slow past lv 10.
     pub fn ape_x(&self) -> f64 {
-        2.0 + 0.25 * self.tail_lv() + if self.tl.ape.giant { 1.0 } else { 0.0 }
+        2.0 + 0.25 * self.s.lvf(Upg::Tail) + if self.tl.ape.giant { 1.0 } else { 0.0 }
+    }
+
+    /// Crit chance past 100%: each 10% of it is +20% crit damage.
+    pub fn crit_over(&self) -> f64 {
+        (self.s.lvf(Upg::Scouter) * 0.1 + self.lvl(N_CRIT) * 0.08 - 1.0).max(0.0)
+    }
+
+    pub fn crit_hit(&self) -> f64 {
+        (2.0 + self.lvl(N_CRITX)) * (1.0 + 2.0 * self.crit_over())
+    }
+
+    /// A senzu bean's boost at a senzu tree level: ×1.5, +0.1 a level past lv 3 (when beans come round fast enough).
+    pub fn senzu_x_at(lv: f64) -> f64 {
+        (15.0 + (lv - 3.0).max(0.0)) / 10.0
+    }
+
+    pub fn senzu_x(&self) -> f64 {
+        Self::senzu_x_at(self.s.lvf(Upg::Senzu))
+    }
+
+    /// A full charge's pay at a galick level: +5% a level.
+    pub fn beam_x_at(lv: f64) -> f64 {
+        (19.0 + lv.max(1.0)) / 20.0
+    }
+
+    /// A big bang's pay, in full beams, at a level: 1.3, +0.05 a level.
+    pub fn bang_x_at(lv: f64) -> f64 {
+        (25.0 + lv) / 20.0
     }
 
     pub fn kaio_x(&self) -> f64 {
@@ -302,7 +332,7 @@ impl Game {
             1.0 + on(b.car_until, 0.5)
                 + on(b.boost_until, 1.0)
                 + on(b.ape_until, self.ape_x())
-                + on(b.senzu_until, 0.5)
+                + on(b.senzu_until, self.senzu_x() - 1.0)
                 + if self.riding > 0.0 { 0.5 } else { 0.0 }
                 + on(b.kaio_until, self.kaio_x() - 1.0)
                 + on(b.daily_until, 0.25)
@@ -318,7 +348,12 @@ impl Game {
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
-        self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
+        let m = self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake;
+        if m < MAX_MULT {
+            m
+        } else {
+            MAX_MULT
+        }
     }
 
     pub fn lap_value(&self) -> f64 {
@@ -414,8 +449,8 @@ impl Game {
     }
 
     pub fn gain(&mut self, n: f64) {
-        let n = js_round(n).max(1.0);
-        self.s.pl += n;
+        let n = if n > 1.0 { MAX_PL.min(js_round(n)) } else { 1.0 };
+        self.s.pl = MAX_PL.min(self.s.pl + n);
         if self.s.pl > self.s.best {
             self.s.best = self.s.pl;
         }
@@ -549,7 +584,7 @@ impl Game {
         let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots))
             * self.mult(false)
             * self.combo
-            * if crit { 2.0 + self.lvl(N_CRITX) } else { 1.0 }
+            * if crit { self.crit_hit() } else { 1.0 }
             * (1.0 + 0.5 * self.lvl(N_FIST))
             * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
         let k = self.kid_screen(14.0);
@@ -757,6 +792,10 @@ impl Game {
     }
 
     pub fn ascend(&mut self) {
+        if self.t < self.b.asc_ready {
+            return;
+        }
+        self.b.asc_ready = self.t + ASC_CD;
         let gain = self.seeds_now();
         let keep = (self.s.pl * 0.01 * self.lvl(N_HEAD)).floor();
         self.s.ascend += gain;
@@ -1042,6 +1081,7 @@ impl Game {
             "krillinDead" => s.krillin_dead = v != 0.0,
             "orbs7" => s.orbs7 = v as u32,
             "trips" => s.trips = v as u32,
+            "form" => s.form = v as usize,
             _ => {
                 if let Some(a) = key.strip_prefix("angel.").and_then(angel_ix) {
                     s.angel[a] = v != 0.0;

@@ -5,7 +5,7 @@
 
 use crate::data::{Upg, N_BEAM};
 use crate::game::Game;
-use crate::jsmath::{cos, hypot, log, sin};
+use crate::jsmath::{cos, hypot, sin};
 
 /// A press in progress (game.js's `drag`).
 #[derive(Clone, Copy, Debug)]
@@ -276,9 +276,9 @@ impl Game {
         }
     }
 
-    /// A full charge, in seconds of rate: levels add a little, never compound.
+    /// A full charge, in seconds of rate: levels add, never compound.
     pub fn beam_pay(&self) -> f64 {
-        self.wrate() * 4.0 * (1.0 + 0.25 * log(1f64.max(self.s.lvf(Upg::Galick)))) * (1.0 + 0.25 * self.lvl(N_BEAM))
+        self.wrate() * 4.0 * Self::beam_x_at(self.s.lvf(Upg::Galick)) * (1.0 + 0.25 * self.lvl(N_BEAM))
     }
 
     /// Kaioken times the great ape, on beam and big bang damage (never on what they pay).
@@ -474,7 +474,7 @@ impl Game {
         let r = 18.0 * (1.0 + 0.25 * (bb - 1.0)) * 1f64.max(self.cam.r / 50.0);
         self.inp.blasts.push(Blast { x, y, r: r * if self.b.ape_until > self.t { 1.6 } else { 1.0 }, t0: self.t, kaio: self.b.kaio_until > self.t });
         self.shake = self.shake.max(0.45);
-        let n = self.beam_pay() * (1.3 + 0.05 * bb.log2());
+        let n = self.beam_pay() * Self::bang_x_at(bb);
         self.gain_at(n, x, y - 10.0, true);
         for i in 0..self.tl.saibas.len() {
             let sb = &self.tl.saibas[i];

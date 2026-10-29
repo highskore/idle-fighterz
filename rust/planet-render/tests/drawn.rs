@@ -153,3 +153,13 @@ fn snake_drawn() {
 fn daily_drawn() {
     drawn("daily");
 }
+
+#[test]
+fn toptaste_drawn() {
+    drawn("toptaste");
+}
+
+#[test]
+fn sides_drawn() {
+    drawn("sides");
+}
