@@ -1,0 +1,34 @@
+name: legacy-js
+
+# game.js (and shenron.js, bundled with it) is frozen: the Rust engine is the game, and these are its fallback. A pull
+# request that changes either needs the legacy-js label or a commit in it with a "Legacy-JS: <why>" trailer, so a
+# change to the fallback is always on purpose and says why. Label changes re-run the check.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  frozen:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: game.js changes only on purpose
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'legacy-js') }}
+        run: |
+          changed=$(git diff --name-only "$BASE...$HEAD" -- game.js shenron.js)
+          if [ -z "$changed" ]; then echo 'game.js and shenron.js are unchanged'; exit 0; fi
+          echo "changed: $changed"
+          if [ "$LABELLED" = true ]; then echo 'the pull request has the legacy-js label'; exit 0; fi
+          why=$(git log --format='%(trailers:key=Legacy-JS,valueonly)' "$BASE..$HEAD" | sed '/^$/d')
+          if [ -n "$why" ]; then echo "Legacy-JS: $why"; exit 0; fi
+          echo '::error::game.js is frozen (new features go in rust/). If this change to the legacy fallback is meant, add the legacy-js label or a "Legacy-JS: <why>" trailer to a commit.'
+          exit 1

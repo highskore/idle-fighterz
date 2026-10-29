@@ -37,8 +37,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Site page
-        run: node build.mjs && test -s dist/planet.html
+      - name: Site page without the wasm build (it runs on planet-game.js)
+        run: node build.mjs && test -s dist/planet.html && test -s dist/planet-game.js
       - name: Widget page
         run: node build.mjs --widget && test -s dist/index.html
 
@@ -61,11 +61,38 @@ jobs:
           workspaces: rust
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Tests and the JS-vs-Rust difftest
+      - name: Tests
+        run: cargo test -p planet-core -p planet-web --release --locked
+      - name: Golden traces (rust/golden, npm run golden:update re-records them)
+        run: cargo test -p planet-render --release --locked -- --test-threads=4
+
+  # game.js is frozen: the Rust engine is diffed against it while their behaviour is the same, but a Rust change may mean
+  # to differ, so this one reports without failing the run (rust/golden is what must pass)
+  js-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    continue-on-error: true
+    defaults:
+      run:
+        shell: bash
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Rust ${{ env.RUST_TOOLCHAIN }}
+        run: rustup toolchain install $RUST_TOOLCHAIN --profile minimal && rustup default $RUST_TOOLCHAIN
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rust
+      - name: The JS-vs-Rust difftest (npm run difftest:js)
+        env:
+          JS_PARITY: 1
         run: |
           cargo test -p planet-core --release --locked -- --nocapture 2>&1 | tee test.log
           # the difftest skips itself without node: make sure it ran, and diffed clean
-          if grep 'skipping' test.log; then exit 1; fi
+          if grep 'skipped' test.log; then exit 1; fi
           grep -q ' 0 mismatches' test.log
           if grep -E '[1-9][0-9]* mismatches' test.log; then exit 1; fi
 
@@ -97,21 +124,18 @@ jobs:
         run: cargo test --release --locked -p planet-core --lib --target wasm32-wasip1 -- jsmath
       - name: planet-web
         run: sh rust/planet-web/build.sh
-      - uses: ./.github/actions/browser
-      - name: The site page with its ?rust engine
-        run: node build.mjs --rust && ls -l dist
-      - name: Every pixel baseline again with ?rust
-        run: npx playwright test visual --grep @rust
-      - name: Upload expected, actual and diff
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      # the site page's engine, for the browser jobs
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: rust-visual-diffs
-          path: test-results/
-          if-no-files-found: ignore
+          name: planet-web
+          path: rust/planet-web/pkg/
+          if-no-files-found: error
+      - name: The site page with its engine
+        run: npm ci && node build.mjs --rust && ls -l dist
 
   hooks:
     runs-on: ubuntu-24.04
+    needs: wasm
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -119,21 +143,30 @@ jobs:
         size: [desktop, phone]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: planet-web
+          path: rust/planet-web/pkg/
       - uses: ./.github/actions/browser
-      - name: Every preview hook, no page or console errors
+      - name: Every preview hook on the Rust engine, no page or console errors
         run: npx playwright test hooks --project ${{ matrix.size }}
 
   visual:
     if: ${{ !inputs.update_baselines }}
     runs-on: ubuntu-24.04
+    needs: wasm
     timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: planet-web
+          path: rust/planet-web/pkg/
       - uses: ./.github/actions/browser
-      - name: Pixel baselines
+      - name: Pixel baselines, on the Rust engine and (@js) game.js's fallback
         id: test
         run: npx playwright test visual
       - name: Upload the screenshots
@@ -174,11 +207,16 @@ jobs:
   baselines:
     if: ${{ inputs.update_baselines }}
     runs-on: ubuntu-24.04
+    needs: wasm
     timeout-minutes: 20
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: planet-web
+          path: rust/planet-web/pkg/
       - uses: ./.github/actions/browser
       - run: npx playwright test visual --update-snapshots=all
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
