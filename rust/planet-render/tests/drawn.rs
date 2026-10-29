@@ -8,6 +8,8 @@
 //! against them in seconds. Each scenario is its own test: run them side by side with `--test-threads=4`. A trace
 //! can't be cut into chunks run side by side: game.js's state lives in `mount()`'s closure, so it can't be saved, and a
 //! fast headless run doesn't reach the drawn state (drawing spends random draws and writes screen spots back).
+//! `itx` and `toptaste` aren't drawn: their scripts end by asserting what the headless random stream brings (a beam
+//! struggle, the form wish auto-picked), and drawing spends draws of its own, so run.js stops before a trace exists.
 //! Needs `node`; skips without.
 
 #[path = "../../planet-core/tests/replay/mod.rs"]
@@ -100,11 +102,6 @@ fn calm_drawn() {
 }
 
 #[test]
-fn itx_drawn() {
-    drawn("itx");
-}
-
-#[test]
 fn attacks_drawn() {
     drawn("attacks");
 }
@@ -152,11 +149,6 @@ fn snake_drawn() {
 #[test]
 fn daily_drawn() {
     drawn("daily");
-}
-
-#[test]
-fn toptaste_drawn() {
-    drawn("toptaste");
 }
 
 #[test]
