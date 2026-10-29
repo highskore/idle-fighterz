@@ -3,7 +3,7 @@
 //! game's random stream stays where game.js leaves it. Screen spots game.js writes back while drawing (where the
 //! hero, piccolo, bubbles and the visitors stand) are written back to the game the same way.
 
-use planet_core::data::{Upg, ALL_FORMS};
+use planet_core::data::{Upg, ALL_FORMS, FORM_AURA};
 use planet_core::geom::{ap, dot, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, pow, sin};
 use planet_core::num::js_round;
@@ -604,7 +604,7 @@ impl Scene {
                 } else if g.s.form == 0 && g.s.aura > 0 {
                     AURAS[((g.s.aura - 1) % 4) as usize].to_vec()
                 } else {
-                    FORM_LOOK[fi].0.to_vec()
+                    FORM_AURA[fi].to_vec()
                 };
                 let p = Particle::new(kd.x + sin(kd.ang) * (lift + 10.0) + cos(a) * r, kd.y - cos(kd.ang) * (lift + 10.0) + sin(a) * r * 0.5, &col)
                     .v(sin(kd.ang) * 20.0, -cos(kd.ang) * 30.0)
@@ -613,7 +613,7 @@ impl Scene {
                 g.fx.push(p);
             }
         }
-        if let Some(sp) = FORM_LOOK[fi].1 {
+        if let Some(sp) = FORM_SPARK[fi] {
             if seen && g.rng.random() < 0.35 {
                 let mut x = kd.x + (g.rng.random() - 0.5) * 22.0;
                 let mut y = kd.y - cos(kd.ang) * (lift + 14.0) + (g.rng.random() - 0.5) * 26.0;
@@ -848,22 +848,22 @@ fn hero_id(g: &Game) -> &'static str {
     }
 }
 
-/// Each form's aura colours and sparks, by `ALL_FORMS` index.
-const FORM_LOOK: [([u32; 3], Option<u32>); 14] = [
-    ([0xffffff, 0xbfe9ff, 0x6fb0ff], None),
-    ([0xffffff, 0xfff8b0, 0xffe02e], None),
-    ([0xffffff, 0xfff8b0, 0xffe02e], Some(0x9fdcff)),
-    ([0xffffff, 0xfff8b0, 0xffd60a], Some(0x9fdcff)),
-    ([0xffd0c0, 0xff7a5a, 0xd8344a], None),
-    ([0xffffff, 0x9fe6ff, 0x2f9ae0], None),
-    ([0xe6d6ff, 0xa070f0, 0x4a1f9a], Some(0xc9a2ff)),
-    ([0xffffff, 0xff9a8a, 0xc8302a], Some(0xffd0a0)),
-    ([0xffffff, 0xd8e8ff, 0x8aa0c8], Some(0xffffff)),
-    ([0xffffff, 0xeef2ff, 0xa8b4d0], Some(0xffffff)),
-    ([0xc8e8ff, 0x3a74d8, 0x122e78], Some(0x9fdcff)),
-    ([0xffffff, 0xe2d4ff, 0x8a4ae0], Some(0xf0e4ff)),
-    ([0xd8c0ff, 0x7a3ad0, 0x2a0a5a], Some(0xc9a2ff)),
-    ([0xffffff, 0xfff4b0, 0x6ab8f0], Some(0xd8f2ff)),
+/// Each form's sparks, by `ALL_FORMS` index.
+const FORM_SPARK: [Option<u32>; 14] = [
+    None,
+    None,
+    Some(0x9fdcff),
+    Some(0x9fdcff),
+    None,
+    None,
+    Some(0xc9a2ff),
+    Some(0xffd0a0),
+    Some(0xffffff),
+    Some(0xffffff),
+    Some(0x9fdcff),
+    Some(0xf0e4ff),
+    Some(0xc9a2ff),
+    Some(0xd8f2ff),
 ];
 /// The base form's capsule auras.
 const AURAS: [[u32; 3]; 4] = [[0xffffff, 0xffc2e2, 0xf05aa8], [0xffffff, 0xb8f5dc, 0x2fbf8a], [0xffffff, 0xffd8a0, 0xf28a1c], [0xffffff, 0xd9c8ff, 0x7a4ae0]];
