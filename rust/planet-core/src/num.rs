@@ -2,6 +2,7 @@
 //! power formatters: the game's `fmtShort` and the HUD's `fmt` / `short` from page.html.
 
 /// `Math.round`: halves go up, toward +infinity.
+#[inline]
 pub fn js_round(x: f64) -> f64 {
     let f = x.floor();
     if x - f >= 0.5 {

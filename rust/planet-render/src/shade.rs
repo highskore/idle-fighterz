@@ -28,11 +28,28 @@ pub struct Axes {
     pub top_dmg: f64,
 }
 
+thread_local! {
+    static CUBES: std::cell::RefCell<Vec<(u64, f64)>> = std::cell::RefCell::new(vec![(u64::MAX, f64::NAN); 4096]);
+}
+
+/// `Math.pow(x, 3)`, remembered: a sphere's pixels share a few thousand normals frame after frame, and pow costs more
+/// in wasm than all the rest of a pixel's shading
+fn cube(x: f64) -> f64 {
+    let b = x.to_bits();
+    CUBES.with_borrow_mut(|m| {
+        let e = &mut m[((b ^ (b >> 23) ^ (b >> 41)) & 4095) as usize];
+        if e.0 != b {
+            *e = (b, pow(x, 3.0));
+        }
+        e.1
+    })
+}
+
 /// `shadePlanet(o, n, x, y)`
 pub fn planet(c: &Ctx, b: &Built, ax: &Axes, n: V3, x: i64, y: i64) -> u32 {
     let t = c.tones;
     let nb = ap_t(&c.m, n);
-    let lum = c.light(n) + pow(1.0 - n[2], 3.0) * 0.15;
+    let lum = c.light(n) + cube(1.0 - n[2]) * 0.15;
     if c.world == 6 {
         return kame(c, ax, nb, lum, x, y);
     }

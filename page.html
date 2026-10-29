@@ -435,7 +435,7 @@ __WIDGET_CSS__
 let BARE = WIDGET;   // the floating widget draws no sky or backdrops; its window mode (a setting) turns them back on
 /*/widget*/__WORLD__
 __PLANET__
-__MAIN__(() => {
+__MAIN__(engine => {   // engine: a promise when the game waits for the Rust engine (loader.js); the rest of the page doesn't
   const $ = id => document.getElementById(id), root = document.documentElement;
 
   const SUF = ['', '', '', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
@@ -509,7 +509,7 @@ __MAIN__(() => {
     const k = b.dataset.tab;
     if (k === 'shop') { $('shop').classList.toggle('open'); $('foot').classList.remove('open'); }
     if (k === 'links') { $('foot').classList.toggle('open'); $('shop').classList.remove('open'); }
-    if (k === 'train') game.train && game.train();
+    if (k === 'train' && game && game.train) game.train();
   }));
   document.addEventListener('pointerdown', e => { const f = $('foot'); if (f.classList.contains('open') && !f.contains(e.target) && !e.target.closest('#menuBtn, [data-tab="links"]')) f.classList.remove('open'); });
   $('shopToggle').addEventListener('click', () => { const open = $('shop').classList.toggle('open'); $('shopToggle').setAttribute('aria-expanded', String(open)); });
@@ -641,8 +641,10 @@ __MAIN__(() => {
   }
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const st = makeStage($('game')); st.resize(); st.night = false; st.calm = reduce;
-  const game = GAMES.find(g => g.id === 'planet').mount(st, ui);
-  const go = () => { if ($('game').classList.contains('playing')) return; $('game').classList.add('playing'); game.start(); ui.fx('lap'); };
+  let game = null, goSoon = false;
+  const mount = () => { game = GAMES.find(g => g.id === 'planet').mount(st, ui); if (goSoon) go(); };
+  const go = () => { if (!game) { goSoon = true; return; } if ($('game').classList.contains('playing')) return; $('game').classList.add('playing'); game.start(); ui.fx('lap'); };
+  if (engine) engine.then(mount); else mount();
   $('play').addEventListener('click', e => { e.stopPropagation(); go(); });
   $('intro').addEventListener('click', go);
   $('kaio').addEventListener('click', () => game.kaioken());
@@ -650,7 +652,7 @@ __MAIN__(() => {
 
   // achievements and characters popup
   let menuTab = 'ach';
-  const achCount = () => { const m = game.menu(), n = m.ach.filter(a => a.done).length; document.querySelectorAll('[data-achn]').forEach(e => { e.textContent = `${n}/${m.ach.length}`; }); };
+  const achCount = () => { if (!game) return; const m = game.menu(), n = m.ach.filter(a => a.done).length; document.querySelectorAll('[data-achn]').forEach(e => { e.textContent = `${n}/${m.ach.length}`; }); };
   const renderMenu = () => {
     const m = game.menu(), body = $('menuBody'); achCount();
     document.querySelectorAll('[data-mt]').forEach(b => b.classList.toggle('on', b.dataset.mt === menuTab));
@@ -705,7 +707,7 @@ __MAIN__(() => {
   $('menuX').addEventListener('click', () => { $('menu').hidden = true; treeNote = ''; });
   $('menu').addEventListener('click', e => { if (e.target === $('menu')) $('menu').hidden = true; });
   addEventListener('keydown', e => { if (e.key === 'Escape') $('menu').hidden = true; });
-  ui.achieved = achCount; achCount();
+  ui.achieved = achCount; if (game) achCount(); else engine.then(achCount);
 
   // the share card, 1200×630: the game beside your power, a stat strip, dragon balls and achievements
   function drawCard(demo) {
@@ -758,7 +760,7 @@ __MAIN__(() => {
     return c;
   }
   let timer = 0;
-  new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); game.resize(); game.frame(st.t, 0); }, 60); }).observe(st.el);   // redraw now: resizing clears the canvas
+  new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); if (game) { game.resize(); game.frame(st.t, 0); } }, 60); }).observe(st.el);   // redraw now: resizing clears the canvas
   let visible = true; new IntersectionObserver(es => { visible = es[0].isIntersecting; }).observe(st.el);
 
   /* 3D pearl logo: one mesh per letter so each can wave, pop and bounce. three.js comes after this script, so the game is playable before the title is built */
@@ -911,7 +913,7 @@ __MAIN__(() => {
     T += dt;   // reduced motion still plays the game (it's the content); it only drops the screen shake
     const scrolling = now - lastScroll < 250, gameDue = visible && now - last >= (scrolling ? 1000 / 60 : /*widget*/WIDGET ? 1000 / st.fps : /*/widget*/1000 / 30) - 2;
     if (R3 && now - lastTitle >= (scrolling ? 1000 / 30 : 1000 / 60) - 2) { lastTitle = now; R3(T); }
-    if (!gameDue) return; const gdt = Math.min(/*widget*/WIDGET ? Math.max(.05, 1.5 / st.fps) : /*/widget*/.05, (now - last) / 1000); last = now;
+    if (!gameDue || !game) return; const gdt = Math.min(/*widget*/WIDGET ? Math.max(.05, 1.5 / st.fps) : /*/widget*/.05, (now - last) / 1000); last = now;
     /*widget*/// battery saver draws at 15fps: each frame also steps the one between, without drawing, so the game runs at full
     // speed in the steps 30fps takes
     if (gdt > .05) { const n = Math.ceil(gdt / .05), d = gdt / n, h = st.headless; st.headless = true; for (let k = n - 1; k > 0; k--) { st.t = T - k * d; game.frame(st.t, d); } st.headless = h; st.t = T; game.frame(T, d); return; }

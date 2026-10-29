@@ -1,21 +1,76 @@
 //! V8's `Math` functions, bit for bit: fdlibm's sin, cos, atan2 and log (V8's `ieee754::*`) and its Kahan `Math.hypot`.
 //! The timeline's geometry (where the hero stands, where a ki blast flies) has to land on the same doubles as game.js.
 //! V8 for arm64 is built with clang's FP contraction, which fuses each `a * b + c` inside an expression (the left
-//! product first) into one rounding, so these use `mul_add` in exactly those places: they match node on arm64 over
+//! product first) into one rounding, so these use `fma` in exactly those places: they match node on arm64 over
 //! 400k random arguments. x86-64 builds have no FMA in their baseline, so V8 there likely differs in the last bit.
 
 #![allow(clippy::excessive_precision, clippy::approx_constant, clippy::eq_op)] // fdlibm as written: its constants digit for digit, x - x for NaN
 
+#[inline]
 fn hi(x: f64) -> u32 {
     (x.to_bits() >> 32) as u32
 }
 
+#[inline]
 fn lo(x: f64) -> u32 {
     x.to_bits() as u32
 }
 
+#[inline]
 fn with_hi(h: u32, l: u32) -> f64 {
     f64::from_bits(((h as u64) << 32) | l as u64)
+}
+
+/// `a * b + c` with one rounding. Native targets have the instruction; wasm has none, and its software `fma` costs
+/// more than the rest of a `sin`, so there it is emulated exactly (Boldo and Melquiond's rounding to odd) whenever
+/// nothing can overflow or underflow, which covers every argument the kernels here see.
+#[inline(always)]
+pub fn fma(a: f64, b: f64, c: f64) -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(r) = fma_odd(a, b, c) {
+        return r;
+    }
+    a.mul_add(b, c)
+}
+
+/// The emulated `fma`, or None outside the exponent range it is proved for (zeros, tiny, huge or non-finite).
+#[inline(always)]
+pub fn fma_odd(a: f64, b: f64, c: f64) -> Option<f64> {
+    // biased exponents within ±400 of 1 for the factors, ±800 for the addend (or an addend of zero)
+    let e = |x: f64, r: u64| ((x.to_bits() >> 52) & 0x7ff).wrapping_sub(1023 - r) <= 2 * r;
+    if !(e(a, 400) && e(b, 400) && (c == 0.0 || e(c, 800))) {
+        return None;
+    }
+    let two_sum = |x: f64, y: f64| {
+        let s = x + y;
+        let bb = s - x;
+        (s, (x - (s - bb)) + (y - bb))
+    };
+    // usually the unfused sum already is the answer: a * b + c = s + r + (the product's error, at most half an ulp of
+    // p), so s stands when |r| plus that bound is under half an ulp of s (a quarter at a power of two)
+    let p = a * b;
+    let (s, r) = two_sum(p, c);
+    let (bs, es, ep) = (s.to_bits(), (s.to_bits() >> 52) & 0x7ff, (p.to_bits() >> 52) & 0x7ff);
+    if es > 64 {
+        let half = f64::from_bits((es - 53 - (bs & ((1 << 52) - 1) == 0) as u64) << 52);
+        if r.abs() < half - f64::from_bits((ep - 53) << 52) {
+            return Some(s);
+        }
+    }
+    let split = |x: f64| {
+        let t = 134217729.0 * x;
+        let h = t - (t - x);
+        (h, x - h)
+    };
+    // the product exactly (Dekker), then c added to its high part exactly
+    let uh = p;
+    let ((ah, al), (bh, bl)) = (split(a), split(b));
+    let ul = ((ah * bh - uh) + ah * bl + al * bh) + al * bl;
+    let (th, tl) = two_sum(c, uh);
+    // the low parts summed, rounded to odd: on an inexact sum, the neighbour whose last bit is 1
+    let (v, ve) = two_sum(tl, ul);
+    let v = if ve != 0.0 && v.to_bits() & 1 == 0 { f64::from_bits(if (ve > 0.0) == (v > 0.0) { v.to_bits() + 1 } else { v.to_bits() - 1 }) } else { v };
+    Some(th + v)
 }
 
 const S1: f64 = -1.66666666666666324348e-01;
@@ -25,6 +80,7 @@ const S4: f64 = 2.75573137070700676789e-06;
 const S5: f64 = -2.50507602534068634195e-08;
 const S6: f64 = 1.58969099521155010221e-10;
 
+#[inline]
 fn k_sin(x: f64, y: f64, iy: bool) -> f64 {
     let ix = hi(x) & 0x7fffffff;
     if ix < 0x3e400000 && x as i32 == 0 {
@@ -32,11 +88,11 @@ fn k_sin(x: f64, y: f64, iy: bool) -> f64 {
     }
     let z = x * x;
     let v = z * x;
-    let r = z.mul_add(z.mul_add(z.mul_add(z.mul_add(S6, S5), S4), S3), S2);
+    let r = fma(z, fma(z, fma(z, fma(z, S6, S5), S4), S3), S2);
     if !iy {
-        v.mul_add(z.mul_add(r, S1), x)
+        fma(v, fma(z, r, S1), x)
     } else {
-        x - (-v).mul_add(S1, z.mul_add(0.5f64.mul_add(y, -(v * r)), -y))
+        x - fma(-v, S1, fma(z, 0.5 * y - v * r, -y))
     }
 }
 
@@ -47,20 +103,21 @@ const C4: f64 = -2.75573143513906633035e-07;
 const C5: f64 = 2.08757232129817482790e-09;
 const C6: f64 = -1.13596475577881948265e-11;
 
+#[inline]
 fn k_cos(x: f64, y: f64) -> f64 {
     let ix = hi(x) & 0x7fffffff;
     if ix < 0x3e400000 && x as i32 == 0 {
         return 1.0;
     }
     let z = x * x;
-    let r = z * z.mul_add(z.mul_add(z.mul_add(z.mul_add(z.mul_add(C6, C5), C4), C3), C2), C1);
+    let r = z * fma(z, fma(z, fma(z, fma(z, fma(z, C6, C5), C4), C3), C2), C1);
     if ix < 0x3fd33333 {
-        1.0 - 0.5f64.mul_add(z, -z.mul_add(r, -(x * y)))
+        1.0 - (0.5 * z - fma(z, r, -(x * y)))
     } else {
         let qx = if ix > 0x3fe90000 { 0.28125 } else { with_hi(ix - 0x00200000, 0) };
-        let hz = 0.5f64.mul_add(z, -qx);
+        let hz = 0.5 * z - qx;
         let a = 1.0 - qx;
-        a - (hz - z.mul_add(r, -(x * y)))
+        a - (hz - fma(z, r, -(x * y)))
     }
 }
 
@@ -72,7 +129,10 @@ const PIO2_2T: f64 = 2.02226624879595063154e-21;
 const PIO2_3: f64 = 2.02226624871116645580e-21;
 const PIO2_3T: f64 = 8.47842766036889956997e-32;
 
+// Where clang fuses a product that is exact (by a power of two, or n by PIO2_1, which has 31 bits, for n < 2^20) the
+// fused and unfused sums are the same double, so those are written unfused: emulating them in wasm costs.
 /// x reduced by n·π/2: (n, y0, y1). Medium arguments only (|x| < 2^19·π/2); past that it defers to the platform.
+#[inline]
 fn rem_pio2(x: f64) -> Option<(i32, f64, f64)> {
     let hx = hi(x) as i32;
     let ix = (hx & 0x7fffffff) as u32;
@@ -104,9 +164,9 @@ fn rem_pio2(x: f64) -> Option<(i32, f64, f64)> {
         return None;
     }
     let t = x.abs();
-    let n = t.mul_add(INVPIO2, 0.5) as i32;
+    let n = fma(t, INVPIO2, 0.5) as i32;
     let fnn = n as f64;
-    let mut r = (-fnn).mul_add(PIO2_1, t);
+    let mut r = t - fnn * PIO2_1;
     let mut w = fnn * PIO2_1T;
     let mut y0;
     let npio2_hw = |n: i32| hi(n as f64 * std::f64::consts::FRAC_PI_2);
@@ -120,14 +180,14 @@ fn rem_pio2(x: f64) -> Option<(i32, f64, f64)> {
             let t = r;
             w = fnn * PIO2_2;
             r = t - w;
-            w = fnn.mul_add(PIO2_2T, -((t - r) - w));
+            w = fma(fnn, PIO2_2T, -((t - r) - w));
             y0 = r - w;
             let i = j - ((hi(y0) >> 20) & 0x7ff) as i32;
             if i > 49 {
                 let t = r;
                 w = fnn * PIO2_3;
                 r = t - w;
-                w = fnn.mul_add(PIO2_3T, -((t - r) - w));
+                w = fma(fnn, PIO2_3T, -((t - r) - w));
                 y0 = r - w;
             }
         }
@@ -137,6 +197,7 @@ fn rem_pio2(x: f64) -> Option<(i32, f64, f64)> {
 }
 
 /// `Math.sin`
+#[inline]
 pub fn sin(x: f64) -> f64 {
     let ix = hi(x) & 0x7fffffff;
     if ix <= 0x3fe921fb {
@@ -155,6 +216,7 @@ pub fn sin(x: f64) -> f64 {
 }
 
 /// `Math.cos`
+#[inline]
 pub fn cos(x: f64) -> f64 {
     let ix = hi(x) & 0x7fffffff;
     if ix <= 0x3fe921fb {
@@ -189,6 +251,7 @@ const AT: [f64; 11] = [
 ];
 
 /// `Math.atan`
+#[inline]
 pub fn atan(x: f64) -> f64 {
     let hx = hi(x) as i32;
     let ix = (hx & 0x7fffffff) as u32;
@@ -210,14 +273,14 @@ pub fn atan(x: f64) -> f64 {
         if ix < 0x3ff30000 {
             if ix < 0x3fe60000 {
                 id = 0;
-                x = 2.0f64.mul_add(x, -1.0) / (2.0 + x);
+                x = fma(2.0, x, -1.0) / (2.0 + x);
             } else {
                 id = 1;
                 x = (x - 1.0) / (x + 1.0);
             }
         } else if ix < 0x40038000 {
             id = 2;
-            x = (x - 1.5) / 1.5f64.mul_add(x, 1.0);
+            x = (x - 1.5) / fma(1.5, x, 1.0);
         } else {
             id = 3;
             x = -1.0 / x;
@@ -225,13 +288,13 @@ pub fn atan(x: f64) -> f64 {
     }
     let z = x * x;
     let w = z * z;
-    let s1 = z * w.mul_add(w.mul_add(w.mul_add(w.mul_add(w.mul_add(AT[10], AT[8]), AT[6]), AT[4]), AT[2]), AT[0]);
-    let s2 = w * w.mul_add(w.mul_add(w.mul_add(w.mul_add(AT[9], AT[7]), AT[5]), AT[3]), AT[1]);
+    let s1 = z * fma(w, fma(w, fma(w, fma(w, fma(w, AT[10], AT[8]), AT[6]), AT[4]), AT[2]), AT[0]);
+    let s2 = w * fma(w, fma(w, fma(w, fma(w, AT[9], AT[7]), AT[5]), AT[3]), AT[1]);
     if id < 0 {
-        return (-x).mul_add(s1 + s2, x);
+        return fma(-x, s1 + s2, x);
     }
     let id = id as usize;
-    let z = ATANHI[id] - (x.mul_add(s1 + s2, -ATANLO[id]) - x);
+    let z = ATANHI[id] - (fma(x, s1 + s2, -ATANLO[id]) - x);
     if hx < 0 {
         -z
     } else {
@@ -245,6 +308,7 @@ const PI_O_2: f64 = 1.5707963267948965580E+00;
 const PI_O_4: f64 = 7.8539816339744827900E-01;
 
 /// `Math.atan2(y, x)`
+#[inline]
 pub fn atan2(y: f64, x: f64) -> f64 {
     if x.is_nan() || y.is_nan() {
         return x + y;
@@ -342,29 +406,29 @@ pub fn log(x: f64) -> f64 {
     let dk = k as f64;
     if (0x000fffff & (2 + hx)) < 3 {
         if f == 0.0 {
-            return if k == 0 { 0.0 } else { dk.mul_add(LN2_HI, dk * LN2_LO) };
+            return if k == 0 { 0.0 } else { fma(dk, LN2_HI, dk * LN2_LO) };
         }
-        let r = f * f * (-0.33333333333333333f64).mul_add(f, 0.5);
-        return if k == 0 { f - r } else { dk.mul_add(LN2_HI, -((-dk).mul_add(LN2_LO, r) - f)) };
+        let r = f * f * fma(-0.33333333333333333f64, f, 0.5);
+        return if k == 0 { f - r } else { fma(dk, LN2_HI, -(fma(-dk, LN2_LO, r) - f)) };
     }
     let s = f / (2.0 + f);
     let z = s * s;
     let w = z * z;
     let i = (hx - 0x6147a) | (0x6b851 - hx);
-    let t1 = w * w.mul_add(w.mul_add(LG6, LG4), LG2);
-    let t2 = z * w.mul_add(w.mul_add(w.mul_add(LG7, LG5), LG3), LG1);
+    let t1 = w * fma(w, fma(w, LG6, LG4), LG2);
+    let t2 = z * fma(w, fma(w, fma(w, LG7, LG5), LG3), LG1);
     let r = t2 + t1;
     if i > 0 {
         let hfsq = 0.5 * f * f;
         if k == 0 {
-            f - (-s).mul_add(hfsq + r, hfsq)
+            f - fma(-s, hfsq + r, hfsq)
         } else {
-            dk.mul_add(LN2_HI, -((hfsq - s.mul_add(hfsq + r, dk * LN2_LO)) - f))
+            fma(dk, LN2_HI, -((hfsq - fma(s, hfsq + r, dk * LN2_LO)) - f))
         }
     } else if k == 0 {
-        (-s).mul_add(f - r, f)
+        fma(-s, f - r, f)
     } else {
-        dk.mul_add(LN2_HI, -(s.mul_add(f - r, -(dk * LN2_LO)) - f))
+        fma(dk, LN2_HI, -(fma(s, f - r, -(dk * LN2_LO)) - f))
     }
 }
 
@@ -398,6 +462,7 @@ pub fn hypot(v: &[f64]) -> f64 {
 
 /// `Math.pow` as node on arm64 computes it: the platform's `pow`, except that ±1 ** ±Infinity is NaN and V8 takes
 /// y = 2 and y = 0.5 itself (x * x and the square root). Matches node over 300k random arguments.
+#[inline]
 pub fn pow(x: f64, y: f64) -> f64 {
     if y.is_nan() || (y.is_infinite() && (x == 1.0 || x == -1.0)) {
         return f64::NAN;
@@ -450,9 +515,9 @@ pub fn exp(x: f64) -> f64 {
             lo_ = if xsb == 0 { LN2_LO } else { -LN2_LO };
             k = 1 - xsb as i32 - xsb as i32;
         } else {
-            k = INVLN2.mul_add(x, if xsb == 0 { 0.5 } else { -0.5 }) as i32;
+            k = fma(INVLN2, x, if xsb == 0 { 0.5 } else { -0.5 }) as i32;
             let t = k as f64;
-            hi_ = (-t).mul_add(LN2_HI, x);
+            hi_ = fma(-t, LN2_HI, x);
             lo_ = t * LN2_LO;
         }
         x = hi_ - lo_;
@@ -460,7 +525,7 @@ pub fn exp(x: f64) -> f64 {
         return 1.0 + x;
     }
     let t = x * x;
-    let c = (-t).mul_add(t.mul_add(t.mul_add(t.mul_add(t.mul_add(EP5, EP4), EP3), EP2), EP1), x);
+    let c = fma(-t, fma(t, fma(t, fma(t, fma(t, EP5, EP4), EP3), EP2), EP1), x);
     if k == 0 {
         return 1.0 - ((x * c) / (c - 2.0) - x);
     }
@@ -485,5 +550,66 @@ mod tests {
         assert_eq!(atan2(-7.154588392004371, 18.199517838656902), -0.37456101990228924);
         assert_eq!(log(3.0), 1.0986122886681096);
         assert_eq!(hypot(&[3.0, 4.0]), 5.0);
+    }
+}
+
+#[cfg(test)]
+mod fma_tests {
+    use super::fma_odd;
+
+    struct X(u64);
+    impl X {
+        fn next(&mut self) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0
+        }
+        /// a double with exponent within ±r of 1 and `bits` significant bits (few bits make exact products and ties)
+        fn f(&mut self, r: u64, bits: u32) -> f64 {
+            let m = (self.next() & ((1 << 52) - 1)) >> (52 - bits) << (52 - bits);
+            let e = 1023 - r + self.next() % (2 * r + 1);
+            f64::from_bits(((self.next() & 1) << 63) | (e << 52) | m)
+        }
+    }
+
+    fn check(a: f64, b: f64, c: f64) {
+        if let Some(r) = fma_odd(a, b, c) {
+            let want = a.mul_add(b, c);
+            assert_eq!(r.to_bits(), want.to_bits(), "fma({a:e}, {b:e}, {c:e}) = {r:e}, want {want:e}");
+        }
+    }
+
+    /// against the hardware's fused multiply-add: random operands, near-cancelling addends and halfway cases.
+    /// `FMA_CASES` raises the count (each round is five checks).
+    #[test]
+    fn emulated_fma_is_exact() {
+        let n: u64 = std::env::var("FMA_CASES").ok().and_then(|s| s.parse().ok()).unwrap_or(400_000);
+        let mut x = X(0x9e3779b97f4a7c15);
+        for i in 0..n {
+            let bits = [52, 52, 26, 20, 8][(i % 5) as usize];
+            let (a, b) = (x.f(60, bits), x.f(60, bits));
+            check(a, b, x.f(120, 52));
+            check(a, b, x.f(4, bits));
+            let p = a * b;
+            check(a, b, -p);
+            // the addend a few ulps off the product, and one exactly half an ulp of the result off
+            let k = (x.next() % 64) as i64 - 32;
+            check(a, b, -f64::from_bits((p.to_bits() as i64 + k) as u64));
+            let half = f64::from_bits((p.abs().to_bits() & (0x7ff << 52)).saturating_sub(53 << 52));
+            check(a, b, if x.next() & 1 == 0 { half } else { -half } * (1.0 + (x.next() % 4) as f64));
+            // sums landing on a power of two, where the ulp below is half the ulp above
+            let pw = f64::from_bits(p.abs().to_bits() & (0x7ff << 52)) * [2.0, 4.0, 1024.0][(i % 3) as usize];
+            check(a, b, pw.copysign(p) - p);
+            check(a, b, pw.copysign(-p));
+        }
+        // and the kernels' own arguments, the ranges sin, cos, atan, log and exp evaluate their polynomials over
+        for _ in 0..n {
+            let z = (x.next() >> 11) as f64 / (1u64 << 53) as f64 * 0.62;
+            for c in [super::S2, super::S1, super::C1, -0.5, 1.0, x.f(30, 52)] {
+                check(z, x.f(30, 52), c);
+                check(z * z, z, c);
+            }
+        }
     }
 }
