@@ -13,7 +13,8 @@
     "test:hooks": "node build.mjs && playwright test hooks",
     "test:visual": "node build.mjs && playwright test visual",
     "shots": "node build.mjs && PLANET_SHOTS_ONLY=1 playwright test visual",
-    "bench": "node build.mjs --rust && node test/bench/bench.mjs"
+    "bench": "node build.mjs --rust && node test/bench/bench.mjs",
+    "bench:load": "node build.mjs --rust && node test/bench/load.mjs"
   },
   "devDependencies": {
     "@fontsource/fragment-mono": "5.2.8",
