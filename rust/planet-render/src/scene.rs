@@ -3,7 +3,7 @@
 //! game's random stream stays where game.js leaves it. Screen spots game.js writes back while drawing (where the
 //! hero, piccolo, bubbles and the visitors stand) are written back to the game the same way.
 
-use planet_core::data::{Upg, ALL_FORMS, FORM_AURA};
+use planet_core::data::{ALL_FORMS, FORM_AURA};
 use planet_core::geom::{ap, dot, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, pow, sin};
 use planet_core::num::js_round;
@@ -337,9 +337,9 @@ impl Scene {
         }
     }
 
-    /// The scenery's solids for the game's world and houses (game.js rebuilds them on the same changes).
+    /// The scenery's solids for the game's world and the houses game.js last built (`Game::scenery_house`).
     fn sync(&mut self, g: &Game) {
-        let key = (g.s.world, g.s.lv(Upg::House).min(9), if g.s.world == 9 { g.s.uni } else { 0 });
+        let key = (g.s.world, g.scenery_house.min(9), if g.s.world == 9 { g.s.uni } else { 0 });
         if self.key != Some(key) {
             self.key = Some(key);
             self.built = crate::scenery::build(g);

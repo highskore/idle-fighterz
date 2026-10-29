@@ -450,6 +450,7 @@ fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("been", n(s.been as f64)),
         ("nextStar", n(tl.next_star)),
         ("nextCloud", n(tl.next_cloud)),
+        ("sceneryHouse", n(g.scenery_house as f64)),
     ]
 }
 
