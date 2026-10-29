@@ -38,7 +38,7 @@ Dependencies only point downward: `web` and `native` depend on `render`, and `re
 - **The perf crate is folded in.** px.wasm's kernels (`planet`, `outline`, `rim`) live in `planet-render/src/px_kernels.rs`; `wasm/src/lib.rs` keeps its exports, statics and `alloc` and `include!`s that file, and `px.wasm` rebuilds byte for byte. `planet-render/src/px.rs` includes the same file over a `Framebuffer` (the kernels keep px.wasm's statics, so calls take a lock). There is no `Raster` trait any more: one source, one owner.
 - `Framebuffer`: `buf` (packed ABGR, ImageData's layout), `zb`, `ib`, `dm`, `st.px` blending, `PK`, `bayer`, `h2`.
 - `scene::Scene::draw(fb, game, view, dt)` is game.js's `frame()` from `// ── draw` to `st.flush()`, in game.js's statement order, spending `Math.random` draws where game.js does (particles), and writing back the screen spots game.js writes while drawing (the hero's lift and facing, piccolo, bubbles, every visitor's `sx`/`sy`, the boss's and the ginyu force's `x`/`y`/`k`, henchmen, the capsule's fall, `ape.k`, the meteors' spin seed). `View` says site or widget (`BARE`), the widget's cloud shape and amount, and the pixel scale.
-- Modules: `tones` (each world's palettes), `scenery` (`scenery()` for every world: spheres, the future's slabs, west city's streets, paozu's river, residents), `shade` (`shadePlanet`, `shadeKame`, `shadeW2`, `shadeTop`, domes, capsule corp, pools), `visitors` (everyone on and over the planet, the boss, the ginyu force, the movies), `effects` (spirit bomb, beam struggle, capsule), `top` (the arena's void, stands and zeno's box), `shenron` (shenron.js: the dragon's body and heads, porunga).
+- Modules: `tones` (each world's palettes), `scenery` (`scenery()` for every world: spheres, the future's slabs, west city's streets, paozu's river, residents), `shade` (`shadePlanet`, `shadeKame`, `shadeW2`, `shadeTop`, domes, capsule corp, pools), `visitors` (everyone on and over the planet, the boss, the ginyu force, the movies), `effects` (spirit bomb, beam struggle, capsule), `top` (the arena's void, stands and zeno's box), `snake` (snake way: the road, the cloud rows, orbs, spines and ghosts, king kai's planet and the arrival), `shenron` (shenron.js: the dragon's body and heads, porunga).
 - planet-core gained what the drawing needs: `sprite` (`makeSprite`, the `shapeSprite` DSL, `makeHero`, and every other sprite baked by `difftest/sprites.js` into `data/sprites.bin`), `fx` (one particle list both sides add to), `flash_t`, `night_k`, `zap`, hit flashes, the dance's look, the movie wobble, `Game::preview(hash)` (the preview hooks) and `Game::set_view`. `jsmath` gained `pow` and `exp` as V8 computes them.
 
 ### planet-web
@@ -77,7 +77,7 @@ Estimates are in focused working days for one person or agent, assuming the perf
 
 | Stage | Scope | Estimate |
 |---|---|---|
-| 1. Renderer and world | **Mostly done** (below). Still to do: snake way's view, the beam charge and the beam, the floating gain numbers, the time chamber's afterimage, the rest of the timeline's bursts as real particles. | 2–3 days remaining |
+| 1. Renderer and world | **Mostly done** (below). Still to do: the beam charge and the beam, the floating gain numbers, the time chamber's afterimage, the rest of the timeline's bursts as real particles. | 2–3 days remaining |
 | 2. Hero, laps and economy | **Done** (below), the save and the daily bonus with stage 4. | |
 | 3. Events and bosses | **Done**. The renderer-placed taps are diffed now (planet-render's drawn difftest). | |
 | 4. HUD bridge and menus | **Done** (below): input, the save, the HUD as data, wasm-bindgen exports, the shim, `build.mjs --rust`. Still to do: cut over (after stage 1). | |
@@ -95,7 +95,7 @@ That leaves about 5–8 days: the rest of stage 1, the cut-over (the `--rust` pa
 
 Drawn difftest: `idle` (9 minutes), `active` (9 minutes) and a new `taps` scenario (8 minutes, 182 taps on pods, king kai, saibamen, the boss and more, all hit-tested on renderer-placed spots) match bit for bit with drawing on, up to the first trip to snake way. `ascend`, `late`, `events`, `multiverse` and `wishes` drawn are `#[ignore]`d for now: game.js takes 10–40 minutes to draw each.
 
-Framebuffer diff results: see the PR. In short, every world, every hero and form, the visitors, raids, sagas, the ginyu force, androids, movies, shenron's looks, the arena and the widget variants match byte for byte at desktop and phone sizes; snake way does not (not ported), and `#struggle` doesn't yet.
+Framebuffer diff results: see the PR. In short, every world, every hero and form, the visitors, raids, sagas, the ginyu force, androids, movies, shenron's looks, the arena, snake way (the run, the nimbus and the arrival) and the widget variants match byte for byte at desktop and phone sizes; `#struggle` doesn't yet.
 
 ## Stage 2: what's ported
 
@@ -130,6 +130,6 @@ All of `frame()`'s timeline, in game.js order and with its short-circuits (a cou
 
 ## Next
 
-1. Snake way's view (`drawSnake`: the road in 3D, the cloud rows, ghosts, the arrival at king kai's), then run the drawn difftest through every scenario (it stops at the first trip to snake way for now).
+1. Run the drawn difftest through every scenario (snake way is drawn now: `planet-render/src/snake.rs`).
 2. The beam and its charge; the floating gain numbers (planet-core has to keep where each gain lands); the time chamber's afterimage; the remaining bursts as real particles.
 3. The cut-over: the `--rust` page draws with planet-render instead of the game.js twin (HUD.md), then stage 5 on the bridge.
