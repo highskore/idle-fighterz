@@ -362,17 +362,14 @@ function run(name) {
   // drawn, a hash of every frame game.js draws (FNV-1a over its pixels), for planet-render to match
   const hashes = [], fnv = b => { let h = 0x811c9dc5; for (let k = 0; k < b.length; k++) h = Math.imul(h ^ b[k], 16777619) >>> 0; return h }
   if (drawn) { g.ctx.__skip = false; g.ctx.BARE = false; DRAWN = true }
-  let frames = Math.round(sc.minutes * 60 / DT); const inputs = [], samples = [], marks = []
+  const frames = Math.round(sc.minutes * 60 / DT); const inputs = [], samples = []
   for (let f = 0; f < frames; f++) {
-    marks.push([g.events.length, g.cues.length])
     sc.script(g, f, i => { inputs.push({ f, ...i }); apply(g, i) })
     g.step(DT)
     if (drawn) hashes.push(fnv(g.ev('st.buf')))
     // every tenth second also the save, as JSON.stringify(S) writes it to localStorage
     // and the HUD: what ui.update and ui.shop last got, every second; the menus and confirm boxes every tenth
     if ((f + 1) % 30 === 0) samples.push({ f, draws: g.draws, ...g.ev(SAMPLE), hud: g.update, side: g.side, shop: g.shop, offer: g.ev("!!shen && shen.phase === 'wish'") ? g.offer() : null, ...((f + 1) % 300 === 0 ? { save: JSON.parse(g.ev('JSON.stringify(S)')), menus: menus(g) } : {}) })
-    // drawn, the run stops at the first trip to snake way: planet-render doesn't draw it yet
-    if (drawn && g.ev('S.world') === 3) { while (samples.length && samples[samples.length - 1].tl[0][1] === 3) samples.pop(); frames = samples.length ? samples[samples.length - 1].f + 1 : 0; while (inputs.length && inputs[inputs.length - 1].f >= frames) inputs.pop(); g.events.length = marks[frames][0]; g.cues.length = marks[frames][1]; break }
   }
   if (g.errors.length) throw new Error(g.errors.join('\n'))
   const kept = t => t <= frames * DT + 1e-6
