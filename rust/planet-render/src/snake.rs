@@ -1,6 +1,7 @@
 //! Snake way (game.js `drawSnake` and its helpers): the snake's back in perspective from behind him, the cloud rows
 //! scrolling past, the orbs, spines and lost souls on the road, king kai's planet growing at the end, and the arrival.
 //! Drawn in place of the planet while `S.world === 3`.
+#![allow(clippy::approx_constant)] // game.js's own 6.28 and 6.283
 
 use planet_core::data::ALL_FORMS;
 use planet_core::jsmath::{atan2, cos, hypot, pow, sin};

@@ -380,7 +380,6 @@ impl Scene {
         let mut c = Ctx { fb, w: g.cam.w, h: g.cam.h, cx: g.cam.cx, cy: g.cam.cy, r: g.cam.r, m: g.cam.m, bob: g.cam.bob, t, l: light_dir(), world, tones: &tones };
         if world == 3 && g.tl.snk.is_some() {
             crate::snake::draw(&mut c, g, view, dt);
-            drop(c);
             self.tones = Some(tones);
             return;
         }
