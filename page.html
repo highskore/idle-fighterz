@@ -919,7 +919,9 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     if (gdt > .05) { const n = Math.ceil(gdt / .05), d = gdt / n, h = st.headless; st.headless = true; for (let k = n - 1; k > 0; k--) { st.t = T - k * d; game.frame(st.t, d); } st.headless = h; st.t = T; game.frame(T, d); return; }
     /*/widget*/st.t = T; game.frame(T, gdt);
   }
-  requestAnimationFrame(tick);
+  /*widget*/// the widget's Rust core steps and draws the game in the app (game.native) and the widget has no title: a frame
+  // here does nothing, and an idle requestAnimationFrame loop still wakes WebKit every display refresh
+  if (!game.native)/*/widget*/requestAnimationFrame(tick);
 /*widget*/
 __WIDGET_JS__
 /*/widget*/});
