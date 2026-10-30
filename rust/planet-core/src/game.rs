@@ -1371,7 +1371,7 @@ impl Game {
         if has("xform") {
             // the transformation scene from the first frame: just past super saiyan's mark and the scouter's
             self.s.form = 0;
-            self.s.pl = self.forms[1].at * 1.02;
+            self.s.pl = Big::from(self.forms[1].at * 1.02);
             self.s.best = self.s.pl;
             self.s.o9k = true;
             self.s.ach.insert("o9k");

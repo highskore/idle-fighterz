@@ -10,7 +10,7 @@ fn at_the_mark(calm: bool) -> Game {
     let mut g = Game::new(7);
     g.calm = calm;
     g.start();
-    g.s.pl = g.forms[1].at * 1.02;
+    g.s.pl = (g.forms[1].at * 1.02).into();
     g.s.best = g.s.pl;
     g
 }
@@ -108,14 +108,17 @@ const POLICY: [&str; 13] = ["boots", "partner", "gravity", "scouter", "house", "
 fn buy_all(g: &mut Game) -> f64 {
     let mut spent = 0.0;
     loop {
-        let ok =
-            POLICY.iter().filter_map(|k| Upg::from_key(k)).filter(|&u| g.unlocked(u) && g.s.pl >= g.cost(u)).min_by(|&a, &b| g.cost(a).total_cmp(&g.cost(b)));
+        let ok = POLICY
+            .iter()
+            .filter_map(|k| Upg::from_key(k))
+            .filter(|&u| g.unlocked(u) && g.s.pl >= g.cost(u))
+            .min_by(|&a, &b| g.cost(a).partial_cmp(&g.cost(b)).unwrap());
         let Some(u) = ok else { return spent };
         let c = g.cost(u);
         if !g.buy(SHOP[u as usize].key) {
             return spent;
         }
-        spent += c;
+        spent += c.to_f64();
     }
 }
 
@@ -144,7 +147,7 @@ impl Run {
 
     /// Power earned: what's held plus what was spent.
     fn earned(&self) -> f64 {
-        self.g.s.pl + self.spent
+        self.g.s.pl.to_f64() + self.spent
     }
 
     /// One frame of a player. `instant` lands each form at once, as before forms came as a scene.
