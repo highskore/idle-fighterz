@@ -56,6 +56,8 @@ pub struct Scene {
     pub tones: Option<Tones>,
     /// the transformation scene's rocks and lightning, while it runs
     pub(crate) xf: Option<crate::xform::XfFx>,
+    /// a saga boss's arrival behind the scouter
+    pub(crate) bi: Option<crate::intro::IntroFx>,
 }
 
 /// `V.norm([-.55, .7, .55])`, as game.js computes it.
@@ -615,6 +617,7 @@ impl Scene {
             }
         }
         crate::floats::draw(c.fb, g, dt);
+        self.bi_draw(&mut c, g, view);
         self.tones = Some(tones);
     }
 

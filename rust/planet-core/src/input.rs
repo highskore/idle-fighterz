@@ -258,6 +258,9 @@ impl Game {
 
     /// `tap(px, py)`: a second tap within 0.32s and 30px throws a big bang; anything else goes to `onClick`.
     pub fn tap(&mut self, px: f64, py: f64) {
+        if self.playing && self.intro_skip() {
+            return;
+        }
         let t = self.t;
         let (lt, lx, ly) = self.inp.last_tap;
         let dbl = t - lt < 0.32 && hypot(&[px - lx, py - ly]) < 30.0;
@@ -303,7 +306,7 @@ impl Game {
 
     /// `fireBeam(c, tx, ty)`: a beam of charge `c` toward (tx, ty) hits whatever is on its line, and pays.
     pub fn fire_beam(&mut self, c: f64, tx: f64, ty: f64) {
-        if self.s.world == 3 {
+        if self.s.world == 3 || self.intro_skip() {
             return;
         }
         let t = self.t;

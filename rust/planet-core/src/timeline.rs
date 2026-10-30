@@ -248,6 +248,10 @@ pub struct Boss {
     pub pow: bool,
     /// the white flash of a hit, run down by the renderer
     pub flash: f64,
+    /// when the fight starts: his ki blasts and the bosses' mechanics wait for it (a saga boss's arrival holds it back)
+    pub go: f64,
+    /// a saga boss's arrival behind the scouter (intro.rs)
+    pub intro: Option<crate::intro::Intro>,
 }
 
 impl Boss {
@@ -277,6 +281,8 @@ impl Boss {
             hit_t: None,
             pow: false,
             flash: 0.0,
+            go: t,
+            intro: None,
         }
     }
 
@@ -1612,20 +1618,13 @@ impl Game {
             let (vname, spr) = VILLAINS[self.s.saga as usize % n];
             let hp = Big::from(600.0).max(self.wrate() * 40.0) * (1.0 + 0.15 * self.s.saga as f64);
             let me = vname == "vegeta" && self.s.hero == Hero::Vegeta;
-            let twin = vname == "goku black" && self.s.hero == Hero::Goku;
             let mut b = Boss::new(0, if me { "past vegeta".into() } else { vname.into() }, spr, hp, t, t + 40.0);
             b.saga = true;
             let name = b.name.clone();
             self.new_boss(b);
             self.cue(crate::hud::Cue::Notify("raid", name));
-            let what = if me {
-                "your younger self shows up, scouter and all — \"that's MY hair!\" tap him".to_string()
-            } else if twin {
-                "goku black is attacking — \"hey, that's MY face!\" tap him".to_string()
-            } else {
-                format!("{vname} is attacking — tap him!")
-            };
-            self.event_ms(format!("saga {}/{n}: {what}", self.s.saga as usize % n + 1), 4000.0);
+            // the scouter reads him as he arrives; its toast names him
+            self.intro_start(t);
             let z = if self.s.zeno > 0 { 4.0 } else { 1.0 };
             if self.s.multi {
                 self.tl.next_saga = (120.0 + self.r() * 60.0) / z;
@@ -1772,16 +1771,17 @@ impl Game {
                     self.event(msg);
                 }
             }
+            self.intro_step(t);
             let b = self.tl.boss.as_mut().unwrap();
             if b.dead && t - b.t1 > 1.2 {
                 self.tl.boss = None;
-            } else if !b.dead && !struggling && tick(&mut b.next_ki, dt) {
+            } else if !b.dead && !struggling && t >= b.go && tick(&mut b.next_ki, dt) {
                 b.next_ki = 0.7;
                 let (x, y) = self.hand_pos();
                 self.tl.kis.push(Ki { x, y, t0: t, m: None, disc: false, done: false });
             }
             if self.s.krillin_ally {
-                if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead) {
+                if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go) {
                     let nd = b.next_disc.unwrap_or(2.0) - dt;
                     b.next_disc = Some(nd);
                     if nd < 0.0 {
@@ -3043,6 +3043,10 @@ impl Game {
         let t = self.t;
         if self.s.world == 3 && self.tl.snk.is_some() {
             self.snake_tap(px, py);
+            return;
+        }
+        // a tap skips a boss's arrival
+        if self.intro_skip() {
             return;
         }
         // a transformation's power-up takes every tap

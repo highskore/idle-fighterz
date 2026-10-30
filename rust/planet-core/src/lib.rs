@@ -12,6 +12,7 @@ pub mod game;
 pub mod geom;
 pub mod hud;
 pub mod input;
+pub mod intro;
 pub mod jsmath;
 pub mod json;
 pub mod num;
