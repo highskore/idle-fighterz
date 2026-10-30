@@ -28,6 +28,11 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
       ctx.putImageData(img, 0, 0);
     };
 
+    // a transformation darkens the sky behind the desktop HUD: its text goes light until the form lands
+    const xs = document.createElement('style');
+    xs.textContent = '@media (min-width: 761px) { body.xdark .hud, body.xdark .hint, body.xdark .hud b { color: #f2f2f2; } body.xdark .hud .label, body.xdark .hud .meta, body.xdark .goal { color: #b4b4c4; } }';
+    document.head.appendChild(xs);
+
     // planet-core's messages, onto page.html's ui
     let night = false, shen = false, look = '', itxOwn = false;
     // every input first runs the timeouts that would have fired before it, as game.js's setTimeouts do
@@ -55,7 +60,7 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
       if ('sky' in m) dusk(m.sky);
       if (m.shop) ui.shop(m.shop);
       for (const [text, ms] of m.events) ui.event(text, ms);
-      for (const [call, ...args] of m.cues) if (back[call]) ui[call](args[0], v => { back[call](v); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
+      for (const [call, ...args] of m.cues) if (call === 'xform') document.body.classList.toggle('xdark', args[0]); else if (back[call]) ui[call](args[0], v => { back[call](v); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
     };
     ui.onBuy(k => { due(); P.buy(k); deliver(); });
 
