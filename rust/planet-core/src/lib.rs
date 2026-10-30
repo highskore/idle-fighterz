@@ -3,6 +3,7 @@
 
 pub mod big;
 pub mod bridge;
+pub mod buy;
 pub mod data;
 pub mod dusk;
 pub mod floats;
