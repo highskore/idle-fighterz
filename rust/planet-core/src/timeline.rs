@@ -2841,6 +2841,17 @@ impl Game {
         false
     }
 
+    /// Dr. gero (or android 19) is hit: he lets go, and what he drained comes back twice over.
+    pub(crate) fn free_gero(&mut self) {
+        let Some(g) = self.tl.gero.take() else { return };
+        let n = (g.drained * 2.0).max(self.wrate() * 20.0);
+        self.gain_at(n, g.x, g.y - g.spr.h - 4.0, true);
+        self.ach("gero");
+        self.event(format!("{} lets go — you take it all back, twice over: +{}", g.name, fmt_short(js_round(n))));
+        self.burst_at(g.x, g.y - 10.0, &[0xffffff, 0xffe08a, 0xe0473e], 20, 160.0);
+        self.cue(Cue::Sfx("hit"));
+    }
+
     pub(crate) fn movie_hit(&mut self, i: usize, dmg: Big) {
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let h = &mut self.tl.movie.as_mut().unwrap().minions[i];
@@ -3180,15 +3191,9 @@ impl Game {
                 return;
             }
         }
-        if let Some(g) = self.tl.gero.clone() {
+        if let Some(g) = self.tl.gero.as_ref() {
             if hypot(&[px - g.x, py - (g.y - g.spr.h / 2.0)]) < 16.0 {
-                let n = (g.drained * 2.0).max(self.wrate() * 20.0);
-                self.gain_at(n, g.x, g.y - g.spr.h - 4.0, true);
-                self.ach("gero");
-                self.event(format!("{} lets go — you take it all back, twice over: +{}", g.name, fmt_short(js_round(n))));
-                self.burst_at(g.x, g.y - 10.0, &[0xffffff, 0xffe08a, 0xe0473e], 20, 160.0);
-                self.cue(Cue::Sfx("hit"));
-                self.tl.gero = None;
+                self.free_gero();
                 return;
             }
         }

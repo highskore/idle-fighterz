@@ -147,8 +147,9 @@ pub fn draw_charge(c: &mut Ctx, g: &mut Game) {
     }
 }
 
-/// game.js's `if (beam)`: the fired beam at the hero's depth, the ball still lit in his hands, a full charge's
-/// crackle and its sparks. It lets the beam go once it has faded, as game.js does while drawing.
+/// game.js's `if (beam)`: the fired beam (over the planet's face), the ball still lit in his hands (at his depth), a
+/// flash on each thing it hit, a full charge's crackle and its sparks. It lets the beam go once it has faded, as
+/// game.js does while drawing.
 pub fn draw_beam(c: &mut Ctx, g: &mut Game) {
     let Some(b) = g.inp.beam else { return };
     let t = c.t;
@@ -168,13 +169,16 @@ pub fn draw_beam(c: &mut Ctx, g: &mut Game) {
     let reach = 1f64.min(age / 0.12) * c.w.max(c.h) * 1.6;
     let (sw, sh) = (c.w, c.h);
     let fb = &mut *c.fb;
+    // only the ball in his hands hides behind what's nearer than him; the beam itself is drawn over the planet's face,
+    // so it visibly runs through everything it hits there
+    let deep = std::cell::Cell::new(false);
     let mut px = |x: f64, y: f64, col: u32, a: f64| {
         let (xi, yi) = (js_round(x), js_round(y));
         if xi.is_nan() || yi.is_nan() {
             return;
         }
         let k = yi * sw + xi;
-        if xi >= 0.0 && yi >= 0.0 && xi < sw && k < fb.zb.len() as f64 && fb.zb[k as usize] as f64 > b.z + 6.0 {
+        if deep.get() && xi >= 0.0 && yi >= 0.0 && xi < sw && k < fb.zb.len() as f64 && fb.zb[k as usize] as f64 > b.z + 6.0 {
             return;
         }
         fb.px(x, y, col, a);
@@ -221,6 +225,7 @@ pub fn draw_beam(c: &mut Ctx, g: &mut Game) {
     }
     // the charged ball stays lit in his hands while the beam pours out
     let bw = w * 1.4;
+    deep.set(true);
     let mut y = -bw;
     while y <= bw {
         let mut x = -bw;
@@ -243,6 +248,34 @@ pub fn draw_beam(c: &mut Ctx, g: &mut Game) {
             x += 1.0;
         }
         y += 1.0;
+    }
+    deep.set(false);
+    // a dark-ringed burst on everything it hit, so a beam through a crowd reads as hitting each one
+    let k = age / 0.35;
+    if k < 1.0 {
+        let ring = if ff { 0xc8601a } else { bp.edge };
+        let rr = 4.0 + 8.0 * k;
+        for &(hx, hy) in &g.inp.beam_hits {
+            let mut a = 0.0;
+            while a < 6.28 {
+                let (x, y) = (hx + cos(a) * rr, hy + sin(a) * rr);
+                px(x, y, ring, 1.0);
+                if k < 0.5 {
+                    px(hx + cos(a) * (rr - 1.0), hy + sin(a) * (rr - 1.0), ring, 1.0);
+                }
+                a += 0.8 / rr;
+            }
+            if k < 0.5 {
+                let l = 3.0 + 4.0 * (1.0 - k);
+                let mut d = -l;
+                while d <= l {
+                    px(hx + d, hy, ring, 1.0);
+                    px(hx, hy + d, ring, 1.0);
+                    d += 1.0;
+                }
+                px(hx, hy, 0xffffff, 1.0);
+            }
+        }
     }
     if b.full {
         // `beamCrackle`: dark-cored bolts, so they read against the pale glow
