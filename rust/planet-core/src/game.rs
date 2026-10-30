@@ -127,6 +127,9 @@ pub struct Game {
     pub strain_rate: f64,
     /// the next milestone, worked out once per milestone (limits.rs)
     pub next_mile: std::cell::RefCell<crate::limits::NextMile>,
+    /// the ki ceiling, kept until what it's made of changes (limits.rs)
+    pub ceil_memo: std::cell::Cell<Option<crate::limits::CeilMemo>>,
+    pub floor_memo: std::cell::Cell<Option<(u32, Big)>>,
     /// the last big buy, while undo can still take it back (buy.rs)
     pub undo: Option<crate::buy::Undo>,
     pub undo_seq: u32,
@@ -187,6 +190,8 @@ impl Game {
             strain_tap_t: -9.0,
             strain_rate: 1.0,
             next_mile: Default::default(),
+            ceil_memo: Default::default(),
+            floor_memo: Default::default(),
             undo: None,
             undo_seq: 0,
             undo_offer: None,

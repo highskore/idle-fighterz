@@ -32,6 +32,9 @@ fn ceil_logs() -> &'static [f64; 3] {
 
 /// The next milestone, worked out once per milestone: which one it is, log10 of its power, its named index, and how
 /// the HUD prints its power.
+/// The ceiling as last worked out: the creep (its bits), the best universe and the limits, and the ceiling.
+pub type CeilMemo = ((u64, u32, u32), Big);
+
 #[derive(Clone, Debug, Default)]
 pub struct NextMile {
     i: Option<u32>,
@@ -115,9 +118,15 @@ impl Game {
     /// The floor under the engine: every limit broken, multiplied.
     pub fn floor(&self) -> Big {
         if self.s.limits == 0 {
-            Big::from(1.0)
-        } else {
-            Big::exp10(LIMIT0 * (2f64.powi(self.s.limits as i32) - 1.0))
+            return Big::from(1.0);
+        }
+        match self.floor_memo.get() {
+            Some((n, f)) if n == self.s.limits => f,
+            _ => {
+                let f = Big::exp10(LIMIT0 * (2f64.powi(self.s.limits as i32) - 1.0));
+                self.floor_memo.set(Some((self.s.limits, f)));
+                f
+            }
         }
     }
 
@@ -137,11 +146,20 @@ impl Game {
         self.s.multi || self.s.limits > 0
     }
 
-    /// The ki ceiling: past it, the engine shrinks to a small power.
+    /// The ki ceiling: past it, the engine shrinks to a small power. Kept until the creep, the universes or the limits
+    /// move it: `mult()` asks for it many times a frame, and fdlibm's exp is software on x86-64.
     pub fn ceiling(&self) -> Big {
+        let key = (self.s.creep.to_bits(), self.s.uni_best, self.s.limits);
+        if let Some((k, c)) = self.ceil_memo.get() {
+            if k == key {
+                return c;
+            }
+        }
         let lid = Self::limit_log(self.s.limits + 1);
         let floor = if self.s.limits > 0 { Self::limit_log(self.s.limits) } else { f64::MIN };
-        Big::exp10(self.creep_log().min(lid).max(floor))
+        let c = Big::exp10(self.creep_log().min(lid).max(floor));
+        self.ceil_memo.set(Some((key, c)));
+        c
     }
 
     /// Strain needed to break the next limit.
