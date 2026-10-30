@@ -300,7 +300,9 @@ impl Game {
         if m <= c {
             m
         } else {
-            c * (m / c).pow(CEIL_EXP)
+            // through jsmath's log and exp, not the platform's pow: the same bits on every target, as the ceiling now moves
+            // with play (glibc's and Apple's pow differed by an ulp here)
+            c * Big::exp10((m / c).log10() * CEIL_EXP)
         }
     }
 
