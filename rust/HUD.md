@@ -49,6 +49,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `bulk(n) → text` | new in Rust: `{key: {n, cost, can}}` for every upgrade row, buying 10 (`n` 10) or max (`n` 0): the buttons' prices in that mode |
 | `learn(id)`, `respec()` | the training tree |
 | `learn_angel(id)`, `auto_next()` | the angels' tab |
+| `wear(kind, id)` | wears a look the milestones unlocked (`aura`, `decor`, `frame`, `trail`), or takes it off with an empty `id`. `menu().looks` lists each kind with what's worn and every look (`open`, and `need`: the milestone that unlocks it); `card().frame` is the worn share-card frame. Rust only: game.js has none, and the page shows the looks rows only when `menu().looks` is there |
 | `pick_wish(key)`, `itx_jump(w)` | the wish box's and the transmission picker's callbacks |
 | `pick_hero(id) → bool` | the characters tab |
 | `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures: `card_sprite()` is the sprite |

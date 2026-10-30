@@ -372,6 +372,7 @@ body.night .game { background-color: #07070d !important; background-image: radia
 @media (max-width: 760px) { body.night .page, body.night { background-color: #07070d; } body.night { --sea: #141a3a; } body.night .foot { background: #07070d; border-color: #1c1c26; } body.night .foot a, body.night .foot nav { color: #e8e8ec; } }
 [data-icons="pills"] .ach { display: inline-flex; align-items: baseline; gap: 8px; font: inherit; text-transform: uppercase; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; } [data-icons="pills"] .ach span { display: none; font-size: 11px; text-transform: none; } [data-icons="pills"] .ach.open span { display: inline; } [data-icons="pills"] .ach.done b { color: var(--ink); }
 [data-icons="pills"] .ach.done { background: #fff7e6; border-color: #f2d9a8; } [data-icons="pills"].menu-body { display: flex; flex-wrap: wrap; gap: 6px; align-content: start; }
+.menu-body .looks { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; } .menu-body .looks > span { min-width: 92px; font-size: 11px; text-transform: uppercase; color: var(--muted); } .menu-body .looks .ach:disabled { opacity: .45; cursor: default; } .menu-body .looks:last-of-type { margin-bottom: 8px; }
 
 /* the share popup: a preview of the card, then share or download it */
 .share-card { width: min(640px, 100%); }
@@ -793,6 +794,12 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     delete body.dataset.icons;
     if (menuTab === 'ach') {
       body.dataset.icons = 'pills';   // compact pills, gold once earned
+      // the looks the milestones unlocked (the Rust engine's): one row a kind, tap one to wear it, again to take it off
+      if (m.looks && m.looks.some(k => k.items.some(i => i.open))) for (const k of m.looks) {
+        const row = document.createElement('div'); row.className = 'looks'; row.innerHTML = `<span>${k.label}</span>`;
+        for (const it of k.items) { const b = document.createElement('button'); b.type = 'button'; b.className = 'ach' + (k.on === it.id ? ' done' : ''); b.disabled = !it.open; b.innerHTML = `<b>${it.open ? it.name : 'at ' + it.need}</b>`; b.addEventListener('click', () => { game.wear(k.kind, k.on === it.id ? '' : it.id); renderMenu(); }); row.append(b); }
+        body.append(row);
+      }
       m.ach.forEach(a => { const d = document.createElement('button'); d.type = 'button'; d.className = 'ach' + (a.done ? ' done' : ''); d.title = a.text; d.innerHTML = `<b>${a.name}</b><span>${a.text}</span>`; d.addEventListener('click', () => d.classList.toggle('open')); body.append(d); });   // tap a pill for how to earn it
       return;
     }
@@ -888,7 +895,26 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     pills(d.ach, 740, by + 24, 420, 15, 32, 8, rows > 1 ? 2 : 3);
     x.fillStyle = '#0b0b0b'; x.font = MONO(22); x.fillText('HIGHSKORE.COM', 740, 590);
     x.fillStyle = '#8a8a86'; x.font = MONO(15); right(`${d.ach.length}/${d.achN} · ${clock(d.time)}`, 1160, 590);
+    cardFrame(x, d.frame, W, H);
     return c;
+  }
+  // the share card's frame, a look a milestone unlocked: drawn in square pixels, like the game
+  function cardFrame(x, id, W, H) {
+    if (!id) return;
+    const px = (cx, cy, col, s = 6) => { x.fillStyle = col; x.fillRect(cx, cy, s, s); };
+    if (id === 'scouter') {   // the scouter's readout: green corner brackets, a scanline rule, the red lamp
+      for (const [cx, cy, dx, dy] of [[12, 12, 1, 1], [W - 18, 12, -1, 1], [12, H - 18, 1, -1], [W - 18, H - 18, -1, -1]]) for (let i = 0; i < 12; i++) { px(cx + dx * i * 6, cy, '#34d873'); px(cx, cy + dy * i * 6, '#34d873'); }
+      for (let i = 0; i < W - 200; i += 12) px(100 + i, H - 30, '#9cf0b8', 3);
+      px(W - 42, 30, '#e0473e', 12);
+    } else if (id === 'angel') {   // the angels' ring: a pale double border, a halo over the top
+      x.fillStyle = '#bfe9ff'; x.fillRect(8, 8, W - 16, 6); x.fillRect(8, H - 14, W - 16, 6); x.fillRect(8, 8, 6, H - 16); x.fillRect(W - 14, 8, 6, H - 16);
+      x.fillStyle = '#6fb0ff'; x.fillRect(20, 20, W - 40, 3); x.fillRect(20, H - 23, W - 40, 3); x.fillRect(20, 20, 3, H - 40); x.fillRect(W - 23, 20, 3, H - 40);
+      for (let a = 0; a < 6.283; a += .05) px(350 + Math.cos(a) * 120 - 3, 34 + Math.sin(a) * 14 - 3, a < 3.14 ? '#fff6d0' : '#ffd860', 6);
+    } else if (id === 'zeno') {   // zeno's stars: gold border, pink and gold stars round it
+      x.fillStyle = '#ffe02e'; x.fillRect(6, 6, W - 12, 8); x.fillRect(6, H - 14, W - 12, 8); x.fillRect(6, 6, 8, H - 12); x.fillRect(W - 14, 6, 8, H - 12);
+      const star = (cx, cy, col) => { px(cx, cy, col); px(cx - 6, cy, col); px(cx + 6, cy, col); px(cx, cy - 6, col); px(cx, cy + 6, col); };
+      for (let i = 0; i < 14; i++) { const t = (i + .5) / 14; star(Math.round(t * W / 6) * 6, 24, i % 2 ? '#ff9ad8' : '#ffb02a'); star(Math.round(t * W / 6) * 6, H - 30, i % 2 ? '#ffb02a' : '#ff9ad8'); }
+    }
   }
   let timer = 0;
   new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { st.resize(); if (game) { game.resize(); game.frame(st.t, 0); } }, 60); }).observe(st.el);   // redraw now: resizing clears the canvas

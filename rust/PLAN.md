@@ -156,6 +156,14 @@ All of `frame()`'s timeline, in game.js order and with its short-circuits (a cou
   - Hooks: `#limitN` (limit N about to break), `#mileK` (the K-th named milestone landing).
   - `planet-core/tests/limits.rs` checks the ladder and that a limit breaks idle. It also checks that the floor holds through god ki and zeno, and that the forms come from limit III. Its ignored `pace` test plays idle and active bots from a new game (see the PR for the table).
 
+- **Looks the milestones unlock** (`planet-core/src/looks.rs`). The named milestones at 1e10, 1e100 and 1e1000 each unlock one look of every kind, and a toast names them:
+  - an aura colour (scouter green, the gods' violet, zeno's gold);
+  - something stood on the planet (the broken scouter on a pedestal, whis's staff, zeno's button);
+  - a share-card frame (the scouter's readout, the angels' ring, zeno's stars);
+  - a trail behind the hero as he runs (ki sparks, starlight, confetti).
+  
+  Like everything else they last the run: nothing is saved but the daily bonus's date. The menu's achievements tab wears them, one of each kind (`wear`, in [HUD.md](HUD.md)). Hook: `#looks0` (`#looks1`, `#looks3`) wears that milestone's set.
+
 ## Next
 
 1. The time chamber's afterimage; the remaining bursts as real particles (the cosmetic draws can move to a render-side generator now that JS parity is optional).

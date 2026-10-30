@@ -285,6 +285,13 @@ impl Game {
             }
         };
         let after = if named.is_some() { MILE_HIT } else { 0.0 };
+        if let Some(k) = named {
+            let new = Self::looks_of(k);
+            if !new.is_empty() {
+                let msg = format!("new looks: {} — wear them from the menu", new.join(", "));
+                self.after(MILE_HIT + 4.2, crate::timeline::Later::Event(msg, 4000.0));
+            }
+        }
         self.after(after, crate::timeline::Later::Event(line, 4000.0));
     }
 

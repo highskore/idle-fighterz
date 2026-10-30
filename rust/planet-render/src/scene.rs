@@ -503,6 +503,15 @@ impl Scene {
         if !self.built.decor.is_empty() {
             draw_decor(&mut c, &self.built.decor);
         }
+        // the decor a milestone unlocked, stood off the road
+        if let Some(l) = g.look(planet_core::looks::LookKind::Decor) {
+            let p = g.frame3.cap_pt(1.15, 2.4);
+            let v = ap(&c.m, p);
+            if v[2] > 0.0 {
+                let (sx, sy) = (c.cx + v[0] * c.r, c.cy - v[1] * c.r + c.bob);
+                c.blit_z(planet_core::looks::decor_sprite(l.id), sx, sy, atan2(v[0], v[1]), false, 0.0, v[2] * c.r + 3.0, 1.4);
+            }
+        }
         // dragon balls get a red star on their face
         for o in &orbs {
             if !o.star {
@@ -685,13 +694,16 @@ impl Scene {
             }
         }
         let kaio = g.b.kaio_until > t;
-        if seen && (g.tl.aura || g.b.boost_until > t || g.riding > 0.0 || g.s.form > 0 || kaio || g.s.aura > 0) {
+        let worn = g.look(planet_core::looks::LookKind::Aura);
+        if seen && (g.tl.aura || g.b.boost_until > t || g.riding > 0.0 || g.s.form > 0 || kaio || g.s.aura > 0 || worn.is_some()) {
             let n = if g.s.form > 0 { 4 } else { 3 };
             for _ in 0..n {
                 let a = kd.ang + (g.rng.random() - 0.5) * 0.9;
                 let r = 4.0 + g.rng.random() * 8.0;
                 let col: Vec<u32> = if kaio {
                     vec![0xffffff, 0xff9a8a, 0xe0332b]
+                } else if let Some(l) = worn {
+                    l.cols[..3].to_vec()
                 } else if g.s.form == 0 && g.s.aura > 0 {
                     AURAS[((g.s.aura - 1) % 4) as usize].to_vec()
                 } else {
@@ -701,6 +713,27 @@ impl Scene {
                     .v(sin(kd.ang) * 20.0, -cos(kd.ang) * 30.0)
                     .life(0.5)
                     .size(1.0, 1.0);
+                g.fx.push(p);
+            }
+        }
+        if let Some(l) = g.look(planet_core::looks::LookKind::Trail).filter(|_| seen && g.b.pose_until <= t) {
+            // the trail: left behind him as he runs
+            let ay = c.cy - ahead[1] * c.r + c.bob;
+            let (dx, dy) = (ax - kd.x, ay - kd.y);
+            let d = hypot(&[dx, dy]).max(1e-6);
+            let (bx, by) = (kd.x + sin(kd.ang) * (lift + 8.0) - dx / d * 4.0, kd.y - cos(kd.ang) * (lift + 8.0) - dy / d * 4.0);
+            let n = if l.id == "confetti" { 2 } else { 1 };
+            for _ in 0..n {
+                let (jx, jy) = ((g.rng.random() - 0.5) * 6.0, (g.rng.random() - 0.5) * 8.0);
+                let col = l.cols[(g.rng.random() * 4.0) as usize % 4];
+                let mut p = Particle::new(bx + jx, by + jy, &[col, l.cols[(g.rng.random() * 4.0) as usize % 4]])
+                    .v(-dx / d * 25.0 + (g.rng.random() - 0.5) * 10.0, -dy / d * 25.0 - 6.0)
+                    .drag(1.5)
+                    .life(if l.id == "starlight" { 1.0 } else { 0.6 })
+                    .size(1.0, if l.id == "sparks" { 0.5 } else { 0.0 });
+                if l.id == "confetti" {
+                    p.g = 70.0;
+                }
                 g.fx.push(p);
             }
         }
