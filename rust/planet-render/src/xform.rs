@@ -191,12 +191,14 @@ impl crate::scene::Scene {
             fill(c, mixc(mixc(0x0c0618, 0xb8a8ff, lit), gold, pl * 0.45), mixc(mixc(0x2a1c40, 0xe0d8ff, lit), gl, pl * 0.45), 1f64.min(x.p * 8.0));
         }
         if x.p > 0.1 {
-            self.xf_shout(c, g, &x);
+            self.xf_shout(c, g, &x, view.bare);
         }
     }
 
-    /// The shout: one enormous アア! behind the planet, cropped by the card, shaking harder as the power builds.
-    fn xf_shout(&self, c: &mut Ctx, g: &Game, x: &XForm) {
+    /// The shout: one enormous アア! behind the planet, cropped by the card, shaking harder as the power builds. The
+    /// widget has no card around it, so there both characters fit whole inside its frame.
+    fn xf_shout(&self, c: &mut Ctx, g: &Game, x: &XForm, bare: bool) {
+        const A: [&[(f64, f64)]; 2] = [&[(0.08, 0.14), (0.92, 0.14), (0.86, 0.27), (0.62, 0.5)], &[(0.5, 0.36), (0.5, 0.62), (0.42, 0.82), (0.22, 0.97)]];
         let t = c.t;
         let (w, h) = (c.w, c.h);
         let ph = w / h < 0.8;
@@ -204,7 +206,39 @@ impl crate::scene::Scene {
         let (j, j2) = if g.calm { (0.0, 0.0) } else { (js_round(sin(t * 37.0) * (1.0 + x.p * 2.0)), js_round(cos(t * 29.0) * (1.0 + x.p * 2.0))) };
         let w0 = 1.2f64.max(s * 0.1);
         let mut gl: Vec<(bool, f64, f64, f64, f64)> = Vec::new(); // (bang, size, x, y, turn)
-        if ph {
+        if bare {
+            // room for the shake (3), the outline (2) and the shadow (4) inside the frame
+            let m = 9.0;
+            // a character's reach from its centre at size s, turned: its strokes plus the brush's width
+            let reach = |s: f64, rot: f64| {
+                let (cr, sr) = (cos(rot), sin(rot));
+                let mut b = [f64::MAX, f64::MIN, f64::MAX, f64::MIN];
+                for &(u, v) in A.iter().flat_map(|k| k.iter()) {
+                    let (lx, ly) = ((u - 0.5) * s, (v - 0.5) * s);
+                    let (px, py) = (lx * cr - ly * sr, lx * sr + ly * cr);
+                    b = [b[0].min(px), b[1].max(px), b[2].min(py), b[3].max(py)];
+                }
+                let r = 1.2f64.max(s * 0.1);
+                [b[0] - r, b[1] + r, b[2] - r, b[3] + r]
+            };
+            let mut s = w.min(h) * 0.62 * (0.92 + x.p * 0.08);
+            loop {
+                // side by side, overlapping a little, and each no taller than the frame
+                let (b, b2) = (reach(s, -0.1), reach(s * 0.85, 0.12));
+                if b[1] - b[0] + b2[1] - b2[0] <= (w - 2.0 * m) * 1.15 && b[3] - b[2] <= h - 2.0 * m {
+                    break;
+                }
+                s *= 0.95;
+            }
+            let place = |s: f64, x0: f64, y0: f64, rot: f64| {
+                let b = reach(s, rot);
+                (x0.max(m - b[0]).min(w - m - b[1]), y0.max(m - b[2]).min(h - m - b[3]))
+            };
+            let (x1, y1) = place(s, w * 0.28, h * 0.44, -0.1);
+            let (x2, y2) = place(s * 0.85, w * 0.72, h * 0.56, 0.12);
+            gl.push((false, s, x1 + j, y1 + j2, -0.1));
+            gl.push((false, s * 0.85, x2 + j2, y2 + j, 0.12));
+        } else if ph {
             gl.push((false, s, w * 0.3 + j, c.cy - c.r - s * 0.38 + j2, -0.1));
             gl.push((false, s * 0.85, w * 0.78 + j2, c.cy - c.r * 0.1 + j, 0.12));
         } else {
@@ -217,7 +251,6 @@ impl crate::scene::Scene {
                 gl.push((true, s * 0.5, (c.cx + c.r * 2.1).min(w * 0.9) + j, h * 0.66, 0.18));
             }
         }
-        const A: [&[(f64, f64)]; 2] = [&[(0.08, 0.14), (0.92, 0.14), (0.86, 0.27), (0.62, 0.5)], &[(0.5, 0.36), (0.5, 0.62), (0.42, 0.82), (0.22, 0.97)]];
         const BANG: [&[(f64, f64)]; 2] = [&[(0.5, 0.04), (0.5, 0.66)], &[(0.5, 0.86), (0.5, 0.92)]];
         let (wi, hi) = (w as i64, h as i64);
         let mut mask = vec![false; (wi * hi) as usize];
