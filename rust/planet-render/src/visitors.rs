@@ -571,7 +571,7 @@ impl Scene {
             let bw = js_round(20.0 * k);
             let bx = js_round(b.x - bw / 2.0);
             let by = js_round(b.y - spr.h as f64 * k - 7.0);
-            let f = 0f64.max(b.hp / b.max);
+            let f = 0f64.max((b.hp / b.max).to_f64());
             let mut x = -1.0;
             while x <= bw {
                 for y in -1..=2 {
@@ -654,7 +654,7 @@ impl Scene {
             let bw = js_round(12.0 * k);
             let bx = js_round(m.x - bw / 2.0);
             let by = js_round(m.y - spr.h as f64 * k - 5.0);
-            let f = 0f64.max(m.hp / m.max);
+            let f = 0f64.max((m.hp / m.max).to_f64());
             let mut x = -1.0;
             while x <= bw {
                 for y in -1..=1 {
@@ -967,7 +967,7 @@ impl Scene {
             let bw = js_round(if h.twin { 20.0 } else { 12.0 } * h.k);
             let bx = js_round(hx - bw / 2.0);
             let by = js_round(h.y - spr.h as f64 * h.k - 5.0);
-            let f = 0f64.max(h.hp / h.max);
+            let f = 0f64.max((h.hp / h.max).to_f64());
             let mut x = -1.0;
             while x <= bw {
                 for y in -1..=1 {

@@ -456,11 +456,14 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   const $ = id => document.getElementById(id), root = document.documentElement;
 
   const SUF = ['', '', '', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+  // past 1e300 the engine sends a number as text, '<m>e<exponent>': e-notation with the exponent grouped (4.50e1,204), past a million short (7.1e1.2M), as planet-core's num::sci
+  const sci = (s, d) => { const i = s.indexOf('e'), [m, c] = (+s.slice(0, i)).toExponential(d).split('e+'), e = +s.slice(i + 1) + +c; let x = e < 1e3 ? String(e) : e.toLocaleString('en-US'); if (e >= 1e6) { let k = Math.floor(Math.log10(e) / 3), q = e / 10 ** (k * 3); if (+q.toFixed(q < 100 ? 1 : 0) >= 1000) { k++; q /= 1000; } x = q.toFixed(q < 100 ? 1 : 0) + ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'][k]; } return [m, 'e' + x]; };
   // full digits up to a billion, then three significant figures and a suffix
-  const big = n => { n = Math.floor(n); if (n < 1e9) return [n.toLocaleString('en-US'), '']; const e = Math.floor(Math.log10(n) / 3); if (e >= SUF.length) { const [m, x] = n.toExponential(2).split('e+'); return [m, 'e' + x]; } const m = n / 10 ** (e * 3); return [m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0), SUF[e]]; };
+  const big = n => { if (typeof n === 'string') return sci(n, 2); n = Math.floor(n); if (n < 1e9) return [n.toLocaleString('en-US'), '']; const e = Math.floor(Math.log10(n) / 3); if (e >= SUF.length) { const [m, x] = n.toExponential(2).split('e+'); return [m, 'e' + x]; } const m = n / 10 ** (e * 3); return [m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0), SUF[e]]; };
   const fmt = n => big(n).join('');
+  const txt = n => typeof n === 'string' ? fmt(n) : n;
   // shop prices stay short so a row never wraps: 950,000 then 1.2M, 21.9M …
-  const short = n => { n = Math.floor(n); if (n < 1e6) return n.toLocaleString('en-US'); const e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); return e < SUF.length ? m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0) + (['', '', 'M'][e] || SUF[e]) : n.toExponential(1).replace('+', ''); };
+  const short = n => { if (typeof n === 'string') return sci(n, 1).join(''); n = Math.floor(n); if (n < 1e6) return n.toLocaleString('en-US'); const e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); return e < SUF.length ? m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0) + (['', '', 'M'][e] || SUF[e]) : n.toExponential(1).replace('+', ''); };
   let lastCombo = 1, goalKey = '';
   // hold a buy button to keep buying: a click buys one; held past 400ms it repeats, quicker and quicker, until you let go or run out
   let holdT = 0; const holdStop = () => { clearTimeout(holdT); holdT = 0; }; addEventListener('pointerup', holdStop); addEventListener('pointercancel', holdStop);
@@ -503,7 +506,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
       const keys = Object.keys(items).join();
       if (shopBuilt !== keys) { goalKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => { b.addEventListener('click', () => buyFn && (b.dataset.buy === 'ascend' ? askAscend() : b.dataset.buy === 'godki' ? askGod() : b.dataset.buy === 'zeno' ? askZeno() : buyFn(b.dataset.buy))); if (!['ascend', 'godki', 'zeno'].includes(b.dataset.buy)) hold(b, () => buyFn && buyFn(b.dataset.buy), () => !b.disabled); }); shopBuilt = keys; ui.achieved && ui.achieved(); }
       $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
-      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can && !v.open; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + v.level : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
+      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can && !v.open; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + txt(v.level) : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
     },
     night(on) { document.body.classList.toggle('night', on); },
     hell(on) { document.body.classList.toggle('hell', on); },
@@ -595,7 +598,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   // share the exact power level: the native share sheet where there is one, otherwise the clipboard
   // share: the card opens in a popup first; share (or copy) and download from there
   let cardBlob = null, cardUrl = '';
-  const shareText = () => `i just hit a power level of ${Math.floor(lastPl).toLocaleString('en-US')} on`;
+  const shareText = () => `i just hit a power level of ${typeof lastPl === 'string' ? fmt(lastPl) : Math.floor(lastPl).toLocaleString('en-US')} on`;
   const openShare = async () => {
     try { await document.fonts.ready; cardBlob = await new Promise(r => drawCard().toBlob(r, 'image/png')); } catch (_) { cardBlob = null; }
     if (cardUrl) URL.revokeObjectURL(cardUrl); cardUrl = cardBlob ? URL.createObjectURL(cardBlob) : ''; $('shareImg').src = cardUrl; $('shareDl').hidden = !cardBlob;
@@ -616,9 +619,9 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   // ascending wipes the run, so it asks first and says exactly what goes and what stays
   const askAscend = () => { const a = game.ascendInfo(); $('ascGo').disabled = !a.ok; $('ascGo').textContent = a.ok ? 'ascend and train' : a.wait ? `ascend again in ${a.wait}s` : 'ascend at 1M power';
     if (!a.ok) { $('ascLose').innerHTML = a.wait ? `<b>not yet</b>: your body needs ${a.wait}s more to settle after the last ascension.` : '<b>not yet</b>: ascending takes 1M power.'; $('ascKeep').innerHTML = `your ki seeds and talents live here: open <b>ki training</b> to spend them.`; $('ascBox').hidden = false; $('ascTree').focus(); return; }
-    $('ascLose').innerHTML = `<b>you lose</b> all ${a.pl} power, every upgrade, and your form (back to base).`; $('ascKeep').innerHTML = `<b>you keep</b> ki seeds and the training tree, achievements, characters, wishes and saga progress. you get <b>+${a.seeds} ki seeds</b>: everything goes from ×${a.now} to <b>×${a.next}</b>${a.keep ? `, and head start keeps ${a.keep}% of your power` : ''}. <b>the training tree opens next</b> so you can spend them.`; $('ascBox').hidden = false; $('ascGo').focus(); };
+    $('ascLose').innerHTML = `<b>you lose</b> all ${a.pl} power, every upgrade, and your form (back to base).`; $('ascKeep').innerHTML = `<b>you keep</b> ki seeds and the training tree, achievements, characters, wishes and saga progress. you get <b>+${txt(a.seeds)} ki seeds</b>: everything goes from ×${a.now} to <b>×${a.next}</b>${a.keep ? `, and head start keeps ${a.keep}% of your power` : ''}. <b>the training tree opens next</b> so you can spend them.`; $('ascBox').hidden = false; $('ascGo').focus(); };
   const closeAsc = () => { $('ascBox').hidden = true; };
-  $('ascGo').addEventListener('click', () => { const got = game.ascendInfo().seeds; closeAsc(); buyFn && buyFn('ascend'); setTimeout(() => openTree(`+${got} ki seeds from ascending`), 650); });
+  $('ascGo').addEventListener('click', () => { const got = game.ascendInfo().seeds; closeAsc(); buyFn && buyFn('ascend'); setTimeout(() => openTree(`+${txt(got)} ki seeds from ascending`), 650); });
   $('ascTree').addEventListener('click', () => { closeAsc(); openTree(); });
   $('ascNo').addEventListener('click', closeAsc); $('ascX').addEventListener('click', closeAsc);
   $('ascBox').addEventListener('click', e => { if (e.target === $('ascBox')) closeAsc(); });
@@ -683,14 +686,14 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
       return;
     }
     if (menuTab === 'tree') {   // ki seeds from ascending buy levels here; reset hands them all back
-      const head = document.createElement('p'); head.className = 'tree-head'; head.innerHTML = `<span><b>${m.seeds}</b> ki seeds${m.seeds || m.spent ? ` · ×${m.boost} on everything` : ' — ascend to earn some'}</span>`;
+      const head = document.createElement('p'); head.className = 'tree-head'; head.innerHTML = `<span><b>${txt(m.seeds)}</b> ki seeds${m.seeds || m.spent ? ` · ×${m.boost} on everything` : ' — ascend to earn some'}</span>`;
       if (m.spent) { const rs = document.createElement('button'); rs.type = 'button'; rs.textContent = 'reset'; rs.addEventListener('click', () => { game.respec(); renderMenu(); }); head.append(rs); }
       if (treeNote) { const n = document.createElement('span'); n.className = 'tree-new'; n.innerHTML = `<span>${treeNote}</span><span>spend them below</span>`; head.style.flexWrap = 'wrap'; head.prepend(n); }
       body.append(head);
       m.branches.forEach((br, col) => m.tree.filter(x => x.branch === br.name).forEach((n, row) => {   // a column per branch, tiers top to bottom
         const tier = n.tier;
         const b = document.createElement('button'); b.type = 'button'; b.className = 'node' + (n.can ? ' can' : '') + (n.lvl ? ' on' : '') + (n.open ? '' : ' locked') + (tier === 3 ? ' cap' : ''); b.disabled = !n.can;
-        b.innerHTML = `<i>${row ? '' : br.name + ' · ' + br.pts + ' pts'}</i><b>${n.name}</b><span>${n.what}</span><em>${!n.open ? `needs ${n.need} in ${n.branch}` : (n.max === Infinity ? 'lv ' + n.lvl : n.lvl + '/' + n.max) + (n.lvl < n.max ? ' · ' + n.cost + ' seed' + (n.cost > 1 ? 's' : '') : '')}</em>`;
+        b.innerHTML = `<i>${row ? '' : br.name + ' · ' + br.pts + ' pts'}</i><b>${n.name}</b><span>${n.what}</span><em>${!n.open ? `needs ${n.need} in ${n.branch}` : (n.max === Infinity ? 'lv ' + n.lvl : n.lvl + '/' + n.max) + (n.lvl < n.max ? ' · ' + txt(n.cost) + ' seed' + (n.cost > 1 ? 's' : '') : '')}</em>`;
         b.style.gridColumn = col + 1; b.style.gridRow = row + 2;
         b.addEventListener('click', () => { game.learn(n.id); renderMenu(); }); hold(b, () => { game.learn(n.id); renderMenu(); }, () => (game.menu().tree.find(x => x.id === n.id) || {}).can); body.append(b);
       }));

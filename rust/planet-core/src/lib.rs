@@ -1,6 +1,7 @@
 //! planet-core: the power planet's game state and fixed-step simulation, shared by the web (wasm) and native builds.
 //! It never touches pixels; planet-render draws from it.
 
+pub mod big;
 pub mod bridge;
 pub mod data;
 pub mod dusk;

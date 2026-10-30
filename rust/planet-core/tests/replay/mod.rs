@@ -191,13 +191,13 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
             rep.num(st, "t", st, g.t, true);
             rep.num(st, "draws", n("draws"), g.rng.draws() as f64, true);
             rep.num(st, "session", n("session"), g.session, false);
-            rep.num(st, "pl", n("pl"), g.s.pl, false);
-            rep.num(st, "best", n("best"), g.s.best, false);
-            rep.num(st, "runBest", n("runBest"), g.s.run_best, false);
-            rep.num(st, "rate", n("rate"), g.rate(), false);
-            rep.num(st, "wrate", n("wrate"), g.wrate(), false);
-            rep.num(st, "mult", n("mult"), g.mult(false), false);
-            rep.num(st, "multBare", n("multBare"), g.mult(true), false);
+            rep.num(st, "pl", n("pl"), g.s.pl.to_f64(), false);
+            rep.num(st, "best", n("best"), g.s.best.to_f64(), false);
+            rep.num(st, "runBest", n("runBest"), g.s.run_best.to_f64(), false);
+            rep.num(st, "rate", n("rate"), g.rate().to_f64(), false);
+            rep.num(st, "wrate", n("wrate"), g.wrate().to_f64(), false);
+            rep.num(st, "mult", n("mult"), g.mult(false).to_f64(), false);
+            rep.num(st, "multBare", n("multBare"), g.mult(true).to_f64(), false);
             rep.num(st, "laps", n("laps"), g.laps as f64, true);
             rep.num(st, "lapsTotal", n("lapsTotal"), g.s.laps_total as f64, true);
             rep.num(st, "phi", n("phi"), g.phi, false);
@@ -205,8 +205,8 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
             rep.num(st, "combo", n("combo"), g.combo, false);
             rep.num(st, "form", n("form"), g.s.form as f64, true);
             rep.num(st, "mastery", n("mastery"), g.s.mastery as f64, true);
-            rep.num(st, "seeds", n("seeds"), g.s.seeds, false);
-            rep.num(st, "ascend", n("ascend"), g.s.ascend, false);
+            rep.num(st, "seeds", n("seeds"), g.s.seeds.to_f64(), false);
+            rep.num(st, "ascend", n("ascend"), g.s.ascend.to_f64(), false);
             rep.num(st, "goalP", n("goalP"), g.s.goal_p, false);
             rep.num(st, "goalsDone", n("goalsDone"), g.s.goals_done as f64, true);
             rep.num(st, "orbs7", n("orbs7"), g.s.orbs7 as f64, true);
@@ -219,7 +219,7 @@ pub fn scenario_with(name: &str, after: &mut dyn FnMut(&mut Game, f64)) {
             }
             for u in Upg::ALL {
                 rep.num(st, &format!("lv.{}", u.key()), s["levels"][u.key()].as_f64().unwrap(), g.s.lv(u) as f64, true);
-                rep.num(st, &format!("cost.{}", u.key()), s["cost"][u.key()].as_f64().unwrap(), g.cost(u), false);
+                rep.num(st, &format!("cost.{}", u.key()), s["cost"][u.key()].as_f64().unwrap(), g.cost(u).to_f64(), false);
             }
             for (pair, (name, rs)) in s["tl"].as_array().unwrap().iter().zip(timeline_sample(&g)) {
                 assert_eq!(pair[0].as_str().unwrap(), name);
@@ -435,9 +435,9 @@ pub fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("krillinDead", b(s.krillin_dead)),
         ("geros", n(s.geros as f64)),
         ("movies", n(s.movies as f64)),
-        ("boss", tl.boss.as_ref().map(|b| b.hp)),
+        ("boss", tl.boss.as_ref().map(|b| b.hp.to_f64())),
         ("bossDead", tl.boss.as_ref().map(|b| if b.dead { 1.0 } else { 0.0 })),
-        ("ginyu", tl.ginyu.as_ref().map(|g| g.members.iter().fold(0.0, |a, m| a + m.hp.max(0.0)))),
+        ("ginyu", tl.ginyu.as_ref().map(|g| g.members.iter().fold(0.0, |a, m| a + m.hp.to_f64().max(0.0)))),
         ("shen", tl.shen.as_ref().map(|s| s.phase as u8 as f64)),
         ("orbs", n(tl.orbs.len() as f64)),
         ("meteors", n(tl.meteors.len() as f64)),
@@ -449,7 +449,7 @@ pub fn timeline_sample(g: &Game) -> Vec<(&'static str, Option<f64>)> {
         ("apeUntil", n(g.b.ape_until)),
         ("riding", n(g.riding)),
         ("tour", tl.tour.as_ref().map(|t| t.ko as f64)),
-        ("movie", tl.movie.as_ref().and(tl.boss.as_ref()).map(|b| b.hp)),
+        ("movie", tl.movie.as_ref().and(tl.boss.as_ref()).map(|b| b.hp.to_f64())),
         ("storm", tl.storm.as_ref().map(|s| s.hit as f64)),
         ("snake", tl.snk.as_ref().map(|s| s.p)),
         ("greg", tl.greg.as_ref().map(|g| g.c[0])),

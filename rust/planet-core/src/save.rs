@@ -47,7 +47,7 @@ impl Game {
     /// `JSON.stringify(S)`.
     pub fn save_json(&self) -> String {
         let s = &self.s;
-        let mut o = Obj::new().num("pl", s.pl).num("best", s.best);
+        let mut o = Obj::new().big("pl", s.pl).big("best", s.best);
         for u in LEVEL_KEYS {
             o = o.num(u.key(), level(self, u));
         }
@@ -59,12 +59,12 @@ impl Game {
             .num("orbs7", s.orbs7 as f64)
             .num("wishes", s.wishes as f64)
             .num("granted", s.granted as f64)
-            .num("ascend", s.ascend)
+            .big("ascend", s.ascend)
             .num("form", s.form as f64)
-            .num("seeds", s.seeds)
+            .big("seeds", s.seeds)
             .raw("tree", tree.end())
             .num("saga", s.saga as f64)
-            .num("runBest", s.run_best)
+            .big("runBest", s.run_best)
             .num("uni", s.uni as f64)
             .num("uniStage", s.uni_stage as f64)
             .num("multi", flag(s.multi))
@@ -93,7 +93,7 @@ impl Game {
         let beaten = s.beaten.iter().fold(Obj::new(), |o, b| o.num(b, 1.0));
         o.num("goalsDone", s.goals_done as f64)
             .num("lapsTotal", s.laps_total as f64)
-            .num("namekAt", s.namek_at)
+            .big("namekAt", s.namek_at)
             .num("trips", s.trips as f64)
             .num("namekLeft", s.namek_left)
             .num("bosses", s.bosses as f64)
