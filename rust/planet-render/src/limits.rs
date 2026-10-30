@@ -10,7 +10,7 @@
 //! Its random numbers are its own (seeded by when the scene started), so the game's stream is left alone. Reduced
 //! motion keeps the colours and shapes and drops the sky flashes.
 
-use planet_core::jsmath::{cos, hypot, sin};
+use planet_core::jsmath::{cos, exp, hypot, sin};
 use planet_core::limits::{Kind, Moment, BREAK_UP, MILE_HIT};
 use planet_core::rng::Lcg;
 use planet_core::Game;
@@ -245,7 +245,7 @@ impl crate::scene::Scene {
             self.mo.as_mut().unwrap().cracks = cr;
         }
         // his aura flares as he pushes, and settles
-        let k = if b < 0.0 { a / BREAK_UP } else { (-(b) * 1.5).exp() };
+        let k = if b < 0.0 { a / BREAK_UP } else { exp(-b * 1.5) };
         glow(c, hx, hy + 6.0, 14.0 + k * 16.0, 0xfff1a0, 0.5 * k);
         glow(c, hx, hy + 6.0, 8.0 + k * 8.0, 0xffffff, 0.6 * k);
     }
@@ -325,7 +325,7 @@ impl crate::scene::Scene {
             let pops = fx.pops.clone();
             for (i, &(x, y, _)) in pops.iter().enumerate() {
                 let yy = y + hit * (60.0 + (i % 5) as f64 * 14.0);
-                let s = 1.0 + ((c.t * 9.0 + i as f64).sin() * 0.5 + 0.5) * 2.0;
+                let s = 1.0 + (sin(c.t * 9.0 + i as f64) * 0.5 + 0.5) * 2.0;
                 star(c, x + sin(hit * 2.0 + i as f64) * 4.0, yy, s, [cols[1], cols[2], 0xffffff, 0x9fe6ff][i % 4]);
             }
         }
