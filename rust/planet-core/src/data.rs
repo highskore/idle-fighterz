@@ -300,7 +300,11 @@ pub const A_SKIP: usize = 5;
 pub const TRIP_WAIT: f64 = 120.0;
 pub const PLANET_EVERY: f64 = 1e6;
 /// The trip rotation: namek, planet vegeta, snake way, beerus, west city, kame house, paozu, the future, the lookout, kai world, yardrat.
+/// Snake way's slot is skipped while it's parked (`SNAKE_WAY_ENABLED`).
 pub const TRIPS: [u32; 11] = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12];
+/// Snake way is parked: false skips its slot in the trip rotation (the `#snake` preview hook still runs it); true
+/// puts it back.
+pub const SNAKE_WAY_ENABLED: bool = false;
 /// Worlds that sit the planet bigger or higher (`W2L`): (world, zoom, dy).
 pub const W2L: [(u32, f64, f64); 4] = [(2, 1.22, 0.0), (10, 0.82, -0.07), (11, 1.0, 0.0), (12, 1.0, 0.0)];
 pub const WORLD_NAMES: [&str; 13] =

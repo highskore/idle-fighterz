@@ -12,7 +12,7 @@ How the page is put together, how to build it, the preview hooks, the Rust engin
   - 15 upgrades, from weighted boots to Piccolo, the time chamber, instant transmission and ascension.
   - Forms from super saiyan to ultra instinct.
   - Events: dragon balls and Shenron, great ape mode, villain raids (Frieza, Cell, Kid Buu, Beerus), the Ginyu Force, the Tournament of Power, the fusion dance, Gregory, King Kai's jokes, Saibamen and meteor showers.
-  - Other worlds: the first trip comes at 1M power and each later one further out (`PLANET_EVERY` in `game.js`): a 45-second visit to Namek (where Porunga grants wishes), Planet Vegeta, Snake Way (a 75-second run), Beerus' planet, West City, Kame House, Mount Paozu, the future, Kami's lookout, the Kais' world and Yardrat, in turn.
+  - Other worlds: the first trip comes at 1M power and each later one further out (`PLANET_EVERY` in `game.js`): a 45-second visit to Namek (where Porunga grants wishes), Planet Vegeta, Beerus' planet, West City, Kame House, Mount Paozu, the future, Kami's lookout, the Kais' world and Yardrat, in turn. Snake Way (a 75-second run) is parked: out of the rotation, `#snake` still shows it.
 
 Every visit starts from zero: power, upgrades, achievements and characters all reset on refresh. Only the date of the last daily bonus is kept in `localStorage` (`hs-power`).
 

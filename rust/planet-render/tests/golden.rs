@@ -264,6 +264,7 @@ fn wishes() {
     golden("wishes");
 }
 
+/// Recorded as a pod to snake way; with it parked, trip 3 skips its slot to beerus, then west city.
 #[test]
 fn snake() {
     golden("snake");

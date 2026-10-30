@@ -72,6 +72,8 @@ pub struct Game {
     pub riding: f64,
     /// the `#snake-nimbus` preview hook (any hash with `nimbus`): snake way starts riding the nimbus
     pub snake_nimbus: bool,
+    /// snake way's slot in the trip rotation: `SNAKE_WAY_ENABLED`, or on with the `#snake` preview hook
+    pub snake_way: bool,
     pub acc: f64,
     pub auto_acc: f64,
     pub combo: f64,
@@ -138,6 +140,7 @@ impl Game {
             sprint: 0.0,
             riding: 0.0,
             snake_nimbus: false,
+            snake_way: SNAKE_WAY_ENABLED,
             acc: 0.0,
             auto_acc: 0.0,
             combo: 1.0,
@@ -1282,6 +1285,7 @@ impl Game {
         }
         if has("snake") {
             trip(self, 3e6, 2);
+            self.snake_way = true;
         }
         self.snake_nimbus = has("nimbus");
         if has("door") {

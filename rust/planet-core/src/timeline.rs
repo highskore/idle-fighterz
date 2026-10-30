@@ -1447,6 +1447,9 @@ impl Game {
             self.tl.pod_wish = 0;
             self.s.namek_at = self.s.run_best * 4.0;
             self.s.trips += 1;
+            if !self.snake_way && TRIPS[((self.s.trips - 1) % 11) as usize] == 3 {
+                self.s.trips += 1;
+            }
             self.trip(TRIPS[((self.s.trips - 1) % 11) as usize]);
         }
         let w = self.s.world;
