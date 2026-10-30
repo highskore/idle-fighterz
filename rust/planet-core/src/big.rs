@@ -2,7 +2,7 @@
 //!
 //! Below 1e300 a `Big` is a plain f64 (`e == 0`) and every operation is the f64 one, so the game rounds exactly as it
 //! did. Only a result at or past 1e300 takes the extended form: 1 ≤ |m| < 10 and an integer exponent e ≥ 300. The slow
-//! path uses IEEE basic operations, a table of correctly rounded powers of ten and `jsmath`'s fdlibm log and pow, so it
+//! path uses IEEE basic operations, a table of correctly rounded powers of ten and `jsmath`'s fdlibm log and exp, so it
 //! lands on the same bits in wasm, on arm64 and on x86-64. The exponent saturates at `E_MAX`: never Infinity or NaN.
 
 use crate::jsmath;
@@ -101,7 +101,8 @@ impl Big {
             return Big::ZERO;
         }
         let e = l.floor();
-        Big::new(jsmath::pow(10.0, l - e), e as i64)
+        // fdlibm's exp, not `jsmath::pow`: that one is the platform's pow, which may differ in the last bit by target
+        Big::new(jsmath::exp((l - e) * std::f64::consts::LN_10), e as i64)
     }
 
     /// The f64 itself, below 1e300.
