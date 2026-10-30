@@ -93,7 +93,7 @@ pub fn draw_charge(c: &mut Ctx, g: &mut Game) {
         let mut d = r + 4.0;
         while d < al.min(400.0) {
             if ((d / 4.0) as i64 as i32).wrapping_add((t * 12.0) as i64 as i32) % 2 != 0 {
-                c.fb.px(hx + ax * d, hy + ay * d, p.aim, 1.0);
+                c.fb.px(hx + ax * d, hy + ay * d, crate::mech::aim_col(g, ch).unwrap_or(p.aim), 1.0);
             }
             d += 4.0;
         }
