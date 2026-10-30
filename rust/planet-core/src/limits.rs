@@ -357,13 +357,15 @@ impl Game {
             g.s.ach.insert("o9k");
             g.tl.next_boss = 1e9;
             g.tl.next_saga = 1e9;
+            // and no trip for a while: the scene plays at home
+            g.tl.home_since = g.session + 600.0;
         };
         if let Some(n) = num("limit").filter(|&n| n >= 1) {
             self.s.limits = n - 1;
             self.s.levels[crate::data::Upg::Gravity as usize] = 60;
             self.s.ascend = Big::from(4e7);
             late(self, Big::exp10(Self::limit_log(n) + 15.0));
-            self.s.creep = Self::limit_log(n) - self.creep_log() + self.s.creep;
+            self.s.creep += Self::limit_log(n) - self.creep_log();
             self.s.meter = self.break_need() - 1.0;
             let (mut i, at) = (0, Self::limit_log(n) + 15.0);
             while milestone(i).0 <= at {
