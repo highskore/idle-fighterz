@@ -16,9 +16,21 @@
       return { up: Object.values(items || {}).filter(v => v && v.can).length, tree: (m.tree || []).filter(n => n && n.can).length, heroes: [chars.filter(c => c && c.open).length, chars.length] };
     };
     const formName = f => f.name === 'base' ? 'base' : f.name.replace('super saiyan', 'ssj') + (f.x > 1 ? ' ×' + f.x : '');
+    // where the scouter's parts go (css px; P the planet's centre and radius, W×H the window, lens and tray their unscaled
+    // sizes): the lens in the top-right corner, shrunk (to .7 at least) until it reaches no deeper than the disc's rim,
+    // the buttons down the right edge under it, the upgrades beside the planet when there's room, else under it
+    const fit = (P, W, H, lens, tray, m = 8) => {
+      const into = (x0, y0, x1, y1) => P.r - Math.hypot(Math.max(x0 - P.x, 0, P.x - x1), Math.max(y0 - P.y, 0, P.y - y1));
+      let k = 1;
+      while (k > .7 && into(W - m - k * lens.w, m, W - m, m + k * lens.h) > P.r * .15) k = Math.round(k * 100 - 5) / 100;
+      const top = Math.round(m + k * lens.h + 6), kt = Math.min(k, Math.floor((H - m - top) / tray.h * 100) / 100);
+      const edge = Math.round(W - m - kt * tray.w - 6), room = Math.floor(edge - (P.x + P.r * .75));
+      const shop = room >= 180 ? { left: edge - Math.min(230, room), top } : { left: m, top: Math.round(Math.min(P.y + P.r * .6, H - m - 90)) };
+      return { k, kt, top, shop: { ...shop, right: W - edge, h: H - m - shop.top } };
+    };
 
     // c: { root, w, B (the buttons by key), stage, shop, menuBody, menuCard, menu(tab): renders the page's menu as tab,
-    // menuData(), relayout(): the planet moved }
+    // menuData(), relayout(): the planet moved, spot(): a promise of where the core draws the planet (planet_spot) or null }
     function mount(c) {
       const el = html => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
       const icon = k => c.B[k].querySelector('svg').outerHTML;
@@ -33,7 +45,7 @@
         scouter() {
           const lens = el(`<div class="sc"><div class="sc-arm"></div><div class="sc-lens"><div class="sc-k"><span>POWER LVL</span><b>▲</b></div><div class="sc-n"></div><div class="sc-r"></div><div class="sc-seg">${'<i></i>'.repeat(12)}</div><div class="sc-f"></div><span class="sc-tgt"></span></div></div>`);
           const tray = el('<div class="sc-btns"></div>'); for (const k of ORDER) tray.append(c.B[k]);
-          c.w.append(lens, tray);
+          c.w.append(lens, tray); grown.observe(lens); grown.observe(tray); grown.observe(c.stage);
           const q = s => lens.querySelector(s), seg = [...lens.querySelectorAll('.sc-seg i')];
           return {
             hud(s, n, rate) {
@@ -119,13 +131,37 @@
       c.stage.addEventListener('pointerdown', close);
       addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
+      // the scouter keeps to the planet's side: placed from where the core draws it, again when the window or its parts
+      // change size (the stage, the fonts coming in, the tray growing a button) and every 2 s (a world may draw the planet
+      // bigger or lower)
+      const VARS = ['--sc-k', '--sc-kt', '--sc-bt', '--sc-sl', '--sc-st', '--sc-sr', '--sc-sh'];
+      let placed = '', again = 0;
+      function place() {
+        const cv = c.stage.querySelector('canvas'), sc = c.w.querySelector('.sc'), tr = c.w.querySelector('.sc-btns');
+        if (skin !== 'scouter' || document.hidden || !cv || !sc || !cv.width) return;
+        Promise.resolve(c.spot && c.spot()).catch(() => null).then(s => {
+          if (skin !== 'scouter' || !sc.isConnected) return;
+          // no core to ask (game.js in the page): its widget camera, as geom.rs's layout() puts it
+          s = s || { w: cv.width, h: cv.height, cx: Math.round(cv.width / 2), cy: Math.round(cv.height / 2), r: Math.max(56, Math.min(70, Math.round(Math.min(cv.width, cv.height) * .2))) };
+          // the buffer or the core not resized to the stage yet: again shortly
+          const b = cv.getBoundingClientRect(), kx = b.width / s.w;
+          if (s.w !== cv.width || s.h !== cv.height || Math.abs(kx - b.height / s.h) > .02) { clearTimeout(again); again = setTimeout(place, 100); return; }
+          const f = fit({ x: b.left + s.cx * kx, y: b.top + s.cy * kx, r: (s.r + 1) * kx }, innerWidth, innerHeight, { w: sc.offsetWidth, h: sc.offsetHeight }, { w: tr.offsetWidth, h: tr.offsetHeight });
+          const v = [f.k, f.kt, f.top + 'px', f.shop.left + 'px', f.shop.top + 'px', f.shop.right + 'px', f.shop.h + 'px'], key = v.join();
+          if (key !== placed) { placed = key; VARS.forEach((n, i) => c.root.style.setProperty(n, v[i])); }
+        });
+      }
+      const grown = new ResizeObserver(() => place());
+      addEventListener('resize', place); setInterval(place, 2000);
+
       return {
         // builds the skin's hud in c.w (emptied, the buttons back in their row); false for classic, which widget.js lays out
         arrange(s) {
           close(); if (p && p.dw) p.dw.remove(); skin = pick(s); p = null;
+          grown.disconnect(); placed = ''; VARS.forEach(n => c.root.style.removeProperty(n));
           if (skin === 'classic') { delete c.root.dataset.skin; paint(); return false; }
           c.root.dataset.skin = skin; paint();
-          p = BUILD[skin](); badges();
+          p = BUILD[skin](); badges(); place();
           return true;
         },
         theme(t) { setting = t; paint(); },
@@ -134,6 +170,6 @@
         shop(v) { items = v; badges(); },
       };
     }
-    return { SKINS, pick, theme, lit, caps, counts, formName, mount };
+    return { SKINS, pick, theme, lit, caps, counts, formName, fit, mount };
   })();
   if (typeof module === 'object' && module.exports) module.exports = SKIN;

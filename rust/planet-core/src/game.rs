@@ -125,6 +125,13 @@ pub struct Game {
     pub strain_extra: f64,
     pub strain_tap_t: f64,
     pub strain_rate: f64,
+    /// the last big buy, while undo can still take it back (buy.rs)
+    pub undo: Option<crate::buy::Undo>,
+    pub undo_seq: u32,
+    /// `(id, text)`: an undo offer the HUD hasn't shown yet
+    pub undo_offer: Option<(u32, String)>,
+    /// times something drained power (dr. gero): an undo can't rewind past one
+    pub drains: u32,
 }
 
 impl Game {
@@ -177,6 +184,10 @@ impl Game {
             strain_extra: 0.0,
             strain_tap_t: -9.0,
             strain_rate: 1.0,
+            undo: None,
+            undo_seq: 0,
+            undo_offer: None,
+            drains: 0,
         };
         g.sync_shop();
         g
@@ -209,7 +220,11 @@ impl Game {
 
     /// Producer milestone multiplier.
     pub fn ms(&self, u: Upg) -> Big {
-        let l = self.s.lv(u);
+        Self::ms_at(self.s.lv(u))
+    }
+
+    /// The producer milestones' doubling at level `l`.
+    pub fn ms_at(l: u32) -> Big {
         let hit = MS.iter().filter(|&&n| l >= n).count() as f64;
         let past = ((l as f64 - 100.0) / 50.0).floor().max(0.0);
         Big::from(2f64).pow(hit + past)
@@ -437,8 +452,13 @@ impl Game {
     }
 
     pub fn cost(&self, u: Upg) -> Big {
+        self.cost_at(u, self.s.lvf(u))
+    }
+
+    /// One buy's price at level `l`.
+    pub fn cost_at(&self, u: Upg, l: f64) -> Big {
         let it = &SHOP[u as usize];
-        (it.base * Big::from(it.k).pow(self.s.lvf(u)) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
+        (it.base * Big::from(it.k).pow(l) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
     }
 
     /// Ascending spends all you hold, 1M at least.
@@ -665,48 +685,7 @@ impl Game {
                 self.zeno_erase();
                 true
             }
-            _ => {
-                let Some(u) = Upg::from_key(key) else { return false };
-                let c = self.cost(u);
-                if self.s.pl < c {
-                    return false;
-                }
-                self.s.pl -= c;
-                self.s.levels[u as usize] += 1;
-                self.cue(Cue::Fx("buy"));
-                for (n, id) in [(10, "tail10"), (25, "tail25"), (50, "tail50")] {
-                    if self.s.lv(Upg::Tail) >= n {
-                        self.ach(id);
-                    }
-                }
-                let first = self.s.lv(u) == 1;
-                let note = match u {
-                    Upg::Partner if first => "bubbles wants to train with you",
-                    Upg::Galick if first => {
-                        if self.kame() {
-                            "hold anywhere to charge a kamehameha"
-                        } else {
-                            "hold anywhere to charge a galick gun"
-                        }
-                    }
-                    Upg::House => "a new capsule house lands",
-                    Upg::Piccolo if first => "piccolo lands to meditate",
-                    Upg::Chamber if first => "the time chamber door will appear — tap it",
-                    Upg::Kaio if first => "kaioken unlocked — hit the red button",
-                    Upg::Bigbang if first => "big bang attack — double-tap anywhere",
-                    Upg::Itx if first => "instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you've been",
-                    Upg::Armor if first => "saiyan armor on — hit villains harder",
-                    _ => "",
-                };
-                if u == Upg::House {
-                    self.scenery();
-                }
-                if !note.is_empty() {
-                    self.event(note);
-                }
-                self.sync_shop();
-                true
-            }
+            _ => self.buy_n(key, 1),
         }
     }
 

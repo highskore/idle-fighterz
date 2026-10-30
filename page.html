@@ -95,12 +95,29 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop { visibility: 
 .shop button:disabled i { color: var(--muted); }
 .shop button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .shop b { font-weight: 400; text-transform: uppercase; white-space: nowrap; }
-.shop em { font-style: normal; color: var(--gold); font-variant-numeric: tabular-nums; }
+.shop em { font-style: normal; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .shop button:disabled em { color: var(--muted); }
 .shop button.special { border-color: var(--gold); background: #fff8e6; }
 .shop span { color: var(--muted); }
 .shop i { font-style: normal; color: var(--gold); }
 .shop-toggle, .mbtn { display: none; }
+/* the hover card (a long press on touch): what a row's next level does and what it costs, from the Rust engine */
+.tip { position: absolute; z-index: 7; left: 0; top: 0; width: max-content; max-width: min(250px, calc(100% - 16px)); padding: 5px 10px 6px; font-size: 10px; line-height: 1.45; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); pointer-events: none; text-transform: none; font-variant-numeric: tabular-nums; }
+.tip p { margin: 0; }
+.tip .tw, .tip .th { color: var(--muted); }
+.tip b { font-weight: 400; color: var(--gold); }
+.tip .tc { display: flex; flex-wrap: wrap; gap: 0 9px; }
+.tip .tc span { white-space: nowrap; } .tip .tc span.no b { color: var(--muted); }
+/* ×1 / ×10 / max above the list: touch has no shift- or alt-click */
+.shop .bulk { display: none; grid-column: 1 / -1; justify-content: center; gap: 4px; pointer-events: auto; }
+html.touch .shop.bulky .bulk { display: flex; }
+.shop .bulk button[data-n] { display: inline-block; flex: none; width: auto; min-width: 0; padding: 1px 10px; font-size: 10px; line-height: 1.5; border-radius: 999px; text-transform: uppercase; }
+.shop .bulk button[aria-pressed="true"] { color: var(--ink); border-color: var(--gold); background: #fff8e6; }
+/* the undo on a big buy's toast: a plain button inside the usual toast */
+.toast .tact { pointer-events: auto; margin-left: .4em; vertical-align: .25em; padding: 3px 9px; font: 10px/1.2 var(--mono); font-style: normal; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); -webkit-text-stroke: 0; background: #fff; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+.toast .tact:hover:not(:disabled) { border-color: var(--ink); }
+.toast .tact:disabled { opacity: .4; cursor: default; }
+.toast:not(.on) .tact { pointer-events: none; }
 .pair { display: contents; }
 @media (min-width: 761px) {
   .shop { left: 16px; top: 44px; bottom: 12px; transform: none; width: 236px; flex-direction: column; justify-content: center; gap: 2px; }   /* centred in the space below the hint */
@@ -113,7 +130,7 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop { visibility: 
   .shop { flex-wrap: nowrap; }
   .shop button { position: relative; }
   .shop button span { display: none; }
-  .shop button:hover span, .shop button:focus-visible span { display: block; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); width: max-content; max-width: 220px; padding: 4px 9px; font-size: 10px; line-height: 1.3; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); z-index: 6; text-transform: none; }
+  .shop:not(.bulky) button:hover span, .shop:not(.bulky) button:focus-visible span { display: block; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); width: max-content; max-width: 220px; padding: 4px 9px; font-size: 10px; line-height: 1.3; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); z-index: 6; text-transform: none; }
 }
 /* before play: the planet idles, the game UI stays hidden */
 .game:not(.playing) .hud, .game:not(.playing) .shop, .game:not(.playing) .shop-toggle, .game:not(.playing) .mbtn, .game:not(.playing) .hint, .game:not(.playing) .toast { opacity: 0; visibility: hidden; }
@@ -197,6 +214,7 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
   .menu { padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
   .menu-body, .asc-body { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
   .shop button { min-width: 0; padding: 6px 9px; border-radius: 10px; flex-direction: column; gap: 0; }
+  html:not(.widget) .shop.bulky .bulk { display: flex; padding: 2px 0 1px; }
   .shop b { font-size: 11px; white-space: normal; }
   .shop span { display: block; font-size: 9.5px; line-height: 1.2; }
   .menu-btn, .rule, .tabbar { display: none; }
@@ -264,7 +282,8 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
   .brand { top: max(66px, calc(28svh - 104px)); bottom: auto; left: -9vw; right: -9vw; height: 125vw; }   /* lower on taller phones, where the planet sits lower too */
   .page.past #brand { pointer-events: none; }
   .game:has(.shop.open) .hud { opacity: 0; visibility: hidden; }
-  body.shop-over .brand, .game:has(.shop.open) .toast { opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }   /* the title hides only once the upgrades sheet reaches it */   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
+  body.shop-over .brand, .game:has(.shop.open) .toast { opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }
+  .game:has(.shop.open) .toast.on:has(.tact) { opacity: 1; visibility: visible; z-index: 4; }   /* the title hides only once the upgrades sheet reaches it */   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
   .hud { top: auto; bottom: max(64px, 11svh); right: 50%; transform: translateX(50%); text-align: center; padding: 6px 14px; }
   .hud .n { transform-origin: 50% 50%; }
   .hud .meta, .hud .row { justify-content: center; }
@@ -421,6 +440,7 @@ __WIDGET_CSS__
       <button type="button" class="start s-arcade" id="play" aria-label="press start to play the power level game"><span><i class="l">&lt;</i> press start <i class="r">&gt;</i></span></button>
     </div>
     <div class="toast" id="toast"></div>
+    <div class="tip" id="tip" hidden></div>
     <div class="wish" id="wish" hidden></div>
     <div class="pair">
       <button type="button" class="shop-toggle" id="shopToggle" aria-expanded="false" aria-controls="shop">upgrades <i id="shopCount"></i></button>
@@ -476,14 +496,56 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   let lastCombo = 1, goalKey = '';
   // hold a buy button to keep buying: a click buys one; held past 400ms it repeats, quicker and quicker, until you let go or run out
   let holdT = 0; const holdStop = () => { clearTimeout(holdT); holdT = 0; }; addEventListener('pointerup', holdStop); addEventListener('pointercancel', holdStop);
-  const hold = (el, buy, can) => {
+  // (shop rows don't on touch: there a long press shows their card)
+  const hold = (el, buy, can, noTouch) => {
     let n = 0, held = false;
     const step = () => { if (!can()) return holdStop(); held = true; buy(); n++; holdT = setTimeout(step, Math.max(35, 250 * .82 ** n)); };
-    el.addEventListener('pointerdown', e => { if (e.button) return; n = 0; held = false; holdStop(); holdT = setTimeout(step, 400); });
+    el.addEventListener('pointerdown', e => { if (e.button || noTouch && e.pointerType === 'touch') return; n = 0; held = false; holdStop(); holdT = setTimeout(step, 400); });
     el.addEventListener('pointerleave', holdStop);
     el.addEventListener('click', e => { if (held) { held = false; e.stopImmediatePropagation(); } }, true);   // the release after a held run isn't one more buy
   };
-  let toastT = 0, buyFn = null, shopBuilt = false, titleFx = null;
+  let toastT = 0, toastAct = null, buyFn = null, shopBuilt = false, titleFx = null;
+  // the shop on the Rust engine (#shop.bulky): shift-click buys ×10 and alt-click max, touch picks ×1 / ×10 / max above
+  // the list; bulk holds the prices buying that many. The widget's engine answers these with promises
+  let shopItems = {}, bulkN = 1, bulk = null, bulkAt = 0, tipFor = null, tipAt = 0;
+  const later = (v, f) => v && typeof v.then === 'function' ? v.then(f, e => console.error(e)) : f(v);
+  const shopPaint = () => {
+    const el = $('shop');
+    for (const [k, v] of Object.entries(shopItems)) {
+      const b = el.querySelector(`[data-buy="${k}"]`), r = bulkN !== 1 && bulk && bulk[k];
+      if (!b) continue;
+      b.disabled = r ? !r.can : !v.can && !v.open;
+      b.querySelector('[data-cost]').textContent = r ? `${bulkN === 10 ? '×10' : r.n > 1 ? '×' + r.n : 'max'} ${short(r.cost)}` : short(v.cost);
+    }
+  };
+  const bulkFetch = force => {
+    if (bulkN === 1 || !game || !game.bulk) return;
+    const now = performance.now(); if (!force && now - bulkAt < 200) return; bulkAt = now;
+    const n = bulkN; later(game.bulk(n), d => { if (n === bulkN) { bulk = d; shopPaint(); } });
+  };
+  const tipHide = () => { tipFor = null; $('tip').hidden = true; };
+  const tipPlace = () => {
+    const t = $('tip'), b = tipFor, g = $('game').getBoundingClientRect(), r = b.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight, pad = 6;
+    let x = r.right + 8 - g.left, y = r.top + r.height / 2 - h / 2 - g.top;
+    if (x + w > g.width - pad) x = r.left - 8 - w - g.left;
+    if (x < pad) { x = Math.min(Math.max(pad, r.left + r.width / 2 - w / 2 - g.left), g.width - w - pad); y = r.top - 6 - h - g.top; if (y < pad) y = r.bottom + 6 - g.top; }
+    t.style.transform = `translate(${Math.round(x)}px, ${Math.round(Math.min(Math.max(pad, y), g.height - h - pad))}px)`;
+  };
+  const tipPaint = () => {
+    const b = tipFor; if (!b || !b.isConnected || !b.offsetParent) return tipHide();
+    const k = b.dataset.buy, v = shopItems[k] || {}, what = `<p class="tw">${v.what || ''}</p>`;
+    tipAt = performance.now();
+    const put = html => { if (tipFor !== b) return; const t = $('tip'); if (t.innerHTML !== html) t.innerHTML = html; t.hidden = false; tipPlace(); };
+    if (v.special) return put(what);
+    later(game.info(k), c => {
+      if (!c) return;
+      const cost = (label, r) => `<span${r.can ? '' : ' class="no"'}>${label} <b>${short(r.cost)}</b></span>`;
+      put(`<p>${c.now} → <b>${c.next}</b></p>` + (c.rate ? `<p>power ${fmt(c.rate[0])}/s → <b>${fmt(c.rate[1])}/s</b></p>` : '') +
+        `<p class="tc">${cost('next', { can: v.can, cost: c.cost })}${cost('×10', c.x10)}${cost(c.max.n > 1 ? 'max ×' + c.max.n : 'max', c.max)}</p>` + what +
+        (root.classList.contains('touch') ? '' : '<p class="th">shift-click ×10 · alt-click max</p>'));
+    });
+  };
+  const tipOpen = b => { if (!game || !game.info || !$('shop').classList.contains('bulky')) return; tipFor = b; tipPaint(); };
   let lastPl = 0;
   const SEAS = ['#e2a93a', '#1e7a7a', '#a03a1c', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c', '#0c0618', '#d2dce8', '#d89ab8', '#c89ab8'];   // each world's deepest sea tone
   // the wish box, which instant transmission's picker (class itxp) borrows: a button with data-i picks, any other closes it
@@ -498,7 +560,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   const ui = {
     onBuy(fn) { buyFn = fn; },
     update(s) {
-      lastPl = s.pl;
+      lastPl = s.pl; bulkFetch(); if (tipFor && performance.now() - tipAt > 250) tipPaint();
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
       const kb = $('kaio'); kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kb.textContent = s.kaio.ready ? 'kaioken' : 'kaioken ' + s.kaio.left + 's';
       if (s.itx) { const ib = $('itxBtn'), name = matchMedia('(max-width: 760px)').matches ? 'IT' : 'transmission'; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut(); ib.textContent = s.itx.left > 0 ? `${name} ${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}` : name; }   // phones keep it short: it shares a row with upgrades and kaioken
@@ -513,13 +575,30 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     shop(items) {
       const el = $('shop');
       const keys = Object.keys(items).join();
-      if (shopBuilt !== keys) { goalKey = ''; el.innerHTML = '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join(''); el.querySelectorAll('[data-buy]').forEach(b => { b.addEventListener('click', () => buyFn && (b.dataset.buy === 'ascend' ? askAscend() : b.dataset.buy === 'godki' ? askGod() : b.dataset.buy === 'zeno' ? askZeno() : buyFn(b.dataset.buy))); if (!['ascend', 'godki', 'zeno'].includes(b.dataset.buy)) hold(b, () => buyFn && buyFn(b.dataset.buy), () => !b.disabled); }); shopBuilt = keys; ui.achieved && ui.achieved(); }
+      shopItems = items;
+      if (shopBuilt !== keys) {
+        goalKey = ''; tipHide();
+        el.innerHTML = '<div class="bulk" role="group" aria-label="how many to buy">' + [1, 10, 0].map(n => `<button type="button" data-n="${n}" aria-pressed="${n === bulkN}">${n === 1 ? '×1' : n === 10 ? '×10' : 'max'}</button>`).join('') + '</div>' +
+          '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join('');
+        el.querySelectorAll('[data-n]').forEach(b => b.addEventListener('click', () => { bulkN = +b.dataset.n; bulk = null; el.querySelectorAll('[data-n]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); shopPaint(); bulkFetch(true); }));
+        el.querySelectorAll('[data-buy]').forEach(b => { const k = b.dataset.buy; b.addEventListener('click', e => buyFn && (k === 'ascend' ? askAscend() : k === 'godki' ? askGod() : k === 'zeno' ? askZeno() : buyFn(k, e.shiftKey ? 10 : e.altKey ? 0 : bulkN))); if (!['ascend', 'godki', 'zeno'].includes(k)) hold(b, () => buyFn && buyFn(k), () => !b.disabled, true); });
+        shopBuilt = keys; ui.achieved && ui.achieved();
+      }
       $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
-      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.disabled = !v.can && !v.open; b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + txt(v.level) : ''; b.querySelector('[data-cost]').textContent = short(v.cost); b.querySelector('[data-c]').textContent = v.what;  }
+      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + txt(v.level) : ''; b.querySelector('[data-c]').textContent = v.what; }
+      shopPaint(); bulkFetch(true); if (tipFor) tipPaint();
     },
     night(on) { document.body.classList.toggle('night', on); },
     hell(on) { document.body.classList.toggle('hell', on); },
-    event(text, ms = 2600) { const t = $('toast'), h = document.querySelector('.hud'); if (h && h.offsetParent) t.style.setProperty('--hud-top', h.offsetTop + 'px'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); },
+    // act {id, label, go}: a button in the toast (undo on a big buy)
+    event(text, ms = 2600, act) {
+      const t = $('toast'), h = document.querySelector('.hud'), sh = $('shop'); if (h && h.offsetParent) t.style.setProperty('--hud-top', h.offsetTop + 'px'); t.textContent = text; toastAct = act ? act.id : null;
+      if (act && sh.classList.contains('open') && sh.offsetParent && innerWidth <= 760) t.style.setProperty('--hud-top', Math.min(h ? h.offsetTop : 1e9, sh.offsetTop) + 'px');   // phones: an undo shows above the open upgrades sheet
+      if (act) { const b = document.createElement('button'); b.type = 'button'; b.className = 'tact'; b.textContent = act.label; b.addEventListener('click', e => { e.stopPropagation(); b.disabled = true; act.go(); }); t.append(' ', b); }
+      t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms);
+    },
+    // the toast's button for act `id` can't do anything any more
+    eventOff(id) { const b = $('toast').querySelector('.tact'); if (b && toastAct === id) b.disabled = true; },
     sfx(kind) { sfx(kind); },
     wish(options, done) {
       openBox('', '<p>state your wish</p>' + options.map((o, i) => `<button type="button" class="${o.tier || 'common'}" data-i="${i}"><i>${o.tier || 'common'}</i><b>${o.label}</b><span>${o.what}</span></button>`).join(''), i => done(options[i].key));
@@ -542,6 +621,30 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   }));
   document.addEventListener('pointerdown', e => { const f = $('foot'); if (f.classList.contains('open') && !f.contains(e.target) && !e.target.closest('#menuBtn, [data-tab="links"]')) f.classList.remove('open'); });
   $('shopToggle').addEventListener('click', () => { const open = $('shop').classList.toggle('open'); $('shopToggle').setAttribute('aria-expanded', String(open)); });
+  // the hover card: under the mouse (disabled rows too, so found by hit-testing), on keyboard focus, or a long press on
+  // touch, which then isn't a buy
+  const coarse = matchMedia('(any-pointer: coarse)'), touchy = () => root.classList.toggle('touch', coarse.matches || root.classList.contains('touched'));
+  touchy(); coarse.addEventListener('change', touchy);
+  const rowAt = e => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.closest('#shop [data-buy]'); };
+  let lpT = 0, lpAt = null, lpDone = false;
+  addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch') { if (lpAt && Math.hypot(e.clientX - lpAt[0], e.clientY - lpAt[1]) > 10) clearTimeout(lpT); return; }
+    const b = rowAt(e); if (b !== tipFor) { if (b) tipOpen(b); else tipHide(); }
+  }, { passive: true });
+  addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    if (!root.classList.contains('touched')) { root.classList.add('touched'); touchy(); }
+    tipHide(); clearTimeout(lpT); lpDone = false;
+    const b = rowAt(e); if (!b) return;
+    lpAt = [e.clientX, e.clientY]; lpT = setTimeout(() => { lpDone = true; holdStop(); tipOpen(b); }, 450);
+  }, true);
+  for (const t of ['pointerup', 'pointercancel']) addEventListener(t, () => clearTimeout(lpT), true);
+  addEventListener('click', e => { if (lpDone) { lpDone = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  $('shop').addEventListener('contextmenu', e => { if (root.classList.contains('touch')) e.preventDefault(); });
+  $('shop').addEventListener('scroll', tipHide, { passive: true });
+  $('shop').addEventListener('focusin', e => { const b = e.target.closest('[data-buy]'); if (b && b.matches(':focus-visible')) tipOpen(b); });
+  $('shop').addEventListener('focusout', e => { if (e.target === tipFor) tipHide(); });
+  root.addEventListener('mouseleave', tipHide);
   // phones: the upgrades sheet grows as upgrades unlock; hide the title only once the sheet's top reaches its letters (the canvas is taller than the letters)
   const shopOver = () => { const sh = $('shop'), b = $('brand').getBoundingClientRect(), r = sh.getBoundingClientRect(); document.body.classList.toggle('shop-over', sh.classList.contains('open') && r.height > 0 && r.top < b.top + b.height * .22); };
   new ResizeObserver(shopOver).observe($('shop')); new MutationObserver(shopOver).observe($('shop'), { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', shopOver);
@@ -671,7 +774,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const st = makeStage($('game')); st.resize(); st.night = false; st.calm = reduce;
   let game = null, goSoon = false;
-  const mount = () => { game = GAMES.find(g => g.id === 'planet').mount(st, ui); if (goSoon) go(); };
+  const mount = () => { game = GAMES.find(g => g.id === 'planet').mount(st, ui); $('shop').classList.toggle('bulky', !!(game.bulk && game.info)); if (goSoon) go(); };
   const go = () => { if (!game) { goSoon = true; return; } if ($('game').classList.contains('playing')) return; $('game').classList.add('playing'); game.start(); ui.fx('lap'); };
   if (engine) engine.then(mount); else mount();
   $('play').addEventListener('click', e => { e.stopPropagation(); go(); });

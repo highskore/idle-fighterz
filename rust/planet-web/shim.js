@@ -63,9 +63,11 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
       if ('sky' in m) dusk(m.sky);
       if (m.shop) ui.shop(m.shop);
       for (const [text, ms] of m.events) ui.event(text, ms);
+      if (m.undo) { const id = m.undo.id; if (m.undo.off) ui.eventOff && ui.eventOff(id); else ui.event(m.undo.text, m.undo.ms, { id, label: 'undo', go: () => { due(); P.undo(id); deliver(); } }); }
       for (const [call, ...args] of m.cues) if (call === 'xform') document.body.classList.toggle('xdark', args[0]); else if (back[call]) ui[call](args[0], v => { back[call](v); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
     };
-    ui.onBuy(k => { due(); P.buy(k); deliver(); });
+    // n: how many (shift-click 10, alt-click 0 for max); a plain click is one buy
+    ui.onBuy((k, n = 1) => { due(); if (n === 1) P.buy(k); else P.buy_n(k, n); deliver(); });
 
     const cv = st.cv;
     cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); due(); P.pointer_down(e.clientX, e.clientY, bx, by, e.pointerId, e.button, e.pointerType === 'touch'); deliver(); });
@@ -131,6 +133,7 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
     document.documentElement.dataset.engine = 'rust';
     return {
       menu, card, frame, thumb,
+      info: k => JSON.parse(P.shop_info(k)), bulk: n => JSON.parse(P.bulk(n)),
       ascendInfo: () => JSON.parse(P.ascend_info()), angels: () => JSON.parse(P.angels()), godInfo: () => JSON.parse(P.god_info()), zenoInfo: () => JSON.parse(P.zeno_info()),
       learn: id => { due(); P.learn(id); deliver(); },
       respec: () => { due(); P.respec(); deliver(); },
