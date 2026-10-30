@@ -16,6 +16,7 @@ pub mod intro;
 pub mod jsmath;
 pub mod json;
 pub mod limits;
+pub mod mech;
 pub mod num;
 pub mod rng;
 pub mod save;

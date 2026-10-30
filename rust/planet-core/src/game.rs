@@ -119,6 +119,8 @@ pub struct Game {
     pub xf: Option<crate::xform::XForm>,
     /// a form a preview hook or a test poke sets up lands at once, without its scene
     pub xf_instant: bool,
+    /// the boss mechanics off (the AFK sims' baseline)
+    pub no_mechs: bool,
     /// a limit break or a milestone playing (limits.rs)
     pub mo: Option<crate::limits::Moment>,
     /// strain from play waiting for the next frame, the last tap that counted, and the strain per second (smoothed)
@@ -185,6 +187,7 @@ impl Game {
             top_uni: 0,
             xf: None,
             xf_instant: false,
+            no_mechs: false,
             mo: None,
             strain_extra: 0.0,
             strain_tap_t: -9.0,

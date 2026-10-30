@@ -608,6 +608,7 @@ impl Scene {
             crate::storm::draw(c.fb, d, t, c.cx, c.cy + c.bob, c.r);
         }
         self.xf_front(&mut c, g, view, dt);
+        crate::mech::draw(&mut c, g);
         self.mo_front(&mut c, g, view);
         if g.flash_t > 0.0 {
             g.flash_t = 0f64.max(g.flash_t - dt * 1.8);
