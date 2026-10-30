@@ -38,12 +38,18 @@
     w.addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (b) ACT[b.dataset.w](); });
     B.snd.setAttribute('aria-pressed', $('snd').getAttribute('aria-pressed'));
     $('game').append(w);
+    // the skins (skins.js): the drawer shows the page's ki tree and heroes, and moves the planet aside
+    const skins = SKIN.mount({ root, w, B, stage: st.el, shop: $('shop'), menuBody: $('menuBody'), menuCard: $('menu').firstElementChild,
+      menu: tab => { menuTab = tab; $('menu').classList.remove('tree-only'); renderMenu(); }, menuData: () => game ? game.menu() : {},
+      relayout: () => game && game.relayout && game.relayout() });
 
     // each layout is the same pieces in different boxes; the ring goes behind the game canvas, so the action reads on top of it
     const LAYOUTS = [7, 1, 2, 3, 6];
-    function arrange(n) {
+    function arrange(n, skin) {
       n = LAYOUTS.includes(n) ? n : 7;
-      root.dataset.layout = n; w.textContent = ''; ring.remove(); for (const b of Object.values(B)) { b.style.left = b.style.top = ''; btns.append(b); }
+      w.textContent = ''; ring.remove(); for (const b of Object.values(B)) { b.style.left = b.style.top = ''; btns.append(b); }
+      if (skins.arrange(skin)) { root.dataset.layout = SKIN.pick(skin); return; }
+      root.dataset.layout = n;
       const box = cls => el('div', cls);
       if (n === 7) { const b = box('w-dock'); b.append(pl, info, btns); w.append(b); }
       else if (n === 1) { st.el.before(ring); w.append(pl, btns); placeRing(); }
@@ -62,7 +68,7 @@
     const hudDue = k => { const now = performance.now(); if (now - due[k] < (root.classList.contains('awake') || root.classList.contains('pin') || keep() ? 30 : 250)) return false; due[k] = now; return true; };
     // the app shows the power level beside its menu-bar icon: about once a second, and only when the short form changes
     const SHORT = ['', 'K', 'M', 'B'];
-    const short = n => { n = Math.floor(n); if (n < 1000) return String(n); let e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); if (+m.toFixed(1) >= 1000) { e++; m /= 1000; } return e < SHORT.length ? m.toFixed(1) + SHORT[e] : n.toExponential(1).replace('+', ''); };
+    const short = n => { if (typeof n === 'string') return sci(n, 1).join(''); n = Math.floor(n); if (n < 1000) return String(n); let e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); if (+m.toFixed(1) >= 1000) { e++; m /= 1000; } return e < SHORT.length ? m.toFixed(1) + SHORT[e] : n.toExponential(1).replace('+', ''); };
     let titleAt = -1e9, title = '';
     ui.update = s => {
       if (!hudDue('u')) return;
@@ -85,19 +91,20 @@
         iNext.hidden = !f.next; iNext.title = f.next ? 'next: ' + f.next : '';
       }
       iNext.firstChild.style.width = (f.p * 100).toFixed(1) + '%';
+      skins.hud(s, num, rate.textContent);
     };
     const event = ui.event;
     ui.event = (text, ms) => { if (!st.headless) event(text, ms); };   // a toast while hidden is gone before it shows
     let couldAscend = null;
     ui.shop = items => {
       if (!hudDue('s')) return;
-      shop(items); B.up.querySelector('i').textContent = $('shopCount').textContent;
+      shop(items); B.up.querySelector('i').textContent = $('shopCount').textContent; skins.shop(items);
       const can = !!(items.ascend && items.ascend.can); if (can && couldAscend === false) ui.notify('ascend'); couldAscend = can;
     };
 
     // awake while the pointer is about; the upgrades list or a popup keep it up
     let idle = 0;
-    const keep = () => $('shop').classList.contains('open') || !$('menu').hidden || !$('ascBox').hidden || !$('shareBox').hidden;
+    const keep = () => $('shop').classList.contains('open') || skins.open() || !$('menu').hidden || !$('ascBox').hidden || !$('shareBox').hidden;
     // clouds under the floating planet (settings: always, while awake, or never, their shape and amount). window mode has the
     // full cloud sea instead
     const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'c'); st.cloudAmt = conf.cloud_amount || 2; };
@@ -178,9 +185,10 @@
     if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; background(); });
 
     const apply = s => {
-      const first = conf.layout !== s.layout || !w.firstChild; conf = s;
+      const first = conf.layout !== s.layout || conf.skin !== s.skin || !w.firstChild; conf = s;
       idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; background();
-      if (first) arrange(s.layout);
+      skins.theme(s.theme);
+      if (first) arrange(s.layout, s.skin);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live
       clouds();
