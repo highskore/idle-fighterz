@@ -542,8 +542,12 @@ impl Scene {
         let arena = c.world == 9;
         let fled = |v: f64| if b.fled { v } else { 0.0 };
         b.x = c.cx + c.r * if arena { 1.3 } else { 1.45 } + (1.0 - ent) * c.w * 0.4 + fled(out * c.w * 0.5);
-        // a tall boss (cell) keeps his name and hp bar on the canvas
-        b.y = (c.cy - c.r * if arena { 0.4 } else { 0.75 } + sin(t * 2.0) * 3.0).max(spr.h as f64 * k + 18.0) - fled(out * 30.0);
+        b.y = c.cy - c.r * if arena { 0.4 } else { 0.75 } + sin(t * 2.0) * 3.0;
+        // cell, the one boss taller than 40px, keeps his name and hp bar (his mechanic's gauge) on the canvas
+        if spr.h > 40 {
+            b.y = b.y.max(spr.h as f64 * k + 18.0);
+        }
+        b.y -= fled(out * 30.0);
         let name_w = text_width(&b.name) / 2.0 + 1.0;
         b.x = b.x.min(c.w - ((spr.w as f64 - spr.ax + 1.0) * k).max(name_w).max(10.0 * k + 1.0) - 3.0 + (1.0 - ent) * c.w * 0.4 + fled(out * c.w * 0.5));
         b.flash = 0f64.max(b.flash - dt);
