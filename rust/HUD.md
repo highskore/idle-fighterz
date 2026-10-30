@@ -48,7 +48,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `pick_wish(key)`, `itx_jump(w)` | the wish box's and the transmission picker's callbacks |
 | `pick_hero(id) → bool` | the characters tab |
 | `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures: `card_sprite()` is the sprite |
-| `hero_sprite(id)`, `card_sprite()` | `thumb(id)`'s sprite (`HEROES[id].idle`) and `card().spr` (the hero's form, or fused), as an `Int32Array` `[w, h, ...col]` (`col` 0xRRGGBB a pixel, -1 for none); the shim makes game.js's `{ w, h, col }` of it |
+| `hero_sprite(id)`, `card_sprite()` | `thumb(id)`'s sprite (`HEROES[id].idle`) and `card().spr` (the hero's form as drawn in play, `HERO().forms[FORMS[S.form].i]`, or fused; game.js's `card()` indexes by ladder position, a different sprite past the shared nine forms), as an `Int32Array` `[w, h, ...col]` (`col` 0xRRGGBB a pixel, -1 for none); the shim makes game.js's `{ w, h, col }` of it |
 | `save() → text` | what to store under `hs-power`: `JSON.stringify(S)`, key for key |
 | `playing() → bool` | |
 
