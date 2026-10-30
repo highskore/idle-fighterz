@@ -20,6 +20,7 @@ pub mod spots;
 pub mod sprite;
 pub mod state;
 pub mod timeline;
+pub mod xform;
 
 pub use game::Game;
 

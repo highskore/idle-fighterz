@@ -35,6 +35,9 @@ pub enum Cue {
     ItxPick(String),
     /// `ui.notify(kind, arg)`: the widget's desktop notifications (a pod, a trip, a raid, the dragon); the site has none
     Notify(&'static str, String),
+    /// `["xform", on]`: a transformation's power-up darkens the sky (on), or its form has landed (off); the page
+    /// lightens the HUD's text over the dark sky
+    Scene(bool),
 }
 
 impl Cue {
@@ -53,6 +56,7 @@ impl Cue {
             Cue::Wish(l) => arr(["\"wish\"".into(), l.clone()]),
             Cue::ItxPick(l) => arr(["\"itxPick\"".into(), l.clone()]),
             Cue::Notify(k, a) => arr(["\"notify\"".into(), json::str(k), json::str(a)]),
+            Cue::Scene(on) => format!("[\"xform\",{on}]"),
         }
     }
 }
@@ -329,6 +333,9 @@ impl Game {
             fx.push(format!("kaioken ×{} {}s", num(self.kaio_x()), secs(b.kaio_until)));
         } else if b.tired_until > t {
             fx.push(format!("tired ×0.75 {}s", secs(b.tired_until)));
+        }
+        if b.surge_until > t {
+            fx.push(format!("power surge ×{} {}s", crate::xform::SURGE_X, secs(b.surge_until)));
         }
         if b.boost_until > t {
             fx.push(format!("boost ×2 {}s", secs(b.boost_until)));
