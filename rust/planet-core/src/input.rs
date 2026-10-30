@@ -96,6 +96,8 @@ pub struct Input {
     /// how long the beam has charged (0 when not), up to 2.5
     pub charging: f64,
     pub beam: Option<Beam>,
+    /// where the fired beam hit something, for the renderer's hit flashes
+    pub beam_hits: Vec<(f64, f64)>,
     pub bang: Option<Bang>,
     pub bang_ready: f64,
     /// the last tap's time and spot, for double-tap detection (`t` is -9 once a pair has fired)
@@ -119,6 +121,7 @@ impl Default for Input {
             w2_pole: false,
             charging: 0.0,
             beam: None,
+            beam_hits: Vec::new(),
             bang: None,
             bang_ready: 0.0,
             last_tap: (-9.0, 0.0, 0.0),
@@ -342,19 +345,26 @@ impl Game {
             kaio: self.b.kaio_until > t,
             ape: self.b.ape_until > t,
         });
+        self.inp.beam_hits.clear();
         self.cue(crate::hud::Cue::Sfx("beam"));
         self.shake = self.shake.max(0.2 + c * 0.15);
+        let ff = self.s.lv(Upg::Galick) >= 5 && c >= 2.4;
+        let band = self.beam_band(c, ff);
+        // it pierces: everything within `w` (the target's own half-size) plus the beam's band of its line is hit
+        let on_line = |x: f64, y: f64, w: f64| {
+            let (rx, ry) = (x - kx, y - ky);
+            rx * dir[0] + ry * dir[1] > 0.0 && (rx * dir[1] - ry * dir[0]).abs() < w + band
+        };
         if let Some(s) = self.tl.star.as_ref() {
-            let (rx, ry) = (s.x - kx, s.y - ky);
-            if rx * dir[0] + ry * dir[1] > 0.0 && (rx * dir[1] - ry * dir[0]).abs() < 8.0 + c * 3.0 {
+            if on_line(s.x, s.y, 8.0) {
                 let (sx, sy) = (s.x, s.y);
+                self.inp.beam_hits.push((sx, sy));
                 self.click(sx, sy);
             }
         }
         if c >= 2.4 {
             self.goal("beam", 1.0, false);
         }
-        let ff = self.s.lv(Upg::Galick) >= 5 && c >= 2.4;
         if let Some(b) = self.inp.beam.as_mut() {
             b.ff = ff;
             b.full = c >= 2.4;
@@ -364,21 +374,19 @@ impl Game {
         }
         let pts = self.beam_pay() * c / 2.5 * if ff { 1.25 } else { 1.0 };
         let dmg = pts * self.atk_buff();
-        let galick = self.s.lvf(Upg::Galick);
-        let on_line = |x: f64, y: f64, w: f64| {
-            let (rx, ry) = (x - kx, y - ky);
-            rx * dir[0] + ry * dir[1] > 0.0 && (rx * dir[1] - ry * dir[0]).abs() < w + c * 3.0 * if ff { 2.0 } else { 1.0 } * (1.0 + 0.15 * (galick - 1.0))
-        };
         for i in 0..self.tl.saibas.len() {
             let sb = &self.tl.saibas[i];
-            if !sb.dead && sb.sx.is_some_and(|(x, y)| on_line(x, y - 6.0, 7.0)) {
+            if let Some((x, y)) = sb.sx.filter(|&(x, y)| !sb.dead && on_line(x, y - 6.0, 7.0)) {
+                self.inp.beam_hits.push((x, y - 6.0));
                 self.kill_saiba(i);
             }
         }
         if self.tl.ginyu.as_ref().is_some_and(|g| g.done == 0.0) {
             for mi in 0..self.tl.ginyu.as_ref().unwrap().members.len() {
                 let m = &self.tl.ginyu.as_ref().unwrap().members[mi];
-                if !m.dead && on_line(m.x, m.y - m.spr.h / 2.0 * m.k, m.spr.w / 2.0 * m.k) {
+                let (x, y) = (m.x, m.y - m.spr.h / 2.0 * m.k);
+                if !m.dead && on_line(x, y, m.spr.w / 2.0 * m.k) {
+                    self.inp.beam_hits.push((x, y));
                     self.ginyu_hit(mi, dmg * 2.0);
                 }
             }
@@ -389,7 +397,9 @@ impl Game {
             }
             for i in 0..self.tl.movie.as_ref().unwrap().minions.len() {
                 let h = &self.tl.movie.as_ref().unwrap().minions[i];
-                if !h.dead && h.x.is_some_and(|x| on_line(x, h.y - h.spr.h / 2.0 * h.k, h.spr.w / 2.0 * h.k)) {
+                let y = h.y - h.spr.h / 2.0 * h.k;
+                if let Some(x) = h.x.filter(|&x| !h.dead && on_line(x, y, h.spr.w / 2.0 * h.k)) {
+                    self.inp.beam_hits.push((x, y));
                     self.movie_hit(i, dmg * 2.0);
                 }
             }
@@ -399,6 +409,7 @@ impl Game {
             if on_line(b.x, b.y - s.h / 2.0 * b.k, s.w / 2.0 * b.k) {
                 let d = self.wall_cap(dmg * 4.0, pts * 4.0);
                 let (bx, by) = (b.x, b.y - s.h / 2.0 * b.k);
+                self.inp.beam_hits.push((bx, by));
                 self.hit_boss(d, bx, by);
                 let b = self.tl.boss.as_ref().unwrap();
                 let (bx, by) = (b.x, b.y - b.spr().h * b.k);
@@ -412,16 +423,26 @@ impl Game {
             if m.dead || m.delay > 0.0 {
                 continue;
             }
-            let (rx, ry) = (m.x - kx, m.y - ky);
-            let (along, off) = (rx * dir[0] + ry * dir[1], (rx * dir[1] - ry * dir[0]).abs());
-            if along > 0.0 && off < 6.0 + c * 3.0 {
+            if on_line(m.x, m.y, 6.0) {
                 let (mx, my) = (m.x, m.y);
+                self.inp.beam_hits.push((mx, my));
                 self.tl.meteors[i].dead = true;
                 self.goal("meteor", 1.0, false);
                 let n = self.meteor_pay();
                 self.gain_at(n, mx, my - 6.0, true);
+                self.burst_at(mx, my, &[0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], 16, 110.0);
             }
         }
+        if let Some(g) = self.tl.gero.as_ref().filter(|g| on_line(g.x, g.y - g.spr.h / 2.0, g.spr.w / 2.0)) {
+            self.inp.beam_hits.push((g.x, g.y - g.spr.h / 2.0));
+            self.free_gero();
+        }
+    }
+
+    /// How far off its line a beam of charge `c` reaches past a target's own half-size: wider with the charge, twice
+    /// as wide as a final flash, +15% a galick level.
+    pub fn beam_band(&self, c: f64, ff: bool) -> f64 {
+        c * 3.0 * if ff { 2.0 } else { 1.0 } * (1.0 + 0.15 * (self.s.lvf(Upg::Galick) - 1.0))
     }
 
     /// `throwBang(x, y)`: the ki ball leaves his hand; it explodes when it lands (see `bang_step`).
