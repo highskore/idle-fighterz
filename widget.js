@@ -41,7 +41,7 @@
     // the skins (skins.js): the drawer shows the page's ki tree and heroes, and moves the planet aside
     const skins = SKIN.mount({ root, w, B, stage: st.el, shop: $('shop'), menuBody: $('menuBody'), menuCard: $('menu').firstElementChild,
       menu: tab => { menuTab = tab; $('menu').classList.remove('tree-only'); renderMenu(); }, menuData: () => game ? game.menu() : {},
-      relayout: () => game && game.relayout && game.relayout() });
+      relayout: () => game && game.relayout && game.relayout(), spot: () => invoke('planet_spot').then(s => s && JSON.parse(s)) });
 
     // each layout is the same pieces in different boxes; the ring goes behind the game canvas, so the action reads on top of it
     const LAYOUTS = [7, 1, 2, 3, 6];
