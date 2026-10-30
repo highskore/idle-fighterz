@@ -94,7 +94,7 @@
       skins.hud(s, num, rate.textContent);
     };
     const event = ui.event;
-    ui.event = (text, ms) => { if (!st.headless) event(text, ms); };   // a toast while hidden is gone before it shows
+    ui.event = (text, ms, act) => { if (!st.headless) event(text, ms, act); };   // a toast while hidden is gone before it shows
     let couldAscend = null;
     ui.shop = items => {
       if (!hudDue('s')) return;
