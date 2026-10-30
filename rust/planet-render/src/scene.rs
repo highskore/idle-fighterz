@@ -442,7 +442,8 @@ impl Scene {
             self.tones = Some(tones);
             return;
         }
-        let sea = sea_pal(&tones.sea, g.tl.night_k);
+        let dusk = g.dusk();
+        let sea = dusk.as_ref().and_then(|d| crate::storm::sea(&tones.sea, d)).unwrap_or_else(|| sea_pal(&tones.sea, g.tl.night_k));
         if world == 9 {
             crate::top::draw_void(&mut c, g, &mut self.void, view.bare);
         } else if view.bare {
@@ -531,7 +532,7 @@ impl Scene {
                 r: c.r,
                 t,
                 rise: 1f64.min((t - sh.t0) / 1.1),
-                age: t - sh.t0,
+                age: t - sh.t0 - g.shen_delay(),
                 gone: if sh.phase == planet_core::timeline::Phase::Leave { 1f64.min((t - sh.t1) / 1.6) } else { 0.0 },
                 glow: sh.look == 3,
             };
@@ -589,6 +590,9 @@ impl Scene {
             }
         } else if world != 9 {
             draw_sea(&mut c, view, &sea, world, true);
+        }
+        if let Some(d) = &dusk {
+            crate::storm::draw(c.fb, d, t, c.cx, c.cy + c.bob, c.r);
         }
         if g.flash_t > 0.0 {
             g.flash_t = 0f64.max(g.flash_t - dt * 1.8);
