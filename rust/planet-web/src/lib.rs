@@ -235,12 +235,14 @@ impl Planet {
         sprite_px(&planet_core::sprite::hero(id).forms[0].idle)
     }
 
-    /// The sprite the share card shows, as `hero_sprite`: the hero's form, or fused (game.js's `card().spr`).
+    /// The sprite the share card shows, as `hero_sprite`: the hero's form as drawn in play, or fused.
     pub fn card_sprite(&self) -> Vec<i32> {
         let g = &self.0.game;
         let id = planet_core::data::CHARS.iter().find(|c| c.0 == g.s.hero).map_or("vegeta", |c| c.1);
         let h = planet_core::sprite::hero(id);
-        sprite_px(if g.b.fuse_until > g.t { &h.fused.idle } else { &h.forms[g.s.form].idle })
+        // sprites go by `ALL_FORMS` index, not ladder index: game.js's `card().spr` mixes them up past the shared nine
+        let fi = planet_core::data::ALL_FORMS.iter().position(|f| f.0 == g.forms[g.s.form].name).unwrap_or(0);
+        sprite_px(if g.b.fuse_until > g.t { &h.fused.idle } else { &h.forms[fi].idle })
     }
 }
 
@@ -322,5 +324,26 @@ mod tests {
         let v = p.hero_sprite("goku");
         assert_eq!((v[0] as usize, v[1] as usize, &v[2..]), (idle.w, idle.h, &idle.col[..]));
         assert_eq!(p.card_sprite(), p.hero_sprite("vegeta"));
+    }
+
+    #[test]
+    fn the_card_sprite_is_the_one_drawn_in_play_for_every_hero_and_form() {
+        use planet_core::data::{ladder_of, ALL_FORMS, CHARS};
+        let mut p = Planet::new(7, 200.0, 134.0, 3.0);
+        for &(hero, id, ..) in CHARS.iter() {
+            let set = planet_core::sprite::hero(id);
+            p.0.game.s.hero = hero;
+            p.0.game.forms = ladder_of(hero);
+            for form in 0..p.0.game.forms.len() {
+                p.0.game.s.form = form;
+                let name = p.0.game.forms[form].name;
+                // the in-play sprite (game.js's draw, planet-render's `draw_hero`): `HERO().forms[FORMS[S.form].i]`
+                let i = ALL_FORMS.iter().position(|a| a.0 == name).unwrap();
+                assert_eq!(p.card_sprite(), sprite_px(&set.forms[i].idle), "{id} in {name}");
+            }
+            p.0.game.b.fuse_until = p.0.game.t + 1.0;
+            assert_eq!(p.card_sprite(), sprite_px(&set.fused.idle), "{id} fused");
+            p.0.game.b.fuse_until = 0.0;
+        }
     }
 }
