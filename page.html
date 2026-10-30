@@ -379,6 +379,14 @@ body.lookout:not(.night) .game { background: linear-gradient(#ece4ff, #a2b4f2 60
 body.kaiworld:not(.night) .game { background: linear-gradient(#eafff4, #9ae0c6 75%) !important; }
 /* yardrat: a pastel pink sky */
 body.yardrat:not(.night) .game { background: linear-gradient(#fff2f8, #eebcda 75%) !important; }
+/* shenron's storm: the Rust engine's shim sets body.dusk and its colours every frame of the summon (rust/HUD.md, sky).
+   The page goes lilac-grey under a dusky violet sky, and a cream pillar of light runs from the card up off the page */
+:root:has(body.dusk), :root body.dusk, :root body.dusk .page { background: var(--dusk-page) !important; transition: none; }
+:root body.dusk .game { background: linear-gradient(var(--dusk-top), var(--dusk-bot) 78%) !important; border-color: transparent; transition: none; }
+body.dusk .foot { opacity: var(--dusk-foot); background: transparent !important; border-color: transparent !important; }
+body.dusk .hint { opacity: 0; }
+body.dusk .edge { display: none !important; }
+body.dusk .page::before { content: ''; position: absolute; z-index: 1; left: var(--dusk-pil-x); top: 0; width: var(--dusk-pil-w); height: var(--dusk-pil-h); translate: -50% 0; pointer-events: none; opacity: var(--dusk-pil); background: linear-gradient(90deg, transparent, #b88a6a80 18%, #f0c070 32%, #ffe8b0 42%, #fff8e8 50%, #ffe8b0 58%, #f0c070 68%, #b88a6a80 82%, transparent); filter: blur(1.5px); box-shadow: 0 0 36px 6px #f0c07073; }
 /*widget*/
 __WIDGET_CSS__
 /*/widget*/</style>

@@ -34,6 +34,15 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
     const due = () => P.timeouts_now(Date.now());
     // the calls that hand the page a callback: what picking does
     const back = { wish: k => { due(); P.pick_wish(k); }, itxPick: w => { due(); P.itx_jump(w); } };
+    // shenron's storm over the page: its colours, and the pillar from the card's top edge up (page.html's body.dusk)
+    const dusk = s => {
+      const bs = document.body.style;
+      document.body.classList.toggle('dusk', !!s);
+      if (!s) return;
+      const r = st.cv.getBoundingClientRect(), k = r.width / st.W;
+      bs.setProperty('--dusk-page', s.page); bs.setProperty('--dusk-top', s.top); bs.setProperty('--dusk-bot', s.bot); bs.setProperty('--dusk-foot', s.foot);
+      bs.setProperty('--dusk-pil', s.pil); bs.setProperty('--dusk-pil-x', (r.left + s.x * k) + 'px'); bs.setProperty('--dusk-pil-w', (s.w * k) + 'px'); bs.setProperty('--dusk-pil-h', Math.max(0, r.top) + 'px');
+    };
     const deliver = () => {
       const m = JSON.parse(P.frame());
       if ('world' in m) { ui.hell && ui.hell(false); ui.world && ui.world(m.world); }
@@ -43,6 +52,7 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
         if (m.hud.shen !== shen) document.body.classList.toggle('shen', shen = m.hud.shen);
         if (m.hud.look !== look) { document.body.classList.remove('jelly', 'earth'); look = m.hud.look; if (look) document.body.classList.add(look); }
       }
+      if ('sky' in m) dusk(m.sky);
       if (m.shop) ui.shop(m.shop);
       for (const [text, ms] of m.events) ui.event(text, ms);
       for (const [call, ...args] of m.cues) if (back[call]) ui[call](args[0], v => { back[call](v); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
