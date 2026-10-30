@@ -112,7 +112,7 @@ html.dw-open .dw { transform: none; }
 .dw header b { font-weight: 400; color: var(--gold); }
 .dw header .dw-x { flex: none; width: 22px; font-size: 13px; }
 .dw-body { position: relative; flex: 1; min-height: 0; }
-.widget .dw .menu-body { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px; font-size: .92em; }
+.widget .dw .menu-body { scrollbar-width: none; position: absolute; inset: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px; font-size: .92em; }
 .widget .dw .menu-body.chars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
 .dw .node, .dw .char, .dw .tree-head button { color: var(--ink); background: var(--row); border-color: var(--line); }
 .dw .node { padding: 6px 8px; border-radius: 10px; } .dw .node.can { border-color: var(--gold); background: var(--can); }
@@ -128,7 +128,7 @@ html.dw-open .dw { transform: none; }
 
 /* dark: smoked glass with gold, for classic (every layout) and the drawer; the scouter has its own dark, capsule corp
    stays white. toasts go dark with either */
-html.widget[data-theme="dark"]:not([data-skin="scouter"]) :is(.w, .shop, .dw) { --chip: rgba(24,24,30,.9); --edge: rgba(255,255,255,.12); --shadow: 0 2px 10px rgba(0,0,0,.32), 0 0 0 .5px rgba(0,0,0,.6); --ink: #f3f1ec; --muted: #a3a09a; --line: rgba(255,255,255,.14); --gold: #f2b53a; --row: rgba(255,255,255,.06); --can: rgba(242,181,58,.14); }
+html.widget[data-theme="dark"]:not([data-skin="scouter"]) :is(.w, .shop, .dw) { --chip: rgba(24,24,30,.94); --edge: rgba(255,255,255,.12); --shadow: 0 2px 10px rgba(0,0,0,.32), 0 0 0 .5px rgba(0,0,0,.6); --ink: #f3f1ec; --muted: #a3a09a; --line: rgba(255,255,255,.14); --gold: #f2b53a; --row: rgba(255,255,255,.06); --can: rgba(242,181,58,.14); }
 html.widget[data-theme="dark"]:not([data-skin]) .w button:hover { background: #34343c; }
 html.widget[data-theme="dark"]:is([data-layout="7"], [data-layout="2"], [data-layout="6"]) .w-btns button:not([data-w="kaio"], [data-w="itx"]) { color: #ece9e2; background: rgba(255,255,255,.08); }
 html.widget[data-theme="dark"]:is([data-layout="7"], [data-layout="2"], [data-layout="6"]) .w-btns button:not([data-w="kaio"], [data-w="itx"]):hover { background: rgba(255,255,255,.16); }
