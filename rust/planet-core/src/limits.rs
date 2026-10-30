@@ -17,7 +17,12 @@ use crate::data::{
 use crate::game::Game;
 use crate::geom::{ap, cross, dot, m_mul, mul, ortho, rot};
 use crate::hud::Cue;
-use crate::jsmath::{atan2, hypot};
+use crate::jsmath::{atan2, hypot, log, pow};
+
+/// log10 the way every target computes it (jsmath's log is V8's, bit for bit)
+fn log10(x: f64) -> f64 {
+    log(x) / std::f64::consts::LN_10
+}
 
 /// A limit break: he powers up for `BREAK_UP`s, the world freezes and cracks, then the colour floods back.
 pub const BREAK_UP: f64 = 3.2;
@@ -70,7 +75,7 @@ pub fn milestone(i: u32) -> (f64, Option<u32>) {
             return (a, Some(k as u32));
         }
         n += 1;
-        let step = 10f64.powf(a.log10().floor());
+        let step = pow(10.0, log10(a).floor());
         let mut x = (a / step).floor() * step + step;
         while x < b {
             if n == i {
@@ -100,7 +105,7 @@ impl Game {
 
     /// log10 of where the ceiling has crept to (before the lid and the floor clamp it).
     fn creep_log(&self) -> f64 {
-        CEIL0.log10() + self.s.creep + self.s.uni_best as f64 * CEIL_STEP.log10()
+        log10(CEIL0) + self.s.creep + self.s.uni_best as f64 * log10(CEIL_STEP)
     }
 
     /// Whether the ceiling has crept up to the current limit.
@@ -122,7 +127,7 @@ impl Game {
 
     /// Strain needed to break the next limit.
     pub fn break_need(&self) -> f64 {
-        BREAK_S * BREAK_G.powi(self.s.limits as i32)
+        BREAK_S * pow(BREAK_G, self.s.limits as f64)
     }
 
     /// A training tap's strain (at most one every `STRAIN_TAP_GAP`s counts).
@@ -155,7 +160,7 @@ impl Game {
             let lid = Self::limit_log(self.s.limits + 1);
             let base = self.creep_log();
             if base < lid {
-                let speed = CEIL_T.log10() / 60.0 * 2f64.powi(self.s.limits as i32);
+                let speed = log10(CEIL_T) / 60.0 * 2f64.powi(self.s.limits as i32);
                 self.s.creep += (s * speed).min(lid - base);
             } else if self.core() >= self.ceiling() && self.mo.is_none() {
                 self.s.meter += s;
