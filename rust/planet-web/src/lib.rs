@@ -124,6 +124,11 @@ impl Planet {
         self.0.game.learn_angel(id);
     }
 
+    /// `wear(kind, id)`: wears a look the milestones unlocked, or takes it off.
+    pub fn wear(&mut self, kind: &str, id: &str) {
+        self.0.game.wear(kind, id);
+    }
+
     pub fn auto_next(&mut self) {
         self.0.game.auto_next();
     }

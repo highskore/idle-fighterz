@@ -641,7 +641,20 @@ impl Game {
             .bool("spent", s.tree.iter().any(|&l| l > 0))
             .raw("ach", arr(ach))
             .raw("chars", arr(chars))
+            .raw("looks", arr(self.looks_json()))
             .end()
+    }
+
+    /// The looks for the menu: each kind with what's worn and every look, unlocked or not (and what unlocks it).
+    fn looks_json(&self) -> impl Iterator<Item = String> + '_ {
+        use crate::looks::{look_need, LookKind, LOOKS};
+        LookKind::ALL.into_iter().map(move |k| {
+            let items = LOOKS
+                .iter()
+                .filter(move |l| l.kind == k)
+                .map(|l| Obj::new().str("id", l.id).str("name", l.name).bool("open", self.look_open(l)).str("need", look_need(l)).end());
+            Obj::new().str("kind", k.key()).str("label", k.label()).str("on", self.s.wear[k as usize].unwrap_or("")).raw("items", arr(items)).end()
+        })
     }
 
     fn angel_open(&self, i: usize) -> bool {
@@ -785,6 +798,7 @@ impl Game {
             .str("zeno", &if s.zeno > 0 { fmt_short(Big::from(ZENO_X).pow(s.zeno as f64)) } else { String::new() })
             .num("mastery", s.mastery as f64)
             .num("limits", s.limits as f64)
+            .str("frame", s.wear[crate::looks::LookKind::Frame as usize].unwrap_or(""))
             .num("movies", s.movies as f64)
             .num("tail", s.lvf(Upg::Tail))
             .end()

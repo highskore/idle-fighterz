@@ -136,6 +136,7 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
       respec: () => { due(); P.respec(); deliver(); },
       learnAngel: id => { due(); P.learn_angel(id); deliver(); },
       autoNext: () => { due(); P.auto_next(); },
+      wear: (kind, id) => { due(); P.wear(kind, id); },
       pick: id => { due(); return P.pick_hero(id); },
       kaioken: () => { due(); P.kaioken(); deliver(); },
       itx: () => { due(); P.itx(); deliver(); },

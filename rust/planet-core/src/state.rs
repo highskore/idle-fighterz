@@ -41,6 +41,8 @@ pub struct Save {
     pub meter: f64,
     /// milestones passed (`limits::milestone`)
     pub mile: u32,
+    /// the looks worn (looks.rs), by kind: the run's, like everything else
+    pub wear: [Option<&'static str>; 4],
     pub form_top: usize,
     pub form_top_name: &'static str,
     pub hero: Hero,

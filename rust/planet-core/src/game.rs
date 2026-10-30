@@ -1398,6 +1398,7 @@ impl Game {
             self.tl.next_tour = 0.0;
         }
         self.limits_preview(hash);
+        self.looks_preview(hash);
         self.forms = ladder_of(self.s.hero, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
         if has("xform") {
