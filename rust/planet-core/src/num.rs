@@ -78,7 +78,13 @@ pub fn to_exponential(x: f64, digits: usize) -> String {
         return format!("{}e+0", to_fixed(0.0, digits));
     }
     let neg = x < 0.0;
-    let exact = format!("{:.1100e}", x.abs());
+    // 30 digits past the rounding place settle it unless, from the rounding digit on, they read as a tie (5000…, which
+    // may be a 4999… rounded up, or 4999…);
+    // only then the full expansion is needed (it's slow: the shop formats every cost every frame)
+    let fast = format!("{:.*e}", digits + 30, x.abs());
+    let tail = &fast.split_once('e').unwrap().0[digits + 2..];
+    let tie = tail.strip_prefix('5').is_some_and(|t| t.bytes().all(|c| c == b'0')) || tail.strip_prefix('4').is_some_and(|t| t.bytes().all(|c| c == b'9'));
+    let exact = if tie { format!("{:.1100e}", x.abs()) } else { fast };
     let (mant, exp) = exact.split_once('e').unwrap();
     let mut e: i32 = exp.parse().unwrap();
     let all: Vec<u8> = mant.bytes().filter(|&c| c != b'.').collect();
@@ -257,6 +263,35 @@ mod tests {
         assert_eq!(to_fixed(1.005, 2), "1.00");
         assert_eq!(to_fixed(99.95, 1), "100.0");
         assert_eq!(to_exponential(1.7976931348623157e308, 1), "1.8e+308");
+        // the fast path agrees with the full expansion, ties included
+        let slow = |x: f64, d: usize| {
+            let exact = format!("{:.1100e}", x);
+            let (mant, exp) = exact.split_once('e').unwrap();
+            let mut e: i32 = exp.parse().unwrap();
+            let all: Vec<u8> = mant.bytes().filter(|&c| c != b'.').collect();
+            let (mut r, carry) = round_half_up(&all, d + 1);
+            if carry {
+                e += 1;
+                r.pop();
+            }
+            let s = String::from_utf8(r).unwrap();
+            let m = if d == 0 { s } else { format!("{}.{}", &s[..1], &s[1..]) };
+            format!("{m}e{}{}", if e < 0 { '-' } else { '+' }, e.abs())
+        };
+        let mut seed = 12345u64;
+        for i in 0..20000 {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            let x = f64::from_bits((seed >> 2) & 0x7fef_ffff_ffff_ffff);
+            let x = if i % 3 == 0 { (x.log2().abs() * 1e3).round() / 8.0 + 0.5 } else { x };
+            if x.is_finite() && x > 0.0 {
+                for d in [0, 1, 2, 5] {
+                    assert_eq!(to_exponential(x, d), slow(x, d), "{x:e} to {d} digits");
+                }
+            }
+        }
+        for x in [1.25, 2.5, 0.125, 1.5e-7, 9.5, 1e21 + 2.0f64.powi(20)] {
+            assert_eq!(to_exponential(x, 1), slow(x, 1));
+        }
         assert_eq!(locale_en(1234567.0), "1,234,567");
         assert_eq!(fmt_short(12345.0), "12.3K");
         assert_eq!(fmt_short(999_950.0), "1.0M");

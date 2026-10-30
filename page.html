@@ -879,7 +879,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     const bt = `BEST ${pl(d.best)}` + (d.peak ? ` · PEAK ${d.peak.toUpperCase()}` : ''); x.fillStyle = '#8a8a86'; fit(bt, MONO, 420, 20); x.fillText(bt, 740, 248);
     // only the stats the player has: early on a row of two or three, late a second row; past eight the plainest go
     const cells = [d.saga < n ? ['SAGA', sagaTxt] : ['VILLAINS', num(d.saga)], d.wishes && ['WISHES', String(d.wishes)], d.seeds && ['KI SEEDS', fmt(d.seeds)], ['LAPS', fmt(d.laps)], d.tail && ['TAIL', `LV ${d.tail}`], d.movies && ['MOVIES', String(d.movies)],
-      d.uni && ['UNIVERSE', d.uni + (d.ustars ? ` ★${d.ustars}` : '')], d.mastery && ['MASTERY', `★${d.mastery}`], d.godki && ['GOD KI', fmt(d.godki)], d.zeno && ['ZENO', `×${d.zeno}`]].filter(Boolean);
+      d.uni && ['UNIVERSE', d.uni + (d.ustars ? ` ★${d.ustars}` : '')], d.mastery && ['MASTERY', `★${d.mastery}`], d.godki && ['GOD KI', fmt(d.godki)], d.zeno && ['ZENO', `×${d.zeno}`], d.limits && ['LIMITS', `${d.limits} BROKEN`]].filter(Boolean);
     for (const l of ['LAPS', 'KI SEEDS', 'SAGA', 'VILLAINS']) { const i = cells.findIndex(c => c[0] === l); if (cells.length > 8 && i >= 0) cells.splice(i, 1); }
     const sy = 270, rows = Math.ceil(cells.length / 4), per = Math.ceil(cells.length / rows), cw = 420 / per;
     x.fillStyle = '#ececec'; for (let r = 0; r <= rows; r++) x.fillRect(740, sy + r * 78, 420, 2);

@@ -10,6 +10,7 @@ pub mod beam;
 pub mod effects;
 pub mod floats;
 pub mod intro;
+mod limits;
 pub mod px;
 pub mod scene;
 pub mod scenery;

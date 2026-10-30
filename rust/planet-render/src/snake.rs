@@ -3,7 +3,6 @@
 //! Drawn in place of the planet while `S.world === 3`.
 #![allow(clippy::approx_constant)] // game.js's own 6.28 and 6.283
 
-use planet_core::data::ALL_FORMS;
 use planet_core::jsmath::{atan2, cos, hypot, pow, sin};
 use planet_core::num::{js_round, to_fixed};
 use planet_core::sprite::{self, Sprite};
@@ -921,7 +920,7 @@ fn road_3d(c: &mut Ctx, g: &mut Game, view: &View, rw: f64) -> f64 {
     let fy = feet + (tip_y + 2.0 - feet) * land;
     let fx2 = hx + (kx - hx) * land;
     let form = &g.forms[g.s.form];
-    let fi = ALL_FORMS.iter().position(|f| f.0 == form.name).unwrap_or(0);
+    let fi = form.look;
     let hero = sprite::hero(crate::scene::hero_id(g));
     let back = &hero.backs.get(fi).unwrap_or(&hero.backs[0])[(t * 8.0).floor() as usize % 2];
     let spr = if tb > 0.35 { &hero.forms[fi].pose } else { back };

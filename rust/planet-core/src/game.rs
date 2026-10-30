@@ -119,6 +119,17 @@ pub struct Game {
     pub xf: Option<crate::xform::XForm>,
     /// a form a preview hook or a test poke sets up lands at once, without its scene
     pub xf_instant: bool,
+    /// a limit break or a milestone playing (limits.rs)
+    pub mo: Option<crate::limits::Moment>,
+    /// strain from play waiting for the next frame, the last tap that counted, and the strain per second (smoothed)
+    pub strain_extra: f64,
+    pub strain_tap_t: f64,
+    pub strain_rate: f64,
+    /// the next milestone, worked out once per milestone (limits.rs)
+    pub next_mile: std::cell::RefCell<crate::limits::NextMile>,
+    /// the ki ceiling, kept until what it's made of changes (limits.rs)
+    pub ceil_memo: std::cell::Cell<Option<crate::limits::CeilMemo>>,
+    pub floor_memo: std::cell::Cell<Option<(u32, Big)>>,
     /// the last big buy, while undo can still take it back (buy.rs)
     pub undo: Option<crate::buy::Undo>,
     pub undo_seq: u32,
@@ -131,7 +142,7 @@ pub struct Game {
 impl Game {
     pub fn new(seed: u32) -> Self {
         let s = Save::new();
-        let forms = ladder_of(s.hero);
+        let forms = ladder_of(s.hero, s.limits);
         let mut g = Game {
             s,
             rng: Lcg::new(seed),
@@ -174,6 +185,13 @@ impl Game {
             top_uni: 0,
             xf: None,
             xf_instant: false,
+            mo: None,
+            strain_extra: 0.0,
+            strain_tap_t: -9.0,
+            strain_rate: 1.0,
+            next_mile: Default::default(),
+            ceil_memo: Default::default(),
+            floor_memo: Default::default(),
             undo: None,
             undo_seq: 0,
             undo_offer: None,
@@ -225,7 +243,7 @@ impl Game {
         if b <= SEED_SOFT {
             b
         } else {
-            SEED_SOFT * (b / SEED_SOFT).pow(SEED_EXP)
+            SEED_SOFT * (b / SEED_SOFT).pow(if self.s.limits >= 2 { crate::data::SEED_EXP_II } else { SEED_EXP })
         }
     }
 
@@ -258,14 +276,23 @@ impl Game {
         self.s.gods >= ZENO_GODS * (1 + self.s.zeno)
     }
 
-    pub fn god_boost_of(n: f64) -> f64 {
-        1.0 + GOD_X * n
+    /// God ki's boost for `n` god ki: ×(1+n), or compounding once limit IV is broken (whichever is more).
+    pub fn god_boost_of(&self, n: f64) -> Big {
+        let lin = Big::from(1.0 + GOD_X * n);
+        if self.s.limits >= 4 {
+            lin.max(Big::from(crate::data::GOD_X_IV).pow(n))
+        } else {
+            lin
+        }
     }
 
-    /// The ki ceiling: the capped engine shrinks to a small power past it.
-    pub fn ceiling(&self) -> f64 {
-        let time = if self.s.multi { crate::jsmath::pow(CEIL_T, ((self.session - self.s.multi_t) / 60.0).max(0.0)) } else { 1.0 };
-        CEIL0 * time * crate::jsmath::pow(CEIL_STEP, self.s.uni_best as f64)
+    /// A universe star's boost: ×1.5, or ×1.75 once limit V is broken.
+    pub fn star_x(&self) -> f64 {
+        if self.s.limits >= 5 {
+            crate::data::STAR_X_V
+        } else {
+            STAR_X
+        }
     }
 
     pub fn capped(&self, m: Big) -> Big {
@@ -273,22 +300,27 @@ impl Game {
         if m <= c {
             m
         } else {
-            c * (m / c).pow(CEIL_EXP)
+            // through jsmath's log and exp, not the platform's pow: the same bits on every target, as the ceiling now moves
+            // with play (glibc's and Apple's pow differed by an ulp here)
+            c * Big::exp10((m / c).log10() * CEIL_EXP)
         }
     }
 
     pub fn late_boost(&self) -> Big {
         let stars = self.s.ustars as f64 * if self.ang(A_STARS) { 2.0 } else { 1.0 };
-        Big::from(STAR_X).pow(stars)
+        Big::from(self.star_x()).pow(stars)
             * Big::from(MASTERY_X).pow(self.s.mastery as f64)
-            * Self::god_boost_of(self.s.god_total as f64)
+            * self.god_boost_of(self.s.god_total as f64)
             * Big::from(ZENO_X).pow(self.s.zeno as f64)
     }
 
-    /// The engine the ceiling caps; forms sit outside it.
+    /// The engine the ceiling caps; forms sit outside it. Every limit broken is a floor under it, even right after god
+    /// ki empties the engine.
     pub fn core(&self) -> Big {
         let w = self.s.wishes as f64;
-        Big::from(1.15f64).pow(self.s.lvf(Upg::Gravity)) * Big::from(1.25f64).pow(w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON
+        (Big::from(1.15f64).pow(self.s.lvf(Upg::Gravity)) * Big::from(1.25f64).pow(w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON)
+            .max(if self.s.limits > 0 { 1.0 } else { 0.0 })
+            * self.floor()
     }
 
     pub fn tail_lv(&self) -> f64 {
@@ -566,6 +598,9 @@ impl Game {
             if f >= MUI_FORM {
                 self.ach("mui");
             }
+            if self.forms[f].lb > 0 {
+                self.ach("lbform");
+            }
             if let Some(&(_, a)) = LATE_ACH.iter().find(|l| l.0 == self.forms[f].name) {
                 self.ach(a);
             }
@@ -579,12 +614,12 @@ impl Game {
         let msg = format!("{}!  ×{}{}{more}", f.name, f.x, if preview { " — a taste, for 60s" } else { "" });
         self.event_ms(msg, ms);
         self.cue(Cue::Form(self.s.form));
-        let fi = ALL_FORMS.iter().position(|f| f.0 == self.forms[self.s.form].name).unwrap_or(0);
+        let aura = self.forms[self.s.form].aura();
         let q = self.kid_screen(10.0);
         for _ in 0..90 {
             let vx = (self.rng.random() - 0.5) * 200.0;
             let vy = (self.rng.random() - 0.5) * 200.0;
-            self.fx.push(Particle::new(q.x, q.y, &FORM_AURA[fi]).v(vx, vy).drag(2.0).life(1.1));
+            self.fx.push(Particle::new(q.x, q.y, &aura).v(vx, vy).drag(2.0).life(1.1));
         }
     }
 
@@ -606,6 +641,7 @@ impl Game {
             1.0
         };
         self.last_click = t;
+        self.strain_tap();
         if self.combo >= 2.0 {
             self.goal("combo", 1.0, false);
         }
@@ -854,7 +890,7 @@ impl Game {
         self.top_sync();
         self.cue(Cue::Form(self.s.form));
         self.scenery();
-        let boost = crate::num::fmt_short(Self::god_boost_of(self.s.god_total as f64));
+        let boost = crate::num::fmt_short(self.god_boost_of(self.s.god_total as f64));
         self.event_ms(format!("whis: \"ohoho, not bad.\" — +{g} god ki (×{boost} on everything). back to universe 9: spend god ki in menu → angels"), 5000.0);
         self.cue(Cue::Fx("super"));
         if self.zeno_ready() {
@@ -1020,6 +1056,7 @@ impl Game {
             }
             // a form you hold the power for comes as a scene (xform.rs) and stays for the run
             self.xform_step(t, dt);
+            self.limits_step(t, dt);
             let last = self.forms.len() - 1;
             if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0) {
                 self.s.mastery += 1;
@@ -1349,7 +1386,8 @@ impl Game {
             best(self, 3000.0);
             self.tl.next_tour = 0.0;
         }
-        self.forms = ladder_of(self.s.hero);
+        self.limits_preview(hash);
+        self.forms = ladder_of(self.s.hero, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
         if has("xform") {
             // the transformation scene from the first frame: just past super saiyan's mark and the scouter's
