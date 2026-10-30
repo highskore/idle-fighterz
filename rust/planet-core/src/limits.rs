@@ -17,11 +17,29 @@ use crate::data::{
 use crate::game::Game;
 use crate::geom::{ap, cross, dot, m_mul, mul, ortho, rot};
 use crate::hud::Cue;
-use crate::jsmath::{atan2, hypot, log, pow};
+use crate::jsmath::{atan2, exp, hypot, log};
 
 /// log10 the way every target computes it (jsmath's log is V8's, bit for bit)
 fn log10(x: f64) -> f64 {
     log(x) / std::f64::consts::LN_10
+}
+
+/// log10 of `CEIL0`, `CEIL_STEP` and `CEIL_T`, worked out once (jsmath's log is slow, and these go every frame)
+fn ceil_logs() -> &'static [f64; 3] {
+    static L: std::sync::OnceLock<[f64; 3]> = std::sync::OnceLock::new();
+    L.get_or_init(|| [log10(CEIL0), log10(CEIL_STEP), log10(CEIL_T)])
+}
+
+/// The next milestone, worked out once per milestone: which one it is, log10 of its power, its named index, and how
+/// the HUD prints its power.
+#[derive(Clone, Debug, Default)]
+pub struct NextMile {
+    i: Option<u32>,
+    at: f64,
+    /// its power (compared every frame: cheaper than a log)
+    need: Big,
+    named: Option<u32>,
+    text: String,
 }
 
 /// A limit break: he powers up for `BREAK_UP`s, the world freezes and cracks, then the colour floods back.
@@ -75,7 +93,7 @@ pub fn milestone(i: u32) -> (f64, Option<u32>) {
             return (a, Some(k as u32));
         }
         n += 1;
-        let step = pow(10.0, log10(a).floor());
+        let step = (0..log10(a).floor() as i32).fold(1.0, |s, _| s * 10.0);
         let mut x = (a / step).floor() * step + step;
         while x < b {
             if n == i {
@@ -105,7 +123,8 @@ impl Game {
 
     /// log10 of where the ceiling has crept to (before the lid and the floor clamp it).
     fn creep_log(&self) -> f64 {
-        log10(CEIL0) + self.s.creep + self.s.uni_best as f64 * log10(CEIL_STEP)
+        let l = ceil_logs();
+        l[0] + self.s.creep + self.s.uni_best as f64 * l[1]
     }
 
     /// Whether the ceiling has crept up to the current limit.
@@ -127,7 +146,8 @@ impl Game {
 
     /// Strain needed to break the next limit.
     pub fn break_need(&self) -> f64 {
-        BREAK_S * pow(BREAK_G, self.s.limits as f64)
+        // fdlibm's exp, not `jsmath::pow` (the platform's), so it's the same on every target
+        BREAK_S * exp(self.s.limits as f64 * log(BREAK_G))
     }
 
     /// A training tap's strain (at most one every `STRAIN_TAP_GAP`s counts).
@@ -160,7 +180,7 @@ impl Game {
             let lid = Self::limit_log(self.s.limits + 1);
             let base = self.creep_log();
             if base < lid {
-                let speed = log10(CEIL_T) / 60.0 * 2f64.powi(self.s.limits as i32);
+                let speed = ceil_logs()[2] / 60.0 * 2f64.powi(self.s.limits as i32);
                 self.s.creep += (s * speed).min(lid - base);
             } else if self.core() >= self.ceiling() && self.mo.is_none() {
                 self.s.meter += s;
@@ -205,8 +225,8 @@ impl Game {
         if self.mo.is_some() || self.xf.is_some() {
             return;
         }
-        let (at, named) = milestone(self.s.mile);
-        if self.s.best.log10() < at {
+        let (at, need, named) = self.milestone_next(|m| (m.at, m.need, m.named));
+        if self.s.best < need {
             return;
         }
         self.s.mile += 1;
@@ -313,6 +333,16 @@ impl Game {
         }
     }
 
+    fn milestone_next<T>(&self, f: impl FnOnce(&NextMile) -> T) -> T {
+        let mut m = self.next_mile.borrow_mut();
+        if m.i != Some(self.s.mile) {
+            let (at, named) = milestone(self.s.mile);
+            let need = Big::exp10(at);
+            *m = NextMile { i: Some(self.s.mile), at, need, named, text: crate::num::fmt_short(need) };
+        }
+        f(&m)
+    }
+
     /// While a limit is breaking, the next form waits for the scene to end.
     pub(crate) fn breaking(&self) -> bool {
         self.mo.as_ref().is_some_and(|m| matches!(m.kind, Kind::Break(_)))
@@ -320,7 +350,7 @@ impl Game {
 
     /// The HUD's standing line: the limit and its strain, or the limits broken; and the next milestone.
     pub fn limit_line(&self) -> String {
-        let next = if self.s.o9k { format!("next: {}", crate::num::fmt_short(Big::exp10(milestone(self.s.mile).0))) } else { String::new() };
+        let next = if self.s.o9k { self.milestone_next(|m| format!("next: {}", m.text)) } else { String::new() };
         let head = if self.at_limit() {
             let n = self.s.limits + 1;
             let pct = (self.s.meter / self.break_need() * 100.0).floor().min(99.0);

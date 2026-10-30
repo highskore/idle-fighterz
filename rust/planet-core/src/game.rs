@@ -125,6 +125,8 @@ pub struct Game {
     pub strain_extra: f64,
     pub strain_tap_t: f64,
     pub strain_rate: f64,
+    /// the next milestone, worked out once per milestone (limits.rs)
+    pub next_mile: std::cell::RefCell<crate::limits::NextMile>,
     /// the last big buy, while undo can still take it back (buy.rs)
     pub undo: Option<crate::buy::Undo>,
     pub undo_seq: u32,
@@ -184,6 +186,7 @@ impl Game {
             strain_extra: 0.0,
             strain_tap_t: -9.0,
             strain_rate: 1.0,
+            next_mile: Default::default(),
             undo: None,
             undo_seq: 0,
             undo_offer: None,

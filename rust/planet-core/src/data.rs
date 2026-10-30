@@ -198,7 +198,7 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
     }
     let top = v[v.len() - 1].clone();
     for n in 1..=limits.saturating_sub(LB_FROM - 1) {
-        v.push(Form { name: lb_name(n), at: top.at, x: top.x * crate::jsmath::pow(2.0, n as f64), look: top.look, lb: n });
+        v.push(Form { name: lb_name(n), at: top.at, x: top.x * 2f64.powi(n as i32), look: top.look, lb: n });
     }
     v
 }
