@@ -399,6 +399,8 @@ body.dusk .edge { display: none !important; }
 /* the title stands in front of the storm: the pillar (z-index 1 above) and the game canvas's lightning go behind it, on
    phones the whole game does. Its overhanging canvas lets taps through to the wish menu meanwhile */
 body.dusk .brand { z-index: 2; } body.dusk #logo { pointer-events: none; }
+/* ...but the dragon flies in front of it: the shim copies his pixels that cross the title onto this layer above it */
+#front { position: absolute; z-index: 3; pointer-events: none; image-rendering: pixelated; image-rendering: crisp-edges; }
 /* phones: the title sits behind the game while he is out, so the sky goes on the page under it and the game stays see-through */
 @media (max-width: 760px) { :root body.dusk .game { background: transparent !important; } :root body.dusk .page { background: var(--dusk-page) linear-gradient(var(--dusk-top), var(--dusk-bot) 78%) 0 40px / 100% calc(100dvh - 40px) no-repeat !important; } }
 body.dusk .page::before { content: ''; position: absolute; z-index: 1; left: var(--dusk-pil-x); top: 0; width: var(--dusk-pil-w); height: var(--dusk-pil-h); translate: -50% 0; pointer-events: none; opacity: clamp(0, calc(var(--dusk-pil) / .51), 1); background: linear-gradient(90deg, transparent 4%, #b88a6a 4% 8.3%, #f0c070 8.3% 22.9%, #ffe8b0 22.9% 37.5%, #fff8e8 37.5% 62.5%, #ffe8b0 62.5% 77.1%, #f0c070 77.1% 91.7%, #b88a6a 91.7% 96%, transparent 96%); }   /* hard bands like the canvas pillar (storm.rs), at full strength once risen */
@@ -409,7 +411,7 @@ __WIDGET_CSS__
 <div class="scroller" id="scroller">
 <div class="page">
   <a class="cue" id="cue" href="#game" aria-label="scroll to the game"><span>scroll for fun</span><i aria-hidden="true"></i></a>
-  <div class="brand gutter" id="brand"><canvas id="logo" aria-hidden="true"></canvas><canvas id="glint" aria-hidden="true"></canvas><h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">highskore</h1></div>
+  <canvas id="front" aria-hidden="true" hidden></canvas><div class="brand gutter" id="brand"><canvas id="logo" aria-hidden="true"></canvas><canvas id="glint" aria-hidden="true"></canvas><h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">highskore</h1></div>
   <div class="rule r1"><span>(01) power planet</span><span>idle · click · hold · drag</span></div>
   <section class="game" data-game="planet" id="game" data-cx=".5">
     <div class="stage" role="img" aria-label="A tiny 3D pixel planet with dome huts, trees and a road, where a spiky-haired runner in blue and white armour runs laps over a sea of golden clouds"><canvas></canvas></div>
@@ -871,6 +873,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
       if (kind === 'form') { formMat = FORM_MATS[arg] || 'pearl'; formUntil = T + 4; if (arg > 0) { ripple = T; for (const l of letters) { l.vy += 3; l.spin += Math.PI * 2; } for (let i = 0; i < letters.length; i++) sparkle(i, 4); } }
     };
     let lastT = 0;
+    const titleBox = new THREE.Box3();
     // shenron's storm (body.dusk): an electric outline crackles round the title, and every strike floods the letters
     // with the bolt's colour (planet-render storm.rs BOLT), fading back over half a second. Strike times are planet-core
     // dusk.rs STRIKES, counted from when the page went dusk. Reduced motion: a steady halo and a light tint, no flashes
@@ -955,6 +958,11 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
         if (Math.random() < dt * (isGold ? 3 : .45)) sparkle(l.idx);
       }
       renderer.render(scene, cam);
+      if (document.body.classList.contains('shen')) {
+        titleBox.setFromObject(group); const cr = logo.getBoundingClientRect(); let l = 1e9, tp = 1e9, rt = -1e9, b = -1e9;
+        for (let i = 0; i < 8; i++) { tmp.set(i & 1 ? titleBox.max.x : titleBox.min.x, i & 2 ? titleBox.max.y : titleBox.min.y, i & 4 ? titleBox.max.z : titleBox.min.z).project(cam); const x = cr.left + (tmp.x + 1) / 2 * cr.width, y = cr.top + (1 - tmp.y) / 2 * cr.height; l = Math.min(l, x); rt = Math.max(rt, x); tp = Math.min(tp, y); b = Math.max(b, y); }
+        logo.box = [l - 12, tp - 12, rt + 12, b + 12];
+      } else logo.box = null;
       drawGlints(dt);
       crackle();
     };

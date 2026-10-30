@@ -229,6 +229,12 @@ impl Planet {
         d.fb.rgba().as_ptr()
     }
 
+    /// Where the dragon's mask is (`w`×`h` bytes, nonzero where shenron or porunga is drawn this frame; stale once he's
+    /// gone), so the page can lift his pixels above the title; 0 before `draw_with_rust`.
+    pub fn dragon_ptr(&self) -> *const u8 {
+        self.1.as_ref().map_or(std::ptr::null(), |d| d.fb.dm.as_ptr())
+    }
+
     /// A hero's idle sprite, the characters tab's thumbnail (game.js's `HEROES[id].idle`), as `[w, h, ...col]` (`col`:
     /// 0xRRGGBB a pixel, -1 for none); vegeta's for an unknown id.
     pub fn hero_sprite(&self, id: &str) -> Vec<i32> {
