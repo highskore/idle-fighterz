@@ -147,7 +147,7 @@ impl Bridge {
     /// A probe for a renderer running in lockstep: `{t, pl, draws, mult, passive}`.
     pub fn probe_json(&self) -> String {
         let g = &self.game;
-        Obj::new().num("t", self.t).num("pl", g.s.pl).num("draws", g.rng.draws() as f64).num("mult", g.mult(false)).num("passive", g.passive()).end()
+        Obj::new().num("t", self.t).big("pl", g.s.pl).num("draws", g.rng.draws() as f64).big("mult", g.mult(false)).big("passive", g.passive()).end()
     }
 
     /// Applies a renderer's screen spots (`spots.rs`); ignores anything `json::parse` refuses.
@@ -190,13 +190,13 @@ mod tests {
     fn the_shop_sent_is_the_one_built_with_the_hud() {
         let mut b = Bridge::new(1, 200.0, 134.0, 3.0);
         b.start("Wed Oct 28 2026", 1.7e12);
-        b.game.s.pl = 1e6;
+        b.game.s.pl = 1e6.into();
         b.step_one();
         let m: String = b.frame_json();
         assert!(m.contains(&format!(r#""shop":{}"#, b.game.shop)), "{m}");
         // what changes after the HUD point (drawing, timeouts) waits for the next syncShop, as in game.js: the frame
         // ships the shop the difftest compared, not a second copy built later
-        b.game.s.pl = 0.0;
+        b.game.s.pl = 0.0.into();
         let m = b.frame_json();
         assert!(!m.contains("\"shop\""), "{m}");
     }

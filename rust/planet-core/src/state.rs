@@ -1,21 +1,22 @@
+use crate::big::Big;
 use crate::data::{Hero, Upg, ANGELS, TREE};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// The persistent state: game.js's `S`.
 #[derive(Clone, Debug, Default)]
 pub struct Save {
-    pub pl: f64,
-    pub best: f64,
-    pub run_best: f64,
+    pub pl: Big,
+    pub best: Big,
+    pub run_best: Big,
     pub levels: [u32; 15],
     pub world: u32,
     pub orbs7: u32,
     pub wishes: u32,
     pub granted: u32,
     /// every ki seed ever earned (the boost counts these, spent or not)
-    pub ascend: f64,
+    pub ascend: Big,
     /// seeds left to spend in the tree
-    pub seeds: f64,
+    pub seeds: Big,
     pub form: usize,
     pub tree: [u32; TREE.len()],
     pub saga: u32,
@@ -39,7 +40,7 @@ pub struct Save {
     pub goal_p: f64,
     pub goals_done: u32,
     pub laps_total: u32,
-    pub namek_at: f64,
+    pub namek_at: Big,
     pub krillin_ally: bool,
     pub krillin_dead: bool,
     pub krillin_revives: u32,

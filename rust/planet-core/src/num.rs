@@ -1,14 +1,35 @@
 //! JS number semantics the game leans on (Math.round, toFixed, toExponential, toLocaleString) and the three
-//! power formatters: the game's `fmtShort` and the HUD's `fmt` / `short` from page.html.
+//! power formatters: the game's `fmtShort` and the HUD's `fmt` / `short` from page.html. Past 1e300 (a `Big` in its
+//! extended form) they switch to e-notation with the exponent grouped (`4.50e1,204`), then short (`7.1e1.2M`).
+
+use crate::big::Big;
 
 /// `Math.round`: halves go up, toward +infinity.
 #[inline]
-pub fn js_round(x: f64) -> f64 {
-    let f = x.floor();
-    if x - f >= 0.5 {
-        f + 1.0
-    } else {
-        f
+pub fn js_round<T: JsRound>(x: T) -> T {
+    x.js_round()
+}
+
+pub trait JsRound {
+    fn js_round(self) -> Self;
+}
+
+impl JsRound for f64 {
+    #[inline]
+    fn js_round(self) -> f64 {
+        let f = self.floor();
+        if self - f >= 0.5 {
+            f + 1.0
+        } else {
+            f
+        }
+    }
+}
+
+impl JsRound for Big {
+    #[inline]
+    fn js_round(self) -> Big {
+        self.round()
     }
 }
 
@@ -94,12 +115,55 @@ pub fn locale_en(n: f64) -> String {
     format!("{sign}{out}")
 }
 
+/// `String(n)` in HUD text; past 1e300, `fmt_short`'s e-notation.
+pub fn big_string(n: Big) -> String {
+    match n.as_plain() {
+        Some(x) => crate::json::num(x),
+        None => fmt_short(n),
+    }
+}
+
+/// `n.toFixed(1)` for a multiplier; from 1e21, where `toFixed` gives up on digits, `fmt_short`.
+pub fn fixed1(n: Big) -> String {
+    match n.as_plain() {
+        Some(x) if x < 1e21 => to_fixed(x, 1),
+        _ => fmt_short(n),
+    }
+}
+
 const SUF: [&str; 12] = ["", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
 // the HUD's table leaves K and M out: full digits run up to a billion
 const HUD_SUF: [&str; 12] = ["", "", "", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc"];
 
+/// A `Big` past 1e300 as [mantissa to `digits` places, `e` and its exponent]; page.html's `sci` is the same.
+pub fn sci(n: Big, digits: usize) -> (String, String) {
+    let (m, e) = n.parts();
+    let s = to_exponential(m, digits);
+    let (mant, carry) = s.split_once('e').unwrap();
+    let e = e.saturating_add(carry.parse::<i64>().unwrap());
+    let x = if e < 1000 {
+        e.to_string()
+    } else if e < 1_000_000 {
+        locale_en(e as f64)
+    } else {
+        short_f64(e as f64)
+    };
+    (mant.to_string(), format!("e{x}"))
+}
+
 /// game.js `fmtShort`: floating gains, event text. 12345 → "12.3K".
-pub fn fmt_short(n: f64) -> String {
+pub fn fmt_short(n: impl Into<Big>) -> String {
+    let n = n.into();
+    match n.as_plain() {
+        Some(n) => short_f64(n),
+        None => {
+            let (m, x) = sci(n, 1);
+            m + &x
+        }
+    }
+}
+
+fn short_f64(n: f64) -> String {
     if n < 1e4 {
         return js_string(n);
     }
@@ -119,7 +183,9 @@ pub fn fmt_short(n: f64) -> String {
 }
 
 /// page.html `big`: the HUD's power readout as [number, suffix].
-pub fn hud_big(n: f64) -> (String, String) {
+pub fn hud_big(n: impl Into<Big>) -> (String, String) {
+    let n = n.into();
+    let Some(n) = n.as_plain() else { return sci(n, 2) };
     let n = n.floor();
     if n < 1e9 {
         return (locale_en(n), String::new());
@@ -147,13 +213,15 @@ pub fn hud_big(n: f64) -> (String, String) {
 }
 
 /// page.html `fmt`.
-pub fn hud_fmt(n: f64) -> String {
+pub fn hud_fmt(n: impl Into<Big>) -> String {
     let (a, b) = hud_big(n);
     a + &b
 }
 
 /// page.html `short`: shop prices, 950,000 then 1.2M.
-pub fn hud_short(n: f64) -> String {
+pub fn hud_short(n: impl Into<Big>) -> String {
+    let n = n.into();
+    let Some(n) = n.as_plain() else { return fmt_short(n) };
     let n = n.floor();
     if n < 1e6 {
         return locale_en(n);
@@ -192,5 +260,27 @@ mod tests {
         assert_eq!(locale_en(1234567.0), "1,234,567");
         assert_eq!(fmt_short(12345.0), "12.3K");
         assert_eq!(fmt_short(999_950.0), "1.0M");
+    }
+
+    #[test]
+    fn suffixes_then_e_notation() {
+        // today's formats, unchanged
+        assert_eq!(fmt_short(1.5e35), "150Dc");
+        assert_eq!(fmt_short(1.5e36), "1.5e36");
+        assert_eq!(fmt_short(1.7e299), "1.7e299");
+        assert_eq!(hud_fmt(1.234e12), "1.23T");
+        assert_eq!(hud_fmt(1.234e40), "1.23e40");
+        assert_eq!(hud_short(950_000.0), "950,000");
+        assert_eq!(hud_short(1.2e6), "1.20M");
+        assert_eq!(hud_short(3.3e50), "3.3e50");
+        // past 1e300
+        assert_eq!(hud_fmt(Big::new(1.2345, 308)), "1.23e308");
+        assert_eq!(hud_big(Big::new(4.5, 1204)), ("4.50".into(), "e1,204".into()));
+        assert_eq!(fmt_short(Big::new(7.1, 1_200_000)), "7.1e1.2M");
+        assert_eq!(fmt_short(Big::new(9.96, 999)), "1.0e1,000", "the mantissa's carry moves the exponent");
+        assert_eq!(fmt_short(Big::new(9.99, 999_999)), "1.0e1.0M");
+        assert_eq!(hud_short(Big::new(3.0, 300)), "3.0e300");
+        assert_eq!(hud_fmt(Big::new(5.0, 123_456_789_012)), "5.00e123B");
+        assert_eq!(fmt_short(Big::new(1.0, crate::big::E_MAX)), "1.0e1.0Qi");
     }
 }

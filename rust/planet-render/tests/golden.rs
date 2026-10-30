@@ -54,10 +54,21 @@ fn frame_hash(buf: &[u32]) -> u32 {
 /// The state sample at the end of a second, as one hash (the toasts and cues are those of the second).
 fn sample(g: &Game, f: usize, events: &[String], cues: &[String]) -> u32 {
     let mut h = Fnv::new();
-    for v in [g.t, g.rng.draws() as f64, g.session, g.s.pl, g.s.best, g.s.run_best, g.rate(), g.wrate(), g.mult(false), g.mult(true)] {
+    for v in [
+        g.t,
+        g.rng.draws() as f64,
+        g.session,
+        g.s.pl.to_f64(),
+        g.s.best.to_f64(),
+        g.s.run_best.to_f64(),
+        g.rate().to_f64(),
+        g.wrate().to_f64(),
+        g.mult(false).to_f64(),
+        g.mult(true).to_f64(),
+    ] {
         h.num(v);
     }
-    for v in [g.laps as f64, g.s.laps_total as f64, g.phi, g.sprint, g.combo, g.s.form as f64, g.s.mastery as f64, g.s.seeds, g.s.ascend] {
+    for v in [g.laps as f64, g.s.laps_total as f64, g.phi, g.sprint, g.combo, g.s.form as f64, g.s.mastery as f64, g.s.seeds.to_f64(), g.s.ascend.to_f64()] {
         h.num(v);
     }
     for v in [g.s.goal_p, g.s.goals_done as f64, g.s.orbs7 as f64] {
@@ -69,7 +80,7 @@ fn sample(g: &Game, f: usize, events: &[String], cues: &[String]) -> u32 {
     }
     for u in Upg::ALL {
         h.num(g.s.lv(u) as f64);
-        h.num(g.cost(u));
+        h.num(g.cost(u).to_f64());
     }
     for (name, v) in replay::timeline_sample(g) {
         h.str(name);
@@ -131,7 +142,7 @@ fn record(name: &str) -> Vec<String> {
         drain(&mut g, &mut events, &mut cues);
         if (f + 1).is_multiple_of(30) {
             let st = sample(&g, f, &events, &cues);
-            lines.push(format!("{} {} {} {:.6e} {} {st:08x} {hashes}", (f + 1) / 30, g.s.world, g.s.form, g.s.pl, g.rng.draws()));
+            lines.push(format!("{} {} {} {:.6e} {} {st:08x} {hashes}", (f + 1) / 30, g.s.world, g.s.form, g.s.pl.to_f64(), g.rng.draws()));
             events.clear();
             cues.clear();
             hashes.clear();

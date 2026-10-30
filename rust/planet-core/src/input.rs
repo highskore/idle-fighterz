@@ -3,6 +3,7 @@
 //! way the press itself acts. Coordinates come in twice: CSS pixels (`clientX`/`clientY`, which the drag turns by) and
 //! the buffer pixels game.js's `st.toBuf` maps them to (which everything on the planet is hit-tested in).
 
+use crate::big::Big;
 use crate::data::{Upg, N_BEAM};
 use crate::game::Game;
 use crate::jsmath::{cos, hypot, sin};
@@ -277,7 +278,7 @@ impl Game {
     }
 
     /// A full charge, in seconds of rate: levels add, never compound.
-    pub fn beam_pay(&self) -> f64 {
+    pub fn beam_pay(&self) -> Big {
         self.wrate() * 4.0 * Self::beam_x_at(self.s.lvf(Upg::Galick)) * (1.0 + 0.25 * self.lvl(N_BEAM))
     }
 
@@ -288,7 +289,7 @@ impl Game {
     }
 
     /// On a universe's wall a buff adds at most up to a quarter of it a hit, like a spirit bomb.
-    fn wall_cap(&self, d: f64, bare: f64) -> f64 {
+    fn wall_cap(&self, d: Big, bare: Big) -> Big {
         let b = self.tl.boss.as_ref().unwrap();
         if b.uni {
             bare.max(d.min(b.max * 0.25 / (1.0 + 0.5 * self.s.lvf(Upg::Armor))))
