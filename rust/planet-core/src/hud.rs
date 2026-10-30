@@ -601,6 +601,11 @@ impl Game {
         TREE.iter().enumerate().filter(|(_, n)| n.branch == b).map(|(i, _)| self.s.tree[i]).sum()
     }
 
+    /// The achievements the menu and the share card list: all but snake way's while it's parked.
+    fn listed_ach(&self) -> impl Iterator<Item = (usize, &'static (&'static str, &'static str, &'static str))> + '_ {
+        ACH.iter().enumerate().filter(|(_, a)| self.snake_way || !SNAKE_ACH.contains(&a.0))
+    }
+
     fn hero_open(&self, h: Hero) -> bool {
         CHARS.iter().find(|c| c.0 == h).is_some_and(|c| c.3.is_none_or(|need| self.s.ach.contains(need)))
     }
@@ -627,7 +632,8 @@ impl Game {
                 .bool("can", open && s.tree[i] < n.max && s.seeds >= cost)
                 .end()
         });
-        let ach = ACH.iter().map(|&(id, name, text)| Obj::new().str("id", id).str("name", name).str("text", text).bool("done", s.ach.contains(id)).end());
+        let ach =
+            self.listed_ach().map(|(_, &(id, name, text))| Obj::new().str("id", id).str("name", name).str("text", text).bool("done", s.ach.contains(id)).end());
         let chars = CHARS.iter().map(|&(h, id, name, need)| {
             let mut o = Obj::new().str("id", id).str("name", name).bool("open", self.hero_open(h));
             if let Some(need) = need {
@@ -760,13 +766,13 @@ impl Game {
     pub fn card_json(&self) -> String {
         let s = &self.s;
         let mut done: Vec<(usize, &str, f64)> =
-            ACH.iter().enumerate().filter(|(_, a)| s.ach.contains(a.0)).map(|(i, a)| (i, a.1, s.ach_at.get(a.0).copied().unwrap_or(0.0))).collect();
+            self.listed_ach().filter(|(_, a)| s.ach.contains(a.0)).map(|(i, a)| (i, a.1, s.ach_at.get(a.0).copied().unwrap_or(0.0))).collect();
         done.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap().then(a.0.cmp(&b.0)));
         let hero = CHARS.iter().find(|c| c.0 == s.hero).unwrap_or(&CHARS[0]).2;
         let uni = if s.multi || s.uni_best > 0 { uni_badge(s.uni.max(s.uni_best) as usize) } else { String::new() };
         Obj::new()
             .raw("ach", arr(done.iter().map(|d| json::str(d.1))))
-            .num("achN", ACH.len() as f64)
+            .num("achN", self.listed_ach().count() as f64)
             .num("laps", self.laps as f64)
             .num("time", self.session)
             .big("best", s.best.floor())

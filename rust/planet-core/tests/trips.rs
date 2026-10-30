@@ -1,7 +1,7 @@
 //! Snake way is parked: a long run never goes there, and over a full rotation of trips idle and active players earn
 //! what they did with it in the rotation (the AFK rule: idle loses nothing).
 
-use planet_core::data::{Upg, SNAKE_WAY_ENABLED};
+use planet_core::data::{Upg, ACH, SNAKE_ACH, SNAKE_WAY_ENABLED};
 use planet_core::{Game, DT};
 
 struct Run {
@@ -44,6 +44,17 @@ fn snake_way_is_parked() {
     let mut g = Game::new(1);
     g.preview("#snake");
     assert!(g.snake_way, "the #snake preview hook still runs it");
+}
+
+#[test]
+fn its_achievements_are_hidden_while_parked() {
+    let mut g = Game::new(1);
+    let listed = |g: &Game| SNAKE_ACH.iter().filter(|id| g.menu_json().contains(&format!("\"id\":\"{id}\""))).count();
+    assert_eq!(listed(&g), 0);
+    assert!(g.card_json().contains(&format!("\"achN\":{}", ACH.len() - SNAKE_ACH.len())));
+    g.snake_way = true;
+    assert_eq!(listed(&g), SNAKE_ACH.len());
+    assert!(g.card_json().contains(&format!("\"achN\":{}", ACH.len())));
 }
 
 #[test]
