@@ -265,7 +265,7 @@ impl Game {
         let (lt, lx, ly) = self.inp.last_tap;
         let dbl = t - lt < 0.32 && hypot(&[px - lx, py - ly]) < 30.0;
         self.inp.last_tap = (if dbl { -9.0 } else { t }, px, py);
-        if dbl && self.playing && self.s.lv(Upg::Bigbang) > 0 && self.inp.bang.is_none() && t > self.inp.bang_ready {
+        if dbl && self.playing && self.s.lv(Upg::Bigbang) > 0 && self.inp.bang.is_none() && t > self.inp.bang_ready && !self.stunned() {
             self.throw_bang(px, py);
             return;
         }

@@ -1,6 +1,7 @@
-//! Boss mechanics, wave 1: Frieza's death beam you deflect, Cell absorbing an ally you rescue, Kid Buu regenerating
-//! unless one big hit finishes him, Hit's time skip, and Jiren batting weak beams back. Each one costs an idle player
-//! a bounded share of the fight (a stun, some hp back, a reform) and pays an active one; none of them blocks idle play,
+//! Boss mechanics, wave 1: Frieza's death beam you deflect, Cell absorbing an ally you rescue, Kid Buu reforming
+//! unless one big hit finishes him, Hit's time skip, and Jiren batting weak beams back. The penalties land on active
+//! inputs (taps on him, beams, big bangs), never on idle ki or passive damage; idle only pays Cell's small heal and
+//! Buu's one reform. Playing the mechanic pays (a deflect, a rescue, a finishing blow, the opening); none blocks idle play,
 //! and none touches income. They run for saga raids (and universe 11's Jiren), from 2.5s into the fight, and wait out a
 //! beam struggle. Cadences are fixed tables: no random draws but the particle bursts. planet-render draws them from
 //! `Boss::mech`; anything with words goes in the usual toast.
@@ -26,15 +27,14 @@ pub const C_EVERY: f64 = 10.0;
 pub const C_REACH: f64 = 0.8;
 pub const C_DRAIN: f64 = 3.0;
 pub const C_HEAL: f64 = 0.04;
-pub const C_CAP: f64 = 0.3;
+pub const C_CAP: f64 = 0.05;
 /// a rescued ally's punch, and how much later the next grab comes
 pub const C_HIT: f64 = 0.05;
 pub const C_PUSH: f64 = 4.0;
-/// Kid Buu: the zone, his regen in it, what he reforms to, how often, and how long he can't be touched meanwhile.
+/// Kid Buu: the zone, what he reforms to, how often, and how long he can't be touched meanwhile.
 pub const B_ZONE: f64 = 0.25;
-pub const B_REGEN: f64 = 0.015;
-pub const B_REFORM: f64 = 0.12;
-pub const B_REFORMS: u32 = 3;
+pub const B_REFORM: f64 = 0.04;
+pub const B_REFORMS: u32 = 1;
 pub const B_REFORM_T: f64 = 0.6;
 /// A beam this charged is a big hit (60% of the full 2.5).
 pub const B_BIG: f64 = 1.5;
@@ -155,7 +155,7 @@ impl Game {
         self.burst_at(k.x, k.y, &[0xffffff, 0xffe066, 0xff8ad0], 8, 90.0);
     }
 
-    /// Hit's time skip is on: the fight is frozen and taps do nothing.
+    /// Hit's time skip is on: your taps, beams and big bangs do nothing (idle ki flies on).
     pub fn skipping(&self) -> bool {
         matches!(self.tl.boss.as_ref().and_then(|b| b.mech.as_ref()), Some(Mech::Hit { ph: Ph::Skip, .. }))
     }
@@ -277,10 +277,7 @@ impl Game {
             Mech::Buu { mut zone, reforms, reform_until, reform_t } => {
                 if !zone && hp <= max * B_ZONE {
                     zone = true;
-                    self.mech_say(0, "kid buu regenerates — finish him with a big hit", 30.0);
-                }
-                if zone && reforms < B_REFORMS && t >= reform_until && hp < max * B_ZONE {
-                    self.tl.boss.as_mut().unwrap().hp = (hp + max * B_REGEN * dt).min(max * B_ZONE);
+                    self.mech_say(0, "kid buu is low — a big hit finishes him, a small one lets him reform", 30.0);
                 }
                 self.set_mech(Mech::Buu { zone, reforms, reform_until, reform_t });
             }
@@ -368,18 +365,13 @@ impl Game {
             *zone = true;
             *reforms += 1;
             *reform_until = t + B_REFORM_T;
-            let n = *reforms;
             if let Some(Mech::Buu { reform_t, .. }) = b.mech.as_mut() {
                 *reform_t = t;
             }
             b.hp = max * B_REFORM;
             let (x, y) = (b.x, b.y - b.spr().h / 2.0 * b.k);
             self.burst_at(x, y, &[0xffffff, 0xffc0dc, 0xf28ab8, 0xff4aa0], 20, 150.0);
-            if n >= B_REFORMS {
-                self.mech_say(3, "buu is spent — anything finishes him now", 30.0);
-            } else {
-                self.mech_say(1, "kid buu reforms", 6.0);
-            }
+            self.mech_say(1, "kid buu reforms — he's spent now, anything finishes him", 6.0);
             return Big::ZERO;
         }
         dmg

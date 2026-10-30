@@ -497,7 +497,7 @@ pub enum Later {
 /// The timeline's runtime state: `mount()`'s closure variables that frame() reads and writes.
 #[derive(Clone, Debug)]
 pub struct Tl {
-    /// a boss mechanic's stun: taps on him do nothing, no ki blasts, no charging (fight only)
+    /// a boss mechanic's stun: taps on him, beams and big bangs do nothing (idle ki and income go on)
     pub stun_until: f64,
     /// when each mechanic toast may come again
     pub mech_say: [f64; 4],
@@ -1784,19 +1784,16 @@ impl Game {
                 }
             }
             self.intro_step(t);
-            // hit's time skip freezes the fight; a stun stops your ki blasts
-            let frozen = self.skipping() || self.stunned();
-            let skip = self.skipping();
             let b = self.tl.boss.as_mut().unwrap();
             if b.dead && t - b.t1 > 1.2 {
                 self.tl.boss = None;
-            } else if !b.dead && !struggling && t >= b.go && !frozen && tick(&mut b.next_ki, dt) {
+            } else if !b.dead && !struggling && t >= b.go && tick(&mut b.next_ki, dt) {
                 b.next_ki = 0.7;
                 let (x, y) = self.hand_pos();
                 self.tl.kis.push(Ki { x, y, t0: t, m: None, disc: false, done: false });
             }
             if self.s.krillin_ally {
-                if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go && !skip) {
+                if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go) {
                     let nd = b.next_disc.unwrap_or(2.0) - dt;
                     b.next_disc = Some(nd);
                     if nd < 0.0 {
@@ -1842,9 +1839,6 @@ impl Game {
                     let dmg = Big::from(1.0).max(self.rate() * if kb.disc { 2.0 } else { 0.2 });
                     self.hit_boss(dmg, tx, ty, false);
                 }
-                continue;
-            }
-            if kb.m.is_none() && self.skipping() {
                 continue;
             }
             let sp = 260.0 * dt / d;

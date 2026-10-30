@@ -161,17 +161,20 @@ fn idle_armor(saga: u32, mechs: bool) -> (u32, f64) {
     (lo, mean(&all(lo).unwrap()))
 }
 
-fn arm(a: u32) -> f64 {
-    1.0 + 0.5 * a as f64
-}
-
 #[test]
 fn idle_beats_every_boss_with_a_bounded_bit_more_armor() {
-    println!("one fight, idle: the least armor that wins it on every seed (its damage ×), and the time it takes there");
+    println!("one fight, idle: the least armor that wins it on every seed, and two levels past it the mean time to beat him");
     for (name, saga) in BOSSES {
         let ((a0, t0), (a1, t1)) = (idle_armor(saga, false), idle_armor(saga, true));
-        println!("{name:8} without the mechanic: armor {a0:2} ({t0:4.1}s) | with it: armor {a1:2} ({t1:4.1}s), ×{:.2} the damage", arm(a1) / arm(a0));
-        assert!(arm(a1) / arm(a0) <= 1.75, "{name}: idle needs at most ~1.75× the damage with his mechanic ({a0} → {a1})");
+        let a = a0 + 2;
+        let ttk = |mechs| mean(&SEEDS.map(|s| fight(s, saga, a, mechs).expect("idle wins two levels past the margin")));
+        let (k0, k1) = (ttk(false), ttk(true));
+        println!(
+            "{name:8} least armor: {a0:2} ({t0:4.1}s) without the mechanic, {a1:2} ({t1:4.1}s) with it | armor {a}: {k0:4.1}s → {k1:4.1}s, ×{:.2}",
+            k1 / k0
+        );
+        assert!(a1 <= a0 + 1, "{name}: idle needs at most one more armor level with his mechanic ({a0} → {a1})");
+        assert!(k1 / k0 <= 1.1, "{name}: his mechanic slows an idle win by at most 10%: ×{}", k1 / k0);
     }
 }
 
