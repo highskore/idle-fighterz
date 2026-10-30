@@ -86,7 +86,8 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   pick from, and the page calls back: `wish(list)`, the dragon's offer `[{key, label, what, tier}]`, once for each
   offer (its words fixed when it's made, as in game.js), calls back `pick_wish(key)`; `itxPick(list)`, instant
   transmission's worlds `[{key, label}]`, calls back `itx_jump(w)`. `resend()` sends the dragon's offer again while it
-  waits.
+  waits. One cue is the Rust engine's own: `xform(on)`, a transformation's power-up darkening the sky (`true`) and its
+  form landing (`false`); the shim toggles `body.xdark`, which lightens the desktop HUD's text over the dark sky.
 
 Every cue game.js emits is ported, at the same point of the same call (90 sites). None is draw-only: the one site in
 game.js's drawing code, `explode`'s `boom` when a big bang lands, runs in the block both sides hoist out of the drawing.
