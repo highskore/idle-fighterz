@@ -128,6 +128,9 @@ pub struct Built {
     pub fut_andro: Vec<V3>,
     /// paozu's dinos: (sprite, th, a, k, sway, hop)
     pub dinos: Vec<(&'static str, f64, f64, f64, f64, f64)>,
+    /// decoration (yardrat's crystals): drawn over the props after their outline, and never into the depth or id buffers,
+    /// so nothing the game reads back from the drawing (whether the hero is in view) changes
+    pub decor: Vec<Solid>,
 }
 
 struct B<'a> {
@@ -721,6 +724,27 @@ impl B<'_> {
             folk(self, &mut rnd, "W2S.elder", &[(0.3, 4.71), (0.3, 4.71)], 0, 0.0);
             folk(self, &mut rnd, "W2S.yard", &[(0.45, 5.5), (0.15, 1.0)], 1, 3.0);
             folk(self, &mut rnd, "W2S.yard2", &[(0.5, 3.95), (0.15, 2.2)], 0, 3.0);
+            // crystal clusters breaking through the soil round the rim, three or four spikes each
+            const XTAL: [u32; 5] = [0x5a6ab8, 0x7a92d8, 0xa8c2f2, 0xd8e8ff, 0xffffff];
+            const XTAL2: [u32; 5] = [0x8a5ab8, 0xaa7ad8, 0xcaa2f0, 0xeed4ff, 0xffffff];
+            let spike = |b: &mut Self, s: V3, dir: V3, h: f64, r0: f64, p: &[u32]| {
+                let n = (h / (0.006 * 0.8)).ceil().min(40.0) as i64;
+                for i in 0..=n {
+                    let f = i as f64 / n as f64;
+                    b.o.decor.push(Solid { c: add(s, dir, h * f), r: r0 + (0.004 - r0) * f, kind: Kind::Pal { pal: p.to_vec(), lift: 0.1 }, fly: None });
+                }
+            };
+            for (k, (th, a, sz)) in
+                [(1.1, 2.6, 1.4), (1.2, 4.4, 1.3), (1.15, 5.2, 1.2), (0.25, 3.5, 1.0), (1.2, 1.1, 1.3), (0.95, 6.2, 1.1)].into_iter().enumerate()
+            {
+                let s = self.cap(th, a);
+                let (t1, t2) = tan(s);
+                let p: &[u32] = if k % 2 == 0 { &XTAL } else { &XTAL2 };
+                for (j, (lean, len)) in [(0.0, 0.26), (0.5, 0.18), (-0.45, 0.2), (0.3, 0.13)].into_iter().enumerate() {
+                    let side = if j % 2 == 0 { t1 } else { t2 };
+                    spike(self, s, norm(add(s, side, lean)), len * sz, 0.04 * sz, p);
+                }
+            }
         }
     }
 
