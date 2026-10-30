@@ -85,10 +85,30 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
     const save = () => { try { localStorage.setItem('hs-power', P.save()); } catch (_) {} };
     addEventListener('pagehide', save);
     document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+    // while the dragon is out, his pixels where they cross the title go again on page.html's #front, above the title, so
+    // he flies in front of it while the storm (the rest of the frame) stays behind
+    const front = document.getElementById('front'), logo = document.getElementById('logo'), fctx = front && front.getContext('2d');
+    let fimg = null;
+    const putFront = () => {
+      const box = shen && logo && logo.box;
+      if (!fctx || !box) { if (front && !front.hidden) front.hidden = true; return; }
+      const W = st.W, H = st.H, r = st.cv.getBoundingClientRect(), sx = r.width / W, sy = r.height / H, buf = memory.buffer;
+      if (!fimg || fimg.width !== W || fimg.height !== H) { fimg = new ImageData(W, H); front.width = W; front.height = H; }
+      const out = new Uint32Array(fimg.data.buffer), px = new Uint32Array(buf, P.pixels_ptr(), W * H), dm = new Uint8Array(buf, P.dragon_ptr(), W * H);
+      out.fill(0);
+      const x0 = Math.max(0, Math.floor((box[0] - r.left) / sx)), x1 = Math.min(W, Math.ceil((box[2] - r.left) / sx));
+      const y0 = Math.max(0, Math.floor((box[1] - r.top) / sy)), y1 = Math.min(H, Math.ceil((box[3] - r.top) / sy));
+      for (let y = y0; y < y1; y++) for (let i = y * W + x0, e = y * W + x1; i < e; i++) if (dm[i]) out[i] = px[i];
+      fctx.putImageData(fimg, 0, 0);
+      const pr = front.parentElement.getBoundingClientRect();
+      Object.assign(front.style, { left: r.left - pr.left + 'px', top: r.top - pr.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+      front.hidden = false;
+    };
     const frame = (t, dt) => {
       P.frame_drawn(t, dt, Date.now());
       put();
       deliver();
+      putFront();
       if (P.playing() && t - lastSave >= 3) { lastSave = t; save(); }
     };
     deliver();
