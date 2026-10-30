@@ -2077,7 +2077,7 @@ impl Game {
                             self.ach(&format!("inf{n}"));
                         }
                     }
-                    let x = STAR_X.powf(if self.ang(A_STARS) { 2.0 } else { 1.0 });
+                    let x = self.star_x().powf(if self.ang(A_STARS) { 2.0 } else { 1.0 });
                     let msg =
                         format!("{} cleared — a universe star: ×{} on everything. next: {}", uni_name(u), crate::json::num(x), uni_name(self.s.uni as usize));
                     self.after(2.6, Later::Event(msg, 4500.0));

@@ -87,6 +87,67 @@ pub struct Form {
     pub name: &'static str,
     pub at: f64,
     pub x: f64,
+    /// the `ALL_FORMS` index he looks like (a limit-breaker form keeps the last form's look)
+    pub look: usize,
+    /// a limit-breaker form's number (1, 2, …); 0 for the canon forms
+    pub lb: u32,
+}
+
+impl Form {
+    /// The aura's colours: the canon form's, or a limit breaker's (they cycle).
+    pub fn aura(&self) -> [u32; 3] {
+        if self.lb == 0 {
+            FORM_AURA[self.look]
+        } else {
+            LB_AURA[(self.lb as usize - 1) % LB_AURA.len()]
+        }
+    }
+}
+
+/// The limit-breaker forms' auras, in turn.
+pub const LB_AURA: [[u32; 3]; 6] = [
+    [0xffffff, 0xffd0ff, 0xff5ad8],
+    [0xffffff, 0xc8fff0, 0x2ee8b0],
+    [0xffffff, 0xffe0a0, 0xff8a1e],
+    [0xffffff, 0xd8d0ff, 0x8a5aff],
+    [0xffffff, 0xffb0b0, 0xff2a3a],
+    [0xffffff, 0xf0f8ff, 0xb0c8ff],
+];
+
+fn roman(mut n: u32) -> String {
+    let mut s = String::new();
+    for (v, r) in
+        [(1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"), (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")]
+    {
+        while n >= v {
+            s.push_str(r);
+            n -= v;
+        }
+    }
+    s
+}
+
+/// A number as roman numerals, kept for the life of the program (form and limit names are `&'static`).
+pub fn roman_static(n: u32) -> &'static str {
+    use std::sync::{Mutex, OnceLock};
+    static NAMES: OnceLock<Mutex<Vec<&'static str>>> = OnceLock::new();
+    let mut v = NAMES.get_or_init(|| Mutex::new(Vec::new())).lock().unwrap();
+    while v.len() <= n as usize {
+        let i = v.len() as u32;
+        v.push(Box::leak(roman(i).into_boxed_str()));
+    }
+    v[n as usize]
+}
+
+fn lb_name(n: u32) -> &'static str {
+    use std::sync::{Mutex, OnceLock};
+    static NAMES: OnceLock<Mutex<Vec<&'static str>>> = OnceLock::new();
+    let mut v = NAMES.get_or_init(|| Mutex::new(Vec::new())).lock().unwrap();
+    while v.len() <= n as usize {
+        let i = v.len() as u32;
+        v.push(Box::leak(format!("limit breaker {}", roman(i)).into_boxed_str()));
+    }
+    v[n as usize]
 }
 
 /// `ALL_FORMS`: the first nine are shared; 9.. are the late canon forms each hero picks from.
@@ -109,6 +170,8 @@ pub const ALL_FORMS: [(&str, f64, f64); 14] = [
 pub const UI_FORM: usize = 8;
 pub const MUI_FORM: usize = 9;
 pub const LATE_STEP: f64 = 1000.0;
+/// From this limit on, every limit broken is also a form-up.
+pub const LB_FROM: u32 = 3;
 const LATE_X: [f64; 2] = [24.0, 40.0];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -120,17 +183,22 @@ pub enum Hero {
     Trunks,
 }
 
-/// `ladderOf`: the shared nine, then the hero's late forms at 2e14, ×1000 each.
-pub fn ladder_of(h: Hero) -> Vec<Form> {
+/// `ladderOf`: the shared nine, then the hero's late forms at 2e14, ×1000 each; then, once limit III is broken, a
+/// limit-breaker form for each limit broken past it (×2 each, held at the last canon form's mark).
+pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
     let late: &[usize] = match h {
         Hero::Vegeta => &[10, 12],
         Hero::Goku => &[9],
         Hero::Gohan => &[11],
         Hero::Trunks => &[13],
     };
-    let mut v: Vec<Form> = ALL_FORMS[..9].iter().map(|&(name, at, x)| Form { name, at, x }).collect();
+    let mut v: Vec<Form> = ALL_FORMS[..9].iter().enumerate().map(|(i, &(name, at, x))| Form { name, at, x, look: i, lb: 0 }).collect();
     for (j, &i) in late.iter().enumerate() {
-        v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j] });
+        v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: i, lb: 0 });
+    }
+    let top = v[v.len() - 1].clone();
+    for n in 1..=limits.saturating_sub(LB_FROM - 1) {
+        v.push(Form { name: lb_name(n), at: top.at, x: top.x * crate::jsmath::pow(2.0, n as f64), look: top.look, lb: n });
     }
     v
 }
@@ -255,6 +323,22 @@ pub const CEIL0: f64 = 20.0;
 pub const CEIL_T: f64 = 1.04;
 pub const CEIL_STEP: f64 = 2.0;
 pub const CEIL_EXP: f64 = 0.15;
+/// limit I sits at a ki ceiling of 1e6; each limit after it doubles the exponent
+pub const LIMIT0: f64 = 6.0;
+/// strain (in strain-seconds) to break limit I, and how much more each limit after it takes
+pub const BREAK_S: f64 = 1200.0;
+pub const BREAK_G: f64 = 1.2;
+/// strain from play: a training tap (at most one every `TAP_GAP`s counts), a full-charge beam, a big bang; kaioken
+/// multiplies it while it's on
+pub const STRAIN_TAP: f64 = 0.45;
+pub const STRAIN_TAP_GAP: f64 = 0.3;
+pub const STRAIN_BEAM: f64 = 10.0;
+pub const STRAIN_BANG: f64 = 6.0;
+pub const STRAIN_KAIO: f64 = 1.4;
+/// the named limits' rewards: II eases the seed soft cap, IV makes god ki compound, V lifts universe stars
+pub const SEED_EXP_II: f64 = 0.75;
+pub const GOD_X_IV: f64 = 1.5;
+pub const STAR_X_V: f64 = 1.75;
 pub const STAR_X: f64 = 1.5;
 pub const GOD_X: f64 = 1.0;
 pub const MASTERY_X: f64 = 1.25;
@@ -553,7 +637,7 @@ pub const LATE_ACH: [(&str, &str); 5] = [
     ("super saiyan rage", "f_rage"),
 ];
 /// `ACH`: every achievement, in game.js order: (id, name, what earns it).
-pub const ACH: [(&str, &str, &str); 81] = [
+pub const ACH: [(&str, &str, &str); 87] = [
     ("lap1", "first steps", "run a lap of the planet"),
     ("laps100", "marathon", "run 100 laps"),
     ("ss", "super saiyan", "reach super saiyan"),
@@ -604,6 +688,12 @@ pub const ACH: [(&str, &str, &str); 81] = [
     ("mastery", "beyond the forms", "earn a mastery star"),
     ("godki", "god ki", "reset for god ki"),
     ("zeno", "zeno's friend", "push the zeno button"),
+    ("limit1", "limit breaker", "break your first limit"),
+    ("limit5", "the grand priest takes notice", "break 5 limits"),
+    ("lbform", "beyond your limits", "transform into a limit breaker"),
+    ("googol", "a googol", "pass 1e100 power"),
+    ("infinity", "past infinity", "pass 1.8e308 power"),
+    ("applause", "zeno claps", "pass 1e1000 power"),
     ("u10", "obuni goes quiet", "clear universe 10"),
     ("u4", "now you see me", "clear universe 4"),
     ("u3", "anilaza unplugged", "clear universe 3"),

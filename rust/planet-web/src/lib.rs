@@ -247,7 +247,7 @@ impl Planet {
         let id = planet_core::data::CHARS.iter().find(|c| c.0 == g.s.hero).map_or("vegeta", |c| c.1);
         let h = planet_core::sprite::hero(id);
         // sprites go by `ALL_FORMS` index, not ladder index: game.js's `card().spr` mixes them up past the shared nine
-        let fi = planet_core::data::ALL_FORMS.iter().position(|f| f.0 == g.forms[g.s.form].name).unwrap_or(0);
+        let fi = g.forms[g.s.form].look;
         sprite_px(if g.b.fuse_until > g.t { &h.fused.idle } else { &h.forms[fi].idle })
     }
 }
@@ -339,7 +339,7 @@ mod tests {
         for &(hero, id, ..) in CHARS.iter() {
             let set = planet_core::sprite::hero(id);
             p.0.game.s.hero = hero;
-            p.0.game.forms = ladder_of(hero);
+            p.0.game.forms = ladder_of(hero, 0);
             for form in 0..p.0.game.forms.len() {
                 p.0.game.s.form = form;
                 let name = p.0.game.forms[form].name;

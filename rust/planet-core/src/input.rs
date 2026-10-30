@@ -364,6 +364,7 @@ impl Game {
         }
         if c >= 2.4 {
             self.goal("beam", 1.0, false);
+            self.strain_beam();
         }
         if let Some(b) = self.inp.beam.as_mut() {
             b.ff = ff;
@@ -492,6 +493,7 @@ impl Game {
     /// `explode(x, y)`: a blast that pays a bit more than a full beam, plus whatever it hits.
     fn explode(&mut self, x: f64, y: f64) {
         self.cue(crate::hud::Cue::Sfx("boom"));
+        self.strain_bang();
         let bb = self.s.lvf(Upg::Bigbang);
         let r = 18.0 * (1.0 + 0.25 * (bb - 1.0)) * 1f64.max(self.cam.r / 50.0);
         self.inp.blasts.push(Blast { x, y, r: r * if self.b.ape_until > self.t { 1.6 } else { 1.0 }, t0: self.t, kaio: self.b.kaio_until > self.t });

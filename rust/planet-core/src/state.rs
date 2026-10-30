@@ -33,6 +33,14 @@ pub struct Save {
     pub angel: [bool; ANGELS.len()],
     pub auto_at: usize,
     pub zeno: u32,
+    /// limits broken (limits.rs); nothing resets them
+    pub limits: u32,
+    /// how far the ki ceiling has crept, in powers of ten
+    pub creep: f64,
+    /// strain in the break meter
+    pub meter: f64,
+    /// milestones passed (`limits::milestone`)
+    pub mile: u32,
     pub form_top: usize,
     pub form_top_name: &'static str,
     pub hero: Hero,

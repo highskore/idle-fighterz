@@ -3,7 +3,6 @@
 //! game's random stream stays where game.js leaves it. Screen spots game.js writes back while drawing (where the
 //! hero, piccolo, bubbles and the visitors stand) are written back to the game the same way.
 
-use planet_core::data::{ALL_FORMS, FORM_AURA};
 use planet_core::fx::Particle;
 use planet_core::geom::{ap, dot, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, pow, sin};
@@ -56,6 +55,8 @@ pub struct Scene {
     pub tones: Option<Tones>,
     /// the transformation scene's rocks and lightning, while it runs
     pub(crate) xf: Option<crate::xform::XfFx>,
+    /// a limit break's or a milestone's drawing state, while it plays
+    pub(crate) mo: Option<crate::limits::MoFx>,
 }
 
 /// `V.norm([-.55, .7, .55])`, as game.js computes it.
@@ -459,6 +460,7 @@ impl Scene {
         } else {
             draw_sea(&mut c, view, &sea, world, false);
         }
+        self.mo_back(&mut c, g);
         if let Some(m) = g.tl.moon.clone() {
             draw_moon(&mut c, &m);
         }
@@ -604,6 +606,7 @@ impl Scene {
             crate::storm::draw(c.fb, d, t, c.cx, c.cy + c.bob, c.r);
         }
         self.xf_front(&mut c, g, view, dt);
+        self.mo_front(&mut c, g, view);
         if g.flash_t > 0.0 {
             g.flash_t = 0f64.max(g.flash_t - dt * 1.8);
             let a = g.flash_t * g.flash_t * 0.85;
@@ -628,9 +631,10 @@ impl Scene {
         }
         let kd = g.kid_screen(0.0);
         let form = &g.forms[g.s.form];
-        let fi = ALL_FORMS.iter().position(|f| f.0 == form.name).unwrap_or(0);
+        let fi = form.look;
+        let aura = form.aura();
         let hero = sprite::hero(hero_id(g));
-        let shown = ALL_FORMS.iter().position(|f| f.0 == g.forms[crate::xform::shown_form(g, t)].name).unwrap_or(0);
+        let shown = g.forms[crate::xform::shown_form(g, t)].look;
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[shown] };
         let bl = match &self.itx_fx {
             Some(b) if t - b.t0 < 0.75 => t - b.t0,
@@ -687,7 +691,7 @@ impl Scene {
                 } else if g.s.form == 0 && g.s.aura > 0 {
                     AURAS[((g.s.aura - 1) % 4) as usize].to_vec()
                 } else {
-                    FORM_AURA[fi].to_vec()
+                    aura.to_vec()
                 };
                 let p = Particle::new(kd.x + sin(kd.ang) * (lift + 10.0) + cos(a) * r, kd.y - cos(kd.ang) * (lift + 10.0) + sin(a) * r * 0.5, &col)
                     .v(sin(kd.ang) * 20.0, -cos(kd.ang) * 30.0)
