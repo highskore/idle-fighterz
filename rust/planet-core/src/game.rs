@@ -38,6 +38,8 @@ pub struct Buffs {
     /// west city gadgets: a robot that taps, a hover bike that sprints
     pub robot_until: f64,
     pub bike_until: f64,
+    /// the power surge a tapped-through transformation earns
+    pub surge_until: f64,
 }
 
 /// Shenron's timed wish buffs (`wishBuff`), by key.
@@ -110,6 +112,10 @@ pub struct Game {
     pub scenery_house: u32,
     /// the universes the arena showed erased at game.js's last `topSync()` (a poked `S.uni` doesn't redraw it)
     pub top_uni: u32,
+    /// the transformation scene, while one runs
+    pub xf: Option<crate::xform::XForm>,
+    /// a form a preview hook or a test poke sets up lands at once, without its scene
+    pub xf_instant: bool,
 }
 
 impl Game {
@@ -155,6 +161,8 @@ impl Game {
             drawn_here: false,
             scenery_house: 0,
             top_uni: 0,
+            xf: None,
+            xf_instant: false,
         };
         g.sync_shop();
         g
@@ -348,6 +356,7 @@ impl Game {
                 + on(b.roshi_until, 0.5)
                 + on(b.calm_until, 0.25)
                 + on(b.gadget_until, 0.5)
+                + on(b.surge_until, crate::xform::SURGE_X - 1.0)
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
@@ -518,6 +527,11 @@ impl Game {
     }
 
     pub(crate) fn transform(&mut self, preview: bool) {
+        self.transform_with(preview, "", 2600.0);
+    }
+
+    /// `transform`, with `more` added to its toast and the toast up for `ms`.
+    pub(crate) fn transform_with(&mut self, preview: bool, more: &str, ms: f64) {
         self.flash_t = 1.0;
         self.s.form += 1;
         self.victory();
@@ -542,8 +556,8 @@ impl Game {
         }
         self.cue(Cue::Sfx("form"));
         let f = &self.forms[self.s.form];
-        let msg = format!("{}!  ×{}{}", f.name, f.x, if preview { " — a taste, for 60s" } else { "" });
-        self.event(msg);
+        let msg = format!("{}!  ×{}{}{more}", f.name, f.x, if preview { " — a taste, for 60s" } else { "" });
+        self.event_ms(msg, ms);
         self.cue(Cue::Form(self.s.form));
         let fi = ALL_FORMS.iter().position(|f| f.0 == self.forms[self.s.form].name).unwrap_or(0);
         let q = self.kid_screen(10.0);
@@ -1024,10 +1038,8 @@ impl Game {
                 }
                 self.tl.preview = None;
             }
-            // a form you hold the power for comes one a frame and stays for the run
-            if self.s.form < self.forms.len() - 1 && self.s.pl >= self.forms[self.s.form + 1].at {
-                self.transform(self.tl.preview.is_some());
-            }
+            // a form you hold the power for comes as a scene (xform.rs) and stays for the run
+            self.xform_step(t, dt);
             let last = self.forms.len() - 1;
             if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * crate::jsmath::pow(LATE_STEP, self.s.mastery as f64 + 1.0)
             {
@@ -1102,6 +1114,10 @@ impl Game {
                     panic!("debug_set: unknown key {key}");
                 }
             }
+        }
+        // a poked power lands the forms it holds at once, as a preview hook's does: it sets a scene up, it isn't a form-up
+        if self.xf.is_none() && self.form_owed() {
+            self.xf_instant = true;
         }
         if key == "world" {
             // as the harness's poke does: the world's layout and scenery, without the trip
@@ -1355,6 +1371,18 @@ impl Game {
         }
         self.forms = ladder_of(self.s.hero);
         self.s.form = self.s.form.min(self.forms.len() - 1);
+        if has("xform") {
+            // the transformation scene from the first frame: just past super saiyan's mark and the scouter's
+            self.s.form = 0;
+            self.s.pl = self.forms[1].at * 1.02;
+            self.s.best = self.s.pl;
+            self.s.o9k = true;
+            self.s.ach.insert("o9k");
+            // and super saiyan's achievement, whose toast would follow the form's own
+            self.s.ach.insert("ss");
+        }
+        // a hook that names a form shows it at once, as it did before forms came as a scene
+        self.xf_instant = !has("xform") && self.form_owed();
         if self.s.multi && self.s.world == 0 {
             self.s.world = 9;
             self.cam.layout(9);

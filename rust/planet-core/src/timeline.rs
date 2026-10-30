@@ -3024,6 +3024,10 @@ impl Game {
             self.snake_tap(px, py);
             return;
         }
+        // a transformation's power-up takes every tap
+        if self.xform_tap() {
+            return;
+        }
         if let Some(d) = self.tl.dance.as_mut().filter(|d| d.done == 0.0) {
             if d.i < 3 && d.spoil != Some(d.i) {
                 let b = d.beats[d.i];
