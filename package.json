@@ -9,7 +9,7 @@
     "wasm": "sh wasm/build.sh",
     "build:rust": "node build.mjs --rust",
     "wasm:rust": "sh rust/planet-web/build.sh",
-    "test": "node build.mjs && node build.mjs --widget && cargo fmt --manifest-path rust/Cargo.toml --all --check && cargo test --manifest-path rust/Cargo.toml --release -p planet-core -p planet-web && cargo test --manifest-path rust/Cargo.toml --release -p planet-render --test golden",
+    "test": "node build.mjs && node build.mjs --widget && node --test test/skins.test.cjs && cargo fmt --manifest-path rust/Cargo.toml --all --check && cargo test --manifest-path rust/Cargo.toml --release -p planet-core -p planet-web && cargo test --manifest-path rust/Cargo.toml --release -p planet-render --test golden",
     "golden": "cargo test --manifest-path rust/Cargo.toml --release -p planet-render --test golden",
     "golden:update": "GOLDEN_UPDATE=1 cargo test --manifest-path rust/Cargo.toml --release -p planet-render --test golden -- --nocapture",
     "difftest:js": "JS_PARITY=1 cargo test --manifest-path rust/Cargo.toml --release -p planet-core -- --nocapture",

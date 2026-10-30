@@ -1,14 +1,14 @@
 //! The transformation scene (planet-core's `xform`): the sky goes dark behind the planet and one enormous アア! shout
 //! sits behind it, cropped by the card and shaking harder as he powers up; rocks tear loose and rise, lightning
 //! strikes, his aura (the tap meter) swells, a column of light punches up out of him. When the form lands: the flash,
-//! a sunburst in the form's colours, the rocks flung away. Reduced motion keeps it still: no shake, no lightning, no
-//! flicker or flash, and a sunburst that doesn't turn.
+//! his aura flaring to about three times its size and settling, the rocks flung away, the dark sky clearing. Reduced
+//! motion keeps it still: no shake, no lightning, no flicker or flash, and the aura only swells a little.
 //!
 //! Its random numbers are its own (seeded by when the scene started), so the game's stream is left alone.
 
 use planet_core::data::{ALL_FORMS, FORM_AURA};
 use planet_core::geom::{add, ap, norm, V3};
-use planet_core::jsmath::{atan2, cos, hypot, pow, sin};
+use planet_core::jsmath::{atan2, cos, exp, hypot, pow, sin};
 use planet_core::num::js_round;
 use planet_core::rng::Lcg;
 use planet_core::xform::XForm;
@@ -18,7 +18,6 @@ use crate::scene::{Ctx, View};
 use crate::top::{mixc, vnoise};
 use crate::{bayer, h2};
 
-const TAU: f64 = 6.2832;
 const ROCK_O: u32 = 0x1e100a;
 const ROCK_T: [u32; 4] = [0x3e2216, 0x5c341f, 0x7d4a2b, 0xa06a40];
 
@@ -156,7 +155,7 @@ impl crate::scene::Scene {
         x
     }
 
-    /// Behind everything: the dark sky (the sunburst once the form lands) and the shout. The widget has no sky.
+    /// Behind everything: the dark sky (clearing once the form lands) and the shout. The widget has no sky.
     pub(crate) fn xf_sky(&mut self, c: &mut Ctx, g: &Game, view: &View) {
         let Some(x) = self.xf_sync(g) else { return };
         let t = c.t;
@@ -168,21 +167,8 @@ impl crate::scene::Scene {
             if view.bare {
                 return;
             }
-            // reduced motion has no flash, so the sunburst eases in rather than switching on
-            let a = 0f64.max(1.0 - rv / g.xf_rev()).min(if g.calm { rv / 0.4 } else { 1.0 });
-            let (hx, hy) = (fx.kx, fx.ky - fx.hh * 0.5);
-            let spin = if g.calm { 0.0 } else { t * 0.4 };
-            let c2 = mixc(gold, 0xffffff, 0.25);
-            for y in 0..c.h as i32 {
-                for xx in 0..c.w as i32 {
-                    if bayer(xx, y) >= a {
-                        continue;
-                    }
-                    let ang = atan2(y as f64 - hy, xx as f64 - hx) + spin;
-                    let ray = ((ang + TAU) / (TAU / 22.0)).floor() as i64 % 2;
-                    c.fb.px(xx as f64, y as f64, if ray == 1 { gl } else { c2 }, 1.0);
-                }
-            }
+            // in about a second, so the hud (dark text again once the form lands) reads
+            fill(c, 0x0c0618, 0x2a1c40, 0f64.max(1.0 - rv / g.xf_rev().min(1.0)));
             return;
         }
         if !view.bare {
@@ -319,7 +305,17 @@ impl crate::scene::Scene {
         let t = c.t;
         let rv = x.since(t);
         let col = cols(g, &x, t);
-        let grow = if rv >= 0.0 { 1.5 + 0f64.max(0.6 - rv) } else { 0.45 + x.p * 0.8 };
+        // the form landing: a burst that settles in about a second (reduced motion: a gentle swell and back)
+        let flare = if rv < 0.0 {
+            0.0
+        } else if g.calm {
+            1f64.min(rv / 0.5) * 0f64.max(1f64.min(1.0 - (rv - 0.9) / 0.6)) * 0.5
+        } else if rv < 0.12 {
+            rv / 0.12
+        } else {
+            exp(-(rv - 0.12) * 3.0)
+        };
+        let grow = if rv >= 0.0 { 1.5 + flare * 1.4 } else { 0.45 + x.p * 0.8 };
         let kick = if rv < 0.0 { 0f64.max(0.5 - (t - x.tap_t) * 2.5) } else { 0.0 };
         let s = grow + pulse(t, 1.0 + x.p * 1.5) * (0.15 + x.p * 0.35) + kick;
         let hh = fx.hh;
@@ -345,7 +341,9 @@ impl crate::scene::Scene {
                             c,
                             xx,
                             y,
-                            if d > 0.74 {
+                            if flare > 0.35 && d < 0.4 {
+                                0xffffff
+                            } else if d > 0.74 {
                                 col[2]
                             } else if d > 0.5 {
                                 col[1]

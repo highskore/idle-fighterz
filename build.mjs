@@ -116,7 +116,7 @@ async function sitePage(page) {
 // the widget runs offline and has no title, so no three.js, and the fonts are inlined from @fontsource (installed with
 // the widget's own dependencies, in node_modules where it runs)
 async function widgetPage(page) {
-  page = page.replace('__WIDGET_CSS__', () => read('widget.css')).replace('__WIDGET_JS__', () => read('widget.js'))
+  page = page.replace('__WIDGET_CSS__', () => read('widget.css') + read('skins.css')).replace('__WIDGET_JS__', () => read('skins.js') + read('widget.js'))
   page = page.replace(/<link [^>]*fonts\.(googleapis|gstatic)\.com[^>]*>\n/g, '').replace('<script id="three">__THREE__</script>\n', '')
   if (/<(script|link)[^>]+(src|href)="https?:/.test(page)) throw new Error('the widget page still loads something remote')
   return page.replace('<style>', '<style>\n' + await faces(process.cwd(), 'block'))

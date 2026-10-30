@@ -201,6 +201,17 @@ fn w2(c: &Ctx, ax: &Axes, nb: V3, dn: f64, lum: f64, x: i64, y: i64) -> u32 {
             if road {
                 return tone(&t.road, lum + 0.2 + (f - 0.5) * 0.15, x, y);
             }
+            // crystal grit glinting in the soil, twinkling as the planet turns
+            let grit = vnoise3(nb[0] * 30.0 + 3.0, nb[1] * 30.0, nb[2] * 30.0 + 1.0);
+            if grit > 0.86 {
+                return if grit <= 0.9 {
+                    0x9ab8ee
+                } else if sin(c.t * 3.0 + nb[0] * 40.0) > 0.0 {
+                    0xffffff
+                } else {
+                    0xc4dcf8
+                };
+            }
             let g = vnoise3(nb[0] * 8.0 + 1.0, nb[1] * 8.0, nb[2] * 8.0 + 5.0);
             if g > 0.64 {
                 return tone(&t.spot, lum + if g > 0.67 { 0.15 } else { -0.3 }, x, y);
