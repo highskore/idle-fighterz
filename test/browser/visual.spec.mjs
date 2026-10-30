@@ -4,7 +4,8 @@
 // Every run also writes what it rendered to shots/<size>/, named as the baselines are (CI uploads it; copied over
 // __screenshots__ it is a new baseline set). PLANET_SHOTS_ONLY=1 (npm run shots) skips the comparison, for a machine
 // that isn't CI's Linux. The page runs the Rust engine (game.js without a wasm build in dist). game.js's fallback gets a
-// smoke test (tagged @js): home with ?js and without WebAssembly must match the same baselines, as game.js is frozen.
+// smoke test (tagged @js): home with ?js and without WebAssembly must match the same canvas baseline, as game.js is
+// frozen; the page gets its own (js-home, no-wasm-home), since game.js still counts snake way's parked achievements.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import { open, start, play } from './page.mjs'
@@ -57,6 +58,6 @@ for (const [pre, [name, hash, act], how] of RUNS) {
     expect(errors).toEqual([])
     if (SHOTS_ONLY) return
     expect(canvas).toMatchSnapshot(`${name}-canvas.png`, { threshold: 0, maxDiffPixels: 0 })
-    await expect(page).toHaveScreenshot(`${name}.png`, { animations: 'disabled', caret: 'hide', threshold: 0.02, maxDiffPixels: 0 })
+    await expect(page).toHaveScreenshot(`${pre ? as : name}.png`, { animations: 'disabled', caret: 'hide', threshold: 0.02, maxDiffPixels: 0 })
   })
 }
