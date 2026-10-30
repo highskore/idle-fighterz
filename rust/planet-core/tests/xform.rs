@@ -182,14 +182,14 @@ fn geo_mean(v: impl Iterator<Item = f64>) -> f64 {
     (v.iter().map(|x| x.ln()).sum::<f64>() / v.len() as f64).exp()
 }
 
-/// The same game up to its first transformation (a casual active player), then `play` for `secs`: the power earned in
-/// that window. Every branch shares the history, so the window shows the scene's own effect, not a run's luck.
-fn window(seed: u32, play: Play, instant: bool, secs: f64) -> f64 {
+/// The same game up to its `n`th transformation scene (a casual active player), then `play` for `secs`: the power
+/// earned in that window. Every branch shares the history, so the window shows the scene's own effect, not a run's luck.
+fn window(seed: u32, n: u32, play: Play, instant: bool, secs: f64) -> f64 {
     let lead = Play::Active { every: 15, scenes: true };
     let mut r = Run::new(seed);
-    while r.g.xf.is_none() {
+    while r.scenes < n {
         r.step(lead, false);
-        assert!(r.f < 30 * 60 * 40, "no transformation in 40 minutes");
+        assert!(r.f < 30 * 60 * 90, "no transformation scene {n} in 90 minutes");
     }
     let at = r.f - 1;
     let mut r = Run::new(seed);
@@ -205,15 +205,15 @@ fn window(seed: u32, play: Play, instant: bool, secs: f64) -> f64 {
 
 #[test]
 fn the_surge_keeps_the_afk_rule() {
-    // the 45 seconds from the first form-up: the scene, its reveal and the surge
+    // the 45 seconds from each of the first 3 form-ups: the scene, its reveal and the surge
     let secs = 45.0;
-    let w = |play, instant| SEEDS.map(|s| window(s, play, instant, secs));
+    let w = |play, instant| SEEDS.map(|s| [1, 2, 3].map(|n| window(s, n, play, instant, secs))).concat();
     let heavy = Play::Active { every: 6, scenes: true };
     let (idle, idle0) = (w(Play::Idle, false), w(Play::Idle, true));
     let (act, act0, alone) = (w(heavy, false), w(heavy, true), w(Play::Active { every: 6, scenes: false }, false));
-    let r = |a: [f64; 24], b: [f64; 24]| geo_mean(a.iter().zip(b.iter()).map(|(x, y)| x / y));
-    let (idle_cost, play_pay, vs_old, afk, afk0) = (r(idle, idle0), r(act, alone), r(act, act0), r(act, idle), r(act0, idle0));
-    println!("the {secs}s from the first form-up, {} seeds: idle with the scene / an instant form ×{idle_cost:.3}", SEEDS.len());
+    let r = |a: &[f64], b: &[f64]| geo_mean(a.iter().zip(b.iter()).map(|(x, y)| x / y));
+    let (idle_cost, play_pay, vs_old, afk, afk0) = (r(&idle, &idle0), r(&act, &alone), r(&act, &act0), r(&act, &idle), r(&act0, &idle0));
+    println!("the {secs}s from each of the first 3 form-ups, {} seeds: idle with the scene / an instant form ×{idle_cost:.3}", SEEDS.len());
     println!("active playing the scene / leaving it alone ×{play_pay:.3}; / an instant form ×{vs_old:.3}");
     println!("active / idle ×{afk:.3} (with instant forms ×{afk0:.3})");
     assert!(idle_cost > 0.8, "idle, the scene only delays the form (and pauses his laps) a few seconds: ×{idle_cost}");
