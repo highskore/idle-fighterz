@@ -203,6 +203,7 @@ fn pace_run(seed: u32, active: bool, hours: f64) -> (Vec<Option<f64>>, Vec<f64>)
         for (i, m) in MARKS.iter().enumerate() {
             if marks[i].is_none() && e >= m.0 {
                 marks[i] = Some(h);
+                eprintln!("{who} s{seed}: {h:6.2}h power {}", m.1);
             }
         }
         while limits.len() < g.s.limits as usize {

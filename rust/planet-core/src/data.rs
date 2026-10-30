@@ -330,8 +330,8 @@ pub const BREAK_S: f64 = 1200.0;
 pub const BREAK_G: f64 = 1.2;
 /// strain from play: a training tap (at most one every `TAP_GAP`s counts), a full-charge beam, a big bang; kaioken
 /// multiplies it while it's on
-pub const STRAIN_TAP: f64 = 0.45;
-pub const STRAIN_TAP_GAP: f64 = 0.3;
+pub const STRAIN_TAP: f64 = 0.8;
+pub const STRAIN_TAP_GAP: f64 = 0.25;
 pub const STRAIN_BEAM: f64 = 10.0;
 pub const STRAIN_BANG: f64 = 6.0;
 pub const STRAIN_KAIO: f64 = 1.4;
