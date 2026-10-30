@@ -11,7 +11,7 @@ use crate::Game;
 
 /// How long his entry waits for the pillar (none under reduced motion).
 pub const DELAY: f64 = 0.9;
-/// How strong the pillar gets: a soft cream glow, not a glare.
+/// The pillar's peak in the `sky` message's `pil`; page.html scales it back up to a solid pillar, as the canvas draws it.
 pub const PILLAR: f64 = 0.6;
 /// When each bolt strikes, in seconds from the summon.
 pub const STRIKES: [f64; 7] = [0.2, 0.75, 1.35, 2.3, 3.4, 4.6, 5.9];
