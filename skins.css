@@ -4,8 +4,9 @@
 .widget[data-skin] { --tb: 10px; --pb: 8px; }
 .widget:not(.windowed)[data-skin] .stage { bottom: calc(clamp(18px, 7vmin, 26px) + 18px); }
 
-/* scouter: a green glass lens off the planet's shoulder, the only place with pixel text; the buttons on its dark housing */
-[data-skin="scouter"] .sc { position: absolute; right: 8px; top: 12px; display: flex; align-items: stretch; filter: drop-shadow(0 4px 10px rgba(0,0,0,.35)); }
+/* scouter: a green glass lens off the planet's shoulder, the only place with pixel text; the buttons on its dark housing
+   down the edge. skins.js places them (--sc-*) to keep off the planet; the lens lets a press through to its rim */
+[data-skin="scouter"] .sc { position: absolute; right: 8px; top: 8px; display: flex; align-items: stretch; filter: drop-shadow(0 4px 10px rgba(0,0,0,.35)); transform: scale(var(--sc-k, 1)); transform-origin: top right; pointer-events: none; }
 .sc-arm { width: 16px; margin-right: -3px; border-radius: 6px 0 0 6px; background: linear-gradient(#f2efe6, #cfcabb); border: 1px solid #555; border-right: 0; position: relative; }
 .sc-arm::after { content: ''; position: absolute; left: 4px; top: 10px; bottom: 10px; width: 6px; border-radius: 3px; background: repeating-linear-gradient(#8a857a 0 2px, transparent 2px 5px); }
 .sc-lens { position: relative; width: 186px; padding: 9px 11px 10px; border: 3px solid #2b3036; border-radius: 4px 22px 4px 22px; overflow: hidden;
@@ -24,7 +25,7 @@
 .sc-f { font-size: 8px; line-height: 1.2; white-space: nowrap; overflow: hidden; }
 .sc-tgt { position: absolute; right: 12px; top: 44px; width: 22px; height: 22px; border: 1px solid #ff6a5a; transform: rotate(45deg); box-shadow: 0 0 5px rgba(255,80,60,.8); }
 .sc-tgt::after { content: ''; position: absolute; inset: 6px; background: #ff6a5a; }
-[data-skin="scouter"] .sc-btns { position: absolute; right: 8px; top: 124px; display: flex; gap: 3px; padding: 3px; border-radius: 999px; background: #2b3036; box-shadow: 0 3px 10px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12); }
+[data-skin="scouter"] .sc-btns { position: absolute; right: 8px; top: var(--sc-bt, 124px); display: flex; flex-direction: column; transform: scale(var(--sc-kt, 1)); transform-origin: top right; gap: 3px; padding: 3px; border-radius: 999px; background: #2b3036; box-shadow: 0 3px 10px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.12); }
 [data-skin="scouter"] .sc-btns button { --b: 24px; color: #9dffad; background: rgba(120,255,150,.08); border: 0; box-shadow: none; }
 [data-skin="scouter"] .sc-btns button:hover { transform: none; background: rgba(120,255,150,.2); }
 [data-skin="scouter"] .sc-btns button svg { width: 60%; height: 60%; }
@@ -33,7 +34,7 @@
 [data-skin="scouter"] .sc-btns button:disabled { opacity: .4; }
 [data-skin="scouter"] .sc-btns [data-w="snd"][aria-pressed="false"], [data-skin="scouter"] .sc-btns [data-w="close"] { color: #5d8f68; }
 [data-skin="scouter"] .sc-btns button i { right: -3px; top: -4px; min-width: 13px; height: 13px; padding: 0 3px; font-size: 8px; line-height: 13px; color: #04210c; background: #9dffad; }
-.widget[data-skin="scouter"] .shop.open { left: auto; right: 18px; top: 160px; bottom: auto; width: 210px; max-height: min(220px, calc(100% - 168px)); color: #c9ffd2; background: rgba(3,34,14,.86); border: 2px solid #2b3036; border-radius: 10px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.widget[data-skin="scouter"] .shop.open { left: var(--sc-sl, auto); right: var(--sc-sr, 18px); top: var(--sc-st, 160px); bottom: auto; width: auto; max-height: var(--sc-sh, calc(100% - 168px)); flex-wrap: nowrap; justify-content: flex-start; color: #c9ffd2; background: rgba(3,34,14,.86); border: 2px solid #2b3036; border-radius: 10px; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .widget[data-skin="scouter"] .shop button { color: #c9ffd2; background: rgba(120,255,150,.07); border-color: rgba(120,255,150,.15); }
 .widget[data-skin="scouter"] .shop button:hover:not(:disabled) { border-color: #9dffad; }
 .widget[data-skin="scouter"] .shop button:disabled { color: #5d8f68; }
@@ -148,3 +149,17 @@ html.widget[data-theme="dark"]:not([data-skin]) .shop button.special { border-co
 html.widget[data-theme="dark"]:not([data-skin="scouter"]) .goal { background: none; }
 html.widget[data-theme="dark"] .toast { color: #f3f1ec; -webkit-text-stroke: 0; background: rgba(22,22,28,.88); border-color: rgba(255,255,255,.12); box-shadow: 0 2px 10px rgba(0,0,0,.3); }
 html.dw-open.widget .toast { left: calc((100% - var(--dw)) / 2); max-width: calc(100% - var(--dw) - 16px); }
+
+/* the shop's hover card, its ×1 / ×10 / max (on touch) and the toast's undo, in each skin's colours */
+.widget .tip { color: var(--ink); background: var(--chip); border-color: var(--edge); box-shadow: var(--shadow); }
+html.widget[data-theme="dark"]:not([data-skin="scouter"]) .tip { --ink: #f3f1ec; --muted: #a3a09a; --gold: #f2b53a; --chip: rgba(24,24,30,.94); --edge: rgba(255,255,255,.12); }
+html.widget[data-theme="dark"]:not([data-skin]) .shop .bulk button[aria-pressed="true"] { border-color: var(--gold); background: rgba(242,181,58,.12); }
+html.widget[data-theme="dark"] .toast .tact { color: inherit; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
+.widget[data-skin="scouter"] .tip { --muted: #7fcf8f; --gold: #9dffad; color: #c9ffd2; background: rgba(3,34,14,.92); border: 2px solid #2b3036; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.widget[data-skin="scouter"] .shop .bulk button[aria-pressed="true"] { border-color: #9dffad; background: rgba(120,255,150,.2); }
+.widget[data-skin="capsule"] .tip { --muted: #6a7690; --gold: #1f5fd1; color: #10213f; background: #fff; border-color: #d6dce8; box-shadow: 0 8px 22px rgba(10,30,70,.3); }
+.widget[data-skin="capsule"] .shop .bulk button[data-n] { display: inline-block; padding: 1px 10px; border-radius: 999px; font-size: 10px; counter-increment: none; }
+.widget[data-skin="capsule"] .shop .bulk button[aria-pressed="true"] { color: #fff; background: #1f5fd1; border-color: #1f5fd1; }
+.widget[data-skin="drawer"] .shop .bulk { padding-bottom: 2px; }
+.widget[data-skin="drawer"] .shop .bulk button[data-n] { padding: 1px 10px; border-radius: 999px; font-size: 10px; }
+.widget[data-skin="drawer"] .shop .bulk button[aria-pressed="true"] { background: var(--can); box-shadow: inset 0 0 0 1px var(--gold); }

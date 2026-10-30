@@ -112,6 +112,26 @@ impl Planet {
         self.0.game.buy(key)
     }
 
+    /// `n` levels at once, 0 for as many as you can afford (shift- and alt-click, the phone's ×10 / max).
+    pub fn buy_n(&mut self, key: &str, n: u32) -> bool {
+        self.0.buy_n(key, n)
+    }
+
+    /// The undo button on a big buy's toast.
+    pub fn undo(&mut self, id: u32) -> bool {
+        self.0.undo(id)
+    }
+
+    /// A shop row's hover card, as JSON.
+    pub fn shop_info(&mut self, key: &str) -> String {
+        self.0.shop_info(key)
+    }
+
+    /// The shop's prices buying `n` at a time (0: max), as JSON.
+    pub fn bulk(&self, n: u32) -> String {
+        self.0.bulk(n)
+    }
+
     pub fn learn(&mut self, id: &str) {
         self.0.game.learn(id);
     }
