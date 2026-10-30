@@ -258,7 +258,7 @@ impl Game {
 
     /// `tap(px, py)`: a second tap within 0.32s and 30px throws a big bang; anything else goes to `onClick`.
     pub fn tap(&mut self, px: f64, py: f64) {
-        if self.playing && self.intro_skip() {
+        if self.playing && (self.intro_skip() || self.skipping()) {
             return;
         }
         let t = self.t;
@@ -275,6 +275,8 @@ impl Game {
     /// The beam's charge, once a frame (`frame()` between the moon and the senzu bean).
     pub(crate) fn charge(&mut self, t: f64) {
         match self.inp.drag {
+            // a stun or hit's time skip holds the charge off
+            Some(_) if self.stunned() || self.skipping() => self.inp.charging = 0.0,
             Some(d) if (d.moved <= 6.0 || self.inp.charging > 0.0) && self.s.lv(Upg::Galick) > 0 && t - d.t > 0.3 => {
                 self.inp.charging = 2.5f64.min(t - d.t - 0.3);
             }
@@ -306,7 +308,7 @@ impl Game {
 
     /// `fireBeam(c, tx, ty)`: a beam of charge `c` toward (tx, ty) hits whatever is on its line, and pays.
     pub fn fire_beam(&mut self, c: f64, tx: f64, ty: f64) {
-        if self.s.world == 3 || self.intro_skip() {
+        if self.s.world == 3 || self.intro_skip() || self.skipping() {
             return;
         }
         let t = self.t;
@@ -410,13 +412,16 @@ impl Game {
         if let Some(b) = self.tl.boss.as_ref().filter(|b| !b.dead) {
             let s = b.spr();
             if on_line(b.x, b.y - s.h / 2.0 * b.k, s.w / 2.0 * b.k) {
-                let d = self.wall_cap(dmg * 4.0, pts * 4.0);
                 let (bx, by) = (b.x, b.y - s.h / 2.0 * b.k);
                 self.inp.beam_hits.push((bx, by));
-                self.hit_boss(d, bx, by);
-                let b = self.tl.boss.as_ref().unwrap();
-                let (bx, by) = (b.x, b.y - b.spr().h * b.k);
-                self.buff_pop(d, bx, by);
+                // jiren bats a weak one back; a full one breaks through for more
+                if let Some(x) = self.mech_beam(c) {
+                    let d = self.wall_cap(dmg * 4.0 * x, pts * 4.0 * x);
+                    self.hit_boss(d, bx, by, c >= crate::mech::B_BIG);
+                    let b = self.tl.boss.as_ref().unwrap();
+                    let (bx, by) = (b.x, b.y - b.spr().h * b.k);
+                    self.buff_pop(d, bx, by);
+                }
             }
         }
         self.gain_at(pts, kx, ky - 16.0, true);
@@ -541,7 +546,7 @@ impl Game {
             let s = b.spr();
             if hypot(&[b.x - x, b.y - s.h / 2.0 * b.k - y]) < r + s.w / 2.0 * b.k {
                 let dmg = self.wall_cap(hit(self) * 12.0 * bb, self.rate().max(self.lap_value() * self.mult(false)) * 12.0 * bb);
-                self.hit_boss(dmg, x, y);
+                self.hit_boss(dmg, x, y, true);
                 self.buff_pop(dmg, x, y - 10.0);
             }
         }

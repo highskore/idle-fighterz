@@ -252,6 +252,9 @@ pub struct Boss {
     pub go: f64,
     /// a saga boss's arrival behind the scouter (intro.rs)
     pub intro: Option<crate::intro::Intro>,
+    /// his mechanic (mech.rs), set when the fight starts
+    pub mech: Option<crate::mech::Mech>,
+    pub armed: bool,
 }
 
 impl Boss {
@@ -283,6 +286,8 @@ impl Boss {
             flash: 0.0,
             go: t,
             intro: None,
+            mech: None,
+            armed: false,
         }
     }
 
@@ -492,6 +497,10 @@ pub enum Later {
 /// The timeline's runtime state: `mount()`'s closure variables that frame() reads and writes.
 #[derive(Clone, Debug)]
 pub struct Tl {
+    /// a boss mechanic's stun: taps on him do nothing, no ki blasts, no charging (fight only)
+    pub stun_until: f64,
+    /// when each mechanic toast may come again
+    pub mech_say: [f64; 4],
     pub star: Option<Star>,
     pub next_star: f64,
     pub orbs: Vec<Orb>,
@@ -707,6 +716,8 @@ impl Default for Tl {
             piccolo_at: None,
             monkey_at: None,
             seen: Vec::new(),
+            stun_until: 0.0,
+            mech_say: [-9.0; 4],
             itx_ready: 0.0,
             itx_trip: false,
             itx_back: f64::NEG_INFINITY,
@@ -1719,7 +1730,7 @@ impl Game {
                 let f = self.finisher();
                 let b = self.tl.boss.as_ref().unwrap();
                 let (x, y) = (b.x, b.y - b.spr().h / 2.0 * b.k);
-                self.hit_boss(f, x, y);
+                self.hit_boss(f, x, y, true);
                 self.ach("struggle");
                 self.event("you won the beam struggle!");
             } else if p <= 0.0 || t > until {
@@ -1730,6 +1741,7 @@ impl Game {
             }
         }
         let struggling = self.tl.struggle.is_some();
+        self.mech_step(t, dt, struggling);
         if let Some(b) = self.tl.boss.as_mut() {
             if b.sprs.len() > 1 && !b.dead {
                 let low = b.sprs.len() > 3 && b.hp / b.max < 0.4;
@@ -1772,16 +1784,19 @@ impl Game {
                 }
             }
             self.intro_step(t);
+            // hit's time skip freezes the fight; a stun stops your ki blasts
+            let frozen = self.skipping() || self.stunned();
+            let skip = self.skipping();
             let b = self.tl.boss.as_mut().unwrap();
             if b.dead && t - b.t1 > 1.2 {
                 self.tl.boss = None;
-            } else if !b.dead && !struggling && t >= b.go && tick(&mut b.next_ki, dt) {
+            } else if !b.dead && !struggling && t >= b.go && !frozen && tick(&mut b.next_ki, dt) {
                 b.next_ki = 0.7;
                 let (x, y) = self.hand_pos();
                 self.tl.kis.push(Ki { x, y, t0: t, m: None, disc: false, done: false });
             }
             if self.s.krillin_ally {
-                if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go) {
+                if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go && !skip) {
                     let nd = b.next_disc.unwrap_or(2.0) - dt;
                     b.next_disc = Some(nd);
                     if nd < 0.0 {
@@ -1825,8 +1840,11 @@ impl Game {
                     self.ginyu_hit(mi, dmg);
                 } else {
                     let dmg = Big::from(1.0).max(self.rate() * if kb.disc { 2.0 } else { 0.2 });
-                    self.hit_boss(dmg, tx, ty);
+                    self.hit_boss(dmg, tx, ty, false);
                 }
+                continue;
+            }
+            if kb.m.is_none() && self.skipping() {
                 continue;
             }
             let sp = 260.0 * dt / d;
@@ -2027,8 +2045,12 @@ impl Game {
     }
 
     /// `hitBoss(dmg, x, y)`: the boss takes a hit; at zero he's down, and pays.
-    pub(crate) fn hit_boss(&mut self, dmg: Big, x: f64, y: f64) {
+    pub(crate) fn hit_boss(&mut self, dmg: Big, x: f64, y: f64, big: bool) {
         if self.tl.boss.as_ref().unwrap().movie && self.movie_guard(dmg, x, y) {
+            return;
+        }
+        let dmg = self.mech_hit(dmg, big);
+        if dmg == 0.0 {
             return;
         }
         let t = self.t;
@@ -2192,7 +2214,7 @@ impl Game {
         }
         if self.boss_up() {
             let f = self.finisher();
-            self.hit_boss(f, x, y);
+            self.hit_boss(f, x, y, true);
         }
         let g = (self.wrate() * 120.0).max(self.lap_value() * self.mult(false) * 60.0) * (1.0 + 0.5 * (self.s.spirit as f64 - 1.0));
         self.gain_at(g, x, y - 20.0, true);
@@ -3075,6 +3097,11 @@ impl Game {
                 return;
             }
         }
+        // hit's time skip swallows every tap
+        if self.skipping() {
+            self.cue(Cue::Sfx("tap"));
+            return;
+        }
         let npc_hit = |g: &Game, c: V3, r: f64| {
             let v = geom::ap(&g.cam.m, c);
             v[2] > 0.05 && hypot(&[px - (g.cam.cx + v[0] * g.cam.r), py - (g.cam.cy - v[1] * g.cam.r + g.cam.bob - 10.0)]) < r
@@ -3119,6 +3146,10 @@ impl Game {
                 self.tl.cling = None;
                 return;
             }
+        }
+        // a deflect, a rescue
+        if self.mech_tap(px, py) {
+            return;
         }
         if let Some(s) = self.tl.struggle.as_mut() {
             s.p += 0.055;
@@ -3373,7 +3404,10 @@ impl Game {
                 self.combo = if t - self.last_click < 0.6 { self.combo_cap().min(self.combo + 0.1) } else { 1.0 };
                 self.last_click = t;
                 let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
-                self.hit_boss(dmg, px, py);
+                let x = self.mech_tap_x();
+                if x > 0.0 {
+                    self.hit_boss(dmg * x, px, py, false);
+                }
                 return;
             }
         }

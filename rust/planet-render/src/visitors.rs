@@ -4,6 +4,7 @@
 use planet_core::data::Upg;
 use planet_core::geom::{add, ap, cross, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, sin};
+use planet_core::mech::Ally;
 use planet_core::num::js_round;
 use planet_core::sprite::{self, Sprite};
 use planet_core::Game;
@@ -118,7 +119,7 @@ impl Scene {
         if g.s.lv(Upg::Piccolo) > 0 {
             let v = ap(&m, mul(g.frame3.cap_pt(0.6, 0.9), 1.28));
             g.tl.piccolo_at = if v[2] > -0.2 { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
-            if let Some((x, y)) = g.tl.piccolo_at {
+            if let Some((x, y)) = g.tl.piccolo_at.filter(|_| !crate::mech::held(g, Ally::Piccolo)) {
                 c.blit_z(sprite::get("PICCOLO"), x, y, 0.0, false, 0.0, v[2] * r + 8.0, 0.95);
             }
         } else {
@@ -491,13 +492,13 @@ impl Scene {
                 gr.sx = None;
             }
         }
-        if g.s.krillin_ally && g.tl.kril.is_none() && !g.tl.date.as_ref().is_some_and(|d| d.kr) {
+        if g.s.krillin_ally && g.tl.kril.is_none() && !g.tl.date.as_ref().is_some_and(|d| d.kr) && !crate::mech::held(g, Ally::Krillin) {
             let kv = ap(&m, g.frame3.road_pt(g.phi - 0.5));
             let (kx, ky) = (cx + kv[0] * r, cy - kv[1] * r + bob);
             let ka = ap(&m, g.frame3.road_pt(g.phi - 0.45));
             c.blit_z(sprite::get("KRILLIN"), kx, ky, atan2(kv[0], kv[1]), cx + ka[0] * r < kx, sin(t * 9.0).abs() * 2.0, kv[2] * r + 5.0, 1.0);
         }
-        if g.s.lv(Upg::Partner) > 0 && g.b.fuse_until <= t {
+        if g.s.lv(Upg::Partner) > 0 && g.b.fuse_until <= t && !crate::mech::held(g, Ally::Bubbles) {
             let mv = ap(&m, g.frame3.road_pt(g.phi - 0.32));
             let (mx, my, ma) = (cx + mv[0] * r, cy - mv[1] * r + bob, atan2(mv[0], mv[1]));
             let kk = 2.6f64.min(1.0 + 0.16 * (g.s.lvf(Upg::Partner)).sqrt());
@@ -541,7 +542,8 @@ impl Scene {
         let arena = c.world == 9;
         let fled = |v: f64| if b.fled { v } else { 0.0 };
         b.x = c.cx + c.r * if arena { 1.3 } else { 1.45 } + (1.0 - ent) * c.w * 0.4 + fled(out * c.w * 0.5);
-        b.y = c.cy - c.r * if arena { 0.4 } else { 0.75 } + sin(t * 2.0) * 3.0 - fled(out * 30.0);
+        // a tall boss (cell) keeps his name and hp bar on the canvas
+        b.y = (c.cy - c.r * if arena { 0.4 } else { 0.75 } + sin(t * 2.0) * 3.0).max(spr.h as f64 * k + 18.0) - fled(out * 30.0);
         let name_w = text_width(&b.name) / 2.0 + 1.0;
         b.x = b.x.min(c.w - ((spr.w as f64 - spr.ax + 1.0) * k).max(name_w).max(10.0 * k + 1.0) - 3.0 + (1.0 - ent) * c.w * 0.4 + fled(out * c.w * 0.5));
         b.flash = 0f64.max(b.flash - dt);
@@ -881,7 +883,7 @@ impl Scene {
 }
 
 /// The boss's sprite: his saga's, a movie villain's, nappa, or a universe fighter's current take.
-fn boss_sprite(g: &Game, b: &planet_core::timeline::Boss) -> Option<&'static Sprite> {
+pub(crate) fn boss_sprite(g: &Game, b: &planet_core::timeline::Boss) -> Option<&'static Sprite> {
     use planet_core::data::VILLAINS;
     let n = if b.name == "past vegeta" { "vegeta" } else { b.name.as_str() };
     if b.uni {

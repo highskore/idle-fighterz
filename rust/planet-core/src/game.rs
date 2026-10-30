@@ -119,6 +119,8 @@ pub struct Game {
     pub xf: Option<crate::xform::XForm>,
     /// a form a preview hook or a test poke sets up lands at once, without its scene
     pub xf_instant: bool,
+    /// the boss mechanics off (the AFK sims' baseline)
+    pub no_mechs: bool,
     /// the last big buy, while undo can still take it back (buy.rs)
     pub undo: Option<crate::buy::Undo>,
     pub undo_seq: u32,
@@ -174,6 +176,7 @@ impl Game {
             top_uni: 0,
             xf: None,
             xf_instant: false,
+            no_mechs: false,
             undo: None,
             undo_seq: 0,
             undo_offer: None,
