@@ -168,7 +168,8 @@ impl crate::scene::Scene {
             if view.bare {
                 return;
             }
-            let a = 0f64.max(1.0 - rv / g.xf_rev());
+            // reduced motion has no flash, so the sunburst eases in rather than switching on
+            let a = 0f64.max(1.0 - rv / g.xf_rev()).min(if g.calm { rv / 0.4 } else { 1.0 });
             let (hx, hy) = (fx.kx, fx.ky - fx.hh * 0.5);
             let spin = if g.calm { 0.0 } else { t * 0.4 };
             let c2 = mixc(gold, 0xffffff, 0.25);
