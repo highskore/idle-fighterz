@@ -2,7 +2,7 @@
 //! dim slate for about a second, then they settle into a lilac-grey page under a dusky violet sky while a pillar of
 //! light goes up and his entry waits for it. This is its timeline and the page's colours, which the bridge sends as
 //! `sky`; planet-render's `storm` draws the rest. Porunga keeps his own summon. Reduced motion: no lightning, flashes,
-//! pillar or wait, only the colours.
+//! pillar or wait; the colours and the dim-slate dip still play.
 
 use crate::json::Obj;
 use crate::num::js_round;
@@ -66,11 +66,8 @@ impl Dusk {
         sm(self.age / 0.5) * self.out
     }
 
-    /// The dim slate the first strikes drop everything to.
+    /// The dim slate the first strikes drop everything to (kept under reduced motion, without the strikes).
     pub fn dark(&self) -> f64 {
-        if self.calm {
-            return 0.0;
-        }
         sm((self.age - 0.15) / 0.08) * (1.0 - sm((self.age - 0.5) / 0.8)) * self.out
     }
 
@@ -158,9 +155,11 @@ mod tests {
     }
 
     #[test]
-    fn reduced_motion_keeps_only_the_colours() {
+    fn reduced_motion_keeps_the_colours_and_the_dip() {
         let calm = |a: f64| at(a, true);
-        assert!((0..600).all(|i| !calm(i as f64 / 100.0).lit() && calm(i as f64 / 100.0).pillar() == 0.0 && calm(i as f64 / 100.0).dark() == 0.0));
+        assert!((0..600).all(|i| !calm(i as f64 / 100.0).lit() && calm(i as f64 / 100.0).pillar() == 0.0));
+        assert_eq!(calm(0.3).dark(), at(0.3, false).dark());
+        assert_eq!(calm(0.3).page(), at(0.3, false).page());
         assert_eq!(calm(3.0).page(), (PAGE, TOP, BOT, 0.8));
     }
 
