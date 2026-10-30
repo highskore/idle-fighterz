@@ -2,7 +2,7 @@
 //! dragon dims toward violet, lightning strikes from the top, a cream pillar of light rises from a ring of the seven
 //! balls over the planet. Drawn after the front clouds; nothing here paints over the dragon. Its own random numbers.
 
-use planet_core::dusk::{Dusk, PILLAR, STRIKES};
+use planet_core::dusk::{Dusk, STRIKES};
 use planet_core::jsmath::{cos, hypot, sin};
 use planet_core::num::js_round;
 
@@ -184,7 +184,8 @@ pub fn draw(fb: &mut Framebuffer, d: &Dusk, t: f64, cx: f64, cy: f64, r: f64) {
     }
     let yb = cy - r - 7.0;
     if !d.calm {
-        pillar(fb, t, cx, yb, (cy + 10.0) * d.rise(), 5f64.max(r * 0.2), d.pillar() * PILLAR);
+        // solid at full strength, like the bolts; dithered only while it rises and fades
+        pillar(fb, t, cx, yb, (cy + 10.0) * d.rise(), 5f64.max(r * 0.2), d.pillar());
     }
     ball_ring(fb, t, r, cx, yb, r * 0.5, d.out, d.calm);
 }
