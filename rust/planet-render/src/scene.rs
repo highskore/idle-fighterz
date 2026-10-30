@@ -54,6 +54,8 @@ pub struct Scene {
     itx_fx: Option<ItxFx>,
     tones_key: Option<(u32, u8)>,
     pub tones: Option<Tones>,
+    /// the transformation scene's rocks and lightning, while it runs
+    pub(crate) xf: Option<crate::xform::XfFx>,
 }
 
 /// `V.norm([-.55, .7, .55])`, as game.js computes it.
@@ -444,8 +446,12 @@ impl Scene {
         }
         let dusk = g.dusk();
         let sea = dusk.as_ref().and_then(|d| crate::storm::sea(&tones.sea, d)).unwrap_or_else(|| sea_pal(&tones.sea, g.tl.night_k));
+        if world != 9 {
+            self.xf_sky(&mut c, g, view);
+        }
         if world == 9 {
             crate::top::draw_void(&mut c, g, &mut self.void, view.bare);
+            self.xf_sky(&mut c, g, view);
         } else if view.bare {
             if view.clouds.is_some() {
                 draw_clouds(&mut c, view, &sea, false);
@@ -594,6 +600,7 @@ impl Scene {
         if let Some(d) = &dusk {
             crate::storm::draw(c.fb, d, t, c.cx, c.cy + c.bob, c.r);
         }
+        self.xf_front(&mut c, g, view, dt);
         if g.flash_t > 0.0 {
             g.flash_t = 0f64.max(g.flash_t - dt * 1.8);
             let a = g.flash_t * g.flash_t * 0.85;
@@ -620,7 +627,8 @@ impl Scene {
         let form = &g.forms[g.s.form];
         let fi = ALL_FORMS.iter().position(|f| f.0 == form.name).unwrap_or(0);
         let hero = sprite::hero(hero_id(g));
-        let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[fi] };
+        let shown = ALL_FORMS.iter().position(|f| f.0 == g.forms[crate::xform::shown_form(g, t)].name).unwrap_or(0);
+        let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[shown] };
         let bl = match &self.itx_fx {
             Some(b) if t - b.t0 < 0.75 => t - b.t0,
             _ => -1.0,
@@ -644,6 +652,7 @@ impl Scene {
         let depth = kd.v[2] * c.r + 6.0;
         g.flip_now = flip;
         g.lift_now = lift;
+        self.xf_pre(c, g, kd.x, kd.y, kd.ang, lift, depth, spr.h as f64);
         let seen = {
             let x = js_round(kd.x + sin(kd.ang) * (lift + 8.0));
             let y = js_round(kd.y - cos(kd.ang) * (lift + 8.0));
