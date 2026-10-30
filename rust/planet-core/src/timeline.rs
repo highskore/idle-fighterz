@@ -2749,7 +2749,7 @@ impl Game {
         let Some(sh) = self.tl.shen.as_ref() else { return };
         let (age, in_phase) = (t - sh.t0, t - sh.phase_t);
         match sh.phase {
-            Phase::Rise if age > 4.4 => self.open_wish(),
+            Phase::Rise if age > 4.4 + self.shen_delay() => self.open_wish(),
             Phase::Wish if in_phase > 20.0 => {
                 // no answer: the rarest of the three (the first offered wins a tie)
                 let three = &sh.offer[..sh.offer.len().min(3)];

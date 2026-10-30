@@ -15,6 +15,7 @@ pub mod scenery;
 pub mod shade;
 pub mod shenron;
 pub mod snake;
+pub mod storm;
 pub mod tones;
 pub mod top;
 pub mod visitors;

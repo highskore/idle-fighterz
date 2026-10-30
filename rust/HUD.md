@@ -48,7 +48,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `pick_wish(key)`, `itx_jump(w)` | the wish box's and the transmission picker's callbacks |
 | `pick_hero(id) → bool` | the characters tab |
 | `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures: `card_sprite()` is the sprite |
-| `hero_sprite(id)`, `card_sprite()` | `thumb(id)`'s sprite (`HEROES[id].idle`) and `card().spr` (the hero's form, or fused), as an `Int32Array` `[w, h, ...col]` (`col` 0xRRGGBB a pixel, -1 for none); the shim makes game.js's `{ w, h, col }` of it |
+| `hero_sprite(id)`, `card_sprite()` | `thumb(id)`'s sprite (`HEROES[id].idle`) and `card().spr` (the hero's form as drawn in play, `HERO().forms[FORMS[S.form].i]`, or fused; game.js's `card()` indexes by ladder position, a different sprite past the shared nine forms), as an `Int32Array` `[w, h, ...col]` (`col` 0xRRGGBB a pixel, -1 for none); the shim makes game.js's `{ w, h, col }` of it |
 | `save() → text` | what to store under `hs-power`: `JSON.stringify(S)`, key for key |
 | `playing() → bool` | |
 
@@ -75,6 +75,12 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   order. It's `Game::shop`, rebuilt wherever game.js calls `syncShop` (the HUD point of a frame, mounting, `start`, buys,
   the tree and the angels), so it can come before play starts, as game.js's does.
 - `world`: the world, when it changed. The page calls `ui.hell(false)` and then `ui.world(w)`.
+- `sky`: shenron's storm over the page (planet-core's `dusk`), every frame it changes while he's out, then `null`:
+  `{page, top, bot, foot, pil, x, w}`, the page's background, the sky's top and bottom (`#rrggbb`), the footer's
+  opacity, and the pillar of light above the card (its opacity, centre and width in buffer pixels). The shim sets
+  `body.dusk` and page.html's `--dusk-*` properties from it. game.js has no storm, so this is new to the Rust engine;
+  porunga has none. The widget has no page or sky behind its canvas, so its HUD can ignore `sky`: the storm's clouds,
+  lightning, pillar and ring of balls are drawn on the canvas.
 - `events`: toasts for `ui.event(text, ms)`, oldest first. They include game.js's delayed ones (achievements 0.9 s
   later, the daily bonus, mr. satan, a universe cleared), which planet-core schedules on simulated time.
 - `cues`: the other one-shot `ui` calls, as `[name, ...args]`: `sfx(kind)`, `fx(kind)` and `fx('form', i)`, `bump`,
