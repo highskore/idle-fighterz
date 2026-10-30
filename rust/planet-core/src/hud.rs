@@ -376,20 +376,12 @@ impl Game {
             } else {
                 String::new()
             },
-            if self.core() > self.ceiling() {
-                if s.multi {
-                    "ki ceiling — it rises with time; clearing universes lifts it too".into()
-                } else {
-                    "ki ceiling — reach ultra instinct or finish the sagas: the multiverse lifts it".into()
-                }
-            } else {
-                String::new()
-            },
-            if s.ustars > 0 { format!("universe stars {} ×{}", s.ustars, fmt_short(Big::from(STAR_X).pow(stars).round())) } else { String::new() },
+            self.limit_line(),
+            if s.ustars > 0 { format!("universe stars {} ×{}", s.ustars, fmt_short(Big::from(self.star_x()).pow(stars).round())) } else { String::new() },
             if s.mastery > 0 { format!("mastery {}", s.mastery) } else { String::new() },
             if s.seeds != 0.0 { format!("ki seeds {}", big_string(s.seeds)) } else { String::new() },
             if s.ascend != 0.0 { format!("ki seeds ×{}", fixed1(self.seed_boost())) } else { String::new() },
-            if s.god_total > 0 { format!("god ki {} · ×{}", s.godki, fmt_short(Self::god_boost_of(s.god_total as f64))) } else { String::new() },
+            if s.god_total > 0 { format!("god ki {} · ×{}", s.godki, fmt_short(self.god_boost_of(s.god_total as f64))) } else { String::new() },
             if s.zeno > 0 { format!("zeno's favour ×{}", fmt_short(Big::from(ZENO_X).pow(s.zeno as f64))) } else { String::new() },
             if s.krillin_ally { "krillin: idle ×1.5".into() } else { String::new() },
         ];
@@ -687,7 +679,7 @@ impl Game {
         Obj::new()
             .num("godki", s.godki as f64)
             .num("gods", s.gods as f64)
-            .str("boost", &fmt_short(Self::god_boost_of(s.god_total as f64)))
+            .str("boost", &fmt_short(self.god_boost_of(s.god_total as f64)))
             .str("auto", &auto)
             .raw("list", arr(list))
             .end()
@@ -718,7 +710,7 @@ impl Game {
             return false;
         }
         self.s.hero = h;
-        self.forms = ladder_of(h);
+        self.forms = ladder_of(h, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
         true
     }
@@ -743,8 +735,8 @@ impl Game {
         Obj::new()
             .str("pl", &fmt_short(s.pl.floor()))
             .num("gain", self.god_now() as f64)
-            .str("now", &fmt_short(Self::god_boost_of(s.god_total as f64)))
-            .str("next", &fmt_short(Self::god_boost_of((s.god_total + self.god_now()) as f64)))
+            .str("now", &fmt_short(self.god_boost_of(s.god_total as f64)))
+            .str("next", &fmt_short(self.god_boost_of((s.god_total + self.god_now()) as f64)))
             .str("seeds", &fmt_short(s.ascend))
             .num("stars", s.ustars as f64)
             .end()
@@ -792,6 +784,7 @@ impl Game {
             .num("godki", s.god_total as f64)
             .str("zeno", &if s.zeno > 0 { fmt_short(Big::from(ZENO_X).pow(s.zeno as f64)) } else { String::new() })
             .num("mastery", s.mastery as f64)
+            .num("limits", s.limits as f64)
             .num("movies", s.movies as f64)
             .num("tail", s.lvf(Upg::Tail))
             .end()

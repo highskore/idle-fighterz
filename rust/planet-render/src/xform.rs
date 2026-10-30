@@ -6,7 +6,6 @@
 //!
 //! Its random numbers are its own (seeded by when the scene started), so the game's stream is left alone.
 
-use planet_core::data::{ALL_FORMS, FORM_AURA};
 use planet_core::geom::{add, ap, norm, V3};
 use planet_core::jsmath::{atan2, cos, exp, hypot, pow, sin};
 use planet_core::num::js_round;
@@ -84,10 +83,6 @@ impl XfFx {
     }
 }
 
-fn form_ix(g: &Game, f: usize) -> usize {
-    ALL_FORMS.iter().position(|a| a.0 == g.forms[f].name).unwrap_or(0)
-}
-
 fn pulse(t: f64, f: f64) -> f64 {
     let ph = (t * f) % 1.0;
     0f64.max(1.0 - ph * 3.0)
@@ -108,8 +103,8 @@ pub fn shown_form(g: &Game, t: f64) -> usize {
 
 /// His aura's colours, from his form's toward the next one's as he powers up.
 fn cols(g: &Game, x: &XForm, t: f64) -> [u32; 3] {
-    let a = FORM_AURA[form_ix(g, g.s.form)];
-    let b = FORM_AURA[form_ix(g, x.to)];
+    let a = g.forms[g.s.form].aura();
+    let b = g.forms[x.to].aura();
     let k = if x.rv.is_some() || flick(g, x, t) { 1.0 } else { pow(x.p, 1.5) * 0.85 };
     [mixc(a[0], b[0], k), mixc(a[1], b[1], k), mixc(a[2], b[2], k)]
 }
@@ -159,7 +154,7 @@ impl crate::scene::Scene {
     pub(crate) fn xf_sky(&mut self, c: &mut Ctx, g: &Game, view: &View) {
         let Some(x) = self.xf_sync(g) else { return };
         let t = c.t;
-        let f = FORM_AURA[form_ix(g, x.to)];
+        let f = g.forms[x.to].aura();
         let (gold, gl) = (f[2], f[1]);
         let fx = self.xf.as_ref().unwrap();
         let rv = x.since(t);

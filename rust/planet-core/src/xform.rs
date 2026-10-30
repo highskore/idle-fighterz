@@ -2,7 +2,6 @@
 //! lands. Taps hurry it along, and enough of them earn a power surge. Idle, it lands on its own. planet-render draws
 //! it from `Game::xf`; the HUD gets the form's name (and the surge) in the usual toast.
 
-use crate::data::FORM_AURA;
 use crate::game::Game;
 use crate::geom::{ap, cross, dot, m_mul, mul, ortho, rot};
 use crate::hud::Cue;
@@ -75,7 +74,7 @@ impl Game {
             }
             self.xf_instant = false;
         }
-        if self.xf.is_none() && self.form_owed() {
+        if self.xf.is_none() && self.form_owed() && !self.breaking() {
             if self.s.world == 3 && self.tl.snk.is_some() {
                 self.transform(preview);
                 return;
@@ -159,9 +158,9 @@ impl Game {
             self.shake = self.shake.max(0.4);
         }
         self.cue(Cue::Sfx("tap"));
-        let fi = crate::data::ALL_FORMS.iter().position(|f| f.0 == self.forms[to].name).unwrap_or(0);
         let k = self.kid_screen(10.0);
-        self.burst_at(k.x, k.y, &FORM_AURA[fi], 10, 140.0);
+        let aura = self.forms[to].aura();
+        self.burst_at(k.x, k.y, &aura, 10, 140.0);
         true
     }
 }

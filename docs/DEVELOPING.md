@@ -73,6 +73,8 @@ Add these to the URL to jump straight to something. They only work off the live 
 | `#spirit` | a nearly full spirit bomb |
 | `#struggle` | a villain who starts a beam struggle |
 | `#chamber` | the time chamber |
+| `#limit1` … `#limitN` | (Rust) limit N about to break, late in the tournament of power |
+| `#mile0` … `#mileK` | (Rust) the K-th named milestone landing: 0 is 1e10, 1 is 1e100, 2 is past infinity, 3 is 1e1000 |
 
 `game.js` has more (`#lookout`, `#beerus`, `#form12`, `#saga3`, `#universe3`, `#godki`…), each marked with a `// preview hook` comment, and hooks combine (`#form2#raid`):
 
