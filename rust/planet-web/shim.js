@@ -38,6 +38,9 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
     const dusk = s => {
       const bs = document.body.style;
       document.body.classList.toggle('dusk', !!s);
+      // the dim-slate dip: the page text turns light while the page is dark
+      const c = s ? parseInt(s.page.slice(1), 16) : 0xffffff;
+      document.body.classList.toggle('dusk-dark', (c >> 16) * .3 + (c >> 8 & 255) * .59 + (c & 255) * .11 < 110);
       if (!s) return;
       const r = st.cv.getBoundingClientRect(), k = r.width / st.W;
       bs.setProperty('--dusk-page', s.page); bs.setProperty('--dusk-top', s.top); bs.setProperty('--dusk-bot', s.bot); bs.setProperty('--dusk-foot', s.foot);

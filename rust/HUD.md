@@ -78,7 +78,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 - `sky`: shenron's storm over the page (planet-core's `dusk`), every frame it changes while he's out, then `null`:
   `{page, top, bot, foot, pil, x, w}`, the page's background, the sky's top and bottom (`#rrggbb`), the footer's
   opacity, and the pillar of light above the card (its opacity, centre and width in buffer pixels). The shim sets
-  `body.dusk` and page.html's `--dusk-*` properties from it. game.js has no storm, so this is new to the Rust engine;
+  `body.dusk` (and `body.dusk-dark` while the page is dark, for its text) and page.html's `--dusk-*` properties from it. game.js has no storm, so this is new to the Rust engine;
   porunga has none. The widget has no page or sky behind its canvas, so its HUD can ignore `sky`: the storm's clouds,
   lightning, pillar and ring of balls are drawn on the canvas.
 - `events`: toasts for `ui.event(text, ms)`, oldest first. They include game.js's delayed ones (achievements 0.9 s
