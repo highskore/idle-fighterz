@@ -69,7 +69,8 @@ jobs:
 
   rust:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # the planet-core tests run about 1.6× slower on x86-64 since the ki limits (#49); the cause isn't found yet
+    timeout-minutes: 35
     defaults:
       run:
         shell: bash

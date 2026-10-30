@@ -57,6 +57,8 @@ pub struct Scene {
     pub(crate) xf: Option<crate::xform::XfFx>,
     /// a limit break's or a milestone's drawing state, while it plays
     pub(crate) mo: Option<crate::limits::MoFx>,
+    /// a saga boss's arrival behind the scouter
+    pub(crate) bi: Option<crate::intro::IntroFx>,
 }
 
 /// `V.norm([-.55, .7, .55])`, as game.js computes it.
@@ -627,6 +629,7 @@ impl Scene {
             }
         }
         crate::floats::draw(c.fb, g, dt);
+        self.bi_draw(&mut c, g, view);
         self.tones = Some(tones);
     }
 

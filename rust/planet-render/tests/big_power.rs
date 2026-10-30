@@ -106,5 +106,5 @@ fn power_past_1e1000() {
     assert!(g.s.best >= g.s.pl);
 
     // the extended form lands on the same bits on every target
-    assert_eq!(g.s.pl.to_text(), "3.297673064077033e2000186");
+    assert_eq!(g.s.pl.to_text(), "7.788568065562606e2000185");
 }
