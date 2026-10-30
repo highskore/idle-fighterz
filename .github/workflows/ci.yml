@@ -41,6 +41,8 @@ jobs:
         run: node build.mjs && test -s dist/planet.html && test -s dist/planet-game.js
       - name: Widget page
         run: node build.mjs --widget && test -s dist/index.html
+      - name: Widget skins
+        run: node --test test/skins.test.cjs
 
   # the widget's hud, panels and popups as Windows draws them (Edge, the engine under WebView2), without and with the
   # Windows text colours (html.win): screenshots to look at, nothing compared
