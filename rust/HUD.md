@@ -68,6 +68,9 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   calls `ui.update`, and once more at `start`, so the first message already has a goal. `time` and the timers are whole
   seconds, but `pl`, `combo` and the form's progress are the raw numbers, so in play the snapshot changes on most steps.
   The struct is `PartialEq`, so checking for a change costs one comparison.
+- **Numbers past 1e300.** `pl`, `best`, `rate`, a shop row's `cost` and `level`, the tree's `seeds` and `cost`, the card's
+  `pl`, `best` and `seeds` and `ascendInfo().seeds` are numbers below 1e300 and, past it, the text `"<m>e<exponent>"`
+  (`"4.5e1204"`, planet-core's `Big`). page.html's `big`, `fmt` and `short` format both; its `sci` is planet-core's `num::sci`.
 - `shop`, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, what, can, open, special}}` in shop
   order. It's `Game::shop`, rebuilt wherever game.js calls `syncShop` (the HUD point of a frame, mounting, `start`, buys,
   the tree and the angels), so it can come before play starts, as game.js's does.

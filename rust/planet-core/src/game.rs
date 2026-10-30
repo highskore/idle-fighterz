@@ -1,6 +1,7 @@
 //! The simulation: game.js `frame(t, dt)` and the inputs that change state (training taps, the shop, kaioken, the tree,
 //! ascending), with the economy as methods. Expressions keep game.js's operand order so floats round the same way.
 
+use crate::big::Big;
 use crate::data::*;
 use crate::fx::Particle;
 use crate::geom::{Cam, Frame};
@@ -194,23 +195,23 @@ impl Game {
     }
 
     /// Producer milestone multiplier.
-    pub fn ms(&self, u: Upg) -> f64 {
+    pub fn ms(&self, u: Upg) -> Big {
         let l = self.s.lv(u);
         let hit = MS.iter().filter(|&&n| l >= n).count() as f64;
         let past = ((l as f64 - 100.0) / 50.0).floor().max(0.0);
-        crate::jsmath::pow(2f64, hit + past)
+        Big::from(2f64).pow(hit + past)
     }
 
-    pub fn seed_boost_of(&self, a: f64) -> f64 {
+    pub fn seed_boost_of(&self, a: Big) -> Big {
         let b = 1.0 + a * (0.1 + 0.02 * self.lvl(N_SEEDX));
         if b <= SEED_SOFT {
             b
         } else {
-            SEED_SOFT * crate::jsmath::pow(b / SEED_SOFT, SEED_EXP)
+            SEED_SOFT * (b / SEED_SOFT).pow(SEED_EXP)
         }
     }
 
-    pub fn seed_boost(&self) -> f64 {
+    pub fn seed_boost(&self) -> Big {
         self.seed_boost_of(self.s.ascend)
     }
 
@@ -226,9 +227,9 @@ impl Game {
         self.s.seeds > 0.0 || self.s.tree.iter().any(|&v| v > 0)
     }
 
-    pub fn seeds_now(&self) -> f64 {
+    pub fn seeds_now(&self) -> Big {
         let p = self.s.pl / 1e4;
-        (if self.ang(A_DIVINE) { crate::jsmath::pow(p, 0.55) } else { p.sqrt() }).floor().max(1.0)
+        (if self.ang(A_DIVINE) { p.pow(0.55) } else { p.sqrt() }).floor().max(1.0)
     }
 
     pub fn god_now(&self) -> u32 {
@@ -249,27 +250,27 @@ impl Game {
         CEIL0 * time * crate::jsmath::pow(CEIL_STEP, self.s.uni_best as f64)
     }
 
-    pub fn capped(&self, m: f64) -> f64 {
+    pub fn capped(&self, m: Big) -> Big {
         let c = self.ceiling();
         if m <= c {
             m
         } else {
-            c * crate::jsmath::pow(m / c, CEIL_EXP)
+            c * (m / c).pow(CEIL_EXP)
         }
     }
 
-    pub fn late_boost(&self) -> f64 {
+    pub fn late_boost(&self) -> Big {
         let stars = self.s.ustars as f64 * if self.ang(A_STARS) { 2.0 } else { 1.0 };
-        crate::jsmath::pow(STAR_X, stars)
-            * crate::jsmath::pow(MASTERY_X, self.s.mastery as f64)
+        Big::from(STAR_X).pow(stars)
+            * Big::from(MASTERY_X).pow(self.s.mastery as f64)
             * Self::god_boost_of(self.s.god_total as f64)
-            * crate::jsmath::pow(ZENO_X, self.s.zeno as f64)
+            * Big::from(ZENO_X).pow(self.s.zeno as f64)
     }
 
     /// The engine the ceiling caps; forms sit outside it.
-    pub fn core(&self) -> f64 {
+    pub fn core(&self) -> Big {
         let w = self.s.wishes as f64;
-        crate::jsmath::pow(1.15f64, self.s.lvf(Upg::Gravity)) * crate::jsmath::pow(1.25f64, w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON
+        Big::from(1.15f64).pow(self.s.lvf(Upg::Gravity)) * Big::from(1.25f64).pow(w) * (1.0 + 0.05 * self.lvl(N_WISH) * w) * self.seed_boost() * ECON
     }
 
     pub fn tail_lv(&self) -> f64 {
@@ -333,7 +334,7 @@ impl Game {
     }
 
     /// Permanent boosts multiply; timed ones add their bonuses. `bare` leaves the timed ones out (windfalls, villain hp).
-    pub fn mult(&self, bare: bool) -> f64 {
+    pub fn mult(&self, bare: bool) -> Big {
         let t = self.t;
         let b = &self.b;
         let on = |until: f64, x: f64| if until > t { x } else { 0.0 };
@@ -360,19 +361,14 @@ impl Game {
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
-        let m = self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake;
-        if m < MAX_MULT {
-            m
-        } else {
-            MAX_MULT
-        }
+        self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
     }
 
-    pub fn lap_value(&self) -> f64 {
+    pub fn lap_value(&self) -> Big {
         30.0 * (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots))
     }
 
-    pub fn passive(&self) -> f64 {
+    pub fn passive(&self) -> Big {
         let s = &self.s;
         (s.lvf(Upg::Partner) * 4.0 * self.ms(Upg::Partner)
             + s.lvf(Upg::House) * 40.0 * self.ms(Upg::House)
@@ -384,13 +380,13 @@ impl Game {
     }
 
     /// Power a second, buffs included: what the HUD shows.
-    pub fn rate(&self) -> f64 {
-        js_round((self.lap_value() / 7.0 + self.passive()) * self.mult(false))
+    pub fn rate(&self) -> Big {
+        ((self.lap_value() / 7.0 + self.passive()) * self.mult(false)).round()
     }
 
     /// The rate without timed buffs: windfalls and villain hp are sized on it.
-    pub fn wrate(&self) -> f64 {
-        js_round((self.lap_value() / 7.0 + self.passive()) * self.mult(true))
+    pub fn wrate(&self) -> Big {
+        ((self.lap_value() / 7.0 + self.passive()) * self.mult(true)).round()
     }
 
     pub fn unlocked(&self, u: Upg) -> bool {
@@ -415,17 +411,17 @@ impl Game {
         self.s.best >= 1e6 || self.tree_open()
     }
 
-    pub fn cost(&self, u: Upg) -> f64 {
+    pub fn cost(&self, u: Upg) -> Big {
         let it = &SHOP[u as usize];
-        (it.base * crate::jsmath::pow(it.k, self.s.lvf(u)) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
+        (it.base * Big::from(it.k).pow(self.s.lvf(u)) * (1.0 - 0.05 * self.lvl(N_DEAL))).floor()
     }
 
     /// Ascending spends all you hold, 1M at least.
-    pub fn ascend_cost(&self) -> f64 {
+    pub fn ascend_cost(&self) -> Big {
         self.s.pl.floor().max(1e6)
     }
 
-    pub fn god_cost(&self) -> f64 {
+    pub fn god_cost(&self) -> Big {
         self.s.pl.floor().max(2e14)
     }
 
@@ -460,9 +456,10 @@ impl Game {
         self.epoch_ms + (self.t * 1000.0).floor()
     }
 
-    pub fn gain(&mut self, n: f64) {
-        let n = if n > 1.0 { MAX_PL.min(js_round(n)) } else { 1.0 };
-        self.s.pl = MAX_PL.min(self.s.pl + n);
+    pub fn gain(&mut self, n: impl Into<Big>) {
+        let n = n.into();
+        let n = if n > 1.0 { n.round() } else { Big::from(1.0) };
+        self.s.pl += n;
         if self.s.pl > self.s.best {
             self.s.best = self.s.pl;
         }
@@ -507,7 +504,7 @@ impl Game {
             self.s.goals_done += 1;
             let prize = (self.wrate() * 90.0 * (1.0 + (self.s.goals_done.min(20) as f64) * 0.15)).max(200.0);
             self.gain(prize);
-            let mut msg = format!("training done: {} — +{}", g.text, crate::num::fmt_short(js_round(prize)));
+            let mut msg = format!("training done: {} — +{}", g.text, crate::num::fmt_short(prize.round()));
             if self.s.goals_done.is_multiple_of(5) {
                 self.s.orbs7 += 1;
                 msg += " and a dragon ball";
@@ -777,8 +774,8 @@ impl Game {
     }
 
     /// Uncapped nodes cost double every 5 ranks.
-    pub fn rank_cost(n: &Node, r: u32) -> f64 {
-        TIER_COST[n.tier] as f64 * crate::jsmath::pow(2f64, (r / 5) as f64)
+    pub fn rank_cost(n: &Node, r: u32) -> Big {
+        TIER_COST[n.tier] as f64 * Big::from(2f64).pow((r / 5) as f64)
     }
 
     pub fn node_open(&self, i: usize) -> bool {
@@ -820,7 +817,7 @@ impl Game {
         self.ach("ascend");
         self.s.pl = keep;
         self.s.run_best = keep;
-        self.s.namek_at = 0.0;
+        self.s.namek_at = Big::ZERO;
         self.s.foes.clear();
         let notes = self.ang(A_NOTES);
         for l in self.s.levels.iter_mut() {
@@ -831,9 +828,10 @@ impl Game {
         self.cue(Cue::Form(self.s.form));
         self.scenery();
         let msg = format!(
-            "ascended — +{gain} ki seed{} (×{} on everything), back to {}",
+            "ascended — +{} ki seed{} (×{} on everything), back to {}",
+            crate::num::big_string(gain),
             if gain > 1.0 { "s" } else { "" },
-            crate::num::to_fixed(self.seed_boost(), 1),
+            crate::num::fixed1(self.seed_boost()),
             self.forms[self.s.form].name
         );
         self.event_ms(msg, 4500.0);
@@ -853,12 +851,12 @@ impl Game {
         self.s.gods += 1;
         self.ach("godki");
         let s = &mut self.s;
-        s.pl = 0.0;
-        s.run_best = 0.0;
-        s.namek_at = 0.0;
+        s.pl = Big::ZERO;
+        s.run_best = Big::ZERO;
+        s.namek_at = Big::ZERO;
         s.levels = [0; Upg::ALL.len()];
-        s.seeds = 0.0;
-        s.ascend = 0.0;
+        s.seeds = Big::ZERO;
+        s.ascend = Big::ZERO;
         s.tree = [0; TREE.len()];
         s.form = if s.angel[A_GOLDEN] { 1 } else { 0 };
         s.uni = 0;
@@ -904,8 +902,8 @@ impl Game {
         let s = &mut self.s;
         s.levels = [0; Upg::ALL.len()];
         (s.pl, s.granted, s.multi, s.multi_t, s.uni_best, s.run_best, s.seeds, s.ascend, s.form, s.wishes, s.saga) =
-            (0.0, 0, false, 0.0, 0, 0.0, 0.0, 0.0, 0, 0, 0);
-        (s.uni, s.uni_stage, s.ustars, s.mastery, s.godki, s.god_total, s.gods, s.auto_at, s.orbs7, s.namek_at) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0.0);
+            (Big::ZERO, 0, false, 0.0, 0, Big::ZERO, Big::ZERO, Big::ZERO, 0, 0, 0);
+        (s.uni, s.uni_stage, s.ustars, s.mastery, s.godki, s.god_total, s.gods, s.auto_at, s.orbs7, s.namek_at) = (0, 0, 0, 0, 0, 0, 0, 0, 0, Big::ZERO);
         s.tree = [0; TREE.len()];
         s.angel = [false; ANGELS.len()];
         s.trips = 0;
@@ -929,7 +927,7 @@ impl Game {
         self.cue(Cue::Fx("super"));
         self.cue(Cue::Sfx("boom"));
         self.scenery();
-        let favour = crate::num::fmt_short(ZENO_X.powf(self.s.zeno as f64));
+        let favour = crate::num::fmt_short(Big::from(ZENO_X).pow(self.s.zeno as f64));
         self.event_ms(
             match erased {
                 Some(v) => format!("zeno: \"{v}? he's no fun.\" — {v} is erased. then so is everything else. zeno's favour ×{favour}"),
@@ -1041,11 +1039,10 @@ impl Game {
             // a form you hold the power for comes as a scene (xform.rs) and stays for the run
             self.xform_step(t, dt);
             let last = self.forms.len() - 1;
-            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * crate::jsmath::pow(LATE_STEP, self.s.mastery as f64 + 1.0)
-            {
+            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0) {
                 self.s.mastery += 1;
                 self.ach("mastery");
-                let next = crate::num::fmt_short(self.forms[last].at * LATE_STEP.powf(self.s.mastery as f64 + 1.0));
+                let next = crate::num::fmt_short(self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0));
                 self.event_ms(format!("mastery star {} — ×{MASTERY_X} on everything, kept through god ki. next at {next}", self.s.mastery), 3500.0);
                 self.cue(Cue::Fx("star"));
             }
@@ -1085,11 +1082,11 @@ impl Game {
     pub fn debug_set(&mut self, key: &str, v: f64) {
         let s = &mut self.s;
         match key {
-            "pl" => s.pl = v,
-            "best" => s.best = v,
+            "pl" => s.pl = v.into(),
+            "best" => s.best = v.into(),
             "wishes" => s.wishes = v as u32,
-            "ascend" => s.ascend = v,
-            "seeds" => s.seeds = v,
+            "ascend" => s.ascend = v.into(),
+            "seeds" => s.seeds = v.into(),
             "multi" => s.multi = v != 0.0,
             "multiT" => s.multi_t = v,
             "world" => s.world = v as u32,
@@ -1143,7 +1140,7 @@ impl Game {
         let lv = |g: &mut Game, u: Upg, n: u32| g.s.levels[u as usize] = g.s.levels[u as usize].max(n);
         let trip = |g: &mut Game, b: f64, trips: u32| {
             g.s.best = g.s.best.max(b);
-            g.s.namek_at = b;
+            g.s.namek_at = b.into();
             g.s.trips = trips;
         };
         let sagas = VILLAINS.len() as u32;
@@ -1217,7 +1214,7 @@ impl Game {
             self.tl.next_kril = 0.0;
         }
         if has("seeds") {
-            self.s.seeds = 40.0;
+            self.s.seeds = 40.0.into();
         }
         if has("galick") {
             lv(self, Upg::Galick, if has("galick5") { 5 } else { 1 });
@@ -1232,19 +1229,19 @@ impl Game {
             self.tl.next_boss = 0.0;
         }
         if has("mui") {
-            self.s.pl = 2.1e14;
-            self.s.best = 2.1e14;
+            self.s.pl = 2.1e14.into();
+            self.s.best = 2.1e14.into();
             self.s.form = MUI_FORM - 1;
         }
         if let Some(n) = num("form") {
             let i = n.min(self.forms.len() - 1);
-            self.s.pl = self.forms[i].at * 1.05;
+            self.s.pl = (self.forms[i].at * 1.05).into();
             self.s.best = self.s.pl;
             self.s.form = i.max(1) - 1;
         }
         if has("godki") {
-            self.s.pl = 2.1e15;
-            self.s.best = 2.1e15;
+            self.s.pl = 2.1e15.into();
+            self.s.best = 2.1e15.into();
             self.s.form = MUI_FORM;
             self.s.godki = 6;
             self.s.god_total = 3;

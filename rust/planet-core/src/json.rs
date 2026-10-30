@@ -122,6 +122,11 @@ impl Obj {
         self.raw(k, num(v))
     }
 
+    /// A `Big`: a number below 1e300, past it the text `"<m>e<e>"` (page.html formats both).
+    pub fn big(self, k: &str, v: crate::big::Big) -> Self {
+        self.raw(k, v.to_json())
+    }
+
     pub fn str(self, k: &str, v: &str) -> Self {
         self.raw(k, str(v))
     }

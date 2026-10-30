@@ -8,13 +8,14 @@
 
 #![allow(clippy::approx_constant)] // game.js turns by 6.28 and laps by 6.283, not by τ
 
+use crate::big::Big;
 use crate::data::*;
 use crate::fx::Particle;
 use crate::game::{Game, WishBuff};
 use crate::geom::{self, Spot, V3};
 use crate::hud::Cue;
 use crate::jsmath::{atan2, cos, hypot, sin};
-use crate::num::{fmt_short, js_round, to_fixed};
+use crate::num::{big_string, fixed1, fmt_short, js_round, to_fixed};
 
 /// A screen spot the renderer writes back (game.js's `sx`/`sy`); unset in a headless game.
 pub type Seen = Option<(f64, f64)>;
@@ -72,8 +73,10 @@ pub struct Npc {
     pub sx: Seen,
     /// king kai: laughed; roshi: when he went max power (0 not yet)
     pub flag: f64,
-    /// roshi: when his kamehameha fired; satan: his prize
+    /// roshi: when his kamehameha fired
     pub n: f64,
+    /// satan: his prize
+    pub prize: Big,
 }
 
 #[derive(Clone, Debug)]
@@ -89,8 +92,8 @@ pub struct Krillin {
 pub struct Member {
     pub name: &'static str,
     pub spr: Dim,
-    pub hp: f64,
-    pub max: f64,
+    pub hp: Big,
+    pub max: Big,
     pub i: usize,
     pub x: f64,
     pub y: f64,
@@ -105,7 +108,7 @@ pub struct Member {
 pub struct Ginyu {
     pub androids: bool,
     pub members: Vec<Member>,
-    pub max: f64,
+    pub max: Big,
     pub t0: f64,
     pub until: f64,
     pub next_ki: f64,
@@ -130,7 +133,7 @@ pub struct Gero {
     pub x: f64,
     pub y: f64,
     pub t0: f64,
-    pub drained: f64,
+    pub drained: Big,
 }
 
 #[derive(Clone, Debug)]
@@ -224,8 +227,8 @@ pub struct Boss {
     /// the takes a tournament fighter switches between; one for everyone else
     pub sprs: Vec<Dim>,
     pub p: usize,
-    pub hp: f64,
-    pub max: f64,
+    pub hp: Big,
+    pub max: Big,
     pub t0: f64,
     pub until: f64,
     pub x: f64,
@@ -248,7 +251,7 @@ pub struct Boss {
 }
 
 impl Boss {
-    fn new(id: u32, name: String, spr: Dim, hp: f64, t: f64, until: f64) -> Self {
+    fn new(id: u32, name: String, spr: Dim, hp: Big, t: f64, until: f64) -> Self {
         Boss {
             id,
             name,
@@ -434,8 +437,8 @@ pub struct Snake {
 pub struct Henchman {
     pub name: &'static str,
     pub spr: Dim,
-    pub hp: f64,
-    pub max: f64,
+    pub hp: Big,
+    pub max: Big,
     pub twin: bool,
     pub dead: bool,
     /// written by the renderer
@@ -844,7 +847,7 @@ impl Game {
 
     // ── economy the timeline adds
 
-    pub fn tap_power(&self) -> f64 {
+    pub fn tap_power(&self) -> Big {
         1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots) + self.passive() / 10.0
     }
 
@@ -852,8 +855,8 @@ impl Game {
         15.0 + 2.0 * self.tail_lv() + if self.tl.ape.giant { 15.0 } else { 0.0 }
     }
 
-    fn wish_seeds(&self) -> f64 {
-        3f64.max((self.seeds_now() / 5.0).ceil())
+    fn wish_seeds(&self) -> Big {
+        Big::from(3.0).max((self.seeds_now() / 5.0).ceil())
     }
 
     fn uni_time(&self) -> f64 {
@@ -864,7 +867,7 @@ impl Game {
         }
     }
 
-    fn finisher(&self) -> f64 {
+    fn finisher(&self) -> Big {
         let b = self.tl.boss.as_ref().unwrap();
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         if b.uni {
@@ -874,7 +877,7 @@ impl Game {
         }
     }
 
-    pub(crate) fn meteor_pay(&self) -> f64 {
+    pub(crate) fn meteor_pay(&self) -> Big {
         25.0 * self.mult(false) * (1.0 + (self.laps.min(50) as f64) * 0.1)
     }
 
@@ -1061,7 +1064,7 @@ impl Game {
             && tick(&mut self.tl.next_andro, dt)
         {
             self.krillin_hit("the androids");
-            let hp = 500f64.max(self.wrate() * 14.0);
+            let hp = Big::from(500.0).max(self.wrate() * 14.0);
             let members = [("android 17", A17), ("android 18", A18)]
                 .iter()
                 .enumerate()
@@ -1088,7 +1091,7 @@ impl Game {
             self.s.geros += 1;
             let odd = self.s.geros % 2 == 1;
             let (spr, name) = if odd { (A20, "dr. gero") } else { (A19, "android 19") };
-            self.tl.gero = Some(Gero { name, spr, x: w + 20.0, y: h * 0.28, t0: t, drained: 0.0 });
+            self.tl.gero = Some(Gero { name, spr, x: w + 20.0, y: h * 0.28, t0: t, drained: Big::ZERO });
             self.event(format!("{name} is absorbing your power — tap him!"));
             self.cue(Cue::Sfx("boss"));
             self.tl.next_gero = 230.0 + self.r() * 80.0;
@@ -1106,7 +1109,7 @@ impl Game {
                 g.drained += d;
             }
             if t - g.t0 > 15.0 {
-                let msg = format!("{} got away with {} power", g.name, fmt_short(js_round(g.drained)));
+                let msg = format!("{} got away with {} power", g.name, fmt_short(g.drained.round()));
                 self.tl.gero = None;
                 self.event(msg);
             }
@@ -1179,7 +1182,7 @@ impl Game {
                 self.tl.ship.as_mut().unwrap().left = t;
                 self.victory();
                 self.ach("fleet");
-                let g = 500f64.max(self.wrate() * 60.0) * (1.0 + 0.5 * self.s.lvf(Upg::Armor));
+                let g = Big::from(500.0).max(self.wrate() * 60.0) * (1.0 + 0.5 * self.s.lvf(Upg::Armor));
                 let q = self.hand_pos();
                 self.gain_at(g, q.0, q.1 - 16.0, true);
                 self.event(format!("frieza's soldiers are down — the ship flees! +{}", fmt_short(js_round(g))));
@@ -1362,7 +1365,7 @@ impl Game {
             && tick(&mut self.tl.next_ginyu, dt)
         {
             self.krillin_hit("the ginyu force");
-            let hp = 300f64.max(self.wrate() * 9.0);
+            let hp = Big::from(300.0).max(self.wrate() * 9.0);
             let members = GINYU
                 .iter()
                 .enumerate()
@@ -1431,7 +1434,7 @@ impl Game {
             let msg = format!("your space pod is incoming — it lands after the {}", if self.tl.tour.is_some() { "tournament" } else { "fight" });
             self.event(msg);
         }
-        let mark = if self.s.namek_at != 0.0 { self.s.namek_at } else { PLANET_EVERY };
+        let mark = if self.s.namek_at != 0.0 { self.s.namek_at } else { Big::from(PLANET_EVERY) };
         // jumped trips don't move either; one that comes due during a jump waits until you've been home TRIP_WAIT × 0.7
         let due = (self.s.run_best >= mark || session - self.tl.home_since > TRIP_WAIT * self.soon()) && session - self.tl.itx_back >= TRIP_WAIT * 0.7;
         if self.s.world == home
@@ -1513,7 +1516,7 @@ impl Game {
             if !tr.villain && t - tr.t0 > 28.0 && self.tl.boss.is_none() {
                 self.tl.tour.as_mut().unwrap().villain = true;
                 let (vname, spr) = VILLAINS[(self.s.bosses as usize) % VILLAINS.len()];
-                let hp = 400f64.max(self.wrate() * 18.0);
+                let hp = Big::from(400.0).max(self.wrate() * 18.0);
                 let name = if vname == "vegeta" && self.s.hero == Hero::Vegeta { "past vegeta" } else { vname };
                 self.new_boss(Boss::new(0, name.into(), spr, hp, t, t + 25.0));
                 self.event(format!("{vname} joins the tournament!"));
@@ -1521,7 +1524,7 @@ impl Game {
             if t > tr.until {
                 let ko = self.tl.tour.as_ref().unwrap().ko;
                 let best = self.s.tour_best;
-                let prize = 500f64.max(self.rate() * ko as f64 * 8.0);
+                let prize = Big::from(500.0).max(self.rate() * ko as f64 * 8.0);
                 self.s.tour_best = best.max(ko);
                 self.gain(prize);
                 self.goal("tour", ko as f64, true);
@@ -1576,7 +1579,7 @@ impl Game {
             self.tl.next_nappa <= 0.0
         } {
             self.tl.next_nappa = 0.0;
-            let hp = 800f64.max(self.wrate() * 50.0);
+            let hp = Big::from(800.0).max(self.wrate() * 50.0);
             self.new_boss(Boss::new(0, "nappa".into(), NAPPA, hp, t, t + 35.0));
             self.event("nappa: \"vegeta, let me handle this!\" — tap him");
         }
@@ -1603,7 +1606,7 @@ impl Game {
         {
             let n = VILLAINS.len();
             let (vname, spr) = VILLAINS[self.s.saga as usize % n];
-            let hp = 600f64.max(self.wrate() * 40.0) * (1.0 + 0.15 * self.s.saga as f64);
+            let hp = Big::from(600.0).max(self.wrate() * 40.0) * (1.0 + 0.15 * self.s.saga as f64);
             let me = vname == "vegeta" && self.s.hero == Hero::Vegeta;
             let twin = vname == "goku black" && self.s.hero == Hero::Goku;
             let mut b = Boss::new(0, if me { "past vegeta".into() } else { vname.into() }, spr, hp, t, t + 40.0);
@@ -1633,7 +1636,7 @@ impl Game {
             let hp = UNI_HP * crate::jsmath::pow(UNI_STEP, u as f64) * UNI_STAGES[k];
             let last = k == UNI_STAGES.len() - 1;
             let ut = self.uni_time();
-            let mut b = Boss::new(0, who.into(), Dim::default(), hp, t, t + ut);
+            let mut b = Boss::new(0, who.into(), Dim::default(), hp.into(), t, t + ut);
             b.sprs = fighter_takes(who);
             b.uni = true;
             b.tag = format!("{}{}", uni_name(u), if last { " boss".to_string() } else { format!(" {}/{}", k + 1, UNI_STAGES.len()) });
@@ -1665,7 +1668,7 @@ impl Game {
             }
             if t > s.until + 2.0 {
                 let hit = self.tl.storm.as_ref().unwrap().hit;
-                let g = hit as f64 * 30f64.max(self.rate() * 2.0);
+                let g = hit as f64 * Big::from(30.0).max(self.rate() * 2.0);
                 if hit > 0 {
                     let q = self.hand_pos();
                     self.gain_at(g, q.0, q.1 - 16.0, true);
@@ -1757,7 +1760,7 @@ impl Game {
                         Some(i) if place[i + 1..].len() == 3 && place.as_bytes()[i + 2] == b'/' => place[..i].to_string(),
                         _ => place,
                     };
-                    let msg = format!("{} holds {place} — {}% left. grow, he's back in {next}s", b.name, js_round(b.hp / b.max * 100.0));
+                    let msg = format!("{} holds {place} — {}% left. grow, he's back in {next}s", b.name, js_round((b.hp / b.max * 100.0).to_f64()));
                     self.tl.next_boss = next;
                     self.event_ms(msg, 3500.0);
                 } else {
@@ -1814,10 +1817,10 @@ impl Game {
             if d < 6.0 {
                 self.tl.kis[i].done = true;
                 if let Some(mi) = kb.m {
-                    let dmg = 1f64.max(self.rate() * 0.2);
+                    let dmg = Big::from(1.0).max(self.rate() * 0.2);
                     self.ginyu_hit(mi, dmg);
                 } else {
-                    let dmg = 1f64.max(self.rate() * if kb.disc { 2.0 } else { 0.2 });
+                    let dmg = Big::from(1.0).max(self.rate() * if kb.disc { 2.0 } else { 0.2 });
                     self.hit_boss(dmg, tx, ty);
                 }
                 continue;
@@ -1975,7 +1978,7 @@ impl Game {
             tr.ko += 1;
         }
         self.tl.saibas[i].dead = true;
-        let n = 40f64.max(self.rate() * 3.0) * (1.0 + 0.5 * self.s.lvf(Upg::Armor));
+        let n = Big::from(40.0).max(self.rate() * 3.0) * (1.0 + 0.5 * self.s.lvf(Upg::Armor));
         match self.tl.saibas[i].sx {
             Some((sx, sy)) => self.gain_at(n, sx, sy - 12.0, true),
             None => self.gain(n),
@@ -1984,7 +1987,7 @@ impl Game {
         self.burst_seen(at, &[0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a], 16, 110.0);
     }
 
-    pub(crate) fn ginyu_hit(&mut self, mi: usize, dmg: f64) {
+    pub(crate) fn ginyu_hit(&mut self, mi: usize, dmg: Big) {
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let g = self.tl.ginyu.as_mut().unwrap();
         let m = &mut g.members[mi];
@@ -2020,7 +2023,7 @@ impl Game {
     }
 
     /// `hitBoss(dmg, x, y)`: the boss takes a hit; at zero he's down, and pays.
-    pub(crate) fn hit_boss(&mut self, dmg: f64, x: f64, y: f64) {
+    pub(crate) fn hit_boss(&mut self, dmg: Big, x: f64, y: f64) {
         if self.tl.boss.as_ref().unwrap().movie && self.movie_guard(dmg, x, y) {
             return;
         }
@@ -2045,8 +2048,11 @@ impl Game {
                 tr.ko += 10;
             }
             self.tl.capsule = Some(Capsule { x: b.x, y: b.y - b.spr().h / 2.0 * b.k, vy: -40.0, t0: t, land: self.cam.cy - self.cam.r * 0.3 });
-            let mut prize =
-                if b.uni { self.wrate() * 15.0 } else { (if b.movie { 0.0 } else { b.max * 1.5 }).max(self.wrate() * 90.0) * (1.0 + 0.5 * self.lvl(N_BOUNTY)) };
+            let mut prize = if b.uni {
+                self.wrate() * 15.0
+            } else {
+                (if b.movie { Big::ZERO } else { b.max * 1.5 }).max(self.wrate() * 90.0) * (1.0 + 0.5 * self.lvl(N_BOUNTY))
+            };
             if b.uni {
                 self.s.uni_stage += 1;
                 if self.s.uni_stage as usize >= UNI_STAGES.len() {
@@ -2086,7 +2092,7 @@ impl Game {
                     self.ach("sagas");
                 }
                 let c = self.cap_pt(0.42, 2.9);
-                self.tl.satan = Some(Npc { c, t0: t + 1.2, until: t + 9.0, n: prize * 0.5, ..Default::default() });
+                self.tl.satan = Some(Npc { c, t0: t + 1.2, until: t + 9.0, prize: prize * 0.5, ..Default::default() });
                 self.after(2.8, Later::Event("mr. satan: \"i did it! it was all me!\" — tap him for the prize money".into(), 4500.0));
             }
             self.victory();
@@ -2178,7 +2184,7 @@ impl Game {
             }
         }
         if self.tl.movie.is_some() {
-            self.movie_blast(f64::INFINITY);
+            self.movie_blast(Big::from(f64::INFINITY));
         }
         if self.boss_up() {
             let f = self.finisher();
@@ -2379,7 +2385,7 @@ impl Game {
         }
         let at = self.tl.snk.as_ref().unwrap().ghosts[gi].sx;
         self.burst_seen(at, &[0xffffff, 0xdff4ff, 0xfff3a0], 18, 120.0);
-        let n = 90f64.max(self.wrate() * 12.0);
+        let n = Big::from(90.0).max(self.wrate() * 12.0);
         match self.tl.snk.as_ref().unwrap().ghosts[gi].sx {
             Some((sx, sy)) => self.gain_at(n, sx, sy - 8.0, true),
             None => self.gain(n),
@@ -2432,7 +2438,7 @@ impl Game {
             if !o.got && o.p <= p {
                 o.got = true;
                 self.tl.snk.as_mut().unwrap().got += 1;
-                let n = 5f64.max(self.wrate() * 1.5);
+                let n = Big::from(5.0).max(self.wrate() * 1.5);
                 let snk = self.tl.snk.as_ref().unwrap();
                 let (hx, hy) = (snk.hx, snk.hy);
                 self.gain_at(n, hx, hy - 18.0, true);
@@ -2456,7 +2462,7 @@ impl Game {
                     if streak >= 8 {
                         self.ach("streak");
                     }
-                    let n = 40f64.max(self.wrate() * 8.0 * (1.0 + streak as f64 * 0.25));
+                    let n = Big::from(40.0).max(self.wrate() * 8.0 * (1.0 + streak as f64 * 0.25));
                     let snk = self.tl.snk.as_ref().unwrap();
                     let (hx, hy) = (snk.hx, snk.hy);
                     self.gain_at(n, hx, hy - 26.0, true);
@@ -2490,7 +2496,7 @@ impl Game {
             snk.done = t;
             let t0 = snk.t0;
             self.ach("snakeway");
-            let g = 300f64.max(self.wrate() * 100.0);
+            let g = Big::from(300.0).max(self.wrate() * 100.0);
             let snk = self.tl.snk.as_ref().unwrap();
             let (hx, hy) = (snk.hx, snk.hy);
             self.gain_at(g, hx, hy - 16.0, true);
@@ -2639,9 +2645,9 @@ impl Game {
                 let g = self.wish_seeds();
                 self.s.seeds += g;
                 self.s.ascend += g;
-                let msg = format!("your wish is granted — +{g} ki seeds (×{} on everything)", to_fixed(self.seed_boost(), 1));
+                let msg = format!("your wish is granted — +{} ki seeds (×{} on everything)", big_string(g), fixed1(self.seed_boost()));
                 self.event(msg);
-                self.cue(crate::hud::Cue::TreeGift(format!("+{g} ki seeds from shenron")));
+                self.cue(crate::hud::Cue::TreeGift(format!("+{} ki seeds from shenron", big_string(g))));
             }
             "bigape" => {
                 self.s.big_ape = true;
@@ -2763,11 +2769,11 @@ impl Game {
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let bb = self.s.lvf(Upg::Bigbang);
         let dps = (self.tap_power() * self.mult(true) * 6.0 * 4.0 * 1.5 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL))
-            + if bb > 0.0 { self.wrate().max(self.lap_value() * self.mult(true)) * 12.0 * bb / 2.5 } else { 0.0 })
+            + if bb > 0.0 { self.wrate().max(self.lap_value() * self.mult(true)) * 12.0 * bb / 2.5 } else { Big::ZERO })
             * arm;
         let wr = self.wrate();
-        let hp = 600f64.max(wr * 26.0).max(dps * o.hp[0]);
-        let mh = 150f64.max(wr * 5.0).max(dps * o.hp[1]);
+        let hp = Big::from(600.0).max(wr * 26.0).max(dps * o.hp[0]);
+        let mh = Big::from(150.0).max(wr * 5.0).max(dps * o.hp[1]);
         let mut b = Boss::new(0, who.into(), movie_dim(who), hp, t, t + 90.0);
         b.movie = true;
         b.struggled = true;
@@ -2809,7 +2815,7 @@ impl Game {
     }
 
     /// True when a hit on the movie villain is turned away.
-    fn movie_guard(&mut self, dmg: f64, x: f64, y: f64) -> bool {
+    fn movie_guard(&mut self, dmg: Big, x: f64, y: f64) -> bool {
         let id = self.tl.boss.as_ref().unwrap().id;
         let Some(m) = self.tl.movie.as_ref().filter(|m| m.boss == id) else { return false };
         if !m.o.minions.is_empty() && m.minions.iter().any(|h| !h.dead) {
@@ -2826,7 +2832,7 @@ impl Game {
         let twin_up = m.twin.is_some_and(|i| !m.minions[i].dead);
         let b = self.tl.boss.as_mut().unwrap();
         if twin_up && b.hp - dmg * arm <= 0.0 {
-            b.hp = 1.0;
+            b.hp = Big::from(1.0);
             b.flash = 0.12;
             self.burst_at(x, y, &[0xffffff, 0xd8c8ff, 0x8a6ad8], 5, 60.0);
             self.say("his other half holds him together — beat the double first");
@@ -2835,7 +2841,7 @@ impl Game {
         false
     }
 
-    pub(crate) fn movie_hit(&mut self, i: usize, dmg: f64) {
+    pub(crate) fn movie_hit(&mut self, i: usize, dmg: Big) {
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let h = &mut self.tl.movie.as_mut().unwrap().minions[i];
         if h.dead {
@@ -2855,7 +2861,7 @@ impl Game {
         if name == "bujin" {
             self.tl.movie.as_mut().unwrap().web = None;
         }
-        let g = 100f64.max(self.wrate() * if twin { 20.0 } else { 5.0 });
+        let g = Big::from(100.0).max(self.wrate() * if twin { 20.0 } else { 5.0 });
         let h = &self.tl.movie.as_ref().unwrap().minions[i];
         match h.x {
             Some(hx) => {
@@ -2920,7 +2926,7 @@ impl Game {
         false
     }
 
-    fn movie_blast(&mut self, dmg: f64) {
+    fn movie_blast(&mut self, dmg: Big) {
         let Some(m) = self.tl.movie.as_ref() else { return };
         if m.over != 0.0 {
             return;
@@ -2952,7 +2958,7 @@ impl Game {
                     h.dead = true;
                 }
                 if !b.fled {
-                    let g = 500f64.max(self.wrate() * 70.0) * (1.0 + 0.5 * self.lvl(N_BOUNTY));
+                    let g = Big::from(500.0).max(self.wrate() * 70.0) * (1.0 + 0.5 * self.lvl(N_BOUNTY));
                     let (cx, cy) = (self.cam.cx, self.cam.cy - self.cam.r * 1.3);
                     self.gain_at(g, cx, cy, true);
                     self.ach(o.ach);
@@ -3072,7 +3078,7 @@ impl Game {
         if self.s.world == 6 && t > self.tl.kame_ready && (npc_hit(self, self.cap_pt(0.5, 5.2), 14.0) || npc_hit(self, self.cap_pt(0.62, 4.1), 12.0)) {
             self.tl.kame_ready = t + 30.0;
             let turtle = npc_hit(self, self.cap_pt(0.5, 5.2), 14.0);
-            let g = 200f64.max(self.rate() * if turtle { 15.0 } else { 30.0 });
+            let g = Big::from(200.0).max(self.rate() * if turtle { 15.0 } else { 30.0 });
             self.gain_at(g, px, py - 10.0, true);
             let p = fmt_short(js_round(g));
             let msg = if turtle {
@@ -3088,7 +3094,7 @@ impl Game {
             let k = self.kid_screen(12.0);
             if hypot(&[px - k.x, py - k.y]) < 16.0 {
                 self.burst_at(k.x, k.y, &[0xffffff, 0xa6e67e, 0x58b848, 0x2f7a2a], 16, 110.0);
-                let g = 60f64.max(self.wrate() * 20.0);
+                let g = Big::from(60.0).max(self.wrate() * 20.0);
                 self.gain_at(g, k.x, k.y - 16.0, true);
                 self.event("shook the saibaman off — it pops harmlessly");
                 self.tl.cling = None;
@@ -3138,7 +3144,7 @@ impl Game {
                 ym.until = t + 1.2;
                 self.ach("yamcha");
                 self.b.senzu_until = self.b.senzu_until.max(t + 10.0);
-                let g = 200f64.max(self.wrate() * 40.0);
+                let g = Big::from(200.0).max(self.wrate() * 40.0);
                 self.gain_at(g, x, y - 10.0, true);
                 let msg = format!("yamcha: \"i'm fine!\" — senzu ×{} for 10s", self.senzu_x());
                 self.event(msg);
@@ -3148,7 +3154,7 @@ impl Game {
         }
         if let Some((x, y)) = self.tl.greg.as_ref().and_then(|g| g.sx) {
             if hypot(&[px - x, py - (y - 4.0)]) < 10.0 {
-                let g = 300f64.max(self.wrate() * 120.0) * (1.0 + 0.5 * 6f64.min(self.s.greg_wins as f64));
+                let g = Big::from(300.0).max(self.wrate() * 120.0) * (1.0 + 0.5 * 6f64.min(self.s.greg_wins as f64));
                 self.s.greg_wins += 1;
                 if self.s.greg_wins >= 5 && !self.s.ach.contains("greg5") {
                     self.ach("greg5");
@@ -3191,7 +3197,7 @@ impl Game {
                 let d = self.tl.date.as_mut().unwrap();
                 d.paid = true;
                 d.until = d.until.min(t + 2.0);
-                let g = 400f64.max(self.wrate() * 90.0);
+                let g = Big::from(400.0).max(self.wrate() * 90.0);
                 self.gain_at(g, x, y - 18.0, true);
                 self.ach("wallet");
                 self.event(format!("krillin hands over his whole wallet without looking: +{}", fmt_short(js_round(g))));
@@ -3215,7 +3221,7 @@ impl Game {
         }
         if let Some((x, y)) = self.tl.pud.as_ref().and_then(|p| p.sx) {
             if hypot(&[px - x, py - (y - 4.0)]) < 11.0 {
-                let g = 500f64.max(self.wrate() * 60.0);
+                let g = Big::from(500.0).max(self.wrate() * 60.0);
                 self.gain_at(g, x, y - 12.0, true);
                 if let Some(bz) = self.tl.bz.as_mut() {
                     bz.awake = 0.0;
@@ -3250,9 +3256,9 @@ impl Game {
         if let Some(s) = self.tl.satan.clone() {
             if let Some((x, y)) = s.sx.filter(|_| t > s.t0) {
                 if hypot(&[px - x, py - (y - 10.0)]) < 13.0 {
-                    self.gain_at(s.n, x, y - 20.0, true);
+                    self.gain_at(s.prize, x, y - 20.0, true);
                     self.ach("satan");
-                    self.event_ms(format!("hercule cash prize! +{} — \"keep it between us, kid\"", fmt_short(js_round(s.n))), 3500.0);
+                    self.event_ms(format!("hercule cash prize! +{} — \"keep it between us, kid\"", fmt_short(js_round(s.prize))), 3500.0);
                     self.cue(Cue::Sfx("coin"));
                     self.burst_at(x, y - 12.0, &[0xffffff, 0xf2c84a, 0xb88a1a], 18, 120.0);
                     self.tl.satan = None;
@@ -3298,7 +3304,7 @@ impl Game {
                 if self.s.stars >= 25 {
                     self.ach("stars25");
                 }
-                let g = 50f64.max(self.wrate() * 20.0);
+                let g = Big::from(50.0).max(self.wrate() * 20.0);
                 self.gain_at(g, s.x, s.y - 6.0, true);
                 self.event("space pod caught — ×2 for 15s");
                 self.goal("star", 1.0, false);
@@ -3385,7 +3391,7 @@ impl Game {
         }
         self.tl.ape.cd = t + 0.2;
         if self.tl.ape.giant {
-            let g = 30f64.max(self.wrate() * 0.55 * (1.0 + self.ape_x()));
+            let g = Big::from(30.0).max(self.wrate() * 0.55 * (1.0 + self.ape_x()));
             self.gain_at(g, px, py - 8.0, true);
             self.shake = self.shake.max(0.6);
             self.burst_at(px, py, &[0xffffff, 0xe7e2d4, 0x9a8a70], 14, 150.0);
@@ -3401,7 +3407,7 @@ impl Game {
             }
             if self.tl.ape.rage >= 1.0 {
                 self.tl.ape.rage = 0.0;
-                let g = 200f64.max(self.wrate() * 3.2 * (1.0 + self.ape_x()));
+                let g = Big::from(200.0).max(self.wrate() * 3.2 * (1.0 + self.ape_x()));
                 self.gain_at(g, h.x, h.y - 20.0, true);
                 self.b.ape_until = (self.tl.ape.at + self.ape_len() + 10.0).min(self.b.ape_until + 2.0);
                 self.flash_t = 0.6;

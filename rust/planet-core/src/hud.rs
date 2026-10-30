@@ -3,10 +3,11 @@
 //! the game for (`menu()`, `angels()`, the confirm boxes' info, the share card). Every builder returns JSON in the
 //! shape game.js returns its object in, so the page's code reads it unchanged. See rust/HUD.md.
 
+use crate::big::Big;
 use crate::data::*;
 use crate::game::{Game, WishBuff};
 use crate::json::{self, arr, num, Obj};
-use crate::num::{fmt_short, js_round, to_fixed};
+use crate::num::{big_string, fixed1, fmt_short, js_round, to_fixed};
 use crate::timeline::{uni_name, Phase};
 
 /// A one-shot UI call game.js makes besides `ui.event`: a sound, a title effect, the tap bump.
@@ -73,9 +74,9 @@ pub struct Hud {
     pub itx_own: bool,
     pub itx_ready: bool,
     pub itx_left: f64,
-    pub pl: f64,
-    pub best: f64,
-    pub rate: f64,
+    pub pl: Big,
+    pub best: Big,
+    pub rate: Big,
     pub laps: u32,
     /// the session clock, floored to the second the HUD shows
     pub time: f64,
@@ -106,9 +107,9 @@ impl Hud {
             .raw("goal", Obj::new().str("text", self.goal_text).num("p", self.goal_p).num("n", self.goal_n).end())
             .raw("kaio", Obj::new().bool("own", self.kaio_own).bool("ready", self.kaio_ready).num("left", self.kaio_left).end())
             .raw("itx", Obj::new().bool("own", self.itx_own).bool("ready", self.itx_ready).num("left", self.itx_left).end())
-            .num("pl", self.pl)
-            .num("best", self.best)
-            .num("rate", self.rate)
+            .big("pl", self.pl)
+            .big("best", self.best)
+            .big("rate", self.rate)
             .num("laps", self.laps as f64)
             .num("time", self.time)
             .str("effects", &self.effects)
@@ -132,8 +133,8 @@ impl Hud {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ShopRow {
     pub key: &'static str,
-    pub cost: f64,
-    pub level: f64,
+    pub cost: Big,
+    pub level: Big,
     pub label: &'static str,
     pub what: String,
     pub can: bool,
@@ -384,12 +385,12 @@ impl Game {
             } else {
                 String::new()
             },
-            if s.ustars > 0 { format!("universe stars {} ×{}", s.ustars, fmt_short(js_round(STAR_X.powf(stars)))) } else { String::new() },
+            if s.ustars > 0 { format!("universe stars {} ×{}", s.ustars, fmt_short(Big::from(STAR_X).pow(stars).round())) } else { String::new() },
             if s.mastery > 0 { format!("mastery {}", s.mastery) } else { String::new() },
-            if s.seeds != 0.0 { format!("ki seeds {}", num(s.seeds)) } else { String::new() },
-            if s.ascend != 0.0 { format!("ki seeds ×{}", to_fixed(self.seed_boost(), 1)) } else { String::new() },
+            if s.seeds != 0.0 { format!("ki seeds {}", big_string(s.seeds)) } else { String::new() },
+            if s.ascend != 0.0 { format!("ki seeds ×{}", fixed1(self.seed_boost())) } else { String::new() },
             if s.god_total > 0 { format!("god ki {} · ×{}", s.godki, fmt_short(Self::god_boost_of(s.god_total as f64))) } else { String::new() },
-            if s.zeno > 0 { format!("zeno's favour ×{}", fmt_short(ZENO_X.powf(s.zeno as f64))) } else { String::new() },
+            if s.zeno > 0 { format!("zeno's favour ×{}", fmt_short(Big::from(ZENO_X).pow(s.zeno as f64))) } else { String::new() },
             if s.krillin_ally { "krillin: idle ×1.5".into() } else { String::new() },
         ];
         parts.into_iter().filter(|p| !p.is_empty()).collect::<Vec<_>>().join(" · ")
@@ -401,8 +402,8 @@ impl Game {
         let g = GOALS.iter().find(|g| g.id == s.goal).unwrap();
         let cf = &self.forms[s.form];
         let (next_name, next_at) = match self.forms.get(s.form + 1) {
-            Some(nf) => (nf.name.to_string(), nf.at),
-            None => (format!("mastery {}", s.mastery + 1), cf.at * LATE_STEP.powf(s.mastery as f64 + 1.0)),
+            Some(nf) => (nf.name.to_string(), Big::from(nf.at)),
+            None => (format!("mastery {}", s.mastery + 1), cf.at * Big::from(LATE_STEP).pow(s.mastery as f64 + 1.0)),
         };
         let tl = &self.tl;
         Hud {
@@ -426,10 +427,10 @@ impl Game {
             form_name: if s.form > 0 { cf.name } else { "base" },
             form_x: cf.x,
             form_next: next_name,
-            form_p: 1f64.min(s.pl / next_at),
+            form_p: 1f64.min((s.pl / next_at).to_f64()),
             balls: s.orbs7,
             wishes: s.granted,
-            ascend: if s.ascend != 0.0 { to_fixed(self.seed_boost(), 1) } else { String::new() },
+            ascend: if s.ascend != 0.0 { fixed1(self.seed_boost()) } else { String::new() },
             snake: s.world == 3,
             busy: s.world == 3 || self.boss_up() || tl.ginyu.as_ref().is_some_and(|g| g.done == 0.0) || tl.moon.is_some() || tl.storm.is_some(),
             night: tl.moon.as_ref().is_some_and(|m| !m.leaving) || self.b.ape_until > t,
@@ -461,9 +462,9 @@ impl Game {
         let s = &self.s;
         match key {
             "ascend" if self.t < self.b.asc_ready => return format!("ascend again in {}s", num((self.b.asc_ready - self.t).ceil())),
-            "ascend" => return format!("reset for +{} ki seeds", num(self.seeds_now())),
+            "ascend" => return format!("reset for +{} ki seeds", big_string(self.seeds_now())),
             "godki" => return format!("reset for +{} god ki", self.god_now()),
-            "zeno" => return format!("erase it all: zeno's favour ×{}", fmt_short(ZENO_X.powf(s.zeno as f64 + 1.0))),
+            "zeno" => return format!("erase it all: zeno's favour ×{}", fmt_short(Big::from(ZENO_X).pow(s.zeno as f64 + 1.0))),
             _ => {}
         }
         let u = Upg::from_key(key).unwrap();
@@ -512,18 +513,18 @@ impl Game {
         for key in SHOP_ORDER {
             let (unlock, level, cost, label) = match key {
                 "ascend" => (self.ascend_unlocked(), s.ascend, self.ascend_cost(), "ascend"),
-                "godki" => (s.form >= MUI_FORM && self.god_now() > 0, s.gods as f64, self.god_cost(), "god ki"),
-                "zeno" => (self.zeno_ready(), s.zeno as f64, 0.0, "zeno button"),
+                "godki" => (s.form >= MUI_FORM && self.god_now() > 0, Big::from(s.gods), self.god_cost(), "god ki"),
+                "zeno" => (self.zeno_ready(), Big::from(s.zeno), Big::ZERO, "zeno button"),
                 _ => {
                     let u = Upg::from_key(key).unwrap();
                     let label = if u == Upg::Galick && self.kame() { "kamehameha" } else { SHOP[u as usize].label };
-                    (self.unlocked(u), s.lvf(u), self.cost(u), label)
+                    (self.unlocked(u), Big::from(s.lvf(u)), self.cost(u), label)
                 }
             };
             let held = match key {
                 "ascend" => s.ascend,
-                "godki" => s.godki as f64,
-                "zeno" => s.zeno as f64,
+                "godki" => Big::from(s.godki),
+                "zeno" => Big::from(s.zeno),
                 _ => level,
             };
             if !(unlock || held > 0.0 && key != "godki" && key != "zeno") {
@@ -551,8 +552,8 @@ impl Game {
                 o.raw(
                     r.key,
                     Obj::new()
-                        .num("cost", r.cost)
-                        .num("level", r.level)
+                        .big("cost", r.cost)
+                        .big("level", r.level)
                         .str("label", r.label)
                         .str("what", &r.what)
                         .bool("can", r.can)
@@ -573,7 +574,7 @@ impl Game {
                 let nf = &self.forms[(self.s.form + 1).min(self.forms.len() - 1)];
                 (format!("a taste of {}", nf.name), format!("×{} for 60 seconds", num(nf.x)))
             }
-            "seeds" => (label.into(), format!("+{} ki seeds, kept forever", num(3f64.max((self.seeds_now() / 5.0).ceil())))),
+            "seeds" => (label.into(), format!("+{} ki seeds, kept forever", big_string((self.seeds_now() / 5.0).ceil().max(3.0)))),
             "kaio" => (label.into(), format!("kaioken ×{} now, no tiredness after", num(self.kaio_x()))),
             "senzu" => (label.into(), format!("senzu ×{} for 2 minutes", num(self.senzu_x()))),
             "krillin" => (label.into(), format!("he trains with you: idle ×1.5 and destructo discs. next death: rage ×{}", 3 + self.s.krillin_revives)),
@@ -622,7 +623,7 @@ impl Game {
                 .str("what", n.what)
                 .num("lvl", s.tree[i] as f64)
                 .raw("max", if n.max == u32::MAX { "null".into() } else { num(n.max as f64) })
-                .num("cost", cost)
+                .big("cost", cost)
                 .bool("can", open && s.tree[i] < n.max && s.seeds >= cost)
                 .end()
         });
@@ -635,8 +636,8 @@ impl Game {
             o.bool("on", s.hero == h).end()
         });
         Obj::new()
-            .num("seeds", s.seeds)
-            .str("boost", &to_fixed(self.seed_boost(), 1))
+            .big("seeds", s.seeds)
+            .str("boost", &fixed1(self.seed_boost()))
             .raw("branches", arr(branches))
             .raw("tree", arr(tree))
             .bool("spent", s.tree.iter().any(|&l| l > 0))
@@ -723,9 +724,9 @@ impl Game {
             .bool("ok", self.s.pl >= self.ascend_cost() && self.s.best >= 1e6 && self.t >= self.b.asc_ready)
             .num("wait", if self.t < self.b.asc_ready { (self.b.asc_ready - self.t).ceil() } else { 0.0 })
             .str("pl", &fmt_short(self.s.pl.floor()))
-            .num("seeds", g)
-            .str("now", &to_fixed(self.seed_boost(), 1))
-            .str("next", &to_fixed(self.seed_boost_of(self.s.ascend + g), 1))
+            .big("seeds", g)
+            .str("now", &fixed1(self.seed_boost()))
+            .str("next", &fixed1(self.seed_boost_of(self.s.ascend + g)))
             .num("keep", self.lvl(N_HEAD))
             .end()
     }
@@ -747,8 +748,8 @@ impl Game {
     pub fn zeno_info_json(&self) -> String {
         let s = &self.s;
         Obj::new()
-            .str("now", &fmt_short(ZENO_X.powf(s.zeno as f64)))
-            .str("next", &fmt_short(ZENO_X.powf(s.zeno as f64 + 1.0)))
+            .str("now", &fmt_short(Big::from(ZENO_X).pow(s.zeno as f64)))
+            .str("next", &fmt_short(Big::from(ZENO_X).pow(s.zeno as f64 + 1.0)))
             .num("gods", s.gods as f64)
             .num("stars", (s.ustars + s.mastery) as f64)
             .end()
@@ -768,22 +769,22 @@ impl Game {
             .num("achN", ACH.len() as f64)
             .num("laps", self.laps as f64)
             .num("time", self.session)
-            .num("best", s.best.floor())
-            .num("pl", s.pl.floor())
+            .big("best", s.best.floor())
+            .big("pl", s.pl.floor())
             .str("form", self.forms[s.form].name)
             .str("hero", hero)
             .num("world", s.world as f64)
             .str("worldName", WORLD_FULL[s.world as usize])
             .num("wishes", s.granted as f64)
             .num("orbs", s.orbs7 as f64)
-            .num("seeds", s.ascend)
+            .big("seeds", s.ascend)
             .num("sagas", VILLAINS.len() as f64)
             .num("saga", s.saga as f64)
             .str("peak", if s.form_top > s.form { s.form_top_name } else { "" })
             .str("uni", &uni)
             .num("ustars", s.ustars as f64)
             .num("godki", s.god_total as f64)
-            .str("zeno", &if s.zeno > 0 { fmt_short(ZENO_X.powf(s.zeno as f64)) } else { String::new() })
+            .str("zeno", &if s.zeno > 0 { fmt_short(Big::from(ZENO_X).pow(s.zeno as f64)) } else { String::new() })
             .num("mastery", s.mastery as f64)
             .num("movies", s.movies as f64)
             .num("tail", s.lvf(Upg::Tail))

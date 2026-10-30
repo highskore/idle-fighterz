@@ -249,9 +249,6 @@ pub const GOALS: [Goal; 9] = [
 
 // economy tuning
 pub const ECON: f64 = 0.35;
-/// power and its multiplier stop short of Infinity, so costs and resets never go NaN
-pub const MAX_MULT: f64 = 1e200;
-pub const MAX_PL: f64 = 1e300;
 pub const SEED_SOFT: f64 = 10.0;
 pub const SEED_EXP: f64 = 0.5;
 pub const CEIL0: f64 = 20.0;
