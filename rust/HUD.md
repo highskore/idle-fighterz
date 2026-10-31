@@ -65,6 +65,8 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 { "hud": {...}, "shop": {...}, "world": 3, "events": [["text", 2600]], "cues": [["sfx", "tap"], ["bump"]] }
 ```
 
+- `cues` may hold `["quake"]`: a tier 3 or 4 shockwave (planet-core's `waves`) shakes the game card; page.html's
+  `ui.quake` skips it under reduced motion.
 - `hud`, while playing, when anything on it has changed. This is `ui.update`'s argument: `goal {text, p, n}`,
   `kaio {own, ready, left}`, `pl`, `best`, `rate`, `laps`, `time`, `effects` (the buffs line), `extra` (the run's
   standing), `combo`, `form {name, x, next, p}`, `balls`, `wishes`, `ascend`, `snake`, `busy`. Four fields that

@@ -1361,6 +1361,20 @@ impl Game {
             best(self, 3e5);
             self.tl.next_movie = 0.0;
         }
+        if has("metal") {
+            self.tl.movie_force = "cooler";
+            self.tl.metal_force = true;
+            self.session = 241.0;
+            self.tl.home_since = self.session;
+            best(self, 3e5);
+            self.tl.next_movie = 0.0;
+        }
+        if has("broly-rage") {
+            self.s.saga = 6;
+            self.session = 111.0;
+            self.tl.next_boss = 0.0;
+            self.tl.rage_force = true;
+        }
         if has("yamcha") {
             self.session = 101.0;
             self.tl.next_yam = 0.0;
@@ -1442,6 +1456,7 @@ impl Game {
         }
         self.limits_preview(hash);
         self.looks_preview(hash);
+        self.waves_preview(hash);
         self.forms = ladder_of(self.s.hero, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
         if has("xform") {

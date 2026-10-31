@@ -21,6 +21,7 @@ pub mod json;
 pub mod limits;
 pub mod looks;
 pub mod mech;
+pub mod mech2;
 pub mod num;
 pub mod ramen;
 pub mod rng;
@@ -29,6 +30,7 @@ pub mod spots;
 pub mod sprite;
 pub mod state;
 pub mod timeline;
+pub mod waves;
 pub mod xform;
 
 pub use game::Game;

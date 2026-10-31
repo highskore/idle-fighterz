@@ -59,6 +59,11 @@ pub struct Scene {
     pub(crate) mo: Option<crate::limits::MoFx>,
     /// a saga boss's arrival behind the scouter
     pub(crate) bi: Option<crate::intro::IntroFx>,
+    /// this frame draws the bare widget (no sky)
+    pub(crate) bare: bool,
+    /// the sky's glass after a tier 4 shockwave, and the wave that last cracked it
+    pub(crate) glass: Option<crate::waves::Glass>,
+    pub(crate) glass_last: Option<f64>,
 }
 
 /// `V.norm([-.55, .7, .55])`, as game.js computes it.
@@ -435,6 +440,7 @@ impl Scene {
 
     fn draw_frame(&mut self, fb: &mut Framebuffer, g: &mut Game, view: &View, dt0: f64) {
         self.sync(g);
+        self.bare = view.bare;
         let t = g.t;
         let dt = if g.b.chamber_until > t && g.s.world != 3 { dt0 * 0.3 } else { dt0 };
         fb.clear();
@@ -460,9 +466,10 @@ impl Scene {
                 draw_clouds(&mut c, view, &sea, false);
             }
         } else {
-            draw_sea(&mut c, view, &sea, world, false);
+            draw_sea(&mut c, view, &sea, world, false, crate::waves::part(g, t));
         }
         self.mo_back(&mut c, g);
+        self.waves_back(&mut c, g, view);
         if let Some(m) = g.tl.moon.clone() {
             draw_moon(&mut c, &m);
         }
@@ -622,14 +629,16 @@ impl Scene {
                 draw_clouds(&mut c, view, &sea, true);
             }
         } else if world != 9 {
-            draw_sea(&mut c, view, &sea, world, true);
+            draw_sea(&mut c, view, &sea, world, true, crate::waves::part(g, t));
         }
         if let Some(d) = &dusk {
             crate::storm::draw(c.fb, d, t, c.cx, c.cy + c.bob, c.r);
         }
         self.xf_front(&mut c, g, view, dt);
         crate::mech::draw(&mut c, g);
+        crate::mech2::draw(&mut c, g);
         self.mo_front(&mut c, g, view);
+        self.waves_front(&mut c, g, view);
         if g.flash_t > 0.0 {
             g.flash_t = 0f64.max(g.flash_t - dt * 1.8);
             let a = g.flash_t * g.flash_t * 0.85;
@@ -1046,7 +1055,8 @@ fn sea_pal(day: &[u32], k: f64) -> Vec<u32> {
 }
 
 /// `drawSea(t, front)`: the scrolling cloud sea along the bottom.
-fn draw_sea(c: &mut Ctx, view: &View, pal: &[u32], world: u32, front: bool) {
+/// `part`: a big shockwave parting the sea round where it landed (waves.rs).
+fn draw_sea(c: &mut Ctx, view: &View, pal: &[u32], world: u32, front: bool, part: Option<(f64, f64)>) {
     let t = c.t;
     let glint = world == 8;
     let ck = 3.0 / view.scale;
@@ -1059,6 +1069,7 @@ fn draw_sea(c: &mut Ctx, view: &View, pal: &[u32], world: u32, front: bool) {
         let span = w + rr * 4.0;
         let px_ = ((i * rr * 1.3 - t * sp) % span + span) % span - rr * 2.0;
         let py = base + sin(i * 1.7) * rr * 0.45 + if front { 0.0 } else { -6.0 * ck };
+        let (px_, py) = crate::waves::parted(part, w, c.h, px_, py, front);
         let r = rr * (0.8 + 0.4 * hash(i * 3.3 + if front { 9.0 } else { 0.0 }));
         let mut y = (py - r).floor();
         while y < c.h {
