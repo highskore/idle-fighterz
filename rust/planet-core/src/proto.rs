@@ -16,6 +16,9 @@ pub struct Proto {
     /// the time of the first frame played
     pub t0: f64,
     pub said: bool,
+    /// piccolo A's meditation look (`#med-N`, 0 = the first rings) and its focus, 0..1 (`#focus-lo`: low, else full)
+    pub look: u32,
+    pub focus: f64,
     /// where on the road he stands
     pub phi0: Option<f64>,
 }
@@ -56,7 +59,9 @@ impl Game {
     pub(crate) fn proto_preview(&mut self, hash: &str) {
         let Some(i) = hash.find("style-") else { return };
         let Some(opt) = hash[i + 6..].chars().next() else { return };
-        self.proto = Some(Proto { opt, t0: -1.0, said: false, phi0: None });
+        let look = hash.find("med-").and_then(|i| hash[i + 4..].chars().next()).and_then(|c| c.to_digit(10)).unwrap_or(0);
+        let focus = if hash.contains("focus-lo") { 0.12 } else { 1.0 };
+        self.proto = Some(Proto { opt, t0: -1.0, said: false, phi0: None, look, focus });
         let s = &mut self.s;
         s.pl = 1.5e4.into();
         s.best = s.pl;
@@ -93,7 +98,7 @@ impl Game {
         self.phi = phi;
         self.last_lap = phi - 1.0;
         let lead = match (self.s.hero, opt) {
-            (Hero::Tien, 'A') => 0.0,
+            (Hero::Tien, 'A') | (Hero::Piccolo, 'A') => 0.0,
             _ => 0.3,
         };
         let f = &self.frame3;
@@ -124,7 +129,10 @@ impl Game {
             }
             _ => {}
         }
-        if say {
+        if say && h == Hero::Piccolo && opt == 'A' && self.proto.as_ref().is_some_and(|p| p.look > 0) {
+            let lo = self.proto.as_ref().is_some_and(|p| p.focus < 0.5);
+            self.event_ms(if lo { "focus ×1.1 · 12s untouched" } else { "focus ×2 · full — tap to spend it" }, 4000.0);
+        } else if say {
             let s = toast(h, opt);
             if !s.is_empty() {
                 self.event_ms(s, 4000.0);

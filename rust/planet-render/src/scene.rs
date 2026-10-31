@@ -659,7 +659,10 @@ impl Scene {
         let flip = ax < kd.x;
         let surf = c.world == 6;
         let fly = g.wished(planet_core::game::WishBuff::Fly) && !surf && g.b.ape_until <= t;
-        let spr = if g.b.pose_until > t || g.tl.struggle.is_some() {
+        let medit = crate::proto::meditation_sprite(g);
+        let spr = if let Some(m) = medit.as_ref() {
+            m
+        } else if g.b.pose_until > t || g.tl.struggle.is_some() {
             &set.pose
         } else if g.tl.jump_h > 1.0 || surf || fly {
             &set.run[0]
