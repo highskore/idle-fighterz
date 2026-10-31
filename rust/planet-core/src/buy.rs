@@ -108,6 +108,8 @@ impl Game {
             Upg::Kaio if first => "kaioken unlocked — hit the red button",
             Upg::Bigbang if first => "big bang attack — double-tap anywhere",
             Upg::Itx if first => "instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you've been",
+            Upg::Armor if first && self.s.hero == Hero::Piccolo => "weighted cape on — hit villains harder",
+            Upg::Armor if first && self.s.hero == Hero::Krillin => "turtle shell on — hit villains harder",
             Upg::Armor if first => "saiyan armor on — hit villains harder",
             _ => "",
         };
@@ -148,7 +150,7 @@ impl Game {
             Upg::Kaio if l > 0 => format!("×{} for 15s", nice(1.25 + 0.25 * lf)),
             Upg::Bigbang if l > 0 => format!("pays {} beams", nice(Self::bang_x_at(lf))),
             Upg::Chamber if l > 0 => format!("×{} inside", nice(1.5 + 0.5 * lf)),
-            Upg::Tail => format!("great ape ×{}", nice(2.0 + 0.25 * lf)),
+            Upg::Tail => format!("{} ×{}", self.ape_name(false), nice(2.0 + 0.25 * lf)),
             Upg::Itx if l > 0 => {
                 let min = (300.0 / (1.0 + 0.1 * (lf - 1.0))).max(90.0) / 60.0;
                 let soon = (1.0 / (1.0 + 0.04 * lf)).max(0.7);

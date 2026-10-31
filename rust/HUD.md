@@ -67,7 +67,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 - `cues` may hold `["quake"]`: a tier 3 or 4 shockwave (planet-core's `waves`) shakes the game card; page.html's
   `ui.quake` skips it under reduced motion.
 - `hud`, while playing, when anything on it has changed. This is `ui.update`'s argument: `goal {text, p, n}`,
-  `kaio {own, ready, left}`, `pl`, `best`, `rate`, `laps`, `time`, `effects` (the buffs line; playing piccolo it carries his focus, `focus ×1.6`), `extra` (the run's
+  `kaio {own, ready, left}`, `pl`, `best`, `rate`, `laps`, `time`, `effects` (the buffs line; playing piccolo it carries how full his focus is, `focus 60%`, and krillin his cuts toward the disc barrage, `discs 3/10`), `extra` (the run's
   standing), `combo`, `form {name, x, next, p}`, `balls`, `wishes`, `ascend`, `snake`, `busy`. Four fields that
   game.js sets elsewhere ride along: `night` (`ui.night`), `world`, `shen` and `look` (game.js's `shen`, `jelly` and
   `earth` body classes), as they stand at that point of the frame. It's planet-core's `Hud` struct, built where game.js

@@ -1080,7 +1080,9 @@ impl Game {
             }
         }
         // krillin drops by
+        // (not to himself: playing krillin, he never drops by, so he's never blown up and never wished back)
         if self.tl.kril.is_none()
+            && self.s.hero != Hero::Krillin
             && !self.s.krillin_dead
             && session > 130.0
             && self.tl.shen.is_none()
@@ -1152,7 +1154,13 @@ impl Game {
             self.tl.next_andro = 340.0 + self.r() * 60.0;
         }
         // android 18 drops by
-        if self.tl.date.is_none() && session > 160.0 && self.tl.shen.is_none() && self.s.world != 8 && tick(&mut self.tl.next_date, dt) {
+        if self.tl.date.is_none()
+            && self.s.hero != Hero::Krillin
+            && session > 160.0
+            && self.tl.shen.is_none()
+            && self.s.world != 8
+            && tick(&mut self.tl.next_date, dt)
+        {
             let kr = !self.s.krillin_dead;
             let (c, c2) = (self.cap_pt(0.45, 0.35), self.cap_pt(0.45, 0.55));
             self.tl.date = Some(Date { c, c2, t0: t, until: t + if kr { 10.0 } else { 4.0 }, kr, paid: false, sx2: None });
@@ -1314,7 +1322,9 @@ impl Game {
                     Hero::Gohan => ("videl", "gohanVidel"),
                     Hero::Trunks => ("goten", "gotenks"),
                     // the new heroes' partners are still to be picked
-                    Hero::Piccolo | Hero::Krillin | Hero::Goten | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
+                    Hero::Krillin => ("master roshi", "roshillin"),
+                    // the other new heroes' fusions come with their own work
+                    Hero::Piccolo | Hero::Goten | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
@@ -1328,6 +1338,11 @@ impl Game {
             if d.done == 0.0 && t > d.beats[2] + 0.4 {
                 d.done = t;
                 let (ok, sat, hits, res) = (d.hits == 3, d.res == "satan", d.hits, d.res);
+                // the new heroes' fusions have no fat or skinny one: a botched dance is still them, weaker
+                let own = match res {
+                    "roshillin" => Some("FUSED.roshillin"),
+                    _ => None,
+                };
                 let x = if sat {
                     1.5
                 } else if ok {
@@ -1338,6 +1353,8 @@ impl Game {
                 self.b.fused = Some((x, t + if ok || sat { 25.0 } else { 15.0 }));
                 self.tl.fused_look = if sat {
                     "FUSED.satan"
+                } else if let Some(look) = own {
+                    look
                 } else if ok {
                     match res {
                         "gogeta" => "FUSED.gogeta",
@@ -1355,6 +1372,8 @@ impl Game {
                 self.ach("dance");
                 let msg = if sat {
                     "fusion ha! …mr. satan takes all the credit. ×1.5 for 25s".to_string()
+                } else if own.is_some() && !ok {
+                    format!("fusion ha… a wobbly {res}. ×0.75 for 15s")
                 } else if ok {
                     format!("fusion ha! {} — ×3 for 25s", if res == "gohanVidel" { "gohan and videl" } else { res })
                 } else if hits > 0 {
@@ -3500,7 +3519,11 @@ impl Game {
                 let tail = giant || self.s.lv(Upg::Tail) > 0;
                 let msg = format!(
                     "{} — ×{}{}",
-                    if giant { "a giant great ape" } else { "great ape mode" },
+                    match self.ape_name(false) {
+                        "great ape" if giant => "a giant great ape",
+                        "great ape" => "great ape mode",
+                        own => own,
+                    },
                     1.0 + self.ape_x(),
                     if tail { format!(", tap to {}", if giant { "stomp" } else { "build rage" }) } else { String::new() }
                 );
@@ -3539,6 +3562,10 @@ impl Game {
             }
         }
         if self.ape_tap(px, py) {
+            return;
+        }
+        // krillin's taps that would train throw his discs instead
+        if self.hero_disc_tap(px, py) {
             return;
         }
         self.train_tap();

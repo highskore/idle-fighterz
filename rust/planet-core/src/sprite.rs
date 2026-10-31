@@ -817,28 +817,7 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
                     Opt { cape: true, ..Opt::default() },
                 ),
             ),
-            (
-                "krillin",
-                make_plain(
-                    &KRILLIN_HEAD,
-                    &KRILLIN_HEAD,
-                    &[
-                        ('K', 0xb0604a),
-                        ('y', 0xf08a24),
-                        ('Y', 0xc0641a),
-                        ('a', 0xf08a24),
-                        ('A', 0xc0641a),
-                        ('g', 0x2b4fc8),
-                        ('G', 0x1c3584),
-                        ('u', 0x2b4fc8),
-                        ('p', 0xf08a24),
-                        ('P', 0xc0641a),
-                        ('w', 0x2b4fc8),
-                        ('W', 0x1c3584),
-                    ],
-                    false,
-                ),
-            ),
+            ("krillin", with_late(make_plain(&KRILLIN_HEAD, &KRILLIN_HEAD, KRI, false), &krillin_late())),
             (
                 "goten",
                 make_hero(
@@ -1003,7 +982,166 @@ pub fn baked() -> &'static HashMap<String, Sprite> {
 
 /// A baked sprite by its game.js path; panics on a name the bake doesn't have.
 pub fn get(name: &str) -> &'static Sprite {
-    baked().get(name).unwrap_or_else(|| panic!("no baked sprite {name}"))
+    built(name).or_else(|| baked().get(name)).unwrap_or_else(|| panic!("no baked sprite {name}"))
+}
+
+/// The sprites built here rather than baked from game.js: the new heroes' fusion results, by the name the fusion
+/// dance looks them up under.
+fn built(name: &str) -> Option<&'static Sprite> {
+    static B: OnceLock<HashMap<&'static str, Sprite>> = OnceLock::new();
+    B.get_or_init(|| HashMap::from([("FUSED.roshillin", roshillin())])).get(name)
+}
+
+// ── the new heroes' late forms and fusion results (from the heroes pickers)
+
+/// Krillin's colours.
+const KRI: &[(char, u32)] = &[
+    ('K', 0xb0604a),
+    ('y', 0xf08a24),
+    ('Y', 0xc0641a),
+    ('a', 0xf08a24),
+    ('A', 0xc0641a),
+    ('g', 0x2b4fc8),
+    ('G', 0x1c3584),
+    ('u', 0x2b4fc8),
+    ('p', 0xf08a24),
+    ('P', 0xc0641a),
+    ('w', 0x2b4fc8),
+    ('W', 0x1c3584),
+];
+
+/// The fusion dance's Metamoran vest: a dark vest, gold shoulder pads, a blue sash, white trousers.
+const META: &[(char, u32)] = &[
+    ('y', 0xf2b62a),
+    ('Y', 0xc0841a),
+    ('a', 0x1e2a5a),
+    ('A', 0x121a3c),
+    ('g', 0xf6c8a2),
+    ('G', 0xd99a73),
+    ('u', 0x3fa0e8),
+    ('p', 0xf4f4f6),
+    ('P', 0xc2c6d2),
+    ('w', 0x22222a),
+    ('W', 0x111118),
+];
+
+fn layers(l: &[&[(char, u32)]]) -> Vec<(char, u32)> {
+    l.iter().flat_map(|x| x.iter().copied()).collect()
+}
+
+fn set_of(head: &[&str], p: &[(char, u32)]) -> HeroSet {
+    make_hero_with(head, p, true, Opt::default()).forms[0].clone()
+}
+
+/// Every frame of a set padded by `l` left, `t` top and `r` right, with art rows painted behind him (only where he
+/// isn't) from the padded frame's top; `L`/`l` glow.
+fn stamp(s: &HeroSet, l: usize, t: usize, r: usize, art: &[&str], p: &[(char, u32)]) -> HeroSet {
+    let pl = Pal::new(p);
+    let one = |s: &Sprite| -> Sprite {
+        let (w, h) = (s.w + l + r, s.h + t);
+        let (mut col, mut emit) = (vec![-1; w * h], vec![false; w * h]);
+        for j in 0..s.h {
+            for i in 0..s.w {
+                col[(j + t) * w + i + l] = s.col[j * s.w + i];
+                emit[(j + t) * w + i + l] = s.emit[j * s.w + i];
+            }
+        }
+        for (j, row) in art.iter().enumerate() {
+            for (i, c) in row.bytes().enumerate() {
+                let Some(v) = pl.get(c).filter(|_| c != b'.' && i < w && j < h) else { continue };
+                let k = j * w + i;
+                if col[k] < 0 {
+                    col[k] = v as i32;
+                    emit[k] = c == b'L' || c == b'l';
+                }
+            }
+        }
+        Sprite { w, h, col, emit, ax: s.ax + l as f64, ay: s.ay + t as f64 }
+    };
+    HeroSet { pose: one(&s.pose), idle: one(&s.idle), run: s.run.clone().map(|x| one(&x)) }
+}
+
+/// A hero with his late forms' looks at the forms after the shared nine.
+fn with_late(mut h: Hero, late: &[HeroSet]) -> Hero {
+    for (j, s) in late.iter().enumerate() {
+        h.forms[9 + j] = s.clone();
+    }
+    h
+}
+
+const FLARE: [&str; 11] = [
+    "...l.......l.......l....",
+    "....l......l......l.....",
+    ".....l.....l.....l......",
+    "......l...lLl...l.......",
+    ".......llLLLLLll........",
+    ".......lLLLLLLLl........",
+    "....llLLLLLLLLLLLll.....",
+    ".......lLLLLLLLl........",
+    ".......llLLLLLll........",
+    "......l...lLl...l.......",
+    ".....l.....l.....l......",
+];
+const FLARE_BIG: [&str; 13] = [
+    "l..l.......l.......l...l",
+    ".l..l......l......l...l.",
+    "..l..l.....l.....l...l..",
+    "...l..l...lLl...l...l...",
+    "....l..llLLLLLll...l....",
+    "......lLLLLLLLLLl.......",
+    "lllllLLLLLLLLLLLLLlllll.",
+    "......lLLLLLLLLLl.......",
+    "....l..llLLLLLll...l....",
+    "...l..l...lLl...l...l...",
+    "..l..l.....l.....l...l..",
+    ".l..l......l......l...l.",
+    "l..........l...........l",
+];
+
+/// Krillin's late forms: the solar flare blazing behind his head, then the taiyoken sun, bigger, his skin lit gold.
+fn krillin_late() -> [HeroSet; 2] {
+    [
+        stamp(&set_of(&KRILLIN_HEAD, KRI), 4, 4, 4, &FLARE, &[('L', 0xfff8c0), ('l', 0xffffff)]),
+        stamp(&set_of(&KRILLIN_HEAD, &layers(&[KRI, &[('s', 0xfff0d0), ('S', 0xf0c890)]])), 4, 4, 4, &FLARE_BIG, &[('L', 0xfff27a), ('l', 0xffffff)]),
+    ]
+}
+
+/// Krillin's stand-in for the great ape: max power, Roshi's trick, his gi torn off and every muscle up.
+pub fn krillin_max_power() -> &'static HeroSet {
+    static S: OnceLock<HeroSet> = OnceLock::new();
+    S.get_or_init(|| set_of(&KRILLIN_HEAD, &layers(&[KRI, &[('y', 0xf6c8a2), ('Y', 0xd99a73), ('a', 0xf6c8a2), ('A', 0xd99a73)]])))
+}
+
+/// Roshillin: krillin and master roshi fused, roshi's beard and shades on krillin's dotted head, in the vest.
+fn roshillin() -> Sprite {
+    let mut head: Vec<String> = [
+        "................",
+        "................",
+        "................",
+        "......oooo......",
+        "....oosssSoo....",
+        "...osssssssSo...",
+        "...ossssssssSo..",
+        "...ossssssssSo..",
+        "...ossssssssSo..",
+        "...ossssssssSo..",
+        "...oEEEEEEEESo..",
+        "..ooEEEEsEEEsoo.",
+        "...okkssssskko..",
+        "...okkkMMkkkk...",
+        "....okkkkko.....",
+        ".....okkko......",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    for (j, cols) in [(5, [5usize, 7, 9]), (6, [6, 8, 10])] {
+        for i in cols {
+            head[j].replace_range(i..i + 1, "K");
+        }
+    }
+    let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
+    set_of(&head, &layers(&[META, &[('K', 0xb0604a), ('k', 0xf4f4f6), ('E', 0x22222a), ('a', 0xf4f4f6), ('A', 0xc2c6d2)]])).idle
 }
 
 /// Reads the bake format (`difftest/sprites.js`).
