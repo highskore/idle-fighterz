@@ -19,7 +19,8 @@ fn heroes_match_game_js() {
     }
     let js = sprite::parse(&std::fs::read(&file).unwrap());
     let mut n = 0;
-    for (id, h) in sprite::heroes() {
+    // game.js has only the first four
+    for (id, h) in sprite::heroes().iter().take(4) {
         let set = |pre: String, s: &sprite::HeroSet| {
             let mut v = vec![(format!("{pre}.pose"), s.pose.clone()), (format!("{pre}.idle"), s.idle.clone())];
             v.extend(s.run.iter().enumerate().map(|(k, r)| (format!("{pre}.run.{k}"), r.clone())));

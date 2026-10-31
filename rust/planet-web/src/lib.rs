@@ -354,7 +354,7 @@ mod tests {
 
     #[test]
     fn the_card_sprite_is_the_one_drawn_in_play_for_every_hero_and_form() {
-        use planet_core::data::{ladder_of, ALL_FORMS, CHARS};
+        use planet_core::data::{ladder_of, CHARS};
         let mut p = Planet::new(7, 200.0, 134.0, 3.0);
         for &(hero, id, ..) in CHARS.iter() {
             let set = planet_core::sprite::hero(id);
@@ -364,7 +364,7 @@ mod tests {
                 p.0.game.s.form = form;
                 let name = p.0.game.forms[form].name;
                 // the in-play sprite (game.js's draw, planet-render's `draw_hero`): `HERO().forms[FORMS[S.form].i]`
-                let i = ALL_FORMS.iter().position(|a| a.0 == name).unwrap();
+                let i = p.0.game.forms[form].look;
                 assert_eq!(p.card_sprite(), sprite_px(&set.forms[i].idle), "{id} in {name}");
             }
             p.0.game.b.fuse_until = p.0.game.t + 1.0;

@@ -377,6 +377,80 @@ pub const TRUNKS_HEAD: [&str; 16] = [
     "....o.ooSSoo....",
 ];
 
+// the heroes game.js doesn't have
+pub const PICCOLO_HEAD: [&str; 16] = [
+    "................",
+    "......oooo......",
+    ".....ohhhhHo....",
+    "....ohhhhhhHo...",
+    "...ohhhhhhhhHo..",
+    "...okkkkkkkkKo..",
+    "...ohhhhhhhhHo..",
+    "...oSsssssssSo..",
+    ".o.oEEEsssEEEo.o",
+    "oso.srEsssErs.so",
+    ".oso.ssssssSoso.",
+    "..oossssssssoo..",
+    "...oSssssssSo...",
+    "....oSsMMsSo....",
+    ".....oSsssSo....",
+    ".....ooSSoo.....",
+];
+pub const PICCOLO_BARE: [&str; 16] = [
+    ".....o....o.....",
+    "......o..o......",
+    "......o..o......",
+    ".....oSooSo.....",
+    "....osssssSo....",
+    "...ossssssssSo..",
+    "...osSsssSsSSo..",
+    "...oSsssssssSo..",
+    ".o.oEEEsssEEEo.o",
+    "oso.srEsssErs.so",
+    ".oso.ssssssSoso.",
+    "..oossssssssoo..",
+    "...oSssssssSo...",
+    "....oSsMMsSo....",
+    ".....oSsssSo....",
+    ".....ooSSoo.....",
+];
+pub const KRILLIN_HEAD: [&str; 16] = [
+    "................",
+    "................",
+    "................",
+    "......oooo......",
+    "....oosssSoo....",
+    "...osssssssSo...",
+    "...oKsKsKsssSo..",
+    "...osKsKsKssSo..",
+    "...ossssssssSo..",
+    "...ossssssssSo..",
+    "...osEEssEEsSo..",
+    "..oosrEEsEErsoo.",
+    "...ossssssssSo..",
+    "...oSsssMMsSo...",
+    "....oSsssSo.....",
+    ".....ooSSoo.....",
+];
+pub const TIEN_HEAD: [&str; 16] = [
+    "................",
+    "................",
+    "......oooo......",
+    "....oosssSoo....",
+    "...osssssssSo...",
+    "...osssoossSSo..",
+    "...ossorEossSo..",
+    "...osssoossSSo..",
+    "...ossssssssSo..",
+    "...ossssssssSo..",
+    "...osEEssEEsSo..",
+    "..oosrEEsEErsoo.",
+    "...ossssssssSo..",
+    "...oSsssMMsSo...",
+    "....oSsssSo.....",
+    ".....ooSSoo.....",
+];
+
 type Rows = Vec<Vec<u8>>;
 
 fn rows(r: &[&str]) -> Rows {
@@ -391,6 +465,36 @@ fn cat(a: &[&str], b: &Rows) -> Rows {
 
 /// `makeHero(head, pal, gi)`
 pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
+    make_hero_with(head, pal, gi, Opt::default())
+}
+
+/// A hero who doesn't go super saiyan: every form keeps one look (`later` from the first form-up, e.g.
+/// piccolo without his turban). `sleeves` gives a gi with sleeves (`c`/`C`) instead of bare arms.
+pub fn make_plain(head: &[&str], later: &[&str], pal: &[(char, u32)], sleeves: bool) -> Hero {
+    make_plain_with(head, later, pal, Opt { sleeves, ..Opt::default() })
+}
+
+/// How a gi is cut: `sleeves` instead of bare arms (`c`/`C`); `cape` hangs a cape (`q`/`Q`) down his back.
+#[derive(Clone, Copy, Default)]
+pub struct Opt {
+    pub sleeves: bool,
+    pub cape: bool,
+}
+
+pub fn make_plain_with(head: &[&str], later: &[&str], pal: &[(char, u32)], o: Opt) -> Hero {
+    let a = make_hero_with(head, pal, true, o);
+    let b = make_hero_with(later, pal, true, o);
+    let mut forms = vec![a.forms[0].clone()];
+    forms.extend((1..a.forms.len()).map(|_| b.forms[0].clone()));
+    let backs = (0..a.backs.len()).map(|_| a.backs[0].clone()).collect();
+    Hero { forms, fused: a.fused, backs }
+}
+
+fn make_hero_with(head: &[&str], pal: &[(char, u32)], gi: bool, o: Opt) -> Hero {
+    // a cape needs room behind him: two more columns on the left
+    let padded: Vec<String> = head.iter().map(|r| if o.cape { format!("..{r}") } else { r.to_string() }).collect();
+    let head: Vec<&str> = padded.iter().map(|r| r.as_str()).collect();
+    let head = &head[..];
     let base = Pal::new(&[
         ('o', 0x120c18),
         ('h', 0x1a1826),
@@ -426,14 +530,48 @@ pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
                 row.bytes()
                     .map(|c| match c {
                         _ if !gi => c,
-                        b'b' if (3..=4).contains(&j) => b's',
-                        b'B' if (3..=4).contains(&j) => b'S',
+                        b'b' if (3..=4).contains(&j) => {
+                            if o.sleeves {
+                                b'c'
+                            } else {
+                                b's'
+                            }
+                        }
+                        b'B' if (3..=4).contains(&j) => {
+                            if o.sleeves {
+                                b'C'
+                            } else {
+                                b'S'
+                            }
+                        }
                         b'b' | b'B' if j == 7 => b'u',
                         b'b' if j >= 8 => b'p',
                         b'B' if j >= 8 => b'P',
                         _ => c,
                     })
-                    .collect()
+                    .collect::<Vec<u8>>()
+            })
+            .enumerate()
+            .map(|(j, mut row): (usize, Vec<u8>)| {
+                if o.cape {
+                    row.splice(0..0, *b"..");
+                }
+                // a cape down his back (he faces right), hung off his outline and flaring toward the hem
+                if o.cape && j <= 12 {
+                    if let Some(f) = row.iter().position(|&c| c != b'.') {
+                        let w = (1 + j / 2).min(f);
+                        for (k, c) in row[f - w..f].iter_mut().enumerate() {
+                            *c = if k == 0 || j == 12 {
+                                b'o'
+                            } else if k == 1 {
+                                b'Q'
+                            } else {
+                                b'q'
+                            };
+                        }
+                    }
+                }
+                row
             })
             .collect()
     };
@@ -575,9 +713,9 @@ pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
     Hero { forms, fused, backs }
 }
 
-/// The four playable heroes (`HEROES`), by id.
-pub fn heroes() -> &'static [(&'static str, Hero); 4] {
-    static H: OnceLock<[(&'static str, Hero); 4]> = OnceLock::new();
+/// The playable heroes (`HEROES`), by id: game.js's four, then piccolo, krillin, goten, tien and android 17.
+pub fn heroes() -> &'static [(&'static str, Hero); 9] {
+    static H: OnceLock<[(&'static str, Hero); 9]> = OnceLock::new();
     H.get_or_init(|| {
         [
             ("vegeta", make_hero(&VEGETA_HEAD, &[], false)),
@@ -647,8 +785,141 @@ pub fn heroes() -> &'static [(&'static str, Hero); 4] {
                     true,
                 ),
             ),
+            (
+                "piccolo",
+                make_plain_with(
+                    &PICCOLO_HEAD,
+                    &PICCOLO_BARE,
+                    &[
+                        ('s', 0x5bb043),
+                        ('S', 0x3c7f2e),
+                        ('h', 0xf4f4f6),
+                        ('H', 0xc2c6d2),
+                        ('k', 0x7a4ab0),
+                        ('K', 0x4e2c78),
+                        ('M', 0x24401c),
+                        ('a', 0x5a3a9a),
+                        ('A', 0x3e2670),
+                        ('y', 0xf4f4f6),
+                        ('Y', 0xc2c6d2),
+                        ('u', 0x3a6ad8),
+                        ('g', 0xd8323a),
+                        ('G', 0x962028),
+                        ('p', 0x5a3a9a),
+                        ('P', 0x3e2670),
+                        ('w', 0x8a4a2a),
+                        ('W', 0x5a2e18),
+                        ('b', 0x5a3a9a),
+                        ('B', 0x3e2670),
+                        ('q', 0xf4f4f6),
+                        ('Q', 0xc2c6d2),
+                    ],
+                    Opt { cape: true, ..Opt::default() },
+                ),
+            ),
+            (
+                "krillin",
+                make_plain(
+                    &KRILLIN_HEAD,
+                    &KRILLIN_HEAD,
+                    &[
+                        ('K', 0xb0604a),
+                        ('y', 0xf08a24),
+                        ('Y', 0xc0641a),
+                        ('a', 0xf08a24),
+                        ('A', 0xc0641a),
+                        ('g', 0x2b4fc8),
+                        ('G', 0x1c3584),
+                        ('u', 0x2b4fc8),
+                        ('p', 0xf08a24),
+                        ('P', 0xc0641a),
+                        ('w', 0x2b4fc8),
+                        ('W', 0x1c3584),
+                    ],
+                    false,
+                ),
+            ),
+            (
+                "goten",
+                make_hero(
+                    &GOKU_HEAD,
+                    &[
+                        ('y', 0xe0641c),
+                        ('Y', 0xa84614),
+                        ('a', 0xe0641c),
+                        ('A', 0xa84614),
+                        ('g', 0x2b4fc8),
+                        ('G', 0x1c3584),
+                        ('u', 0x2b4fc8),
+                        ('p', 0xe0641c),
+                        ('P', 0xa84614),
+                        ('w', 0x2b4fc8),
+                        ('W', 0x1c3584),
+                    ],
+                    true,
+                ),
+            ),
+            (
+                "tien",
+                make_plain(
+                    &TIEN_HEAD,
+                    &TIEN_HEAD,
+                    &[
+                        ('y', 0x2f8a46),
+                        ('Y', 0x1f6030),
+                        ('a', 0x2f8a46),
+                        ('A', 0x1f6030),
+                        ('g', 0xf6c8a2),
+                        ('G', 0xd99a73),
+                        ('u', 0xc83030),
+                        ('p', 0x23683a),
+                        ('P', 0x164a28),
+                        ('w', 0x22222a),
+                        ('W', 0x111118),
+                        ('b', 0x2f8a46),
+                        ('B', 0x1f6030),
+                    ],
+                    false,
+                ),
+            ),
+            (
+                "a17",
+                make_plain(
+                    &TRUNKS_HEAD,
+                    &TRUNKS_HEAD,
+                    &[
+                        ('h', 0x1a1826),
+                        ('H', 0x4a5080),
+                        ('y', 0xf07a1c),
+                        ('Y', 0xb8561a),
+                        ('a', 0x22222a),
+                        ('A', 0x111118),
+                        ('g', 0xf6c8a2),
+                        ('G', 0xd99a73),
+                        ('u', 0x3a3a48),
+                        ('p', 0x3a5aa0),
+                        ('P', 0x26407a),
+                        ('w', 0xf4f4f6),
+                        ('W', 0xc8ccda),
+                        ('b', 0xf07a1c),
+                        ('B', 0xb8561a),
+                        ('c', 0xf0f0f4),
+                        ('C', 0xc0c4d0),
+                    ],
+                    true,
+                ),
+            ),
         ]
     })
+}
+
+/// How much bigger or smaller a hero is drawn than the others: Goten's a kid, Tien's tall.
+pub fn hero_scale(id: &str) -> f64 {
+    match id {
+        "goten" => 0.86,
+        "tien" => 1.1,
+        _ => 1.0,
+    }
 }
 
 /// A hero by id, vegeta when unknown (`HERO()`).

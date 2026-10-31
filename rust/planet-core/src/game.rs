@@ -508,7 +508,7 @@ impl Game {
         let Some(&(id, name, _)) = ACH.iter().find(|a| a.0 == id) else { return };
         self.s.ach.insert(id);
         self.s.ach_at.insert(id, self.now_ms());
-        let unlocks = CHARS.iter().find(|c| c.3 == Some(id)).map_or(String::new(), |c| format!(" · {} unlocked", c.2));
+        let unlocks: String = CHARS.iter().filter(|c| c.3 == Need::Ach(id)).map(|c| format!(" · {} unlocked", c.2)).collect();
         self.after(0.9, crate::timeline::Later::Event(format!("achievement — {name}{unlocks}"), 3200.0));
         self.cue(Cue::Sfx("coin"));
         self.cue(Cue::Achieved);
@@ -1161,7 +1161,11 @@ impl Game {
     /// after the world is set up and before `start()`. Of those that wait on a `setTimeout`, `#shenron` is ported;
     /// `#flight`, `#chamber` and `#cvlink` aren't.
     pub fn preview(&mut self, hash: &str) {
-        use crate::data::{Hero, Upg, LADDER, MUI_FORM, VILLAINS};
+        use crate::data::{Upg, LADDER, MUI_FORM, VILLAINS};
+        // `#hero-<id>` picks the hero; the other hooks never see it, so `#hero-krillin` doesn't also call krillin in
+        let hero_id: Option<String> = hash.find("hero-").map(|i| hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect());
+        let rest = hero_id.as_ref().map_or_else(|| hash.to_string(), |id| hash.replacen(&format!("hero-{id}"), "", 1));
+        let hash = rest.as_str();
         let has = |k: &str| hash.contains(k);
         let num = |k: &str| -> Option<usize> {
             let i = hash.find(k)? + k.len();
@@ -1306,11 +1310,8 @@ impl Game {
         if has("vegeta") {
             trip(self, 2e6, 1);
         }
-        if let Some(i) = hash.find("hero-") {
-            let id: String = hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect();
-            if let Some(h) = [("vegeta", Hero::Vegeta), ("goku", Hero::Goku), ("gohan", Hero::Gohan), ("trunks", Hero::Trunks)].iter().find(|h| h.0 == id) {
-                self.s.hero = h.1;
-            }
+        if let Some(c) = hero_id.and_then(|id| CHARS.iter().find(|c| c.1 == id)) {
+            self.s.hero = c.0;
         }
         if has("snake") {
             trip(self, 3e6, 2);

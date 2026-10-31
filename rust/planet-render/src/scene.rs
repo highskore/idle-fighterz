@@ -667,6 +667,8 @@ impl Scene {
         let fi = form.look;
         let aura = form.aura();
         let hero = sprite::hero(hero_id(g));
+        // his drawn size: goten is a kid, tien is tall
+        let hk = 1.05 * sprite::hero_scale(hero_id(g));
         let shown = g.forms[crate::xform::shown_form(g, t)].look;
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[shown] };
         let bl = match &self.itx_fx {
@@ -814,7 +816,7 @@ impl Scene {
             let w0 = 3.6;
             let dir = if flip { -1.0 } else { 1.0 };
             let tilt = 1.2;
-            let sh = spr.h as f64 * 1.05;
+            let sh = spr.h as f64 * hk;
             let at = |j: f64| {
                 let v = ap(&c.m, g.frame3.road_pt(g.phi - j * 0.013));
                 let r = c.r + lift + sh * 0.45;
@@ -875,22 +877,22 @@ impl Scene {
                     );
                 }
             }
-            draw_hero(c, spr, 0.0, depth, 1.05, mx - sin(a2) * sh / 2.0, my + cos(a2) * sh / 2.0, a2);
+            draw_hero(c, spr, 0.0, depth, hk, mx - sin(a2) * sh / 2.0, my + cos(a2) * sh / 2.0, a2);
         } else if (0.0..0.18).contains(&bl) {
             // he steps in out of the light
             let ghost = itx_ghost(&itx_pose(&set.idle), bl / 0.18, t);
-            c.blit_z(&ghost, kd.x, kd.y, kd.ang, flip, lift, depth, 1.05);
+            c.blit_z(&ghost, kd.x, kd.y, kd.ang, flip, lift, depth, hk);
         } else if (0.0..0.75).contains(&bl) {
-            draw_hero(c, &itx_pose(&set.idle), lift, depth, 1.05, kd.x, kd.y, kd.ang);
+            draw_hero(c, &itx_pose(&set.idle), lift, depth, hk, kd.x, kd.y, kd.ang);
         } else {
-            draw_hero(c, spr, lift, depth, 1.05, kd.x, kd.y, kd.ang);
+            draw_hero(c, spr, lift, depth, hk, kd.x, kd.y, kd.ang);
         }
         if bl >= 0.0 {
             // where he stood: his shape fades out in a shimmer; where he lands, a ring of light pulls in
             let b = self.itx_fx.as_mut().unwrap();
             if bl < 0.35 {
                 let ghost = itx_ghost(&set.idle, 1.0 - bl / 0.35, t);
-                c.blit_z(&ghost, b.x, b.y, b.ang, b.flip, b.lift, b.z * c.r + 6.0, 1.05);
+                c.blit_z(&ghost, b.x, b.y, b.ang, b.flip, b.lift, b.z * c.r + 6.0, hk);
             }
             if bl < 0.3 && seen {
                 let r = 3.0 + 16.0 * (1.0 - bl / 0.3);
@@ -1014,6 +1016,11 @@ pub(crate) fn hero_id(g: &Game) -> &'static str {
         Hero::Goku => "goku",
         Hero::Gohan => "gohan",
         Hero::Trunks => "trunks",
+        Hero::Piccolo => "piccolo",
+        Hero::Krillin => "krillin",
+        Hero::Goten => "goten",
+        Hero::Tien => "tien",
+        Hero::A17 => "a17",
     }
 }
 

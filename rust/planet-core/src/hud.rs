@@ -611,7 +611,11 @@ impl Game {
     }
 
     fn hero_open(&self, h: Hero) -> bool {
-        CHARS.iter().find(|c| c.0 == h).is_some_and(|c| c.3.is_none_or(|need| self.s.ach.contains(need)))
+        CHARS.iter().find(|c| c.0 == h).is_some_and(|c| match c.3 {
+            Need::Open => true,
+            Need::Ach(a) => self.s.ach.contains(a),
+            Need::Beat(v) => self.s.beaten.contains(v),
+        })
     }
 
     /// `menu()`: the training tree, achievements and characters. An uncapped node's `max` is `null` (Infinity in JS).
@@ -640,8 +644,10 @@ impl Game {
             self.listed_ach().map(|(_, &(id, name, text))| Obj::new().str("id", id).str("name", name).str("text", text).bool("done", s.ach.contains(id)).end());
         let chars = CHARS.iter().map(|&(h, id, name, need)| {
             let mut o = Obj::new().str("id", id).str("name", name).bool("open", self.hero_open(h));
-            if let Some(need) = need {
-                o = o.str("need", ACH.iter().find(|a| a.0 == need).unwrap().2);
+            match need {
+                Need::Open => {}
+                Need::Ach(a) => o = o.str("need", ACH.iter().find(|x| x.0 == a).unwrap().2),
+                Need::Beat(v) => o = o.str("need", &format!("beat {v}")),
             }
             o.bool("on", s.hero == h).end()
         });
