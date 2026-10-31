@@ -59,6 +59,20 @@ impl Game {
         }
     }
 
+    /// Turns the planet `k` of the way to having him on top of it, facing us (unless it's being dragged, or it's the
+    /// lookout).
+    pub(crate) fn face_us(&mut self, k: f64) {
+        if self.inp.drag.is_none() && !self.inp.w2_pole {
+            let v = ap(&self.cam.m, self.frame3.road_pt(self.phi));
+            let u = [0.0, 0.42, 0.91];
+            let ax = cross(v, u);
+            let s = hypot(&ax);
+            if s > 1e-4 {
+                self.cam.m = ortho(&m_mul(&rot(mul(ax, 1.0 / s), atan2(s, dot(v, u)) * k), &self.cam.m));
+            }
+        }
+    }
+
     pub(crate) fn form_owed(&self) -> bool {
         self.s.form < self.forms.len() - 1 && self.s.pl >= self.forms[self.s.form + 1].at
     }
@@ -91,16 +105,8 @@ impl Game {
             self.cue(Cue::Scene(false));
             return;
         }
-        // the planet turns so he powers up on top of it, facing us (unless it's being dragged, or it's the lookout)
-        if self.inp.drag.is_none() && !self.inp.w2_pole {
-            let v = ap(&self.cam.m, self.frame3.road_pt(self.phi));
-            let u = [0.0, 0.42, 0.91];
-            let ax = cross(v, u);
-            let s = hypot(&ax);
-            if s > 1e-4 {
-                self.cam.m = ortho(&m_mul(&rot(mul(ax, 1.0 / s), atan2(s, dot(v, u)) * 1f64.min(dt * 3.0)), &self.cam.m));
-            }
-        }
+        // the planet turns so he powers up on top of it, facing us
+        self.face_us(1f64.min(dt * 3.0));
         let Some(rv) = x.rv else {
             let p = 1f64.min(x.p + dt / self.xf_dur());
             self.xf.as_mut().unwrap().p = p;

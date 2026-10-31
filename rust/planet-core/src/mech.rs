@@ -190,7 +190,7 @@ impl Game {
     pub fn ally_spot(&self, a: Ally) -> Option<(f64, f64)> {
         let c = &self.cam;
         let v = match a {
-            Ally::Bubbles => ap(&c.m, self.frame3.road_pt(self.phi - 0.32)),
+            Ally::Bubbles => ap(&c.m, self.frame3.road_pt(self.bub_phi())),
             Ally::Krillin => ap(&c.m, self.frame3.road_pt(self.phi - 0.5)),
             Ally::Piccolo => ap(&c.m, mul(self.frame3.cap_pt(0.6, 0.9), 1.28)),
         };

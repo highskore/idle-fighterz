@@ -588,6 +588,7 @@ impl Scene {
             c.blit_z(spr, sx, sy, atan2(v[0], v[1]), sin(t * 3.0 + sb.born) > 0.0, (up * down - 1.0) * 11.0 + hop, v[2] * c.r + 4.0, 1.1);
         }
         let hero = self.draw_hero(&mut c, g, dt);
+        crate::snack::draw_ramen(&mut c, g, &hero);
         self.draw_visitors(&mut c, g, &hero, dt);
         crate::beam::draw_charge(&mut c, g);
         crate::effects::draw(&mut c, g);
@@ -669,7 +670,7 @@ impl Scene {
         let fly = g.wished(planet_core::game::WishBuff::Fly) && !surf && g.b.ape_until <= t;
         let spr = if g.b.pose_until > t || g.tl.struggle.is_some() {
             &set.pose
-        } else if g.tl.jump_h > 1.0 || surf || fly {
+        } else if g.tl.jump_h > 1.0 || surf || fly || g.eating() {
             &set.run[0]
         } else {
             &set.run[((t * (9.0 + g.sprint * 10.0)).floor() as i64 % 4) as usize]

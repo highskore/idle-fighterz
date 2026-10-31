@@ -625,6 +625,12 @@ pub struct Tl {
     /// where and when the last jump left from (`itxFx`): the renderer's shimmer and pose
     pub itx_fx: Option<(Spot, f64)>,
     pub later: Vec<(f64, Later)>,
+    /// the ramen break (ramen.rs): the one on now, the quiet seconds to the next, and how many he's had
+    pub ramen: Option<crate::ramen::Ramen>,
+    pub next_ramen: f64,
+    pub ramens: u32,
+    /// bubbles wandering the road (bubbles.rs)
+    pub bub: crate::bubbles::Bub,
 }
 
 impl Default for Tl {
@@ -737,6 +743,10 @@ impl Default for Tl {
             itx_back: f64::NEG_INFINITY,
             itx_fx: None,
             later: Vec::new(),
+            ramen: None,
+            next_ramen: crate::ramen::RAMEN_FIRST,
+            ramens: 0,
+            bub: Default::default(),
         }
     }
 }
@@ -3127,6 +3137,10 @@ impl Game {
         if self.xform_tap() {
             return;
         }
+        // a tap on him while he eats knocks his ramen over
+        if self.ramen_tap(px, py) {
+            return;
+        }
         if let Some(d) = self.tl.dance.as_mut().filter(|d| d.done == 0.0) {
             if d.i < 3 && d.spoil != Some(d.i) {
                 let b = d.beats[d.i];
@@ -3215,6 +3229,9 @@ impl Game {
                 self.throw_spirit();
                 return;
             }
+        }
+        if self.tl.fuse_offer <= t {
+            self.bubbles_tap(px, py);
         }
         if let Some((mx, my, mk)) = self.tl.monkey_at {
             if self.tl.fuse_offer > t && hypot(&[px - mx, py - (my - 5.0 * mk)]) < 12.0 * mk {

@@ -1,6 +1,6 @@
 //! Draws a preview hook's frames to PPM files, for looking at scenes outside a browser:
 //! `cargo run --release -p planet-render --example limitshot -- '#limit1' 360 225 site out/prefix 0.5 3.0 [fps=15]`
-//! (hook, buffer width and height, `site` or `bare` (the widget), output prefix, then seconds of play to draw at; with
+//! (hook, `calm` in it for reduced motion, buffer width and height, `site` or `bare` (the widget), output prefix, then seconds of play to draw at; with
 //! `fps=N`, every frame from the first time to the last at N a second). Prints the toasts as they come.
 
 use planet_core::Game;
@@ -26,6 +26,8 @@ fn main() {
     let mut g = Game::new(1);
     g.set_view(w as f64, h as f64, bare);
     g.preview(hook);
+    // a hook with `calm` in it plays with reduced motion
+    g.calm = hook.contains("calm");
     g.start();
     let view = View { scale: 2.0, bare, clouds: None, cloud_amt: 2.0 };
     let mut fb = Framebuffer::new(w, h);

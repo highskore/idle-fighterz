@@ -3,6 +3,7 @@
 
 pub mod big;
 pub mod bridge;
+pub mod bubbles;
 pub mod buy;
 pub mod data;
 pub mod dusk;
@@ -20,6 +21,7 @@ pub mod looks;
 pub mod mech;
 pub mod mech2;
 pub mod num;
+pub mod ramen;
 pub mod rng;
 pub mod save;
 pub mod spots;
