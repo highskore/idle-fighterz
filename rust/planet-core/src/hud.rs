@@ -362,7 +362,15 @@ impl Game {
             fx.push(format!("king kai's car ×1.5 {}s", secs(b.car_until)));
         }
         if b.ape_until > t {
-            fx.push(format!("{} ×{} {}s", if tl.ape.giant { "giant ape" } else { "great ape" }, num(1.0 + self.ape_x()), secs(b.ape_until)));
+            let who = match (self.s.hero == Hero::Piccolo, tl.ape.giant) {
+                (true, _) => "giant namekian",
+                (false, true) => "giant ape",
+                (false, false) => "great ape",
+            };
+            fx.push(format!("{who} ×{} {}s", num(1.0 + self.ape_x()), secs(b.ape_until)));
+        }
+        if self.focus() > 0.0 {
+            fx.push(format!("focus ×{}", fixed1(Big::from(1.0 + self.focus()))));
         }
         fx.join(" · ")
     }
@@ -521,7 +529,14 @@ impl Game {
                 "zeno" => (self.zeno_ready(), Big::from(s.zeno), Big::ZERO, "zeno button"),
                 _ => {
                     let u = Upg::from_key(key).unwrap();
-                    let label = if u == Upg::Galick && self.kame() { "kamehameha" } else { SHOP[u as usize].label };
+                    let label = match u {
+                        Upg::Galick if self.kame() => "kamehameha",
+                        // piccolo's own: his beam, his pupil in the piccolo slot, and the giant namekian for the great ape
+                        Upg::Galick if s.hero == Hero::Piccolo => "special beam cannon",
+                        Upg::Piccolo if s.hero == Hero::Piccolo => "kid gohan",
+                        Upg::Tail if s.hero == Hero::Piccolo => "giant training",
+                        _ => SHOP[u as usize].label,
+                    };
                     (self.unlocked(u), Big::from(s.lvf(u)), self.cost(u), label)
                 }
             };
@@ -741,6 +756,7 @@ impl Game {
             return false;
         }
         self.s.hero = h;
+        self.hero_sync();
         self.forms = ladder_of(h, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
         true

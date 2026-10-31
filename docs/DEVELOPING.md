@@ -62,7 +62,7 @@ Add these to the URL to jump straight to something. They only work off the live 
 | `#yamcha` | Yamcha in his crater |
 | `#gregory` | the Gregory race |
 | `#vegeta` | a planet vegeta visit, then nappa |
-| `#hero-goku` | play as goku (or `gohan`, `trunks`) |
+| `#hero-goku` | play as goku (or `gohan`, `trunks`, `krillin`, `piccolo`, `goten`, `tien`, `a17`); the other hooks don't see the id |
 | `#snake` | snake way |
 | `#car` | king kai's car |
 | `#kaio` | kaioken already owned |

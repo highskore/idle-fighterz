@@ -26,6 +26,8 @@ struct Pal {
 
 const GALICK: Pal = Pal { aim: 0x9a5af0, ball: 0xd9b8ff, ball_edge: 0x8a4ae8, spark: 0xc9a2ff, glow: 0xb98af8, mid: 0xe2cbff, edge: 0x7a3ae0 };
 const KAME: Pal = Pal { aim: 0x4aa8f0, ball: 0xb8e4ff, ball_edge: 0x2a8ae8, spark: 0xa2d8ff, glow: 0x7ac8ff, mid: 0xcdeeff, edge: 0x1f6ad8 };
+/// Piccolo's special beam cannon: a bright yellow core in a violet sheath.
+const SBC: Pal = Pal { aim: 0xffd84a, ball: 0xfff2a0, ball_edge: 0x8a4ae8, spark: 0xffe86a, glow: 0xd8b0ff, mid: 0xfff6c0, edge: 0x7a3ae0 };
 const KAIO: Pal = Pal { aim: 0, ball: 0xffb0a4, ball_edge: 0, spark: 0xff9a8a, glow: 0xff6a5a, mid: 0xffc8bf, edge: 0xc8201a };
 
 fn kame(g: &Game) -> bool {
@@ -36,6 +38,8 @@ fn kame(g: &Game) -> bool {
 fn pal(g: &Game) -> &'static Pal {
     if kame(g) {
         &KAME
+    } else if g.s.hero == Hero::Piccolo {
+        &SBC
     } else {
         &GALICK
     }

@@ -121,7 +121,12 @@ impl Scene {
             let v = ap(&m, mul(g.frame3.cap_pt(0.6, 0.9), 1.28));
             g.tl.piccolo_at = if v[2] > -0.2 { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
             if let Some((x, y)) = g.tl.piccolo_at.filter(|_| !crate::mech::held(g, Ally::Piccolo) && !g.candied(Target::Piccolo)) {
-                c.blit_z(sprite::get("PICCOLO"), x, y, 0.0, false, 0.0, v[2] * r + 8.0, 0.95);
+                // playing piccolo, his pupil kid gohan meditates in his place
+                if g.s.hero == planet_core::data::Hero::Piccolo {
+                    c.blit_z(&sprite::hero("gohan").forms[0].idle, x, y, 0.0, false, 0.0, v[2] * r + 8.0, 0.75);
+                } else {
+                    c.blit_z(sprite::get("PICCOLO"), x, y, 0.0, false, 0.0, v[2] * r + 8.0, 0.95);
+                }
             }
         } else {
             g.tl.piccolo_at = None;
@@ -838,11 +843,13 @@ impl Scene {
                 let l = hypot(&[dx, dy]);
                 let l = if l == 0.0 { 1.0 } else { l };
                 let (nx, ny) = (-dy / l, dx / l);
+                // piccolo's special beam cannon, or kid gohan's golden masenko in his place
+                let (wave, core) = if g.s.hero == planet_core::data::Hero::Piccolo { (0xffc83a, 0xfff8d0) } else { (0xc89aff, 0xfff6a0) };
                 let mut d = 0.0;
                 while d < l {
                     let w = sin(d * 0.5) * 2.2;
-                    c.fb.px(x0 + dx * d / l + nx * w, y0 + dy * d / l + ny * w, 0xc89aff, 1.0);
-                    c.fb.px(x0 + dx * d / l, y0 + dy * d / l, 0xfff6a0, 1.0);
+                    c.fb.px(x0 + dx * d / l + nx * w, y0 + dy * d / l + ny * w, wave, 1.0);
+                    c.fb.px(x0 + dx * d / l, y0 + dy * d / l, core, 1.0);
                     d += 0.6;
                 }
             }
