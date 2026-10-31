@@ -215,7 +215,7 @@ fn own_names(h: Hero) -> Option<[&'static str; 9]> {
         ],
         Hero::Krillin => [
             "base",
-            "max power",
+            "unlocked potential",
             "guru's unlock",
             "turtle master",
             "destructo master",
@@ -248,8 +248,13 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         Hero::Goku => &[9],
         Hero::Gohan => &[11],
         Hero::Trunks => &[13],
-        // their late forms aren't picked yet: their ladders stop at the shared nine
+        // their own late forms come below; the rest aren't built yet: their ladders stop at the shared nine
         Hero::Piccolo | Hero::Krillin | Hero::Goten | Hero::Tien | Hero::A17 => &[],
+    };
+    // a non-saiyan's own late forms, each with its aura: their looks follow the shared nine in his sprites
+    let own_late: &[(&str, [u32; 3])] = match h {
+        Hero::Krillin => &[("solar flare", [0xffffff, 0xfffbe0, 0xffe680]), ("taiyoken sun", [0xffffff, 0xfff8b0, 0xffd60a])],
+        _ => &[],
     };
     let own = own_names(h);
     let mut v: Vec<Form> = ALL_FORMS[..9]
@@ -259,6 +264,9 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         .collect();
     for (j, &i) in late.iter().enumerate() {
         v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: i, lb: 0, own_aura: None });
+    }
+    for (j, &(name, aura)) in own_late.iter().enumerate() {
+        v.push(Form { name, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: 9 + j, lb: 0, own_aura: Some(aura) });
     }
     let top = v[v.len() - 1].clone();
     for n in 1..=limits.saturating_sub(LB_FROM - 1) {

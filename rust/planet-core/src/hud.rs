@@ -243,9 +243,9 @@ impl Game {
         self.cues.push(c);
     }
 
-    /// `kame()`: goku and gohan fire a kamehameha, the others a galick gun.
+    /// `kame()`: goku, gohan and krillin fire a kamehameha, the others a galick gun (piccolo his own cannon).
     pub fn kame(&self) -> bool {
-        matches!(self.s.hero, Hero::Goku | Hero::Gohan)
+        matches!(self.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin)
     }
 
     /// The buffs line under the power (`fxs.join(' · ')`).
@@ -362,15 +362,14 @@ impl Game {
             fx.push(format!("king kai's car ×1.5 {}s", secs(b.car_until)));
         }
         if b.ape_until > t {
-            let who = match (self.s.hero == Hero::Piccolo, tl.ape.giant) {
-                (true, _) => "giant namekian",
-                (false, true) => "giant ape",
-                (false, false) => "great ape",
-            };
-            fx.push(format!("{who} ×{} {}s", num(1.0 + self.ape_x()), secs(b.ape_until)));
+            fx.push(format!("{} ×{} {}s", self.ape_name(tl.ape.giant), num(1.0 + self.ape_x()), secs(b.ape_until)));
         }
-        if self.focus() > 0.0 {
-            fx.push(format!("focus ×{}", fixed1(Big::from(1.0 + self.focus()))));
+        if matches!(self.s.hero, Hero::Piccolo) {
+            // how full his focus is (his steady income runs from half at empty to whole at full)
+            fx.push(format!("focus {}%", num(js_round(self.focus() * 100.0))));
+        }
+        if self.cuts() > 0 {
+            fx.push(format!("discs {}/{BARRAGE}", self.cuts().min(crate::heroes::BARRAGE_CUTS), BARRAGE = crate::heroes::BARRAGE_CUTS));
         }
         fx.join(" · ")
     }
@@ -482,6 +481,11 @@ impl Game {
         let u = Upg::from_key(key).unwrap();
         let l = s.lv(u);
         let base = SHOP[u as usize].what;
+        match (u, self.s.hero) {
+            (Upg::Tail, Hero::Piccolo) => return "giant namekian: +×0.25, +8% size, +2s (size and time slow past lv 10)".into(),
+            (Upg::Tail, Hero::Krillin) => return "max power: +×0.25, +8% size, +2s (size and time slow past lv 10)".into(),
+            _ => {}
+        }
         if u == Upg::Itx && l > 0 {
             let min: f64 = to_fixed(self.itx_cd() / 60.0, 1).parse().unwrap();
             return format!("jump every {} min · trips {}% sooner", num(min), num(js_round(100.0 - 100.0 * self.soon())));
@@ -500,6 +504,8 @@ impl Game {
                 if l == 4 {
                     if self.kame() {
                         " and super kamehameha"
+                    } else if s.hero == Hero::Piccolo {
+                        " and a full-power special beam cannon"
                     } else {
                         " and final flash"
                     }
@@ -529,14 +535,7 @@ impl Game {
                 "zeno" => (self.zeno_ready(), Big::from(s.zeno), Big::ZERO, "zeno button"),
                 _ => {
                     let u = Upg::from_key(key).unwrap();
-                    let label = match u {
-                        Upg::Galick if self.kame() => "kamehameha",
-                        // piccolo's own: his beam, his pupil in the piccolo slot, and the giant namekian for the great ape
-                        Upg::Galick if s.hero == Hero::Piccolo => "special beam cannon",
-                        Upg::Piccolo if s.hero == Hero::Piccolo => "kid gohan",
-                        Upg::Tail if s.hero == Hero::Piccolo => "giant training",
-                        _ => SHOP[u as usize].label,
-                    };
+                    let label = self.own_label(u).unwrap_or(SHOP[u as usize].label);
                     (self.unlocked(u), Big::from(s.lvf(u)), self.cost(u), label)
                 }
             };

@@ -1,0 +1,226 @@
+//! Krillin, destructo disc: taps throw discs that cut everything along their line, a chain paying more with every cut;
+//! left alone he throws one himself every few seconds. The AFK rule over whole runs: idle he keeps pace with an idle
+//! Vegeta, playing him (aiming discs between training taps) earns about 2-3× his own idle, and nothing an idle player
+//! does costs him anything.
+
+use planet_core::data::{Hero, Upg, SHOP};
+use planet_core::heroes::{BARRAGE_CUTS, DISC_AUTO, DISC_GAP};
+use planet_core::{Game, DT};
+
+const POLICY: [&str; 13] = ["boots", "partner", "gravity", "scouter", "house", "piccolo", "cloud", "armor", "kaio", "galick", "senzu", "chamber", "bigbang"];
+
+/// The difftest's `buyAll`: the cheapest open upgrade until none is affordable. Returns what it spent.
+fn buy_all(g: &mut Game) -> f64 {
+    let mut spent = 0.0;
+    loop {
+        let ok = POLICY
+            .iter()
+            .filter_map(|k| Upg::from_key(k))
+            .filter(|&u| g.unlocked(u) && g.s.pl >= g.cost(u))
+            .min_by(|&a, &b| g.cost(a).partial_cmp(&g.cost(b)).unwrap());
+        let Some(u) = ok else { return spent };
+        let c = g.cost(u);
+        if !g.buy(SHOP[u as usize].key) {
+            return spent;
+        }
+        spent += c.to_f64();
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum Play {
+    /// never taps; checks in once a second to buy
+    Idle,
+    /// buys, kaiokens when ready, and for 5s of every 10 taps every 0.4s (as fast as his discs come): at the nearest
+    /// target, or on himself
+    Active,
+}
+
+struct Run {
+    g: Game,
+    spent: f64,
+    f: u32,
+}
+
+impl Run {
+    fn new(seed: u32, hero: Hero) -> Self {
+        let mut g = Game::new(seed);
+        g.s.hero = hero;
+        g.forms = planet_core::data::ladder_of(hero, 0);
+        g.start();
+        Run { g, spent: 0.0, f: 0 }
+    }
+
+    fn earned(&self) -> f64 {
+        self.g.s.pl.to_f64() + self.spent
+    }
+
+    fn step(&mut self, play: Play) {
+        let f = self.f;
+        if play == Play::Active && f % 300 < 150 && f.is_multiple_of(12) {
+            // his taps are discs: at the nearest target, or on himself (straight ahead) when there's none
+            let (x, y) = self.g.nearest_target().unwrap_or_else(|| {
+                let k = self.g.kid_screen(14.0);
+                (k.x, k.y)
+            });
+            self.g.tap(x, y);
+        }
+        if f.is_multiple_of(30) {
+            self.spent += buy_all(&mut self.g);
+            if play != Play::Idle {
+                self.g.kaioken();
+            }
+        }
+        self.g.frame((f + 1) as f64 * DT, DT);
+        self.f += 1;
+    }
+
+    fn play(&mut self, play: Play, secs: f64) {
+        for _ in 0..(secs / DT) as u32 {
+            self.step(play);
+        }
+    }
+}
+
+const SEEDS: [u32; 12] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+fn geo_mean(v: &[f64]) -> f64 {
+    (v.iter().map(|x| x.ln()).sum::<f64>() / v.len() as f64).exp()
+}
+
+fn earned(hero: Hero, play: Play, mins: f64) -> Vec<f64> {
+    SEEDS
+        .iter()
+        .map(|&s| {
+            let mut r = Run::new(s, hero);
+            r.play(play, mins * 60.0);
+            r.earned()
+        })
+        .collect()
+}
+
+fn ratio(a: &[f64], b: &[f64]) -> f64 {
+    geo_mean(&a.iter().zip(b).map(|(x, y)| x / y).collect::<Vec<_>>())
+}
+
+#[test]
+fn a_disc_cuts_everything_along_its_line_and_a_chain_pays_more() {
+    let mut r = Run::new(7, Hero::Krillin);
+    // once he runs round to the side facing us (and before his own disc flies)
+    while r.g.kid_screen(0.0).v[2] < 0.4 {
+        r.play(Play::Idle, 0.1);
+        assert!(r.g.t < 60.0);
+    }
+    // three orbs on the road next to him, on the side facing us: one disc at the farthest cuts all three
+    let phi = r.g.phi;
+    let front = |d: f64| r.g.cam.screen(r.g.frame3.road_pt(phi + d), 4.0).v[2] > 0.05;
+    let dir = if front(0.14) { 1.0 } else { -1.0 };
+    assert!(front(0.14 * dir));
+    r.g.tl.orbs = [0.06, 0.1, 0.14].iter().map(|d| planet_core::timeline::Orb { phi: phi + d * dir, star: false, done: false }).collect();
+    let p = r.g.cam.screen(r.g.frame3.road_pt(phi + 0.14 * dir), 4.0);
+    let (cuts, before) = (r.g.cuts(), r.earned());
+    r.g.tap(p.x, p.y);
+    let said: Vec<String> = r.g.events.drain(..).map(|e| e.0).collect();
+    assert_eq!(r.g.cuts() - cuts, 3, "one throw, three cuts");
+    assert!(said.iter().any(|s| s.starts_with("destructo disc! 3 cut in one throw · chain ×4")), "{said:?}");
+    assert!(r.earned() > before);
+    assert_eq!(r.g.discs().len(), 1, "the disc flies");
+    r.g.tap(p.x, p.y);
+    assert_eq!(r.g.discs().len(), 1, "one disc every {DISC_GAP}s, however fast you tap");
+}
+
+#[test]
+fn left_alone_he_throws_by_himself() {
+    let mut r = Run::new(3, Hero::Krillin);
+    r.play(Play::Idle, 600.0);
+    assert!(r.g.cuts() > 0, "idle, krillin's own discs (one every {DISC_AUTO}s) cut things");
+}
+
+#[test]
+fn the_barrage_takes_a_fifth_of_a_villain() {
+    let mut g = Game::new(7);
+    g.preview("#hero-krillin#saga3");
+    g.start();
+    while g.tl.boss.is_none() || g.tl.boss.as_ref().is_some_and(|b| b.max <= 0.0) {
+        let t = g.t + DT;
+        g.frame(t, DT);
+        assert!(g.t < 200.0, "a villain comes");
+    }
+    for _ in 0..30 * 6 {
+        let t = g.t + DT;
+        g.frame(t, DT);
+    }
+    let b = g.tl.boss.as_ref().unwrap();
+    let (hp0, max) = (b.hp.to_f64(), b.max.to_f64());
+    if let planet_core::heroes::Kind::Krillin { cuts, .. } = &mut g.hero_rt.kind {
+        *cuts = BARRAGE_CUTS;
+    }
+    let (x, y) = (b.x, b.y);
+    for _ in 0..30 {
+        let t = g.t + DT;
+        g.frame(t, DT);
+    }
+    g.tap(x, y);
+    let hp1 = g.tl.boss.as_ref().map_or(0.0, |b| b.hp.to_f64());
+    assert!(hp0 - hp1 >= max * 0.19 || g.tl.boss.as_ref().is_none_or(|b| b.dead), "the barrage: {hp0} → {hp1} of {max}");
+    assert_eq!(g.cuts(), 0);
+}
+
+#[test]
+fn other_heroes_are_untouched() {
+    for h in [Hero::Vegeta, Hero::Goku, Hero::Piccolo] {
+        let r = Run::new(1, h);
+        assert_eq!(r.g.cuts(), 0, "{h:?}");
+        assert!(r.g.discs().is_empty());
+    }
+}
+
+#[test]
+fn he_never_visits_himself() {
+    let mut r = Run::new(5, Hero::Krillin);
+    r.play(Play::Idle, 900.0);
+    assert!(r.g.tl.kril.is_none() && !r.g.s.krillin_dead && r.g.tl.date.is_none(), "no krillin visit, death or date for krillin");
+}
+
+#[test]
+#[ignore = "slow: whole runs, several seeds (cargo test --release -- --ignored krillin)"]
+fn the_afk_rule_over_whole_runs() {
+    for mins in [30.0, 60.0] {
+        let (ki, ka) = (earned(Hero::Krillin, Play::Idle, mins), earned(Hero::Krillin, Play::Active, mins));
+        let vi = earned(Hero::Vegeta, Play::Idle, mins);
+        let (vs_vegeta, act) = (ratio(&ki, &vi), ratio(&ka, &ki));
+        println!("{mins} min, {} seeds: idle krillin / idle vegeta ×{vs_vegeta:.3}; active / idle ×{act:.3}", SEEDS.len());
+        assert!((0.8..=1.25).contains(&vs_vegeta), "idle, he keeps pace with an idle vegeta: ×{vs_vegeta}");
+        assert!((2.0..=3.0).contains(&act), "playing him earns about 2-3× his idle: ×{act}");
+    }
+}
+
+#[test]
+fn his_own_late_forms_moon_and_fusion() {
+    let ladder = planet_core::data::ladder_of(Hero::Krillin, 0);
+    let names: Vec<&str> = ladder.iter().map(|f| f.name).collect();
+    assert_eq!(&names[9..], ["solar flare", "taiyoken sun"], "past the shared nine, his own two");
+    assert!(!names.contains(&"max power"), "max power is his moon form now, not a form name");
+    let s = planet_core::sprite::hero("krillin");
+    assert!(s.forms[9].idle.w > s.forms[0].idle.w, "the solar flare blazes behind him");
+    let mut r = Run::new(1, Hero::Krillin);
+    assert_eq!(r.g.ape_name(false), "max power");
+    assert_eq!(planet_core::sprite::get("FUSED.roshillin").h, planet_core::sprite::hero("krillin").forms[0].idle.h);
+    // the fusion dance: master roshi asks, three beats on time make roshillin
+    r.g.preview("#dance");
+    r.g.tl.next_dance = 0.0;
+    r.g.session = 400.0;
+    let mut said = Vec::new();
+    for _ in 0..30 * 10 {
+        if let Some(d) = r.g.tl.dance.clone() {
+            if d.i < 3 && (d.beats[d.i] - r.g.t).abs() < 0.05 {
+                r.g.train();
+            }
+        }
+        r.play(Play::Idle, DT);
+        said.extend(r.g.events.drain(..).map(|e| e.0));
+    }
+    assert!(said.iter().any(|s| s.starts_with("master roshi wants to do the fusion dance")), "{said:?}");
+    assert!(said.iter().any(|s| s.contains("roshillin")), "{said:?}");
+    assert_eq!(r.g.tl.fused_look, "FUSED.roshillin");
+}

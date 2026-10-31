@@ -598,6 +598,7 @@ impl Scene {
         let hero = self.draw_hero(&mut c, g, dt);
         crate::snack::draw_ramen(&mut c, g, &hero);
         self.draw_visitors(&mut c, g, &hero, dt);
+        crate::heroes::draw_discs(&mut c, g);
         crate::beam::draw_charge(&mut c, g);
         crate::effects::draw(&mut c, g);
         crate::beam::draw_beam(&mut c, g);
@@ -779,7 +780,11 @@ impl Scene {
                 c.kaio_aura(s, x, y, a, flip, l, d, k, t);
             }
         };
-        if g.b.ape_until > t {
+        if g.b.ape_until > t && g.s.hero == planet_core::data::Hero::Krillin {
+            // krillin's stand-in for the great ape: max power, bigger and bare-chested
+            let mp = sprite::krillin_max_power();
+            draw_hero(c, &mp.run[((t * 9.0).floor() as i64 % 4) as usize], lift, depth, hk * 1.3, kd.x, kd.y, kd.ang);
+        } else if g.b.ape_until > t {
             // the great ape stomps: a little hop each step, a screen shake on landing
             // (the step and its shake are planet-core's: Game::draw_step)
             let step = (t * 3.2).floor();

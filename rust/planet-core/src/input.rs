@@ -272,6 +272,10 @@ impl Game {
             self.throw_bang(px, py);
             return;
         }
+        // krillin's taps throw his discs: a tap that throws one does nothing else
+        if self.playing && self.hero_touch(px, py) {
+            return;
+        }
         self.click(px, py);
     }
 
