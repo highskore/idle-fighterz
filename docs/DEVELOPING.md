@@ -76,6 +76,8 @@ Add these to the URL to jump straight to something. They only work off the live 
 | `#limit1` … `#limitN` | (Rust) limit N about to break, late in the tournament of power |
 | `#looks0`, `#looks1`, `#looks3` | (Rust) the looks the 1e10, 1e100 or 1e1000 milestone unlocks, worn |
 | `#mile0` … `#mileK` | (Rust) the K-th named milestone landing: 0 is 1e10, 1 is 1e100, 2 is past infinity, 3 is 1e1000 |
+| `#scale1` … `#scale4` | (Rust) a run at shockwave tier N's best power, a full beam at the sky (or the boss) 3s in and every 6s; `#scale4bang` throws big bangs instead |
+| `#kimeter` | the "ki meter" buttons (kaioken and transmission fill as they recharge), whatever the setting says |
 
 `game.js` has more (`#lookout`, `#beerus`, `#form12`, `#saga3`, `#universe3`, `#godki`…), each marked with a `// preview hook` comment, and hooks combine (`#form2#raid`):
 

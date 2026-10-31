@@ -1391,6 +1391,7 @@ impl Game {
         }
         self.limits_preview(hash);
         self.looks_preview(hash);
+        self.waves_preview(hash);
         self.forms = ladder_of(self.s.hero, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
         if has("xform") {

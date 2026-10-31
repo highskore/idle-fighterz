@@ -144,3 +144,7 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
 [data-layout="6"] .shop.open { top: calc(14px + var(--b)); bottom: auto; }
 [data-layout="6"] { --tb: 10px; }
 
+/* the "ki meter" buttons (the app's buttons setting, `ki_buttons: 'meter'`): a recharging button fills bottom to top */
+html[data-kibtn="meter"] .w button[data-w="kaio"]:disabled, html[data-kibtn="meter"] .w button[data-w="itx"]:disabled { background: linear-gradient(to top, var(--kc) var(--f), var(--kp) var(--f)) !important; border-color: transparent !important; transition: --f 1s linear; }
+.w [data-w="kaio"] { --kc: #e0332b; --kp: #f1b9b4; } .w [data-w="itx"] { --kc: #2f8ae0; --kp: #b8d6f4; }
+@media (prefers-reduced-motion: reduce) { html[data-kibtn="meter"] .w button[data-w]:disabled { transition: none; } }

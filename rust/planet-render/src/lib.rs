@@ -22,6 +22,7 @@ pub mod storm;
 pub mod tones;
 pub mod top;
 pub mod visitors;
+mod waves;
 pub mod xform;
 
 /// The buffers game.js keeps per stage: packed ABGR pixels as `ImageData` wants them (`st.buf`), depth (`zb`),
