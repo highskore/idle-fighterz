@@ -265,7 +265,7 @@ impl Game {
         let (lt, lx, ly) = self.inp.last_tap;
         let dbl = t - lt < 0.32 && hypot(&[px - lx, py - ly]) < 30.0;
         self.inp.last_tap = (if dbl { -9.0 } else { t }, px, py);
-        if dbl && self.playing && self.s.lv(Upg::Bigbang) > 0 && self.inp.bang.is_none() && t > self.inp.bang_ready && !self.stunned() {
+        if dbl && self.playing && self.s.lv(Upg::Bigbang) > 0 && self.inp.bang.is_none() && t > self.inp.bang_ready && !self.stunned() && !self.swapped() {
             self.throw_bang(px, py);
             return;
         }
@@ -409,6 +409,15 @@ impl Game {
                     self.movie_hit(i, dmg * 2.0);
                 }
             }
+            let cs = self.tl.movie.as_ref().unwrap().metal.as_ref().map_or(vec![], |m| m.clones.clone());
+            let d = crate::data::movie_dim("cooler");
+            for (i, cl) in cs.iter().enumerate() {
+                let y = cl.y - d.h / 2.0 * cl.k;
+                if let Some(x) = cl.x.filter(|&x| !cl.dead() && on_line(x, y, d.w / 2.0 * cl.k)) {
+                    self.inp.beam_hits.push((x, y));
+                    self.clone_hit(i, dmg * 2.0);
+                }
+            }
         }
         if let Some(b) = self.tl.boss.as_ref().filter(|b| !b.dead) {
             let s = b.spr();
@@ -543,11 +552,19 @@ impl Game {
                     self.movie_hit(i, dmg);
                 }
             }
+            let cs = self.tl.movie.as_ref().unwrap().metal.as_ref().map_or(vec![], |m| m.clones.clone());
+            let d = crate::data::movie_dim("cooler");
+            for (i, cl) in cs.iter().enumerate() {
+                if !cl.dead() && cl.x.is_some_and(|cx| hypot(&[cx - x, cl.y - d.h / 2.0 * cl.k - y]) < r + 6.0) {
+                    self.clone_hit(i, dmg);
+                }
+            }
         }
         if let Some(b) = self.tl.boss.as_ref().filter(|b| !b.dead) {
             let s = b.spr();
             if hypot(&[b.x - x, b.y - s.h / 2.0 * b.k - y]) < r + s.w / 2.0 * b.k {
-                let dmg = self.wall_cap(hit(self) * 12.0 * bb, self.rate().max(self.lap_value() * self.mult(false)) * 12.0 * bb);
+                let mx = self.mech_bang();
+                let dmg = self.wall_cap(hit(self) * 12.0 * bb, self.rate().max(self.lap_value() * self.mult(false)) * 12.0 * bb) * mx;
                 self.hit_boss(dmg, x, y, true);
                 self.buff_pop(dmg, x, y - 10.0);
             }

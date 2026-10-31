@@ -299,7 +299,7 @@ impl Game {
                 if left > 0 {
                     format!("{left} to go before {}", m.o.who)
                 } else {
-                    format!("{} {}s", m.o.who, secs(until))
+                    format!("{} {}s", if m.metal.is_some() { "metal cooler" } else { m.o.who }, secs(until))
                 }
             };
             if !s.is_empty() {
