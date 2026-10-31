@@ -53,7 +53,7 @@ fn sky_of(k: u32) -> Sky {
     }
 }
 
-fn line(c: &mut Ctx, x0: f64, y0: f64, x1: f64, y1: f64, col: u32, a: f64) {
+pub(crate) fn line(c: &mut Ctx, x0: f64, y0: f64, x1: f64, y1: f64, col: u32, a: f64) {
     let n = 1f64.max((hypot(&[x1 - x0, y1 - y0]) * 1.5).ceil());
     let mut i = 0.0;
     while i <= n {
@@ -62,7 +62,7 @@ fn line(c: &mut Ctx, x0: f64, y0: f64, x1: f64, y1: f64, col: u32, a: f64) {
     }
 }
 
-fn disc(c: &mut Ctx, x: f64, y: f64, r: f64, col: u32, a: f64) {
+pub(crate) fn disc(c: &mut Ctx, x: f64, y: f64, r: f64, col: u32, a: f64) {
     let mut yy = (y - r).floor();
     while yy <= y + r {
         let mut xx = (x - r).floor();
@@ -78,7 +78,7 @@ fn disc(c: &mut Ctx, x: f64, y: f64, r: f64, col: u32, a: f64) {
 }
 
 /// A soft dithered glow: thinner away from the centre.
-fn glow(c: &mut Ctx, x: f64, y: f64, r: f64, col: u32, k: f64) {
+pub(crate) fn glow(c: &mut Ctx, x: f64, y: f64, r: f64, col: u32, k: f64) {
     let mut yy = (y - r).floor();
     while yy <= y + r {
         let mut xx = (x - r).floor();
@@ -94,7 +94,7 @@ fn glow(c: &mut Ctx, x: f64, y: f64, r: f64, col: u32, k: f64) {
 }
 
 /// A four-point twinkle.
-fn star(c: &mut Ctx, x: f64, y: f64, s: f64, col: u32) {
+pub(crate) fn star(c: &mut Ctx, x: f64, y: f64, s: f64, col: u32) {
     for i in -(s as i32)..=(s as i32) {
         let a = 1.0 - (i.abs() as f64) / (s + 1.0);
         c.fb.px(x + i as f64, y, col, a);

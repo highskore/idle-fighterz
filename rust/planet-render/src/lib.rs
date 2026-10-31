@@ -8,6 +8,7 @@
 
 pub mod beam;
 pub mod effects;
+mod ending;
 pub mod floats;
 pub mod intro;
 mod limits;

@@ -459,10 +459,11 @@ impl Scene {
             if view.clouds.is_some() {
                 draw_clouds(&mut c, view, &sea, false);
             }
-        } else {
+        } else if !crate::ending::no_sea(g) {
             draw_sea(&mut c, view, &sea, world, false);
         }
         self.mo_back(&mut c, g);
+        self.end_back(&mut c, g, view);
         if let Some(m) = g.tl.moon.clone() {
             draw_moon(&mut c, &m);
         }
@@ -610,7 +611,7 @@ impl Scene {
             if view.clouds.is_some() && world != 9 {
                 draw_clouds(&mut c, view, &sea, true);
             }
-        } else if world != 9 {
+        } else if world != 9 && !crate::ending::no_sea(g) {
             draw_sea(&mut c, view, &sea, world, true);
         }
         if let Some(d) = &dusk {
@@ -619,6 +620,7 @@ impl Scene {
         self.xf_front(&mut c, g, view, dt);
         crate::mech::draw(&mut c, g);
         self.mo_front(&mut c, g, view);
+        self.end_front(&mut c, g, view);
         if g.flash_t > 0.0 {
             g.flash_t = 0f64.max(g.flash_t - dt * 1.8);
             let a = g.flash_t * g.flash_t * 0.85;

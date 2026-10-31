@@ -6,6 +6,7 @@ pub mod bridge;
 pub mod buy;
 pub mod data;
 pub mod dusk;
+pub mod ending;
 pub mod floats;
 pub mod fx;
 pub mod game;

@@ -123,6 +123,8 @@ pub struct Game {
     pub no_mechs: bool,
     /// a limit break or a milestone playing (limits.rs)
     pub mo: Option<crate::limits::Moment>,
+    /// PROTOTYPE: an ending moment playing (ending.rs)
+    pub end: Option<crate::ending::Ending>,
     /// strain from play waiting for the next frame, the last tap that counted, and the strain per second (smoothed)
     pub strain_extra: f64,
     pub strain_tap_t: f64,
@@ -189,6 +191,7 @@ impl Game {
             xf_instant: false,
             no_mechs: false,
             mo: None,
+            end: None,
             strain_extra: 0.0,
             strain_tap_t: -9.0,
             strain_rate: 1.0,
@@ -487,12 +490,13 @@ impl Game {
 
     /// `ui.event(text)`: a toast for the default 2.6s.
     pub(crate) fn event(&mut self, s: impl Into<String>) {
-        self.events.push((s.into(), 2600.0));
+        self.event_ms(s, 2600.0);
     }
 
     /// `ui.event(text, ms)`: a toast that stays up `ms` milliseconds.
     pub(crate) fn event_ms(&mut self, s: impl Into<String>, ms: f64) {
-        self.events.push((s.into(), ms));
+        let Some(s) = crate::ending::toast_filter(self.end.as_ref(), s.into()) else { return };
+        self.events.push((s, ms));
     }
 
     /// `ach(id)`: an achievement, once, stamped with the wall clock; its toast follows 0.9s later.
@@ -1060,6 +1064,7 @@ impl Game {
             // a form you hold the power for comes as a scene (xform.rs) and stays for the run
             self.xform_step(t, dt);
             self.limits_step(t, dt);
+            self.ending_step(t);
             let last = self.forms.len() - 1;
             if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0) {
                 self.s.mastery += 1;
@@ -1391,6 +1396,7 @@ impl Game {
         }
         self.limits_preview(hash);
         self.looks_preview(hash);
+        self.ending_preview(hash);
         self.forms = ladder_of(self.s.hero, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
         if has("xform") {
