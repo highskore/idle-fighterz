@@ -17,6 +17,7 @@ pub mod scene;
 pub mod scenery;
 pub mod shade;
 pub mod shenron;
+pub mod snack;
 pub mod snake;
 pub mod storm;
 pub mod tones;

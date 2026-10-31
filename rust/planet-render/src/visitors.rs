@@ -499,8 +499,15 @@ impl Scene {
             c.blit_z(sprite::get("KRILLIN"), kx, ky, atan2(kv[0], kv[1]), cx + ka[0] * r < kx, sin(t * 9.0).abs() * 2.0, kv[2] * r + 5.0, 1.0);
         }
         if g.s.lv(Upg::Partner) > 0 && g.b.fuse_until <= t && !crate::mech::held(g, Ally::Bubbles) {
-            let mv = ap(&m, g.frame3.road_pt(g.phi - 0.32));
+            crate::snack::draw_butterfly(c, g);
+            let bub = g.tl.bub.clone();
+            let mv = ap(&m, g.frame3.road_pt(g.bub_phi()));
             let (mx, my, ma) = (cx + mv[0] * r, cy - mv[1] * r + bob, atan2(mv[0], mv[1]));
+            // he faces where he's going; dancing, he turns about
+            let ahead = ap(&m, g.frame3.road_pt(g.bub_phi() + if bub.v < -0.02 { -0.05 } else { 0.05 }));
+            let dance = bub.dancing(t);
+            let face = if dance { (t * if g.calm { 2.5 } else { 5.0 }).floor() as i64 % 2 == 0 } else { cx + ahead[0] * r < mx };
+            let pounce = !g.calm && bub.fly.as_ref().is_some_and(|f| f.gone.is_none() && (f.phi - g.bub_phi()).abs() < 0.12) && !dance;
             let kk = 2.6f64.min(1.0 + 0.16 * (g.s.lvf(Upg::Partner)).sqrt());
             g.tl.monkey_at = if mv[2] > 0.0 { Some((mx, my, kk)) } else { None };
             if g.tl.fuse_offer > t && g.rng.random() < 0.7 {
@@ -514,8 +521,14 @@ impl Scene {
                 mx,
                 my,
                 ma,
-                hero.flip,
-                if g.tl.fuse_offer > t { sin(t * 9.0).abs() * 3.0 } else { 0.0 },
+                face,
+                if g.tl.fuse_offer > t || (dance && !g.calm) {
+                    sin(t * 9.0).abs() * 3.0
+                } else if pounce {
+                    sin(t * 7.0).abs() * 5.0
+                } else {
+                    0.0
+                },
                 mv[2] * r + 5.0,
                 1.1 * kk,
             );

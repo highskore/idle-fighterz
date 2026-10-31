@@ -41,6 +41,8 @@ pub struct Buffs {
     pub bike_until: f64,
     /// the power surge a tapped-through transformation earns
     pub surge_until: f64,
+    /// a ramen break left alone: a full belly
+    pub ramen_until: f64,
 }
 
 /// Shenron's timed wish buffs (`wishBuff`), by key.
@@ -121,6 +123,8 @@ pub struct Game {
     pub xf_instant: bool,
     /// the boss mechanics off (the AFK sims' baseline)
     pub no_mechs: bool,
+    /// the planet's events off (the ramen break, ...: the AFK sims' baseline)
+    pub no_events: bool,
     /// a limit break or a milestone playing (limits.rs)
     pub mo: Option<crate::limits::Moment>,
     /// strain from play waiting for the next frame, the last tap that counted, and the strain per second (smoothed)
@@ -188,6 +192,7 @@ impl Game {
             xf: None,
             xf_instant: false,
             no_mechs: false,
+            no_events: false,
             mo: None,
             strain_extra: 0.0,
             strain_tap_t: -9.0,
@@ -411,6 +416,7 @@ impl Game {
                 + on(b.calm_until, 0.25)
                 + on(b.gadget_until, 0.5)
                 + on(b.surge_until, crate::xform::SURGE_X - 1.0)
+                + on(b.ramen_until, crate::ramen::FULL_X - 1.0)
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
@@ -990,8 +996,9 @@ impl Game {
             * if self.wished(WishBuff::Fast) { 1.5 } else { 1.0 }
             * if self.riding > 0.0 { 1.6 } else { 1.0 }
             * if self.wished(WishBuff::Fly) && !snake { 1.8 } else { 1.0 }
-            * if self.b.pose_until > t || self.tl.struggle.is_some() { 0.0 } else { 1.0 };
+            * if self.b.pose_until > t || self.tl.struggle.is_some() || self.eating() { 0.0 } else { 1.0 };
         self.phi += pace * dt;
+        self.bubbles_step(t, dt, pace);
         if self.phi - self.last_lap > LAP {
             self.last_lap += LAP;
             if self.playing {
@@ -1060,6 +1067,7 @@ impl Game {
             // a form you hold the power for comes as a scene (xform.rs) and stays for the run
             self.xform_step(t, dt);
             self.limits_step(t, dt);
+            self.ramen_step(t, dt);
             let last = self.forms.len() - 1;
             if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0) {
                 self.s.mastery += 1;
@@ -1383,6 +1391,17 @@ impl Game {
             self.tl.later.push((1.5, crate::timeline::Later::ItxPicker));
             self.s.ach.insert("yardrat");
             self.s.been = crate::data::ITX_WORLDS.iter().fold(0, |m, w| m | 1 << w);
+        }
+        if has("ramen") {
+            self.session = 200.0;
+            self.tl.home_since = self.session;
+            self.tl.next_ramen = 0.5;
+        }
+        if has("bubbles") {
+            lv(self, Upg::Partner, 3);
+            // he goes after a butterfly a second in
+            self.tl.bub.plan = 0;
+            self.tl.bub.until = 1.0;
         }
         if has("tournament") {
             self.session = 76.0;

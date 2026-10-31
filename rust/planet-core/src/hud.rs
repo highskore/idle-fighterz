@@ -337,6 +337,9 @@ impl Game {
         if b.surge_until > t {
             fx.push(format!("power surge ×{} {}s", crate::xform::SURGE_X, secs(b.surge_until)));
         }
+        if b.ramen_until > t {
+            fx.push(format!("full belly ×{} {}s", crate::ramen::FULL_X, secs(b.ramen_until)));
+        }
         if b.boost_until > t {
             fx.push(format!("boost ×2 {}s", secs(b.boost_until)));
         }
