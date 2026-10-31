@@ -10,6 +10,7 @@ pub mod beam;
 pub mod effects;
 pub mod floats;
 pub mod games;
+pub mod heroes;
 pub mod intro;
 mod limits;
 pub mod mech;

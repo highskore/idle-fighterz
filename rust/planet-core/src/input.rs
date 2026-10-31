@@ -443,6 +443,7 @@ impl Game {
             }
         }
         self.gain_at(pts, kx, ky - 16.0, true);
+        self.hero_beam(c, kx, ky - 26.0);
         self.cue(crate::hud::Cue::Fx("buy"));
         for i in 0..self.tl.meteors.len() {
             let m = &self.tl.meteors[i];

@@ -143,6 +143,8 @@ pub struct Game {
     /// the ki ceiling, kept until what it's made of changes (limits.rs)
     pub ceil_memo: std::cell::Cell<Option<crate::limits::CeilMemo>>,
     pub floor_memo: std::cell::Cell<Option<(u32, Big)>>,
+    /// the run state of the heroes game.js doesn't have (heroes.rs); never saved
+    pub hero_rt: crate::heroes::HeroRt,
 }
 
 impl Game {
@@ -201,6 +203,7 @@ impl Game {
             next_mile: Default::default(),
             ceil_memo: Default::default(),
             floor_memo: Default::default(),
+            hero_rt: Default::default(),
         };
         g.sync_shop();
         g
@@ -209,6 +212,7 @@ impl Game {
     /// game.js `start()`; the daily bonus needs a date and waits for the save bridge.
     pub fn start(&mut self) {
         self.playing = true;
+        self.hero_sync();
         self.sync_shop();
     }
 
@@ -439,7 +443,7 @@ impl Game {
 
     /// Power a second, buffs included: what the HUD shows.
     pub fn rate(&self) -> Big {
-        ((self.lap_value() / 7.0 + self.passive()) * self.mult(false)).round()
+        ((self.lap_value() / 7.0 + self.passive()) * self.mult(false) * self.hero_x()).round()
     }
 
     /// The rate without timed buffs: windfalls and villain hp are sized on it.
@@ -522,6 +526,7 @@ impl Game {
     pub fn gain(&mut self, n: impl Into<Big>) {
         let n = n.into();
         let n = if n > 1.0 { n.round() } else { Big::from(1.0) };
+        self.hero_earned(n);
         self.s.pl += n;
         if self.s.pl > self.s.best {
             self.s.best = self.s.pl;
@@ -597,10 +602,11 @@ impl Game {
         self.victory();
         if !preview {
             let f = self.s.form;
-            if f >= 1 {
+            // super saiyan and ultra instinct are a saiyan's (and super saiyan opens goku)
+            if f >= 1 && self.s.hero.saiyan() {
                 self.ach("ss");
             }
-            if f >= UI_FORM {
+            if f >= UI_FORM && self.s.hero.saiyan() {
                 self.ach("ui");
             }
             if f >= MUI_FORM {
@@ -670,6 +676,7 @@ impl Game {
             * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
         let k = self.kid_screen(14.0);
         self.gain_at(n, k.x, k.y - 10.0, crit);
+        self.hero_tap(k.x, k.y - 20.0);
         self.cue(Cue::Sfx("tap"));
         if crit {
             let k = self.kid_screen(14.0);
@@ -843,6 +850,7 @@ impl Game {
         self.s.seeds += gain;
         self.ach("ascend");
         self.s.pl = keep;
+        self.hero_reset();
         self.s.run_best = keep;
         self.s.namek_at = Big::ZERO;
         self.s.foes.clear();
@@ -877,6 +885,7 @@ impl Game {
         self.s.god_total += g;
         self.s.gods += 1;
         self.ach("godki");
+        self.hero_reset();
         let s = &mut self.s;
         s.pl = Big::ZERO;
         s.run_best = Big::ZERO;
@@ -926,6 +935,7 @@ impl Game {
             b.fled = true;
             b.t1 = self.t;
         }
+        self.hero_reset();
         let s = &mut self.s;
         s.levels = [0; Upg::ALL.len()];
         (s.pl, s.granted, s.multi, s.multi_t, s.uni_best, s.run_best, s.seeds, s.ascend, s.form, s.wishes, s.saga) =
@@ -1016,7 +1026,8 @@ impl Game {
                     * (1.0 + 0.5 * self.lvl(N_LEGS))
                     * if self.wished(WishBuff::Laps) { 3.0 } else { 1.0 }
                     * if self.tl.bz.is_some() { 3.0 } else { 1.0 }
-                    * if self.b.whis_until > t { 2.0 } else { 1.0 };
+                    * if self.b.whis_until > t { 2.0 } else { 1.0 }
+                    * self.hero_x();
                 let k = self.kid_screen(20.0);
                 self.gain_at(n, k.x, k.y - 14.0, true);
             }
@@ -1033,7 +1044,7 @@ impl Game {
             self.acc += rdt;
             if self.acc >= 1.0 {
                 self.acc -= 1.0;
-                let n = (self.lap_value() / 7.0 + self.passive()) * self.mult(false);
+                let n = (self.lap_value() / 7.0 + self.passive()) * self.mult(false) * self.hero_x();
                 self.gain(n);
             }
             // the timeline: all of it waits while you're on snake way
@@ -1065,6 +1076,7 @@ impl Game {
                 self.tl.preview = None;
             }
             // a form you hold the power for comes as a scene (xform.rs) and stays for the run
+            self.hero_step(dt);
             self.xform_step(t, dt);
             self.limits_step(t, dt);
             self.ramen_step(t, dt);

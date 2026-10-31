@@ -91,12 +91,16 @@ pub struct Form {
     pub look: usize,
     /// a limit-breaker form's number (1, 2, …); 0 for the canon forms
     pub lb: u32,
+    /// a non-saiyan's own aura, in place of the super saiyan form's he'd look like
+    pub own_aura: Option<[u32; 3]>,
 }
 
 impl Form {
     /// The aura's colours: the canon form's, or a limit breaker's (they cycle).
     pub fn aura(&self) -> [u32; 3] {
-        if self.lb == 0 {
+        if let Some(a) = self.own_aura.filter(|_| self.lb == 0) {
+            a
+        } else if self.lb == 0 {
             FORM_AURA[self.look]
         } else {
             LB_AURA[(self.lb as usize - 1) % LB_AURA.len()]
@@ -226,6 +230,16 @@ fn own_names(h: Hero) -> Option<[&'static str; 9]> {
     })
 }
 
+/// A non-saiyan's aura at every canon form: piccolo's namekian white-green, the others the plain base aura until
+/// their forms are picked.
+fn own_aura(h: Hero) -> Option<[u32; 3]> {
+    match h {
+        Hero::Piccolo => Some([0xffffff, 0xe2f8d8, 0x8ad87a]),
+        _ if h.saiyan() => None,
+        _ => Some(FORM_AURA[0]),
+    }
+}
+
 /// `ladderOf`: the shared nine, then the hero's late forms at 2e14, ×1000 each; then, once limit III is broken, a
 /// limit-breaker form for each limit broken past it (×2 each, held at the last canon form's mark).
 pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
@@ -238,14 +252,17 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         Hero::Piccolo | Hero::Krillin | Hero::Goten | Hero::Tien | Hero::A17 => &[],
     };
     let own = own_names(h);
-    let mut v: Vec<Form> =
-        ALL_FORMS[..9].iter().enumerate().map(|(i, &(name, at, x))| Form { name: own.map_or(name, |n| n[i]), at, x, look: i, lb: 0 }).collect();
+    let mut v: Vec<Form> = ALL_FORMS[..9]
+        .iter()
+        .enumerate()
+        .map(|(i, &(name, at, x))| Form { name: own.map_or(name, |n| n[i]), at, x, look: i, lb: 0, own_aura: own_aura(h) })
+        .collect();
     for (j, &i) in late.iter().enumerate() {
-        v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: i, lb: 0 });
+        v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: i, lb: 0, own_aura: None });
     }
     let top = v[v.len() - 1].clone();
     for n in 1..=limits.saturating_sub(LB_FROM - 1) {
-        v.push(Form { name: lb_name(n), at: top.at, x: top.x * 2f64.powi(n as i32), look: top.look, lb: n });
+        v.push(Form { name: lb_name(n), at: top.at, x: top.x * 2f64.powi(n as i32), look: top.look, lb: n, own_aura: None });
     }
     v
 }

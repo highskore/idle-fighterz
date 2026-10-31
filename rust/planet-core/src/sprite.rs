@@ -913,6 +913,73 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
     })
 }
 
+/// Piccolo sitting cross-legged to meditate (his design: turban, purple gi, red wristbands), and his cape apart from
+/// him, as `(row, column, colour)`, so the renderer can let it flutter.
+pub struct Seated {
+    pub body: Sprite,
+    pub cape: Vec<(usize, usize, u32)>,
+}
+
+pub fn piccolo_seated() -> &'static Seated {
+    static S: OnceLock<Seated> = OnceLock::new();
+    S.get_or_init(|| {
+        const BODY: [&str; 9] = [
+            "...oyyobbbbyyo..",
+            "..oyyyoaaaaoyyo.",
+            "..oYYogssssgoYo.",
+            "..oaasSSsSSsaao.",
+            "...oaaaaaaaaAo..",
+            "...ouuuuuuuuuo..",
+            ".oppppppppppppo.",
+            "oppPPpwwwwpPPppo",
+            ".oooooooooooooo.",
+        ];
+        let pal = Pal::new(&[
+            ('o', 0x120c18),
+            ('s', 0x5bb043),
+            ('S', 0x3c7f2e),
+            ('h', 0xf4f4f6),
+            ('H', 0xc2c6d2),
+            ('k', 0x7a4ab0),
+            ('K', 0x4e2c78),
+            ('E', 0x120c18),
+            ('r', 0xffffff),
+            ('M', 0x24401c),
+            ('a', 0x5a3a9a),
+            ('A', 0x3e2670),
+            ('b', 0x5a3a9a),
+            ('y', 0xf4f4f6),
+            ('Y', 0xc2c6d2),
+            ('u', 0x3a6ad8),
+            ('p', 0x5a3a9a),
+            ('P', 0x3e2670),
+            ('w', 0x8a4a2a),
+            ('g', 0xd8323a),
+        ]);
+        // seven columns of room behind him (he faces right) for the cape to stream back into
+        let rows: Vec<String> = PICCOLO_HEAD.iter().chain(BODY.iter()).map(|r| format!(".......{r}")).collect();
+        let body = make_sprite(&rows, &pal, "", Some(15.0), None);
+        // the cape hangs off his back from the shoulders and pools on the ground behind him
+        let mut cape = Vec::new();
+        for (j, row) in rows.iter().enumerate().skip(PICCOLO_HEAD.len()) {
+            let b = j - PICCOLO_HEAD.len();
+            let first = row.bytes().position(|c| c != b'.').unwrap();
+            let w = (2 + b / 2).min(first);
+            for i in first - w..first {
+                let c = if i == first - w || b == BODY.len() - 1 {
+                    0x120c18
+                } else if i == first - w + 1 {
+                    0xc2c6d2
+                } else {
+                    0xf4f4f6
+                };
+                cape.push((j, i, c));
+            }
+        }
+        Seated { body, cape }
+    })
+}
+
 /// How much bigger or smaller a hero is drawn than the others: Goten's a kid, Tien's tall.
 pub fn hero_scale(id: &str) -> f64 {
     match id {

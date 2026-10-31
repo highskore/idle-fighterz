@@ -680,7 +680,10 @@ impl Scene {
         let flip = ax < kd.x;
         let surf = c.world == 6;
         let fly = g.wished(planet_core::game::WishBuff::Fly) && !surf && g.b.ape_until <= t;
-        let spr = if g.b.pose_until > t || g.tl.struggle.is_some() {
+        let seated = (g.meditating() && !surf && !fly).then(|| crate::heroes::seated(g, t));
+        let spr = if let Some(s) = seated.as_ref() {
+            s
+        } else if g.b.pose_until > t || g.tl.struggle.is_some() {
             &set.pose
         } else if g.tl.jump_h > 1.0 || surf || fly || g.eating() {
             &set.run[0]
@@ -759,7 +762,7 @@ impl Scene {
                 g.fx.push(p);
             }
         }
-        if let Some(sp) = FORM_SPARK[fi] {
+        if let Some(sp) = FORM_SPARK[fi].filter(|_| g.s.hero.saiyan()) {
             if seen && g.rng.random() < 0.35 {
                 let mut x = kd.x + (g.rng.random() - 0.5) * 22.0;
                 let mut y = kd.y - cos(kd.ang) * (lift + 14.0) + (g.rng.random() - 0.5) * 26.0;
@@ -794,12 +797,14 @@ impl Scene {
                 .min((kd.y + uy * lift) / (1.001 - uy))
                 .min((c.h - kd.y - uy * lift) / (1.001 + uy))
                 - 3.0;
-            let a0 = sprite::get("APE.0");
+            // piccolo grows into a giant namekian: himself, huge, in place of the ape
+            let namek = g.s.hero == planet_core::data::Hero::Piccolo;
+            let a0 = if namek { &set.run[0] } else { sprite::get("APE.0") };
             let ape = &g.tl.ape;
             let want = 2.3 * (1.0 + 0.08 * g.tail_lv()) * if ape.giant { 1.0 + 0.5 * 1f64.min((t - ape.at) / 1.2) } else { 1.0 };
             let k = ape.k + (1.5f64.max(want.min(2.0 * half / (a0.w.max(a0.h) as f64))) - ape.k) * 1f64.min(dt * 2.0);
             g.tl.ape.k = k;
-            let spr = sprite::get(if step as i64 % 2 == 0 { "APE.0" } else { "APE.1" });
+            let spr = if namek { &set.run[step as i64 as usize % 4] } else { sprite::get(if step as i64 % 2 == 0 { "APE.0" } else { "APE.1" }) };
             draw_hero(c, spr, lift + sin(t * 3.2 * std::f64::consts::PI).abs() * 3.0, depth + 30.0, k, kd.x, kd.y, kd.ang);
         } else if g.b.fused.is_some_and(|f| f.1 > t) {
             let look = g.tl.fused_look;

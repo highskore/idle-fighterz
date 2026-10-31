@@ -93,6 +93,8 @@ impl Game {
         }
         let note = match u {
             Upg::Partner if first => "bubbles wants to train with you",
+            Upg::Galick if first && self.s.hero == Hero::Piccolo => "hold anywhere to charge the special beam cannon: it spends his focus",
+            Upg::Piccolo if first && self.s.hero == Hero::Piccolo => "kid gohan lands to meditate",
             Upg::Galick if first => {
                 if self.kame() {
                     "hold anywhere to charge a kamehameha"
