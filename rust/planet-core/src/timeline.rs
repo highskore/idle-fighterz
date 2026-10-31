@@ -3564,6 +3564,10 @@ impl Game {
         if self.ape_tap(px, py) {
             return;
         }
+        // krillin's taps that would train throw his discs instead
+        if self.hero_disc_tap(px, py) {
+            return;
+        }
         self.train_tap();
     }
 

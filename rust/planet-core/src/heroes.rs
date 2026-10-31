@@ -7,8 +7,8 @@
 //! earns what an idle Vegeta does. A training tap spends a slice of focus and pays it out; a beam, his special beam
 //! cannon, spends focus in proportion to its charge and pays much more for it. Taps and beams themselves pay as anyone's.
 //!
-//! Krillin throws destructo discs: his taps are discs, not training. A tap throws one toward where you tapped (on
-//! himself, straight ahead), at most one every `DISC_GAP`; it cuts every saibaman, soldier, meteor and orb along its
+//! Krillin throws destructo discs: his taps are discs, not training. A tap that hits nothing else throws one toward
+//! where you tapped (on himself, straight ahead), at most one every `DISC_GAP`; a chain counts as his combo. It cuts every saibaman, soldier, meteor and orb along its
 //! line, each paying as if taken by hand, and each cut after the first in one throw also pays a chain bonus that
 //! doubles with every cut. Left alone he throws one by himself every `DISC_AUTO` at the nearest saibaman or meteor
 //! (never at an orb: running picks those up anyway). After `BARRAGE_CUTS` cuts, his next disc at a villain is a giant
@@ -299,13 +299,14 @@ impl Game {
         self.own_pay(pay, x, y);
     }
 
-    /// A tap of yours at (x, y), before it's handled: krillin's taps are his discs. One is thrown that way (on
-    /// himself, straight ahead along the road) if one's ready, and either way the tap is spent; only a tap on a
-    /// space pod is still a hand catching it.
-    pub(crate) fn hero_touch(&mut self, x: f64, y: f64) -> bool {
+    /// A tap of yours at (x, y) that hit nothing else and would train: krillin throws a disc that way instead (on
+    /// himself, straight ahead along the road) if one's ready, and either way the tap is spent. Everything a tap
+    /// does before that (a villain, a pod, the moon, the fusion dance's beats…) is his as anyone's, and a training
+    /// tap the game makes (instinct's, from off the screen) still trains.
+    pub(crate) fn hero_disc_tap(&mut self, x: f64, y: f64) -> bool {
         let t = self.t;
         let Kind::Krillin { last, .. } = self.hero_rt.kind else { return false };
-        if self.tl.star.as_ref().is_some_and(|s| hypot(&[x - s.x, y - s.y]) < 10.0) {
+        if !(0.0..=self.cam.w).contains(&x) || !(0.0..=self.cam.h).contains(&y) {
             return false;
         }
         if t - last >= DISC_GAP && !self.stunned() && !self.swapped() {
@@ -425,6 +426,10 @@ impl Game {
         let n = hits.len() as u32;
         if n >= 2 {
             self.event(format!("destructo disc! {n} cut in one throw · chain ×{}", 1u32 << (n - 1)));
+            // a chain is his combo: n cuts in one throw count as a ×n combo
+            self.combo = self.combo.max((n as f64).min(self.combo_cap()));
+            self.last_click = t;
+            self.goal("combo", 1.0, false);
         }
         if let Kind::Krillin { cuts, last, discs, .. } = &mut self.hero_rt.kind {
             *cuts += n;

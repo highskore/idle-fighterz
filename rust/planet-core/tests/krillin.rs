@@ -82,7 +82,7 @@ impl Run {
     }
 }
 
-const SEEDS: [u32; 12] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const SEEDS: [u32; 24] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
 
 fn geo_mean(v: &[f64]) -> f64 {
     (v.iter().map(|x| x.ln()).sum::<f64>() / v.len() as f64).exp()
@@ -155,12 +155,12 @@ fn the_barrage_takes_a_fifth_of_a_villain() {
     if let planet_core::heroes::Kind::Krillin { cuts, .. } = &mut g.hero_rt.kind {
         *cuts = BARRAGE_CUTS;
     }
-    let (x, y) = (b.x, b.y);
     for _ in 0..30 {
         let t = g.t + DT;
         g.frame(t, DT);
     }
-    g.tap(x, y);
+    // a tap on empty sky: with the barrage charged, the disc goes for the villain
+    g.tap(g.cam.w * 0.05, g.cam.h * 0.05);
     let hp1 = g.tl.boss.as_ref().map_or(0.0, |b| b.hp.to_f64());
     assert!(hp0 - hp1 >= max * 0.19 || g.tl.boss.as_ref().is_none_or(|b| b.dead), "the barrage: {hp0} → {hp1} of {max}");
     assert_eq!(g.cuts(), 0);
@@ -214,7 +214,9 @@ fn his_own_late_forms_moon_and_fusion() {
     for _ in 0..30 * 10 {
         if let Some(d) = r.g.tl.dance.clone() {
             if d.i < 3 && (d.beats[d.i] - r.g.t).abs() < 0.05 {
-                r.g.train();
+                // a real tap on him: the beat takes it before any disc would
+                let k = r.g.kid_screen(14.0);
+                r.g.tap(k.x, k.y);
             }
         }
         r.play(Play::Idle, DT);
@@ -223,4 +225,41 @@ fn his_own_late_forms_moon_and_fusion() {
     assert!(said.iter().any(|s| s.starts_with("master roshi wants to do the fusion dance")), "{said:?}");
     assert!(said.iter().any(|s| s.contains("roshillin")), "{said:?}");
     assert_eq!(r.g.tl.fused_look, "FUSED.roshillin");
+}
+
+#[test]
+fn a_chain_is_his_combo_and_his_taps_still_hit_what_they_touch() {
+    let mut r = Run::new(7, Hero::Krillin);
+    while r.g.kid_screen(0.0).v[2] < 0.4 {
+        r.play(Play::Idle, 0.1);
+    }
+    r.g.s.goal = "combo";
+    r.g.s.goal_p = 0.0;
+    let phi = r.g.phi;
+    let front = |d: f64| r.g.cam.screen(r.g.frame3.road_pt(phi + d), 4.0).v[2] > 0.05;
+    let dir = if front(0.14) { 1.0 } else { -1.0 };
+    r.g.tl.orbs = [0.06, 0.1].iter().map(|d| planet_core::timeline::Orb { phi: phi + d * dir, star: false, done: false }).collect();
+    let p = r.g.cam.screen(r.g.frame3.road_pt(phi + 0.1 * dir), 4.0);
+    r.g.tap(p.x, p.y);
+    assert_eq!(r.g.combo, 2.0, "two cuts in one throw are a ×2 combo");
+    assert_ne!(r.g.s.goal, "combo", "and they meet \"hit a ×2 combo\"");
+    // a villain tapped is hit by hand, not thrown at
+    let mut g = Game::new(7);
+    g.preview("#hero-krillin#saga1");
+    g.start();
+    while g.tl.boss.as_ref().is_none_or(|b| b.hp.to_f64() <= 0.0) {
+        let t = g.t + DT;
+        g.frame(t, DT);
+        assert!(g.t < 200.0);
+    }
+    // past his arrival (the scouter intro takes every tap)
+    for _ in 0..30 * 8 {
+        let t = g.t + DT;
+        g.frame(t, DT);
+    }
+    let b = g.tl.boss.as_ref().unwrap();
+    let (x, y, hp0) = (b.x, b.y - b.spr().h / 2.0 * b.k, b.hp.to_f64());
+    g.tap(x, y);
+    assert!(g.tl.boss.as_ref().is_some_and(|b| b.hp.to_f64() < hp0), "the tap hits him");
+    assert!(g.discs().is_empty(), "no disc for a tap that hit something");
 }
