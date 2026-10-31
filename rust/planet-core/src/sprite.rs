@@ -465,21 +465,42 @@ fn cat(a: &[&str], b: &Rows) -> Rows {
 
 /// `makeHero(head, pal, gi)`
 pub fn make_hero(head: &[&str], pal: &[(char, u32)], gi: bool) -> Hero {
-    make_hero_with(head, pal, gi, false)
+    make_hero_with(head, pal, gi, Opt::default())
 }
 
 /// A prototype hero who doesn't go super saiyan: every form keeps one look (`later` from the first form-up, e.g.
 /// piccolo without his turban). `sleeves` gives a gi with sleeves (`c`/`C`) instead of bare arms.
 pub fn make_plain(head: &[&str], later: &[&str], pal: &[(char, u32)], sleeves: bool) -> Hero {
-    let a = make_hero_with(head, pal, true, sleeves);
-    let b = make_hero_with(later, pal, true, sleeves);
+    make_plain_with(head, later, pal, Opt { sleeves: sleeves as u8, ..Opt::default() })
+}
+
+/// How a prototype design's body is cut: `sleeves` 0 bare arms, 1 long sleeves (`c`/`C`), 2 short sleeves; `armor`
+/// keeps the armour body (suit `b`, chest `a`); `cape` hangs a cape (`q`/`Q`) down his back.
+#[derive(Clone, Copy, Default)]
+pub struct Opt {
+    pub sleeves: u8,
+    pub armor: bool,
+    pub cape: bool,
+}
+
+pub fn make_plain_with(head: &[&str], later: &[&str], pal: &[(char, u32)], o: Opt) -> Hero {
+    let a = make_hero_with(head, pal, !o.armor, o);
+    let b = make_hero_with(later, pal, !o.armor, o);
     let mut forms = vec![a.forms[0].clone()];
     forms.extend((1..a.forms.len()).map(|_| b.forms[0].clone()));
     let backs = (0..a.backs.len()).map(|_| a.backs[0].clone()).collect();
     Hero { forms, fused: a.fused, backs }
 }
 
-fn make_hero_with(head: &[&str], pal: &[(char, u32)], gi: bool, sleeves: bool) -> Hero {
+pub fn make_hero_opt(head: &[&str], pal: &[(char, u32)], o: Opt) -> Hero {
+    make_hero_with(head, pal, !o.armor, o)
+}
+
+fn make_hero_with(head: &[&str], pal: &[(char, u32)], gi: bool, o: Opt) -> Hero {
+    // a cape needs room behind him: two more columns on the left
+    let padded: Vec<String> = head.iter().map(|r| if o.cape { format!("..{r}") } else { r.to_string() }).collect();
+    let head: Vec<&str> = padded.iter().map(|r| r.as_str()).collect();
+    let head = &head[..];
     let base = Pal::new(&[
         ('o', 0x120c18),
         ('h', 0x1a1826),
@@ -516,14 +537,14 @@ fn make_hero_with(head: &[&str], pal: &[(char, u32)], gi: bool, sleeves: bool) -
                     .map(|c| match c {
                         _ if !gi => c,
                         b'b' if (3..=4).contains(&j) => {
-                            if sleeves {
+                            if o.sleeves == 1 || (o.sleeves == 2 && j == 3) {
                                 b'c'
                             } else {
                                 b's'
                             }
                         }
                         b'B' if (3..=4).contains(&j) => {
-                            if sleeves {
+                            if o.sleeves == 1 || (o.sleeves == 2 && j == 3) {
                                 b'C'
                             } else {
                                 b'S'
@@ -534,7 +555,30 @@ fn make_hero_with(head: &[&str], pal: &[(char, u32)], gi: bool, sleeves: bool) -
                         b'B' if j >= 8 => b'P',
                         _ => c,
                     })
-                    .collect()
+                    .collect::<Vec<u8>>()
+            })
+            .enumerate()
+            .map(|(j, mut row): (usize, Vec<u8>)| {
+                if o.cape {
+                    row.splice(0..0, *b"..");
+                }
+                // a cape down his back (he faces right): behind whatever the frame has there
+                if o.cape && j <= 12 {
+                    // hung off his back: filled from his outline outward, flaring toward the hem
+                    if let Some(f) = row.iter().position(|&c| c != b'.') {
+                        let w = (1 + j / 2).min(f);
+                        for i in f - w..f {
+                            row[i] = if i == f - w || j == 12 {
+                                b'o'
+                            } else if i == f - w + 1 {
+                                b'Q'
+                            } else {
+                                b'q'
+                            };
+                        }
+                    }
+                }
+                row
             })
             .collect()
     };

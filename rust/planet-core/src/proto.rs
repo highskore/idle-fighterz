@@ -18,6 +18,8 @@ pub struct Proto {
     pub said: bool,
     /// piccolo A's meditation look (`#med-N`, 0 = the first rings) and its focus, 0..1 (`#focus-lo`: low, else full)
     pub look: u32,
+    /// the hero designs picker's sprite design (`#design-N`), 0 for the hero's own
+    pub design: u32,
     pub focus: f64,
     /// where on the road he stands
     pub phi0: Option<f64>,
@@ -61,7 +63,8 @@ impl Game {
         let Some(opt) = hash[i + 6..].chars().next() else { return };
         let look = hash.find("med-").and_then(|i| hash[i + 4..].chars().next()).and_then(|c| c.to_digit(10)).unwrap_or(0);
         let focus = if hash.contains("focus-lo") { 0.12 } else { 1.0 };
-        self.proto = Some(Proto { opt, t0: -1.0, said: false, phi0: None, look, focus });
+        let design = hash.find("design-").and_then(|i| hash[i + 7..].chars().next()).and_then(|c| c.to_digit(10)).unwrap_or(0);
+        self.proto = Some(Proto { opt, t0: -1.0, said: false, phi0: None, look, focus, design });
         let s = &mut self.s;
         s.pl = 1.5e4.into();
         s.best = s.pl;
@@ -70,7 +73,11 @@ impl Game {
         for (u, n) in [(Upg::Boots, 10), (Upg::House, 2), (Upg::Gravity, 2), (Upg::Scouter, 2), (Upg::Galick, 1), (Upg::Senzu, 1), (Upg::Kaio, 1)] {
             s.levels[u as usize] = n;
         }
-        if s.hero == Hero::Piccolo && opt == 'B' {
+        if hash.contains("#ssj") {
+            // its achievement would toast over the shot
+            s.ach.insert("ss");
+        }
+        if (s.hero == Hero::Piccolo && opt == 'B') || hash.contains("#ssj") {
             s.pl = 2.4e4.into();
             s.best = s.pl;
         }
@@ -98,7 +105,7 @@ impl Game {
         self.phi = phi;
         self.last_lap = phi - 1.0;
         let lead = match (self.s.hero, opt) {
-            (Hero::Tien, 'A') | (Hero::Piccolo, 'A') => 0.0,
+            (Hero::Tien, 'A') | (Hero::Piccolo, 'A') | (_, 'Z') => 0.0,
             _ => 0.3,
         };
         let f = &self.frame3;

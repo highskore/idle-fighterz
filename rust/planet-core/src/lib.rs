@@ -5,6 +5,7 @@ pub mod big;
 pub mod bridge;
 pub mod buy;
 pub mod data;
+pub mod designs;
 pub mod dusk;
 pub mod floats;
 pub mod fx;

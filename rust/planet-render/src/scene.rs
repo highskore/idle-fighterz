@@ -647,7 +647,9 @@ impl Scene {
         let form = &g.forms[g.s.form];
         let fi = form.look;
         let aura = form.aura();
-        let hero = sprite::hero(hero_id(g));
+        let design = g.proto.as_ref().and_then(|p| planet_core::designs::design(hero_id(g), p.design));
+        let hero = design.map_or_else(|| sprite::hero(hero_id(g)), |d| &d.hero);
+        let dk = design.map_or(1.0, |d| d.scale);
         let shown = g.forms[crate::xform::shown_form(g, t)].look;
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[shown] };
         let bl = match &self.itx_fx {
@@ -867,7 +869,7 @@ impl Scene {
         } else if (0.0..0.75).contains(&bl) {
             draw_hero(c, &itx_pose(&set.idle), lift, depth, 1.05, kd.x, kd.y, kd.ang);
         } else {
-            draw_hero(c, spr, lift, depth, 1.05, kd.x, kd.y, kd.ang);
+            draw_hero(c, spr, lift, depth, 1.05 * dk, kd.x, kd.y, kd.ang);
         }
         if bl >= 0.0 {
             // where he stood: his shape fades out in a shimmer; where he lands, a ring of light pulls in
