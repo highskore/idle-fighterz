@@ -41,7 +41,7 @@ fn ball(c: &mut Ctx, x: f64, y: f64, r: f64) {
 
 /// `BEAM()`: goku and gohan fire a blue kamehameha, vegeta and trunks a purple galick gun (mid, edge).
 fn beam_pal(g: &Game) -> (u32, u32) {
-    if matches!(g.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin) {
+    if matches!(g.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten) {
         (0xcdeeff, 0x1f6ad8)
     } else if g.s.hero == Hero::Piccolo {
         (0xfff6c0, 0x7a3ae0)

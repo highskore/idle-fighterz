@@ -7,6 +7,12 @@
 //! earns what an idle Vegeta does. A training tap spends a slice of focus and pays it out; a beam, his special beam
 //! cannon, spends focus in proportion to its charge and pays much more for it. Taps and beams themselves pay as anyone's.
 //!
+//! Goten was born super saiyan: his forms come at `GOTEN_MARK` of the usual marks, but he can't hold one. `GOTEN_UP`
+//! seconds after a form-up he runs out of steam and drops a form; `GOTEN_REST` later he powers up again by himself,
+//! the transformation scene replaying it (taps hurry it, as anyone's do), and each tap that would train while he's
+//! down takes `GOTEN_CHEER` off his rest. His training taps are a kid's, `GOTEN_TAP` of anyone's. The form he dropped still counts as his for
+//! mastery stars, god ki and the multiverse.
+//!
 //! Krillin throws destructo discs: his taps are discs, not training. A tap that hits nothing else throws one toward
 //! where you tapped (on himself, straight ahead), at most one every `DISC_GAP`; a chain counts as his combo. It cuts every saibaman, soldier, meteor and orb along its
 //! line, each paying as if taken by hand, and each cut after the first in one throw also pays a chain bonus that
@@ -36,6 +42,13 @@ pub const CANNON_SECS: f64 = 155.0;
 pub const STRAIN_FOCUS: f64 = 100.0;
 /// His steady income with no focus; full focus doubles it.
 pub const PICCOLO_BASE: f64 = 0.5;
+
+/// How long goten holds a form, and how long he rests in base before powering up again by himself.
+pub const GOTEN_UP: f64 = 90.0;
+pub const GOTEN_REST: f64 = 30.0;
+/// His forms' marks against the usual ones, and his training taps against anyone's (a kid's punches).
+pub const GOTEN_MARK: f64 = 0.6;
+pub const GOTEN_TAP: f64 = 0.5;
 
 /// Seconds between krillin's discs, and between the ones he throws by himself.
 pub const DISC_GAP: f64 = 0.4;
@@ -76,6 +89,13 @@ pub enum Kind {
         auto: f64,
         discs: Vec<Disc>,
     },
+    Goten {
+        /// when he last formed up, when he dropped to base (while he's down), his best form, and the form last seen
+        up: f64,
+        down: Option<f64>,
+        best: usize,
+        seen: usize,
+    },
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -92,6 +112,7 @@ impl Kind {
         match h {
             Hero::Piccolo => Kind::Piccolo { focus: 1.0 },
             Hero::Krillin => Kind::Krillin { cuts: 0, last: -9.0, auto: DISC_AUTO, discs: Vec::new() },
+            Hero::Goten => Kind::Goten { up: 0.0, down: None, best: 0, seen: 0 },
             _ => Kind::None,
         }
     }
@@ -182,6 +203,73 @@ impl Game {
         }
     }
 
+    /// The hero's own factor on his training taps.
+    pub fn hero_tap_x(&self) -> f64 {
+        match self.hero_rt.kind {
+            Kind::Goten { .. } => GOTEN_TAP,
+            _ => 1.0,
+        }
+    }
+
+    /// The form that counts as his: goten's best this run even while he's dropped to base; anyone else's own.
+    pub fn held_form(&self) -> usize {
+        match self.hero_rt.kind {
+            Kind::Goten { best, .. } => best.max(self.s.form),
+            _ => self.s.form,
+        }
+    }
+
+    /// Goten, dropped a form, since when (None for everyone else, and for him while he holds his best).
+    pub fn powered_down(&self) -> Option<f64> {
+        match self.hero_rt.kind {
+            Kind::Goten { down, .. } => down,
+            _ => None,
+        }
+    }
+
+    /// Seconds goten has left in his form (None when he's down, or for anyone else).
+    pub fn form_left(&self) -> Option<f64> {
+        match self.hero_rt.kind {
+            Kind::Goten { up, down: None, .. } if self.s.form > 0 && self.xf.is_none() => Some((GOTEN_UP - (self.t - up)).max(0.0)),
+            _ => None,
+        }
+    }
+
+    /// Goten's step: he drops a form when his time's up, and rests before he powers up again.
+    fn goten_step(&mut self) {
+        let t = self.t;
+        let (form, scene) = (self.s.form, self.xf.is_some());
+        let Kind::Goten { up, down, best, seen } = &mut self.hero_rt.kind else { return };
+        if form > *seen {
+            *up = t;
+        }
+        *seen = form;
+        *best = (*best).max(form);
+        if let Some(d) = *down {
+            if t - d >= GOTEN_REST {
+                *down = None;
+            }
+        } else if form > 0 && !scene && t - *up >= GOTEN_UP {
+            *down = Some(t);
+            *seen = form - 1;
+            self.s.form = form - 1;
+            self.cue(crate::hud::Cue::Form(form - 1));
+            let (now, was) = (self.forms[form - 1].name, self.forms[form].name);
+            self.event(format!("goten runs out of steam — {was} drops to {now}. he'll power up again in {GOTEN_REST}s, or tap him"));
+        }
+    }
+
+    /// A tap that would train while goten is down: he powers up at once, and that's the tap.
+    pub(crate) fn hero_power_tap(&mut self) -> bool {
+        match &mut self.hero_rt.kind {
+            Kind::Goten { down: down @ Some(_), .. } => {
+                *down = None;
+                true
+            }
+            _ => false,
+        }
+    }
+
     /// Piccolo sits cross-legged and meditates: left alone, and not busy being something else.
     pub fn meditating(&self) -> bool {
         let t = self.t;
@@ -234,6 +322,7 @@ impl Game {
             r.rate = r.rate + (now - r.rate) * (r.tick / RATE_SECS).min(1.0);
             (r.earned, r.tick) = (Big::ZERO, 0.0);
         }
+        self.goten_step();
         if self.meditating() {
             let f = self.focus();
             if f < 1.0 {

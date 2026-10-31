@@ -257,10 +257,12 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         _ => &[],
     };
     let own = own_names(h);
+    // goten was born super saiyan: his marks come at a tenth (he can't hold a form for long, heroes.rs)
+    let mark = if h == Hero::Goten { crate::heroes::GOTEN_MARK } else { 1.0 };
     let mut v: Vec<Form> = ALL_FORMS[..9]
         .iter()
         .enumerate()
-        .map(|(i, &(name, at, x))| Form { name: own.map_or(name, |n| n[i]), at, x, look: i, lb: 0, own_aura: own_aura(h) })
+        .map(|(i, &(name, at, x))| Form { name: own.map_or(name, |n| n[i]), at: at * mark, x, look: i, lb: 0, own_aura: own_aura(h) })
         .collect();
     for (j, &i) in late.iter().enumerate() {
         v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: i, lb: 0, own_aura: None });

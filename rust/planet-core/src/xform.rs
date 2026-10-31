@@ -93,7 +93,7 @@ impl Game {
             }
             self.xf_instant = false;
         }
-        if self.xf.is_none() && self.form_owed() && !self.breaking() {
+        if self.xf.is_none() && self.form_owed() && !self.breaking() && self.powered_down().is_none() {
             if self.s.world == 3 && self.tl.snk.is_some() {
                 self.transform(preview);
                 return;
@@ -132,7 +132,8 @@ impl Game {
     /// The form lands, with every other form the power already holds (they came one a frame before the scene).
     fn xform_land(&mut self, t: f64, taps: u32) {
         let preview = self.tl.preview.is_some();
-        let surge = taps >= SURGE_TAPS;
+        // goten powering up again replays a form he's had: hurrying it is its own reward, there's no surge
+        let surge = taps >= SURGE_TAPS && self.held_form() <= self.s.form;
         if surge {
             self.b.surge_until = t + SURGE_S;
         }
@@ -140,10 +141,17 @@ impl Game {
         while self.s.form + n < self.forms.len() - 1 && self.s.pl >= self.forms[self.s.form + n + 1].at {
             n += 1;
         }
+        let said = self.events.len();
         for i in 0..n {
             let more = if surge && i == n - 1 { format!(" — power surge ×{SURGE_X} for {SURGE_S}s") } else { String::new() };
             // up past the reveal, so the new form settles with its name still showing
             self.transform_with(preview, &more, 4000.0);
+        }
+        // goten powering up again climbs straight back to his best form: only its own toast
+        if self.s.hero == crate::data::Hero::Goten && n > 1 {
+            let last = self.events.pop();
+            self.events.truncate(said);
+            self.events.extend(last);
         }
         if self.calm {
             self.flash_t = 0.0;

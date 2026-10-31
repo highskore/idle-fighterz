@@ -1324,7 +1324,8 @@ impl Game {
                     // the new heroes' partners are still to be picked
                     Hero::Krillin => ("master roshi", "roshillin"),
                     // the other new heroes' fusions come with their own work
-                    Hero::Piccolo | Hero::Goten | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
+                    Hero::Goten => ("kid trunks", "gotenks"),
+                    Hero::Piccolo | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
@@ -1341,6 +1342,8 @@ impl Game {
                 // the new heroes' fusions have no fat or skinny one: a botched dance is still them, weaker
                 let own = match res {
                     "roshillin" => Some("FUSED.roshillin"),
+                    // goten's gotenks: a botched dance is still gotenks (trunks' keeps the old fat and skinny ones)
+                    "gotenks" if self.s.hero == Hero::Goten => Some("FUSED.gotenks"),
                     _ => None,
                 };
                 let x = if sat {
@@ -1695,7 +1698,7 @@ impl Game {
         }
         // ultra instinct (or the end of the sagas) opens the multiverse
         let sagas = VILLAINS.len() as u32;
-        if !self.s.multi && (self.s.saga >= sagas || self.s.form >= UI_FORM) {
+        if !self.s.multi && (self.s.saga >= sagas || self.held_form() >= UI_FORM) {
             self.s.multi = true;
             self.s.multi_t = session;
             self.tl.next_boss = self.tl.next_boss.min(20.0);
@@ -3564,8 +3567,8 @@ impl Game {
         if self.ape_tap(px, py) {
             return;
         }
-        // krillin's taps that would train throw his discs instead
-        if self.hero_disc_tap(px, py) {
+        // krillin's taps that would train throw his discs instead; goten's, while he's down, power him up
+        if self.hero_disc_tap(px, py) || self.hero_power_tap() {
             return;
         }
         self.train_tap();

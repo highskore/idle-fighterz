@@ -172,7 +172,7 @@ impl Game {
     pub(crate) fn strain_tap(&mut self) {
         if self.t - self.strain_tap_t >= STRAIN_TAP_GAP {
             self.strain_tap_t = self.t;
-            self.strain_extra += STRAIN_TAP;
+            self.strain_extra += STRAIN_TAP * self.hero_tap_x();
         }
     }
 

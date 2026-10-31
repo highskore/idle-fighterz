@@ -243,9 +243,9 @@ impl Game {
         self.cues.push(c);
     }
 
-    /// `kame()`: goku, gohan and krillin fire a kamehameha, the others a galick gun (piccolo his own cannon).
+    /// `kame()`: goku, gohan, krillin and goten fire a kamehameha, the others a galick gun (piccolo his own cannon).
     pub fn kame(&self) -> bool {
-        matches!(self.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin)
+        matches!(self.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten)
     }
 
     /// The buffs line under the power (`fxs.join(' · ')`).
@@ -367,6 +367,12 @@ impl Game {
         if matches!(self.s.hero, Hero::Piccolo) {
             // how full his focus is (his steady income runs from half at empty to whole at full)
             fx.push(format!("focus {}%", num(js_round(self.focus() * 100.0))));
+        }
+        if let Some(left) = self.form_left() {
+            fx.push(format!("{} {}s", self.forms[self.s.form].name, num(left.ceil())));
+        }
+        if self.powered_down().is_some() {
+            fx.push("powered down · tap him".into());
         }
         if self.cuts() > 0 {
             fx.push(format!("discs {}/{BARRAGE}", self.cuts().min(crate::heroes::BARRAGE_CUTS), BARRAGE = crate::heroes::BARRAGE_CUTS));
@@ -531,7 +537,7 @@ impl Game {
         for key in SHOP_ORDER {
             let (unlock, level, cost, label) = match key {
                 "ascend" => (self.ascend_unlocked(), s.ascend, self.ascend_cost(), "ascend"),
-                "godki" => (s.form >= MUI_FORM && self.god_now() > 0, Big::from(s.gods), self.god_cost(), "god ki"),
+                "godki" => (self.held_form() >= MUI_FORM && self.god_now() > 0, Big::from(s.gods), self.god_cost(), "god ki"),
                 "zeno" => (self.zeno_ready(), Big::from(s.zeno), Big::ZERO, "zeno button"),
                 _ => {
                     let u = Upg::from_key(key).unwrap();

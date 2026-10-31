@@ -673,7 +673,8 @@ impl Game {
             * self.combo
             * if crit { self.crit_hit() } else { 1.0 }
             * (1.0 + 0.5 * self.lvl(N_FIST))
-            * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
+            * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 }
+            * self.hero_tap_x();
         let k = self.kid_screen(14.0);
         self.gain_at(n, k.x, k.y - 10.0, crit);
         self.hero_tap(k.x, k.y - 20.0);
@@ -876,7 +877,7 @@ impl Game {
 
     /// God ki: seeds, the tree, forms and universes go; wishes, sagas and mastery stars stay.
     pub fn god_reset(&mut self) {
-        if self.s.form < MUI_FORM || self.god_now() == 0 {
+        if self.held_form() < MUI_FORM || self.god_now() == 0 {
             return;
         }
         self.flash_t = 1.0;
@@ -1083,7 +1084,8 @@ impl Game {
             self.cg_step(t, dt);
             self.candy_step(t, dt);
             let last = self.forms.len() - 1;
-            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0) {
+            if self.held_form() == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0)
+            {
                 self.s.mastery += 1;
                 self.ach("mastery");
                 let next = crate::num::fmt_short(self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0));
