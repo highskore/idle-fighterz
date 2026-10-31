@@ -159,6 +159,14 @@ html.touch .shop.bulky .bulk { display: flex; }
 /* instant transmission: a blue button above kaioken once it's bought; it counts down after a jump */
 .kaio.itxb { bottom: 58px; background: #2f8ae0; } .kaio.itxb:disabled { background: #b8d6f4; }
 .wish.itxp { display: grid; grid-template-columns: 1fr 1fr; width: min(420px, 92%); } .wish.itxp p, .wish.itxp .stay { grid-column: 1 / -1; } .wish.itxp button { padding: 8px 12px; } .wish .stay { align-items: center; color: var(--muted); }   /* the picker: two columns of worlds */
+/* the "ki meter" buttons (a setting, menu → achievements): a recharging button fills left to right in its own colour
+   over today's pale, instead of counting down */
+@property --f { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
+.kaio { --kc: #e0332b; --kp: #f1b9b4; } .kaio.itxb { --kc: #2f8ae0; --kp: #b8d6f4; }
+html[data-kibtn="meter"] .kaio:disabled { background: linear-gradient(to right, var(--kc) var(--f), var(--kp) var(--f)); transition: --f 1s linear, transform .12s; }
+html[data-kibtn="meter"] .kaio small { font-size: 1em; opacity: .8; margin-left: 6px; font-variant-numeric: tabular-nums; }
+html[data-kibtn="meter"] .kjump { transition: none !important; }
+@media (prefers-reduced-motion: reduce) { html[data-kibtn="meter"] .kaio:disabled { transition: none; } }
 @media (max-width: 760px) {
   .kaio { position: static; height: 34px; box-sizing: border-box; padding: 0 14px; white-space: nowrap; flex: none; }   /* the cooldown text stays on one line, to the right of upgrades */ .game:has(.shop.open) .kaio { display: none; }
 }
@@ -546,7 +554,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     });
   };
   const tipOpen = b => { if (!game || !game.info || !$('shop').classList.contains('bulky')) return; tipFor = b; tipPaint(); };
-  let lastPl = 0;
+  let lastPl = 0, kiOwned = false;
   const SEAS = ['#e2a93a', '#1e7a7a', '#a03a1c', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c', '#0c0618', '#d2dce8', '#d89ab8', '#c89ab8'];   // each world's deepest sea tone
   // the wish box, which instant transmission's picker (class itxp) borrows: a button with data-i picks, any other closes it
   const closeBox = () => { const box = $('wish'); box.hidden = true; box.classList.remove('itxp'); $('game').classList.remove('wishing'); };
@@ -556,14 +564,29 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     box.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { closeBox(); if (b.dataset.i) pick(+b.dataset.i); }));
     box.querySelector('button').focus({ preventScroll: true });
   };
-  const itxShut = () => { if ($('wish').classList.contains('itxp')) closeBox(); };   // a trip, a fight or the dragon: the picker is stale
+  const itxShut = () => { if ($('wish').classList.contains('itxp')) closeBox(); };
+  // the buttons' look (a setting): classic counts down; the ki meter fills each button as it recharges. #kimeter
+  // previews it. A cooldown's length is the most seconds left seen since the button was last ready
+  let kiBtns = 'classic'; try { kiBtns = localStorage.getItem('hs-kibtn') || 'classic'; } catch (_) {}
+  if (/kimeter/.test(location.hash)) kiBtns = 'meter';
+  const kiLook = v => { kiBtns = v; document.documentElement.dataset.kibtn = v; };
+  kiLook(kiBtns);
+  const kiFill = (bs, ready, left) => {
+    const b0 = bs[0]; b0._max = ready ? 0 : Math.max(b0._max || 0, left);
+    const f = ready ? 100 : left > 0 && b0._max ? (1 - left / b0._max) * 100 : 0;
+    for (const b of bs) { b.classList.toggle('kjump', f < (b._f ?? 100)); b._f = f; b.style.setProperty('--f', f.toFixed(1) + '%'); }
+  };   // a trip, a fight or the dragon: the picker is stale
   const ui = {
     onBuy(fn) { buyFn = fn; },
     update(s) {
       lastPl = s.pl; bulkFetch(); if (tipFor && performance.now() - tipAt > 250) tipPaint();
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
-      const kb = $('kaio'); kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kb.textContent = s.kaio.ready ? 'kaioken' : 'kaioken ' + s.kaio.left + 's';
-      if (s.itx) { const ib = $('itxBtn'), name = matchMedia('(max-width: 760px)').matches ? 'IT' : 'transmission'; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut(); ib.textContent = s.itx.left > 0 ? `${name} ${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}` : name; }   // phones keep it short: it shares a row with upgrades and kaioken
+      const kb = $('kaio'), meter = kiBtns === 'meter'; kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kiOwned = s.kaio.own || !!(s.itx && s.itx.own);
+      const kt = s.kaio.ready ? 'kaioken' : meter ? `kaioken<small>${s.kaio.left}s</small>` : 'kaioken ' + s.kaio.left + 's'; if (kb.dataset.t !== kt) { kb.dataset.t = kt; kb.innerHTML = kt; }
+      kiFill([kb, ...document.querySelectorAll('.w [data-w="kaio"]')], s.kaio.ready, s.kaio.left);
+      if (s.itx) { const ib = $('itxBtn'), name = matchMedia('(max-width: 760px)').matches ? 'IT' : 'transmission', clock = `${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}`; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut();
+        const it = s.itx.left > 0 ? (meter ? `${name}<small>${clock}</small>` : `${name} ${clock}`) : name; if (ib.dataset.t !== it) { ib.dataset.t = it; ib.innerHTML = it; }
+        kiFill([ib, ...document.querySelectorAll('.w [data-w="itx"]')], s.itx.ready, s.itx.left); }   // phones keep it short: it shares a row with upgrades and kaioken
       const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
       if (pl.dataset.v !== txt) { pl.dataset.v = txt; pl.innerHTML = num + (suf ? `<small>${suf}</small>` : ''); pl.style.setProperty('--len', Math.max(9, num.length + suf.length * .6)); }
       const mx = $('mx'); mx.textContent = s.combo > 1 ? '×' + s.combo.toFixed(2).replace(/\.?0+$/, '') : ''; mx.classList.toggle('hot', s.combo >= 2);
@@ -773,6 +796,8 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   }
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const st = makeStage($('game')); st.resize(); st.night = false; st.calm = reduce;
+  // a big shockwave (the Rust engine's waves) shakes the whole card
+  ui.quake = () => { if (!reduce && $('game').animate) $('game').animate([0, 1, 2, 3, 4, 5, 6, 7].map(i => ({ transform: `translate(${(i % 2 ? 1 : -1) * (8 - i)}px, ${(i % 3 - 1) * (8 - i) * .6}px)` })).concat([{ transform: 'none' }]), { duration: 600 }); };
   let game = null, goSoon = false;
   const mount = () => { game = GAMES.find(g => g.id === 'planet').mount(st, ui); $('shop').classList.toggle('bulky', !!(game.bulk && game.info)); if (goSoon) go(); };
   const go = () => { if (!game) { goSoon = true; return; } if ($('game').classList.contains('playing')) return; $('game').classList.add('playing'); game.start(); ui.fx('lap'); };
@@ -794,6 +819,12 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     delete body.dataset.icons;
     if (menuTab === 'ach') {
       body.dataset.icons = 'pills';   // compact pills, gold once earned
+      // the buttons' look, once there's kaioken or instant transmission to show it on
+      if (kiOwned) {
+        const row = document.createElement('div'); row.className = 'looks'; row.innerHTML = '<span>buttons</span>';
+        for (const [v, name] of [['classic', 'classic'], ['meter', 'ki meter']]) { const b = document.createElement('button'); b.type = 'button'; b.className = 'ach' + (kiBtns === v ? ' done' : ''); b.innerHTML = `<b>${name}</b>`; b.addEventListener('click', () => { kiLook(v); try { localStorage.setItem('hs-kibtn', v); } catch (_) {} renderMenu(); }); row.append(b); }
+        body.append(row);
+      }
       // the looks the milestones unlocked (the Rust engine's): one row a kind, tap one to wear it, again to take it off
       if (m.looks && m.looks.some(k => k.items.some(i => i.open))) for (const k of m.looks) {
         const row = document.createElement('div'); row.className = 'looks'; row.innerHTML = `<span>${k.label}</span>`;
