@@ -277,6 +277,19 @@ impl Game {
         (if self.ang(A_DIVINE) { p.pow(0.55) } else { p.sqrt() }).floor().max(1.0)
     }
 
+    /// God ki opens at `LATE_AT`: a form held at that mark (a saiyan's tenth on), or the top of a ladder that stops
+    /// short of it with the power for it this run.
+    pub fn god_open(&self) -> bool {
+        // goten's dropped form still counts
+        let f = self.held_form();
+        self.forms[f].at >= LATE_AT || f == self.forms.len() - 1 && self.s.run_best >= LATE_AT
+    }
+
+    /// Where mastery star `m + 1` lands: ×1000 a star past the last form's mark, and never under `LATE_AT`'s.
+    pub fn mastery_at(&self, m: u32) -> Big {
+        self.forms[self.forms.len() - 1].at.max(LATE_AT) * Big::from(LATE_STEP).pow(m as f64 + 1.0)
+    }
+
     pub fn god_now(&self) -> u32 {
         (if self.s.gods > 0 { 0 } else { 1 }).max(self.s.uni) * if self.ang(A_PRIEST) { 2 } else { 1 }
     }
@@ -408,7 +421,8 @@ impl Game {
                 + on(b.kaio_until, self.kaio_x() - 1.0)
                 + on(b.daily_until, 0.25)
                 + on(b.fuse_until, 1.0)
-                + b.fused.map_or(0.0, |(x, until)| on(until, x - 1.0))
+                // a botched dance's ×0.75 is `botched`'s, on taps: penalties never slow idle income
+                + b.fused.map_or(0.0, |(x, until)| on(until, (x - 1.0).max(0.0)))
                 + on(b.laugh_until, 0.25)
                 + on(b.chamber_until, self.chamber_x() - 1.0)
                 + on(b.rage_until, b.rage - 1.0)
@@ -424,6 +438,11 @@ impl Game {
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
         self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
+    }
+
+    /// A botched fusion dance while it lasts (×0.75), on what your taps make; 1 otherwise.
+    pub fn botched(&self) -> f64 {
+        self.b.fused.filter(|&(x, until)| x < 1.0 && until > self.t).map_or(1.0, |(x, _)| x)
     }
 
     pub fn lap_value(&self) -> Big {
@@ -670,6 +689,7 @@ impl Game {
         let crit = self.wished(WishBuff::Crit) || self.rng.random() < self.s.lvf(Upg::Scouter) * 0.1 + self.lvl(N_CRIT) * 0.08;
         let n = (1.0 + self.s.lvf(Upg::Boots) * self.ms(Upg::Boots))
             * self.mult(false)
+            * self.botched()
             * self.combo
             * if crit { self.crit_hit() } else { 1.0 }
             * (1.0 + 0.5 * self.lvl(N_FIST))
@@ -877,7 +897,7 @@ impl Game {
 
     /// God ki: seeds, the tree, forms and universes go; wishes, sagas and mastery stars stay.
     pub fn god_reset(&mut self) {
-        if self.held_form() < MUI_FORM || self.god_now() == 0 {
+        if !self.god_open() || self.god_now() == 0 {
             return;
         }
         self.flash_t = 1.0;
@@ -1084,11 +1104,10 @@ impl Game {
             self.cg_step(t, dt);
             self.candy_step(t, dt);
             let last = self.forms.len() - 1;
-            if self.held_form() == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0)
-            {
+            if self.held_form() == last && self.tl.preview.is_none() && self.s.pl >= self.mastery_at(self.s.mastery) {
                 self.s.mastery += 1;
                 self.ach("mastery");
-                let next = crate::num::fmt_short(self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0));
+                let next = crate::num::fmt_short(self.mastery_at(self.s.mastery));
                 self.event_ms(format!("mastery star {} — ×{MASTERY_X} on everything, kept through god ki. next at {next}", self.s.mastery), 3500.0);
                 self.cue(Cue::Fx("star"));
             }

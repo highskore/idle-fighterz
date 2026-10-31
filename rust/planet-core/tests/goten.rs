@@ -216,3 +216,18 @@ fn the_afk_rule_over_whole_runs() {
         assert!((2.0..=3.2).contains(&act), "playing him earns about 2-3× his idle: ×{act}");
     }
 }
+
+#[test]
+fn his_drop_survives_a_switch_and_back() {
+    let mut g = at("goten", 2e4);
+    formed(&mut g);
+    let best = g.s.form;
+    idle(&mut g, GOTEN_UP + 1.0);
+    assert!(g.powered_down().is_some());
+    g.s.beaten.insert("kid buu".into());
+    assert!(g.pick_hero("vegeta"));
+    assert!(g.powered_down().is_none(), "vegeta doesn't drop");
+    assert!(g.pick_hero("goten"));
+    assert!(g.powered_down().is_some(), "back as goten, he's still down");
+    assert!(g.held_form() >= best, "and his best still counts");
+}

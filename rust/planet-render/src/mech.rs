@@ -166,8 +166,10 @@ fn bar(b: &planet_core::timeline::Boss, spr: &Sprite) -> (f64, f64, f64) {
     (js_round(b.x - bw / 2.0), bw, js_round(b.y - spr.h as f64 * b.k - 7.0))
 }
 
-fn ally_sprite(a: Ally, t: f64) -> (&'static Sprite, f64) {
+fn ally_sprite(g: &Game, a: Ally, t: f64) -> (&'static Sprite, f64) {
     match a {
+        // playing piccolo, the ally in his place is kid gohan (visitors.rs)
+        Ally::Piccolo if g.s.hero == planet_core::data::Hero::Piccolo => (&sprite::hero("gohan").forms[0].idle, 0.75),
         Ally::Bubbles => (sprite::get(if (t * 14.0).floor() as i64 % 2 == 0 { "MONKEY.0" } else { "MONKEY.1" }), 1.7),
         Ally::Piccolo => (sprite::get("PICCOLO"), 0.95),
         Ally::Krillin => (sprite::get("KRILLIN"), 1.0),
@@ -298,7 +300,7 @@ pub fn draw(c: &mut Ctx, g: &mut Game) {
             disc(c, tx, ty, 2.0, 0xa8ec84, 1.0);
             disc(c, tx, ty, 1.0, 0x15171c, 1.0);
             if ph == Ph::Drain {
-                let (s, kk) = ally_sprite(who, t);
+                let (s, kk) = ally_sprite(g, who, t);
                 let sway = if calm { 0.0 } else { sin(t * 7.0) * 0.4 };
                 c.blit_z(s, to.0, to.1 + 9.0, sway, true, 0.0, 1e9, kk);
                 // his ki runs up the tail into him

@@ -153,3 +153,25 @@ fn a_stun_never_touches_training() {
     g.train();
     assert!(g.s.pl > pl);
 }
+
+#[test]
+fn cell_grabs_who_is_really_there() {
+    // playing piccolo, the ally meditating in his place is kid gohan
+    let mut g = Game::new(7);
+    g.preview("#hero-piccolo#saga5");
+    g.debug_set("piccolo", 1.0);
+    g.debug_set("armor", 60.0);
+    g.start();
+    until(&mut g, BI_DUR + C_FIRST + C_REACH + 1.0);
+    let Mech::Cell { who, .. } = mech(&g) else { panic!() };
+    assert_eq!(who, Ally::Piccolo);
+    assert!(g.events.iter().any(|e| e.0.starts_with("cell grabs kid gohan")), "{:?}", g.events);
+    // playing krillin, a krillin ally isn't there to grab
+    let mut g = Game::new(7);
+    g.preview("#hero-krillin#saga5");
+    g.debug_set("armor", 60.0);
+    g.s.krillin_ally = true;
+    g.start();
+    until(&mut g, BI_DUR + C_FIRST + C_REACH + 1.0);
+    assert!(matches!(mech(&g), Mech::Cell { ph: Ph::Idle, .. }), "nobody to grab");
+}
