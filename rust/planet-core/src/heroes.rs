@@ -1,5 +1,6 @@
 //! The run state of the heroes game.js doesn't have, and what each one changes about the economy. None of it is
-//! saved: it starts over each run (a new visit, an ascend, god ki, zeno) and when you switch heroes. Every new hero
+//! saved: it starts over each run (a new visit, an ascend, god ki, zeno); a hero you switch away from finds his as he
+//! left it when you pick him again that run. Every new hero
 //! keeps his recent income (what he's earned a second, smoothed), which his own payouts are measured in.
 //!
 //! Piccolo meditates. He starts a run at full focus, and left alone he sits cross-legged and builds it back, +1% a
@@ -81,6 +82,8 @@ pub enum Kind {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HeroRt {
     pub kind: Kind,
+    /// the run state of the heroes switched away from this run, for when they're picked again
+    pub kept: Vec<Kind>,
     /// what he earned since `tick` began, and his income a second, smoothed (his own payouts left out)
     pub earned: Big,
     pub tick: f64,
@@ -111,11 +114,21 @@ impl Game {
         self.hero_rt = HeroRt { kind: Kind::of(self.s.hero), ..Default::default() };
     }
 
-    /// The state for the hero now playing, kept if it's already his.
+    /// The state for the hero now playing: kept if it's already his, else his own from earlier this run (the one he
+    /// leaves is kept for him), or a fresh one.
     pub(crate) fn hero_sync(&mut self) {
-        if std::mem::discriminant(&self.hero_rt.kind) != std::mem::discriminant(&Kind::of(self.s.hero)) {
-            self.hero_reset();
+        use std::mem::discriminant as kind;
+        let fresh = Kind::of(self.s.hero);
+        if kind(&self.hero_rt.kind) == kind(&fresh) {
+            return;
         }
+        let mut kept = std::mem::take(&mut self.hero_rt.kept);
+        let left = std::mem::take(&mut self.hero_rt.kind);
+        let now = kept.iter().position(|k| kind(k) == kind(&fresh)).map_or(fresh, |i| kept.swap_remove(i));
+        if left != Kind::None {
+            kept.push(left);
+        }
+        self.hero_rt = HeroRt { kind: now, kept, ..Default::default() };
     }
 
     /// Piccolo's focus, 0..1 (0 for everyone else).
@@ -244,11 +257,12 @@ impl Game {
             }
         }
         let t = self.t;
+        let free = !self.stunned() && !self.swapped();
         let mut due = false;
         if let Kind::Krillin { auto, discs, .. } = &mut self.hero_rt.kind {
             discs.retain(|d| t - d.t0 < DISC_FLIGHT);
             *auto -= dt;
-            if *auto <= 0.0 {
+            if *auto <= 0.0 && free {
                 *auto = DISC_AUTO;
                 due = true;
             }
@@ -340,9 +354,11 @@ impl Game {
     /// Where every target a disc can cut is on screen now, with its half-size.
     fn disc_targets(&self) -> Vec<(Target, f64, f64, f64)> {
         let mut v = Vec::new();
+        // through the core's own camera, as planet-render places them: never its write-back
         for (i, sb) in self.tl.saibas.iter().enumerate() {
-            if let Some((x, y)) = sb.sx.filter(|_| !sb.dead) {
-                v.push((Target::Saiba(i), x, y - 6.0, 7.0));
+            let p = self.cam.screen(sb.c, 0.0);
+            if !sb.dead && p.v[2] >= 0.05 && self.t > sb.born {
+                v.push((Target::Saiba(i), p.x, p.y - 6.0, 7.0));
             }
         }
         for (i, m) in self.tl.meteors.iter().enumerate() {
@@ -381,10 +397,11 @@ impl Game {
     fn throw_disc(&mut self, tx: f64, ty: f64) {
         let t = self.t;
         let (hx, hy) = self.hand_pos();
-        let boss = self.tl.boss.as_ref().filter(|b| !b.dead).map(|b| (b.x, b.y - b.spr().h / 2.0 * b.k));
+        let boss = self.tl.boss.as_ref().filter(|b| !b.dead && t >= b.go).map(|b| (b.x, b.y - b.spr().h / 2.0 * b.k));
         if let (Some((bx, by)), true) = (boss, self.cuts() >= BARRAGE_CUTS) {
             let max = self.tl.boss.as_ref().unwrap().max;
-            self.hit_boss(max * BARRAGE_HP, bx, by, true);
+            // a fifth of his hp after armor, as mech.rs's set shares are
+            self.hit_boss(max * BARRAGE_HP / (1.0 + 0.5 * self.s.lvf(crate::data::Upg::Armor)), bx, by, true);
             self.event("disc barrage! a giant destructo disc takes a fifth of his hp");
             if let Kind::Krillin { cuts, last, discs, .. } = &mut self.hero_rt.kind {
                 *cuts -= BARRAGE_CUTS;

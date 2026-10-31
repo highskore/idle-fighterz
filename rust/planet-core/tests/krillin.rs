@@ -263,3 +263,156 @@ fn a_chain_is_his_combo_and_his_taps_still_hit_what_they_touch() {
     assert!(g.tl.boss.as_ref().is_some_and(|b| b.hp.to_f64() < hp0), "the tap hits him");
     assert!(g.discs().is_empty(), "no disc for a tap that hit something");
 }
+
+/// A villain on the planet with the barrage charged, `armor` levels of armor, from the moment he's up.
+fn charged_at_a_villain(armor: u32) -> Game {
+    let mut g = Game::new(7);
+    g.preview("#hero-krillin#saga3");
+    g.s.levels[Upg::Armor as usize] = armor;
+    g.start();
+    while g.tl.boss.is_none() || g.tl.boss.as_ref().is_some_and(|b| b.max <= 0.0) {
+        let t = g.t + DT;
+        g.frame(t, DT);
+        assert!(g.t < 200.0, "a villain comes");
+    }
+    if let planet_core::heroes::Kind::Krillin { cuts, .. } = &mut g.hero_rt.kind {
+        *cuts = BARRAGE_CUTS;
+    }
+    g
+}
+
+#[test]
+fn armor_doesnt_grow_the_barrage() {
+    let mut g = charged_at_a_villain(10);
+    while g.tl.boss.as_ref().is_some_and(|b| g.t < b.go) {
+        let t = g.t + DT;
+        g.frame(t, DT);
+    }
+    let t = g.t + 1.0;
+    g.frame(t, DT);
+    let b = g.tl.boss.as_ref().unwrap();
+    let (hp0, max) = (b.hp.to_f64(), b.max.to_f64());
+    assert!(hp0 > max * 0.5, "{hp0} of {max}");
+    g.tap(g.cam.w * 0.05, g.cam.h * 0.05);
+    let hp1 = g.tl.boss.as_ref().unwrap().hp.to_f64();
+    let took = (hp0 - hp1) / max;
+    assert!((0.19..=0.21).contains(&took), "a fifth of his hp with armor ×6 too: took {took}");
+}
+
+#[test]
+fn no_barrage_before_the_villain_arrives() {
+    let mut g = charged_at_a_villain(0);
+    let b = g.tl.boss.as_ref().unwrap();
+    assert!(g.t < b.go, "he's still on his way in");
+    let hp0 = b.hp.to_f64();
+    // a tap now skips his entrance: his own disc is what could go for him early
+    if let planet_core::heroes::Kind::Krillin { auto, .. } = &mut g.hero_rt.kind {
+        *auto = 0.01;
+    }
+    let (x, y) = g.hand_pos();
+    g.tl.meteors.push(planet_core::timeline::Meteor { x: x + 30.0, y, vx: 0.0, vy: 0.0, delay: 0.0, dead: false, sd: None });
+    let t = g.t + DT;
+    g.frame(t, DT);
+    assert!(g.discs().len() == 1, "he throws");
+    assert!(g.tl.boss.as_ref().is_some_and(|b| g.t < b.go));
+    assert_eq!(g.tl.boss.as_ref().unwrap().hp.to_f64(), hp0);
+    assert!(g.cuts() >= BARRAGE_CUTS, "the barrage waits for him");
+}
+
+/// Krillin facing us, a fresh saibaman on the road just ahead of him, nothing else to cut, and his own disc due.
+fn saiba_ahead() -> Run {
+    let mut r = Run::new(7, Hero::Krillin);
+    while r.g.kid_screen(0.0).v[2] < 0.6 {
+        r.play(Play::Idle, 0.1);
+        assert!(r.g.t < 60.0);
+    }
+    r.g.tl.meteors.clear();
+    r.g.tl.orbs.clear();
+    let c = r.g.frame3.road_pt(r.g.phi + 0.12);
+    let born = r.g.t - 1.0;
+    r.g.tl.saibas = vec![planet_core::timeline::Saiba { c, born, life: 16.0, soldier: false, dead: false, sx: None }];
+    if let planet_core::heroes::Kind::Krillin { auto, .. } = &mut r.g.hero_rt.kind {
+        *auto = 0.01;
+    }
+    r
+}
+
+#[test]
+fn his_own_disc_finds_a_saibaman_without_the_renderer() {
+    let mut r = saiba_ahead();
+    r.step(Play::Idle);
+    assert!(r.g.tl.saibas[0].dead, "the core sees the saibaman itself, drawn or not");
+}
+
+#[test]
+fn no_disc_of_his_own_while_hes_stunned() {
+    let mut r = saiba_ahead();
+    r.g.tl.stun_until = r.g.t + 1.0;
+    r.play(Play::Idle, 0.5);
+    assert!(r.g.cuts() == 0 && r.g.discs().is_empty(), "stunned, he throws nothing");
+    r.play(Play::Idle, 1.0);
+    assert_eq!(r.g.cuts(), 1, "and throws once he's back on his feet");
+}
+
+#[test]
+fn playing_krillin_theres_no_other_krillin() {
+    for seed in 1..=6 {
+        let mut g = Game::new(seed);
+        g.preview("#hero-krillin#androids");
+        g.s.krillin_ally = true;
+        g.start();
+        while g.tl.ginyu.is_none() {
+            let t = g.t + DT;
+            g.frame(t, DT);
+            assert!(g.t < 30.0, "the androids drop in");
+        }
+        assert!(g.tl.kril.is_none(), "seed {seed}: nobody goes for a krillin ally while you are krillin");
+    }
+    let mut g = Game::new(7);
+    g.preview("#hero-krillin");
+    g.s.krillin_dead = true;
+    g.start();
+    g.summon();
+    while g.tl.shen.as_ref().is_some_and(|s| s.offer.is_empty()) {
+        let t = g.t + DT;
+        g.frame(t, DT);
+        assert!(g.t < 60.0, "the dragon offers");
+    }
+    assert!(!g.tl.shen.as_ref().unwrap().offer.contains(&planet_core::data::KRILLIN_WISH), "no wishing krillin back to krillin");
+}
+
+#[test]
+fn the_androids_dont_drop_in_on_seventeen() {
+    let mut g = Game::new(7);
+    g.preview("#hero-a17#androids");
+    g.start();
+    for _ in 0..30 * 20 {
+        let t = g.t + DT;
+        g.frame(t, DT);
+    }
+    assert!(g.tl.ginyu.is_none(), "17 doesn't drop in on himself");
+}
+
+#[test]
+fn a_botched_dance_slows_taps_not_idle_income() {
+    let botch = |on: bool| {
+        let mut g = Game::new(7);
+        g.start();
+        g.s.levels[Upg::Partner as usize] = 5;
+        g.s.levels[Upg::Boots as usize] = 300;
+        for _ in 0..30 {
+            let t = g.t + DT;
+            g.frame(t, DT);
+        }
+        if on {
+            g.b.fused = Some((0.75, g.t + 15.0));
+        }
+        let rate = g.rate().to_f64();
+        let pl = g.s.pl.to_f64();
+        g.train();
+        (rate, g.s.pl.to_f64() - pl)
+    };
+    let ((r0, tap0), (r1, tap1)) = (botch(false), botch(true));
+    assert_eq!(r1, r0, "idle income doesn't feel a botched dance");
+    assert!((tap1 / tap0 - 0.75).abs() < 0.02, "taps do: ×{}", tap1 / tap0);
+}

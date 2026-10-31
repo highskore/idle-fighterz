@@ -498,7 +498,12 @@ impl Scene {
                 gr.sx = None;
             }
         }
-        if g.s.krillin_ally && g.tl.kril.is_none() && !g.tl.date.as_ref().is_some_and(|d| d.kr) && !crate::mech::held(g, Ally::Krillin) {
+        if g.s.krillin_ally
+            && g.s.hero != planet_core::data::Hero::Krillin
+            && g.tl.kril.is_none()
+            && !g.tl.date.as_ref().is_some_and(|d| d.kr)
+            && !crate::mech::held(g, Ally::Krillin)
+        {
             let kv = ap(&m, g.frame3.road_pt(g.phi - 0.5));
             let (kx, ky) = (cx + kv[0] * r, cy - kv[1] * r + bob);
             let ka = ap(&m, g.frame3.road_pt(g.phi - 0.45));

@@ -66,6 +66,10 @@ fn beating_raditz_brings_piccolo() {
         said.extend(g.events.drain(..).map(|e| e.0));
     }
     assert!(said.iter().any(|s| s.starts_with("piccolo joins you")), "{said:?}");
+    // (not mid-transformation: a form-up's scene plays out first)
+    while g.xf.is_some() {
+        step(&mut g);
+    }
     assert!(g.pick_hero("piccolo"));
 }
 
@@ -104,4 +108,119 @@ fn the_save_names_the_new_hero() {
     g.start();
     assert!(g.pick_hero("krillin"));
     assert!(g.save_json().contains("\"hero\":\"krillin\""));
+}
+
+/// Vegeta at `form` with the power for the next one, the scene for it under way (and every hero open).
+fn mid_scene(form: usize, pl: f64) -> Game {
+    let mut g = Game::new(7);
+    g.start();
+    g.s.beaten.insert("raditz".into());
+    g.s.form = form;
+    g.s.pl = pl.into();
+    g.xf_instant = false;
+    while g.xf.is_none() {
+        step(&mut g);
+        assert!(g.t < 10.0, "the scene starts");
+    }
+    let x = g.xf.as_ref().unwrap();
+    assert_eq!((x.from, x.to), (form, form + 1));
+    g
+}
+
+#[test]
+fn no_switching_heroes_mid_transformation() {
+    // vegeta's ninth form up to his tenth, then piccolo (nine forms); his tenth up to his eleventh, then goku (ten)
+    for (form, pl, id) in [(8, 3e14, "piccolo"), (9, 3e17, "goku")] {
+        let mut g = mid_scene(form, pl);
+        assert!(!g.pick_hero(id), "{id}: not while vegeta transforms");
+        assert_eq!(g.s.hero, Hero::Vegeta);
+        assert!(g.pick_hero("vegeta"), "picking the hero he already is is fine");
+        g.tap(g.cam.w / 2.0, g.cam.h / 2.0);
+        while g.xf.is_some() {
+            step(&mut g);
+            assert!(g.t < 30.0, "the scene ends");
+        }
+        assert!(g.pick_hero(id), "{id}: once the scene is over");
+        assert!(g.s.form < g.forms.len());
+        for _ in 0..60 {
+            step(&mut g);
+        }
+    }
+}
+
+#[test]
+fn each_heroes_run_state_survives_a_switch_until_the_run_ends() {
+    let mut g = Game::new(7);
+    g.start();
+    g.s.beaten.insert("raditz".into());
+    assert!(g.pick_hero("piccolo"));
+    g.hero_rt.kind = planet_core::heroes::Kind::Piccolo { focus: 0.25 };
+    assert!(g.pick_hero("krillin"));
+    if let planet_core::heroes::Kind::Krillin { cuts, auto, .. } = &mut g.hero_rt.kind {
+        (*cuts, *auto) = (7, 3.0);
+    }
+    assert!(g.pick_hero("vegeta"));
+    assert!(g.pick_hero("piccolo"));
+    assert_eq!(g.focus(), 0.25, "switching away and back doesn't refill his focus");
+    assert!(g.pick_hero("krillin"));
+    assert_eq!(g.cuts(), 7, "nor wipe krillin's barrage cuts");
+    assert!(matches!(g.hero_rt.kind, planet_core::heroes::Kind::Krillin { auto: 3.0, .. }), "or his own disc's timer");
+    assert!(!g.save_json().contains("cuts"), "none of it is saved");
+    g.s.pl = 1e9.into();
+    g.s.best = 1e9.into();
+    g.b.asc_ready = 0.0;
+    g.ascend();
+    assert_eq!(g.cuts(), 0, "a new run starts him over");
+    assert!(g.pick_hero("piccolo"));
+    assert_eq!(g.focus(), 1.0, "and every hero");
+}
+
+fn godki_open(g: &Game) -> bool {
+    g.shop().iter().any(|r| r.key == "godki")
+}
+
+#[test]
+fn god_ki_opens_at_the_same_mark_for_every_hero() {
+    for (id, h) in [("piccolo", Hero::Piccolo), ("tien", Hero::Tien), ("a17", Hero::A17), ("vegeta", Hero::Vegeta), ("goku", Hero::Goku)] {
+        let mut g = Game::new(7);
+        g.start();
+        g.s.hero = h;
+        g.forms = ladder_of(h, 0);
+        let top = g.forms.len() - 1;
+        g.s.form = top.min(8);
+        g.s.run_best = 1e12.into();
+        assert!(!godki_open(&g), "{id}: not below the mark");
+        g.s.form = top;
+        g.s.run_best = 2.5e14.into();
+        assert!(godki_open(&g), "{id}: his top form with the power for the saiyans' tenth");
+        let gods = g.s.gods;
+        g.god_reset();
+        assert_eq!(g.s.gods, gods + 1, "{id}");
+    }
+    // once limit III breaks, a nine-form hero's limit breakers sit at his ninth form's mark: still not god ki
+    let mut g = Game::new(7);
+    g.start();
+    g.s.hero = Hero::Piccolo;
+    g.s.limits = 3;
+    g.forms = ladder_of(Hero::Piccolo, 3);
+    g.s.form = 9;
+    g.s.run_best = 1e12.into();
+    assert!(!godki_open(&g), "a limit breaker at 2e11 isn't the saiyans' 2e14");
+}
+
+#[test]
+fn mastery_stars_cost_every_hero_at_least_what_goku_pays() {
+    for h in [Hero::Piccolo, Hero::Tien, Hero::A17, Hero::Goku] {
+        let mut g = Game::new(7);
+        g.start();
+        g.s.hero = h;
+        g.forms = ladder_of(h, 0);
+        g.s.form = g.forms.len() - 1;
+        g.s.pl = 1e17.into();
+        step(&mut g);
+        assert_eq!(g.s.mastery, 0, "{h:?}: no star below 2e17");
+        g.s.pl = 2.1e17.into();
+        step(&mut g);
+        assert_eq!(g.s.mastery, 1, "{h:?}: the first at 2e17");
+    }
 }

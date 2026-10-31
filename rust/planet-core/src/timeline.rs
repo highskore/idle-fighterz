@@ -1139,6 +1139,7 @@ impl Game {
             && self.s.world != 8
             && session > 200.0
             && self.s.best >= 2e5
+            && self.s.hero != Hero::A17
             && tick(&mut self.tl.next_andro, dt)
         {
             self.krillin_hit("the androids");
@@ -2075,7 +2076,7 @@ impl Game {
 
     /// `krillinHit`: an ally krillin is the first thing every villain goes for.
     fn krillin_hit(&mut self, by: &str) {
-        if !self.s.krillin_ally || self.tl.kril.is_some() || self.r() > 0.75 {
+        if !self.s.krillin_ally || self.s.hero == Hero::Krillin || self.tl.kril.is_some() || self.r() > 0.75 {
             return;
         }
         let c = self.frame3.road_pt(self.phi - 0.5);
@@ -2701,7 +2702,7 @@ impl Game {
             offer.truncate(2);
             offer.push(w);
         }
-        if self.s.krillin_dead {
+        if self.s.krillin_dead && self.s.hero != Hero::Krillin {
             offer.push(KRILLIN_WISH);
         }
         let text = self.offer_json(&offer);
@@ -3047,7 +3048,8 @@ impl Game {
         if let Some(i) = self.clone_at(px, py) {
             self.combo = if t - self.last_click < 0.6 { self.combo_cap().min(self.combo + 0.1) } else { 1.0 };
             self.last_click = t;
-            let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
+            let dmg =
+                self.tap_power() * self.mult(false) * self.botched() * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
             self.clone_hit(i, dmg);
             self.cue(Cue::Sfx("hit"));
             return true;
@@ -3060,7 +3062,8 @@ impl Game {
         if let Some(i) = hit {
             self.combo = if t - self.last_click < 0.6 { self.combo_cap().min(self.combo + 0.1) } else { 1.0 };
             self.last_click = t;
-            let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
+            let dmg =
+                self.tap_power() * self.mult(false) * self.botched() * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
             self.movie_hit(i, dmg);
             self.cue(Cue::Sfx("hit"));
             let m = self.tl.movie.as_mut().unwrap();
@@ -3461,7 +3464,8 @@ impl Game {
             {
                 self.combo = if t - self.last_click < 0.6 { self.combo_cap().min(self.combo + 0.1) } else { 1.0 };
                 self.last_click = t;
-                let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
+                let dmg =
+                    self.tap_power() * self.mult(false) * self.botched() * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
                 let x = self.ginyu_rude(mi);
                 self.ginyu_hit(mi, dmg * x);
                 if x > 1.0 {
@@ -3543,7 +3547,8 @@ impl Game {
             if (px - b.x).abs() < (s.w / 2.0 + 3.0) * b.k && py > b.y - (s.h + 2.0) * b.k && py < b.y + 4.0 {
                 self.combo = if t - self.last_click < 0.6 { self.combo_cap().min(self.combo + 0.1) } else { 1.0 };
                 self.last_click = t;
-                let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
+                let dmg =
+                    self.tap_power() * self.mult(false) * self.botched() * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
                 let x = self.mech_tap_x();
                 if x > 0.0 {
                     self.hit_boss(dmg * x, px, py, false);
