@@ -573,7 +573,8 @@ impl Scene {
         }
         b.flash = 0f64.max(b.flash - dt);
         if !(b.dead && !b.fled) {
-            for j in 0..spr.h {
+            let away = g.boss_away && b.saga && !b.uni;
+            for j in (0..spr.h).filter(|_| !away) {
                 for i in 0..spr.w {
                     let col = spr.col[j * spr.w + (spr.w - 1 - i)];
                     if col < 0 {
