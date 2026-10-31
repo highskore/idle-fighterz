@@ -447,18 +447,35 @@ pub fn meditation_sprite(g: &Game) -> Option<Sprite> {
     static S: std::sync::OnceLock<Sprite> = std::sync::OnceLock::new();
     Some(
         S.get_or_init(|| {
-            let mut rows: Vec<&str> = planet_core::sprite::PICCOLO_HEAD.to_vec();
-            rows.extend_from_slice(&[
+            // design 1 (classic z): turban, purple gi, red wristbands, the white cape draped behind him onto the ground
+            let body = [
                 "...oyyobbbbyyo..",
                 "..oyyyoaaaaoyyo.",
-                "..oYYosssssoYYo.",
+                "..oYYogssssgoYo.",
                 "..oaasSSsSSsaao.",
                 "...oaaaaaaaaAo..",
                 "...ouuuuuuuuuo..",
                 ".oppppppppppppo.",
                 "oppPPpwwwwpPPppo",
                 ".oooooooooooooo.",
-            ]);
+            ];
+            let n = planet_core::sprite::PICCOLO_HEAD.len();
+            let mut rows: Vec<Vec<u8>> = planet_core::sprite::PICCOLO_HEAD.iter().chain(body.iter()).map(|r| format!("....{r}").into_bytes()).collect();
+            for (j, row) in rows.iter_mut().enumerate().skip(n) {
+                let j = j - n;
+                if let Some(f) = row.iter().position(|&c| c != b'.') {
+                    let w = (2 + j / 2).min(f);
+                    for i in f - w..f {
+                        row[i] = if i == f - w || j == body.len() - 1 {
+                            b'o'
+                        } else if i == f - w + 1 {
+                            b'Q'
+                        } else {
+                            b'q'
+                        };
+                    }
+                }
+            }
             make_sprite(
                 &rows,
                 &Pal::new(&[
@@ -481,6 +498,9 @@ pub fn meditation_sprite(g: &Game) -> Option<Sprite> {
                     ('p', 0x5a3a9a),
                     ('P', 0x3e2670),
                     ('w', 0x8a4a2a),
+                    ('g', 0xd8323a),
+                    ('q', 0xf4f4f6),
+                    ('Q', 0xc2c6d2),
                 ]),
                 "",
                 None,
