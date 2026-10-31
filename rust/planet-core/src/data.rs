@@ -181,6 +181,49 @@ pub enum Hero {
     Goku,
     Gohan,
     Trunks,
+    Piccolo,
+    Krillin,
+    Goten,
+    Tien,
+    A17,
+}
+
+impl Hero {
+    /// Saiyans climb the super saiyan ladder; the others get their own names for the same marks (prototype names).
+    pub fn saiyan(self) -> bool {
+        matches!(self, Hero::Vegeta | Hero::Goku | Hero::Gohan | Hero::Trunks | Hero::Goten)
+    }
+}
+
+/// The prototype heroes' form names for the shared nine marks.
+fn own_names(h: Hero) -> Option<[&'static str; 9]> {
+    Some(match h {
+        Hero::Piccolo => [
+            "base",
+            "weights off",
+            "fused with nail",
+            "fused with kami",
+            "super namekian",
+            "potential unleashed",
+            "namekian god",
+            "orange piccolo",
+            "orange giant",
+        ],
+        Hero::Krillin => [
+            "base",
+            "max power",
+            "guru's unlock",
+            "turtle master",
+            "destructo master",
+            "old kai's unlock",
+            "strongest human",
+            "earth's guardian",
+            "beyond human",
+        ],
+        Hero::Tien => ["base", "max power", "crane master", "four-armed", "tri-beam master", "neo crane", "third eye open", "dojo master", "heaven's eye"],
+        Hero::A17 => ["base", "limiter off", "barrier", "ranger", "perpetual core", "overclock", "survivor", "last one standing", "infinite"],
+        _ => return None,
+    })
 }
 
 /// `ladderOf`: the shared nine, then the hero's late forms at 2e14, ×1000 each; then, once limit III is broken, a
@@ -190,9 +233,12 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         Hero::Vegeta => &[10, 12],
         Hero::Goku => &[9],
         Hero::Gohan => &[11],
-        Hero::Trunks => &[13],
+        Hero::Trunks | Hero::Goten => &[13],
+        _ => &[],
     };
-    let mut v: Vec<Form> = ALL_FORMS[..9].iter().enumerate().map(|(i, &(name, at, x))| Form { name, at, x, look: i, lb: 0 }).collect();
+    let own = own_names(h);
+    let mut v: Vec<Form> =
+        ALL_FORMS[..9].iter().enumerate().map(|(i, &(name, at, x))| Form { name: own.map_or(name, |n| n[i]), at, x, look: i, lb: 0 }).collect();
     for (j, &i) in late.iter().enumerate() {
         v.push(Form { name: ALL_FORMS[i].0, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: i, lb: 0 });
     }
@@ -728,11 +774,17 @@ pub const ACH: [(&str, &str, &str); 87] = [
 ];
 
 /// `CHARS`: the heroes you can play and the achievement that unlocks each: (id, name, need).
-pub const CHARS: [(Hero, &str, &str, Option<&str>); 4] = [
+pub const CHARS: [(Hero, &str, &str, Option<&str>); 9] = [
     (Hero::Vegeta, "vegeta", "vegeta", None),
     (Hero::Goku, "goku", "goku", Some("ss")),
     (Hero::Gohan, "gohan", "gohan", Some("cell")),
     (Hero::Trunks, "trunks", "future trunks", Some("frieza")),
+    // prototype heroes: only the #hero- preview hook plays them
+    (Hero::Piccolo, "piccolo", "piccolo", Some("zeno")),
+    (Hero::Krillin, "kuririn", "krillin", Some("zeno")),
+    (Hero::Goten, "goten", "goten", Some("zeno")),
+    (Hero::Tien, "tien", "tien", Some("zeno")),
+    (Hero::A17, "a17", "android 17", Some("zeno")),
 ];
 
 /// The angels' rules as the menu shows them, in `ANGELS` order: (name, what).

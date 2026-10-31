@@ -139,6 +139,8 @@ pub struct Game {
     pub undo_offer: Option<(u32, String)>,
     /// times something drained power (dr. gero): an undo can't rewind past one
     pub drains: u32,
+    /// the heroes picker's prototype pitch (`#style=`), if one is staged
+    pub proto: Option<crate::proto::Proto>,
 }
 
 impl Game {
@@ -176,6 +178,7 @@ impl Game {
             hud: Hud::default(),
             shop: String::new(),
             epoch_ms: 0.0,
+            proto: None,
             lift_now: 0.0,
             flip_now: false,
             fx: Vec::new(),
@@ -980,6 +983,7 @@ impl Game {
         self.cam.bob = if self.shake > 0.0 && !self.calm { js_round((self.rng.random() - 0.5) * 5.0 * self.shake) } else { 0.0 };
         self.shake = (self.shake - dt).max(0.0);
         self.spin(dt);
+        self.proto_step(t);
 
         // running: sprint decays; laps pay
         self.sprint = (self.sprint - dt * 0.8).max(0.0);
@@ -1151,7 +1155,7 @@ impl Game {
     /// after the world is set up and before `start()`. Of those that wait on a `setTimeout`, `#shenron` is ported;
     /// `#flight`, `#chamber` and `#cvlink` aren't.
     pub fn preview(&mut self, hash: &str) {
-        use crate::data::{Hero, Upg, LADDER, MUI_FORM, VILLAINS};
+        use crate::data::{Upg, LADDER, MUI_FORM, VILLAINS};
         let has = |k: &str| hash.contains(k);
         let num = |k: &str| -> Option<usize> {
             let i = hash.find(k)? + k.len();
@@ -1298,10 +1302,11 @@ impl Game {
         }
         if let Some(i) = hash.find("hero-") {
             let id: String = hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect();
-            if let Some(h) = [("vegeta", Hero::Vegeta), ("goku", Hero::Goku), ("gohan", Hero::Gohan), ("trunks", Hero::Trunks)].iter().find(|h| h.0 == id) {
+            if let Some(h) = crate::data::CHARS.iter().map(|c| (c.1, c.0)).find(|h| h.0 == id) {
                 self.s.hero = h.1;
             }
         }
+        self.proto_preview(hash);
         if has("snake") {
             trip(self, 3e6, 2);
             self.snake_way = true;

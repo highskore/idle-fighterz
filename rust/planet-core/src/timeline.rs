@@ -1255,6 +1255,7 @@ impl Game {
                     Hero::Goku => ("vegeta", "gogeta"),
                     Hero::Gohan => ("videl", "gohanVidel"),
                     Hero::Trunks => ("goten", "gotenks"),
+                    _ => ("goku", "gogeta"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });

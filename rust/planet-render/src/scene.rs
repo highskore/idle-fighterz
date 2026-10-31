@@ -582,6 +582,7 @@ impl Scene {
         }
         let hero = self.draw_hero(&mut c, g, dt);
         self.draw_visitors(&mut c, g, &hero, dt);
+        crate::proto::draw(&mut c, g);
         crate::beam::draw_charge(&mut c, g);
         crate::effects::draw(&mut c, g);
         crate::beam::draw_beam(&mut c, g);
@@ -737,7 +738,7 @@ impl Scene {
                 g.fx.push(p);
             }
         }
-        if let Some(sp) = FORM_SPARK[fi] {
+        if let Some(sp) = FORM_SPARK[fi].filter(|_| g.s.hero.saiyan()) {
             if seen && g.rng.random() < 0.35 {
                 let mut x = kd.x + (g.rng.random() - 0.5) * 22.0;
                 let mut y = kd.y - cos(kd.ang) * (lift + 14.0) + (g.rng.random() - 0.5) * 26.0;
@@ -994,6 +995,11 @@ pub(crate) fn hero_id(g: &Game) -> &'static str {
         Hero::Goku => "goku",
         Hero::Gohan => "gohan",
         Hero::Trunks => "trunks",
+        Hero::Piccolo => "piccolo",
+        Hero::Krillin => "krillin",
+        Hero::Goten => "goten",
+        Hero::Tien => "tien",
+        Hero::A17 => "a17",
     }
 }
 

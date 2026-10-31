@@ -19,6 +19,7 @@ pub mod limits;
 pub mod looks;
 pub mod mech;
 pub mod num;
+pub mod proto;
 pub mod rng;
 pub mod save;
 pub mod spots;
