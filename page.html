@@ -113,11 +113,6 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop { visibility: 
 html.touch .shop.bulky .bulk { display: flex; }
 .shop .bulk button[data-n] { display: inline-block; flex: none; width: auto; min-width: 0; padding: 1px 10px; font-size: 10px; line-height: 1.5; border-radius: 999px; text-transform: uppercase; }
 .shop .bulk button[aria-pressed="true"] { color: var(--ink); border-color: var(--gold); background: #fff8e6; }
-/* the undo on a big buy's toast: a plain button inside the usual toast */
-.toast .tact { pointer-events: auto; margin-left: .4em; vertical-align: .25em; padding: 3px 9px; font: 10px/1.2 var(--mono); font-style: normal; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); -webkit-text-stroke: 0; background: #fff; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
-.toast .tact:hover:not(:disabled) { border-color: var(--ink); }
-.toast .tact:disabled { opacity: .4; cursor: default; }
-.toast:not(.on) .tact { pointer-events: none; }
 .pair { display: contents; }
 @media (min-width: 761px) {
   .shop { left: 16px; top: 44px; bottom: 12px; transform: none; width: 236px; flex-direction: column; justify-content: center; gap: 2px; }   /* centred in the space below the hint */
@@ -290,8 +285,7 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
   .brand { top: max(66px, calc(28svh - 104px)); bottom: auto; left: -9vw; right: -9vw; height: 125vw; }   /* lower on taller phones, where the planet sits lower too */
   .page.past #brand { pointer-events: none; }
   .game:has(.shop.open) .hud { opacity: 0; visibility: hidden; }
-  body.shop-over .brand, .game:has(.shop.open) .toast { opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }
-  .game:has(.shop.open) .toast.on:has(.tact) { opacity: 1; visibility: visible; z-index: 4; }   /* the title hides only once the upgrades sheet reaches it */   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
+  body.shop-over .brand, .game:has(.shop.open) .toast { opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }   /* the title hides only once the upgrades sheet reaches it */   /* the upgrades sheet replaces the power level strip */   /* the tall title canvas must not swallow taps meant for the game */
   .hud { top: auto; bottom: max(64px, 11svh); right: 50%; transform: translateX(50%); text-align: center; padding: 6px 14px; }
   .hud .n { transform-origin: 50% 50%; }
   .hud .meta, .hud .row { justify-content: center; }
@@ -512,7 +506,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     el.addEventListener('pointerleave', holdStop);
     el.addEventListener('click', e => { if (held) { held = false; e.stopImmediatePropagation(); } }, true);   // the release after a held run isn't one more buy
   };
-  let toastT = 0, toastAct = null, buyFn = null, shopBuilt = false, titleFx = null;
+  let toastT = 0, buyFn = null, shopBuilt = false, titleFx = null;
   // the shop on the Rust engine (#shop.bulky): shift-click buys ×10 and alt-click max, touch picks ×1 / ×10 / max above
   // the list; bulk holds the prices buying that many. The widget's engine answers these with promises
   let shopItems = {}, bulkN = 1, bulk = null, bulkAt = 0, tipFor = null, tipAt = 0;
@@ -613,15 +607,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     },
     night(on) { document.body.classList.toggle('night', on); },
     hell(on) { document.body.classList.toggle('hell', on); },
-    // act {id, label, go}: a button in the toast (undo on a big buy)
-    event(text, ms = 2600, act) {
-      const t = $('toast'), h = document.querySelector('.hud'), sh = $('shop'); if (h && h.offsetParent) t.style.setProperty('--hud-top', h.offsetTop + 'px'); t.textContent = text; toastAct = act ? act.id : null;
-      if (act && sh.classList.contains('open') && sh.offsetParent && innerWidth <= 760) t.style.setProperty('--hud-top', Math.min(h ? h.offsetTop : 1e9, sh.offsetTop) + 'px');   // phones: an undo shows above the open upgrades sheet
-      if (act) { const b = document.createElement('button'); b.type = 'button'; b.className = 'tact'; b.textContent = act.label; b.addEventListener('click', e => { e.stopPropagation(); b.disabled = true; act.go(); }); t.append(' ', b); }
-      t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms);
-    },
-    // the toast's button for act `id` can't do anything any more
-    eventOff(id) { const b = $('toast').querySelector('.tact'); if (b && toastAct === id) b.disabled = true; },
+    event(text, ms = 2600) { const t = $('toast'), h = document.querySelector('.hud'); if (h && h.offsetParent) t.style.setProperty('--hud-top', h.offsetTop + 'px'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); },
     sfx(kind) { sfx(kind); },
     wish(options, done) {
       openBox('', '<p>state your wish</p>' + options.map((o, i) => `<button type="button" class="${o.tier || 'common'}" data-i="${i}"><i>${o.tier || 'common'}</i><b>${o.label}</b><span>${o.what}</span></button>`).join(''), i => done(options[i].key));

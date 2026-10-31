@@ -44,7 +44,6 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `train()`, `kaioken()`, `itx()` | the train tab, the kaioken button, the transmission button |
 | `buy(key) → bool` | `ui.onBuy`'s callback: shop rows, `ascend`, `godki`, `zeno` |
 | `buy_n(key, n) → bool` | new in Rust: `n` levels of a shop row at once (all or none), or with `n` 0 as many as you can afford: the same as that many single buys in a row. `ui.onBuy`'s callback with its second argument (shift-click 10, alt-click 0, or the touch toggle's ×1 / ×10 / max) |
-| `undo(id) → bool` | new in Rust: the undo button on a big buy's toast (the frame message's `undo`, below) |
 | `shop_info(key) → text` | new in Rust: a shop row's hover card, `{now, next, rate?, cost, x10: {n, cost, can}, max: {n, cost, can}}`: what the row does at its level and the next, your power a second without timed buffs now and with the next level (for the rows that change it), and the prices of the next level, ten and max |
 | `bulk(n) → text` | new in Rust: `{key: {n, cost, can}}` for every upgrade row, buying 10 (`n` 10) or max (`n` 0): the buttons' prices in that mode |
 | `learn(id)`, `respec()` | the training tree |
@@ -88,13 +87,6 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   `body.dusk` (and `body.dusk-dark` while the page is dark, for its text) and page.html's `--dusk-*` properties from it. game.js has no storm, so this is new to the Rust engine;
   porunga has none. The widget has no page or sky behind its canvas, so its HUD can ignore `sky`: the storm's clouds,
   lightning, pillar and ring of balls are drawn on the canvas.
-- `undo`: new in Rust. `{id, text, ms}` when a big buy (25% or more of the power you held, and 1,000 or more) can be
-  undone: the page shows `text` as a toast for `ms` with an undo button that calls `undo(id)`. `{id, off: true}` when
-  that stops being possible before the toast is gone: the page greys the button. Undo puts power back to exactly what it
-  was before the buy and takes the levels back; it rewinds power, not time, so whatever was earned since goes with it.
-  It's possible for 5 s of game time while it gives power back, and only while nothing else that hangs on the buy has
-  happened: another buy or a learn, a level granted, a form or a mastery star, a reset, kaioken or a jump, or a drain.
-  A buy that lands an achievement offers none. Not part of `events`, so the golden traces don't carry it.
 - `events`: toasts for `ui.event(text, ms)`, oldest first. They include game.js's delayed ones (achievements 0.9 s
   later, the daily bonus, mr. satan, a universe cleared), which planet-core schedules on simulated time.
 - `cues`: the other one-shot `ui` calls, as `[name, ...args]`: `sfx(kind)`, `fx(kind)` and `fx('form', i)`, `bump`,

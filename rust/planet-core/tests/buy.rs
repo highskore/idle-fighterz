@@ -1,10 +1,9 @@
-//! The shop's bulk buys, undo and hover card: ×10 is ten single buys, max never overspends, undo puts power and levels
-//! back exactly (and only while nothing else hangs on the buy), and the card's numbers are what the next level does.
+//! The shop's bulk buys and hover card: ×10 is ten single buys, max never overspends, and the card's numbers are what
+//! the next level does.
 
 use planet_core::big::Big;
-use planet_core::buy::{UNDO_MIN, UNDO_S};
 use planet_core::data::Upg;
-use planet_core::{Game, DT};
+use planet_core::Game;
 
 /// A game in play holding `pl`, in super saiyan 3 so a form-up can't land while it runs.
 fn holding(pl: impl Into<Big>) -> Game {
@@ -22,13 +21,6 @@ fn same(a: &Game, b: &Game) {
     assert_eq!(a.s.levels, b.s.levels);
     assert_eq!(a.s.ach, b.s.ach);
     assert_eq!(a.shop, b.shop);
-}
-
-fn steps(g: &mut Game, n: u32) {
-    for _ in 0..n {
-        let t = g.t + DT;
-        g.frame(t, DT);
-    }
 }
 
 #[test]
@@ -106,91 +98,6 @@ fn bulk_prices_are_what_the_buys_spend() {
 }
 
 #[test]
-fn undo_puts_it_back_exactly() {
-    let mut g = holding(1e6);
-    g.s.levels[Upg::Partner as usize] = 12;
-    g.shop = g.shop_json();
-    let (pl, levels, shop) = (g.s.pl, g.s.levels, g.shop.clone());
-    assert!(g.buy_n("partner", 0));
-    let (id, text) = g.undo_offer.take().expect("a big buy offers undo");
-    assert!(text.starts_with("bubbles ×"), "{text}");
-    assert!(g.undo_live());
-    assert!(!g.undo(id + 1), "only the offered buy");
-    assert!(g.undo(id));
-    assert_eq!((g.s.pl, g.s.levels, &g.shop), (pl, levels, &shop));
-    assert!(!g.undo(id), "once");
-}
-
-#[test]
-fn undo_rewinds_power_earned_since() {
-    let mut g = holding(1e6);
-    let pl = g.s.pl;
-    assert!(g.buy_n("gravity", 0));
-    let (id, _) = g.undo_offer.take().unwrap();
-    let after = g.s.pl;
-    steps(&mut g, 60);
-    assert!(g.s.pl > after, "the run earned power meanwhile");
-    assert!(g.undo(id));
-    assert_eq!(g.s.pl, pl);
-}
-
-#[test]
-fn undo_lapses() {
-    // after UNDO_S
-    let mut g = holding(1e6);
-    g.buy_n("partner", 0);
-    let (id, _) = g.undo_offer.take().unwrap();
-    steps(&mut g, (UNDO_S / DT) as u32 + 2);
-    assert!(!g.undo_live() && !g.undo(id));
-    assert_eq!(g.undo_lapse(), Some(id));
-    assert_eq!(g.undo_lapse(), None);
-
-    // after another buy, a level granted, a learn, a form, a drain or kaioken
-    let pokes: [fn(&mut Game); 6] = [
-        |g| assert!(g.buy("boots")),
-        |g| g.s.levels[Upg::Partner as usize] += 5,
-        |g| {
-            g.s.seeds = 100.0.into();
-            g.learn("fist");
-        },
-        |g| g.s.form += 1,
-        |g| g.drains += 1,
-        |g| g.b.kaio_ready = g.t + 45.0,
-    ];
-    for poke in pokes {
-        let mut g = holding(1e6);
-        g.buy_n("partner", 0);
-        let (id, _) = g.undo_offer.take().unwrap();
-        poke(&mut g);
-        assert!(!g.undo(id));
-    }
-
-    // when what you earned since is more than the buy cost, undo would take power: it's gone
-    let mut g = holding(1e6);
-    g.buy_n("partner", 0);
-    let (id, _) = g.undo_offer.take().unwrap();
-    g.gain(2e6);
-    assert!(!g.undo(id));
-}
-
-#[test]
-fn small_buys_offer_no_undo() {
-    let mut g = holding(1e6);
-    assert!(g.buy("boots")); // 50 of 1M
-    assert!(g.undo_offer.is_none() && g.undo.is_none());
-    let mut g = holding(UNDO_MIN * 2.0);
-    g.s.levels[Upg::Boots as usize] = 0;
-    assert!(g.buy("boots")); // half your power, but 50
-    assert!(g.undo_offer.is_none());
-    // a buy that lands an achievement can't be taken back
-    let mut g = holding(5e9);
-    g.s.ach.insert("ape");
-    g.s.levels[Upg::Tail as usize] = 9;
-    assert!(g.buy_n("tail", 0));
-    assert!(g.s.ach.contains("tail10") && g.undo_offer.is_none());
-}
-
-#[test]
 fn the_card_says_what_the_next_level_does() {
     let mut g = holding(1e6);
     let card = |g: &mut Game, k: &str| serde_json::from_str::<serde_json::Value>(&g.shop_info_json(k)).unwrap();
@@ -222,20 +129,4 @@ fn the_card_says_what_the_next_level_does() {
     card(&mut g, "house");
     g.shop = g.shop_json();
     assert_eq!(g.shop, shop);
-}
-
-#[test]
-fn undo_is_an_input_like_any_other() {
-    // the same inputs, undo among them, play the same game
-    let run = || {
-        let mut g = holding(1e6);
-        steps(&mut g, 30);
-        g.buy_n("partner", 0);
-        let (id, _) = g.undo_offer.take().unwrap();
-        steps(&mut g, 45);
-        assert!(g.undo(id));
-        steps(&mut g, 300);
-        (g.s.pl, g.s.levels, g.rng.draws(), g.shop.clone())
-    };
-    assert_eq!(run(), run());
 }

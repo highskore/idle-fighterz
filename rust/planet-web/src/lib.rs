@@ -117,11 +117,6 @@ impl Planet {
         self.0.buy_n(key, n)
     }
 
-    /// The undo button on a big buy's toast.
-    pub fn undo(&mut self, id: u32) -> bool {
-        self.0.undo(id)
-    }
-
     /// A shop row's hover card, as JSON.
     pub fn shop_info(&mut self, key: &str) -> String {
         self.0.shop_info(key)

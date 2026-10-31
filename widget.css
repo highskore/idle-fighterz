@@ -51,7 +51,6 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
 .widget .goal { padding: 2px 4px 4px; }
 .widget .toast { top: auto; bottom: var(--tb); max-width: calc(100% - 16px); font-size: 1.05em; transform: translate(-50%, 0) scale(.5); }
 .widget .toast.on { transform: translate(-50%, 0) scale(1); }
-.widget .game:has(.shop.open) .toast:has(.tact) { top: 8px; bottom: auto; z-index: 6; }   /* a big buy's undo: above the open upgrades, not under them */
 .widget .wish { right: auto; left: 50%; top: auto; bottom: 6px; transform: translateX(-50%); gap: 4px; width: calc(100% - 16px); }
 .widget .wish p { font-size: 1.6em; } .widget .wish button { padding: 4px 10px; }
 .widget .menu { padding: 6px; }

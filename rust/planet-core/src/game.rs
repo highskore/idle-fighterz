@@ -143,13 +143,6 @@ pub struct Game {
     /// the ki ceiling, kept until what it's made of changes (limits.rs)
     pub ceil_memo: std::cell::Cell<Option<crate::limits::CeilMemo>>,
     pub floor_memo: std::cell::Cell<Option<(u32, Big)>>,
-    /// the last big buy, while undo can still take it back (buy.rs)
-    pub undo: Option<crate::buy::Undo>,
-    pub undo_seq: u32,
-    /// `(id, text)`: an undo offer the HUD hasn't shown yet
-    pub undo_offer: Option<(u32, String)>,
-    /// times something drained power (dr. gero): an undo can't rewind past one
-    pub drains: u32,
 }
 
 impl Game {
@@ -208,10 +201,6 @@ impl Game {
             next_mile: Default::default(),
             ceil_memo: Default::default(),
             floor_memo: Default::default(),
-            undo: None,
-            undo_seq: 0,
-            undo_offer: None,
-            drains: 0,
         };
         g.sync_shop();
         g
