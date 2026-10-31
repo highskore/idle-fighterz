@@ -176,7 +176,8 @@ html[data-kibtn="meter"] .kjump { transition: none !important; }
 @media (min-width: 761px) { .hud .label { flex-wrap: wrap; row-gap: 0; max-width: min(540px, 46vw); margin-left: auto; } .hud .fxs { flex: 1 0 100%; white-space: normal; text-align: right; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } .game:has(.fxs:not(:empty)) .toast { top: calc(9% + 48px); } }   /* the toast drops below a long buff line instead of covering it */
 
 .foot { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; text-transform: uppercase; color: var(--muted); }
-.foot .copy { display: flex; align-items: center; gap: 14px; color: var(--ink); }
+.foot .copy { display: flex; align-items: center; gap: 14px; color: var(--ink); transition: opacity .5s, visibility .5s; }
+body:not(:has(.game.playing)) .foot .copy { opacity: 0; visibility: hidden; }   /* sound and share wait for the game, like the in-game buttons */
 .foot nav { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink); }
 body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once your power level passes 9,007,199,254,740,991 */
 
