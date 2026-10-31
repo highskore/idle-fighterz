@@ -1182,7 +1182,6 @@ impl Game {
             if t - g.t0 > 1.2 {
                 let d = self.s.pl.min(rate * 3.0 * dt);
                 self.s.pl -= d;
-                self.drains += 1;
                 g.drained += d;
             }
             if t - g.t0 > 15.0 {

@@ -1,5 +1,5 @@
-//! The shop's bulk buys (×10 and max), undoing a big buy, and what an upgrade's next level does (the hover card).
-//! None of it changes what a buy does: a bulk buy is the single buys in a row, and undo is an input like any other.
+//! The shop's bulk buys (×10 and max) and what an upgrade's next level does (the hover card).
+//! None of it changes what a buy does: a bulk buy is the single buys in a row.
 
 use crate::big::Big;
 use crate::data::*;
@@ -8,43 +8,8 @@ use crate::hud::Cue;
 use crate::json::{num, Obj};
 use crate::num::{fmt_short, js_round, to_fixed};
 
-/// How long a big buy can be undone, in game seconds.
-pub const UNDO_S: f64 = 5.0;
-/// A buy is big when it spends at least this share of the power you held...
-pub const UNDO_SHARE: f64 = 0.25;
-/// ...and at least this much: the first minute's buys are all big, and all cheap.
-pub const UNDO_MIN: f64 = 1000.0;
 /// The most levels one max buy takes.
 pub const BULK_MAX: u32 = 100_000;
-
-/// Everything an undo has to find as the buy left it: the levels, and whatever spends, resets or forms up.
-#[derive(Clone, Debug, PartialEq)]
-struct Econ {
-    levels: [u32; 15],
-    form: usize,
-    mastery: u32,
-    tree: [u32; TREE.len()],
-    seeds: Big,
-    ascend: Big,
-    godki: u32,
-    gods: u32,
-    zeno: u32,
-    angel: [bool; ANGELS.len()],
-    kaio_ready: f64,
-    itx_ready: f64,
-    drains: u32,
-    playing: bool,
-}
-
-/// A big buy that can still be taken back.
-#[derive(Clone, Debug)]
-pub struct Undo {
-    pub id: u32,
-    levels: [u32; 15],
-    before: Big,
-    until: f64,
-    after: Econ,
-}
 
 /// A number on the hover card: two decimals at most, then the short suffixes.
 fn nice(v: impl Into<Big>) -> String {
@@ -57,26 +22,6 @@ fn nice(v: impl Into<Big>) -> String {
 }
 
 impl Game {
-    fn econ(&self) -> Econ {
-        let s = &self.s;
-        Econ {
-            levels: s.levels,
-            form: s.form,
-            mastery: s.mastery,
-            tree: s.tree,
-            seeds: s.seeds,
-            ascend: s.ascend,
-            godki: s.godki,
-            gods: s.gods,
-            zeno: s.zeno,
-            angel: s.angel,
-            kaio_ready: self.b.kaio_ready,
-            itx_ready: self.tl.itx_ready,
-            drains: self.drains,
-            playing: self.playing,
-        }
-    }
-
     /// Single buys of `u` in a row, on paper: `want` levels or none (all or nothing), or with `None` as many as you can
     /// afford. Returns how many and the power left after them. Levels too cheap to change what you hold (late, when
     /// you're astronomically rich) cost nothing one by one too, so max counts them in one search instead of a loop.
@@ -130,14 +75,14 @@ impl Game {
     }
 
     /// Buys `n` levels of a shop upgrade (all or none), or with `n` 0 as many as you can afford: the same as that many
-    /// single buys in a row, with one sound and one note. A big one (see `UNDO_SHARE`) can be undone for `UNDO_S`.
+    /// single buys in a row, with one sound and one note.
     pub fn buy_n(&mut self, key: &str, n: u32) -> bool {
         let Some(u) = Upg::from_key(key) else { return false };
         let (k, after) = self.plan(u, if n == 0 { None } else { Some(n) });
         if k == 0 {
             return false;
         }
-        let (before, levels, achs) = (self.s.pl, self.s.levels, self.s.ach.len());
+        let first = self.s.levels[u as usize] == 0;
         self.s.pl = after;
         self.s.levels[u as usize] += k;
         self.cue(Cue::Fx("buy"));
@@ -146,7 +91,6 @@ impl Game {
                 self.ach(id);
             }
         }
-        let first = levels[u as usize] == 0;
         let note = match u {
             Upg::Partner if first => "bubbles wants to train with you",
             Upg::Galick if first => {
@@ -172,52 +116,7 @@ impl Game {
             self.event(note);
         }
         self.sync_shop();
-        let spent = before - after;
-        // an achievement can't be taken back, so a buy that lands one can't be either
-        if spent >= before * UNDO_SHARE && spent >= UNDO_MIN && self.s.ach.len() == achs {
-            self.undo_seq += 1;
-            let id = self.undo_seq;
-            self.undo = Some(Undo { id, levels, before, until: self.t + UNDO_S, after: self.econ() });
-            let label = if u == Upg::Galick && self.kame() { "kamehameha" } else { SHOP[u as usize].label };
-            let text = if note.is_empty() {
-                format!("{label}{} for {}", if k > 1 { format!(" ×{k}") } else { String::new() }, fmt_short(spent))
-            } else {
-                note.into()
-            };
-            self.undo_offer = Some((id, text));
-        }
         true
-    }
-
-    /// Undo puts your power back to exactly what it was before the buy and takes the levels back. It rewinds power, not
-    /// time: anything earned since goes with it (it was earned with the upgrade). Live for `UNDO_S`, while it gives
-    /// power back, and only while nothing else that hangs on the buy has happened: another buy or a learn, a level
-    /// granted, a form or a mastery star, a reset, kaioken or a jump, or dr. gero draining you.
-    pub fn undo_live(&self) -> bool {
-        self.undo.as_ref().is_some_and(|u| self.t <= u.until && self.s.pl < u.before && self.econ() == u.after)
-    }
-
-    /// Takes back the big buy `id`; false if it can't be any more.
-    pub fn undo(&mut self, id: u32) -> bool {
-        if !self.undo_live() || self.undo.as_ref().is_some_and(|u| u.id != id) {
-            return false;
-        }
-        let u = self.undo.take().unwrap();
-        self.s.pl = u.before;
-        self.s.levels = u.levels;
-        self.scenery();
-        self.cue(Cue::Sfx("buy"));
-        self.event(format!("undone — back to {} power", fmt_short(u.before)));
-        self.sync_shop();
-        true
-    }
-
-    /// The undo that just stopped being possible, if one did: the HUD greys its button.
-    pub fn undo_lapse(&mut self) -> Option<u32> {
-        if self.undo.is_some() && !self.undo_live() {
-            return self.undo.take().map(|u| u.id);
-        }
-        None
     }
 
     /// What `u` does at level `l`, in the shop's words.

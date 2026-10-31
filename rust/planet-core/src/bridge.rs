@@ -114,8 +114,6 @@ impl Bridge {
     /// - `shop`: `ui.shop`'s last argument (`Game::shop`, the copy the difftest checks), when a row changed
     /// - `world`: the world, when it changed (the page's `ui.hell(false)` and `ui.world(w)`)
     /// - `sky`: shenron's storm over the page (`Dusk::to_json`), when it changed; `null` once it's over
-    /// - `undo`: `{id, text, ms}` when a big buy can be undone (a toast with an undo button), `{id, off: true}` when
-    ///   that stops being possible before its toast is gone (`Game::undo_live`)
     /// - `events`: `[[text, ms], ...]` for `ui.event`; `cues`: `[[call, arg?], ...]` for the other `ui` calls, the
     ///   dragon's offer (`wish`) and instant transmission's picker (`itxPick`) among them
     ///
@@ -140,12 +138,6 @@ impl Bridge {
             o = o.raw("sky", if sky.is_empty() { "null" } else { &sky });
             self.sent_sky = sky;
         }
-        if let Some(id) = g.undo_lapse() {
-            o = o.raw("undo", Obj::new().num("id", id as f64).bool("off", true).end());
-        }
-        if let Some((id, text)) = g.undo_offer.take() {
-            o = o.raw("undo", Obj::new().num("id", id as f64).str("text", &text).num("ms", crate::buy::UNDO_S * 1000.0).end());
-        }
         o.raw("events", g.take_events_json()).raw("cues", g.take_cues_json()).end()
     }
 
@@ -164,11 +156,6 @@ impl Bridge {
     /// Buys `n` levels of a shop upgrade, 0 for as many as you can afford (`Game::buy_n`).
     pub fn buy_n(&mut self, key: &str, n: u32) -> bool {
         self.game.buy_n(key, n)
-    }
-
-    /// Takes back the big buy `id` an `undo` message offered (`Game::undo`).
-    pub fn undo(&mut self, id: u32) -> bool {
-        self.game.undo(id)
     }
 
     /// A shop row's hover card (`Game::shop_info_json`).
@@ -236,24 +223,6 @@ mod tests {
         b.game.s.pl = 0.0.into();
         let m = b.frame_json();
         assert!(!m.contains("\"shop\""), "{m}");
-    }
-
-    #[test]
-    fn a_big_buy_offers_undo_until_it_lapses() {
-        let mut b = Bridge::new(1, 200.0, 134.0, 3.0);
-        b.start("Wed Oct 28 2026", 1.7e12);
-        b.game.s.pl = 1e6.into();
-        b.frame_json();
-        assert!(b.buy_n("partner", 0));
-        let m = b.frame_json();
-        assert!(m.contains(r#""undo":{"id":1,"text":"bubbles wants to train with you","ms":5000}"#), "{m}");
-        assert!(!b.frame_json().contains("undo"), "once");
-        for _ in 0..160 {
-            b.step_one();
-        }
-        let m = b.frame_json();
-        assert!(m.contains(r#""undo":{"id":1,"off":true}"#), "{m}");
-        assert!(!b.undo(1));
     }
 
     #[test]

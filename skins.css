@@ -150,11 +150,10 @@ html.widget[data-theme="dark"]:not([data-skin="scouter"]) .goal { background: no
 html.widget[data-theme="dark"] .toast { color: #f3f1ec; -webkit-text-stroke: 0; background: rgba(22,22,28,.88); border-color: rgba(255,255,255,.12); box-shadow: 0 2px 10px rgba(0,0,0,.3); }
 html.dw-open.widget .toast { left: calc((100% - var(--dw)) / 2); max-width: calc(100% - var(--dw) - 16px); }
 
-/* the shop's hover card, its ×1 / ×10 / max (on touch) and the toast's undo, in each skin's colours */
+/* the shop's hover card and its ×1 / ×10 / max (on touch), in each skin's colours */
 .widget .tip { color: var(--ink); background: var(--chip); border-color: var(--edge); box-shadow: var(--shadow); }
 html.widget[data-theme="dark"]:not([data-skin="scouter"]) .tip { --ink: #f3f1ec; --muted: #a3a09a; --gold: #f2b53a; --chip: rgba(24,24,30,.94); --edge: rgba(255,255,255,.12); }
 html.widget[data-theme="dark"]:not([data-skin]) .shop .bulk button[aria-pressed="true"] { border-color: var(--gold); background: rgba(242,181,58,.12); }
-html.widget[data-theme="dark"] .toast .tact { color: inherit; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.2); }
 .widget[data-skin="scouter"] .tip { --muted: #7fcf8f; --gold: #9dffad; color: #c9ffd2; background: rgba(3,34,14,.92); border: 2px solid #2b3036; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .widget[data-skin="scouter"] .shop .bulk button[aria-pressed="true"] { border-color: #9dffad; background: rgba(120,255,150,.2); }
 .widget[data-skin="capsule"] .tip { --muted: #6a7690; --gold: #1f5fd1; color: #10213f; background: #fff; border-color: #d6dce8; box-shadow: 0 8px 22px rgba(10,30,70,.3); }

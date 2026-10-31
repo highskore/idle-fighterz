@@ -63,7 +63,6 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
       if ('sky' in m) dusk(m.sky);
       if (m.shop) ui.shop(m.shop);
       for (const [text, ms] of m.events) ui.event(text, ms);
-      if (m.undo) { const id = m.undo.id; if (m.undo.off) ui.eventOff && ui.eventOff(id); else ui.event(m.undo.text, m.undo.ms, { id, label: 'undo', go: () => { due(); P.undo(id); deliver(); } }); }
       for (const [call, ...args] of m.cues) if (call === 'xform') document.body.classList.toggle('xdark', args[0]); else if (back[call]) ui[call](args[0], v => { back[call](v); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
     };
     // n: how many (shift-click 10, alt-click 0 for max); a plain click is one buy
