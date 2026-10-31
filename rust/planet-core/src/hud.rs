@@ -414,7 +414,7 @@ impl Game {
         let cf = &self.forms[s.form];
         let (next_name, next_at) = match self.forms.get(s.form + 1) {
             Some(nf) => (nf.name.to_string(), Big::from(nf.at)),
-            None => (format!("mastery {}", s.mastery + 1), cf.at * Big::from(LATE_STEP).pow(s.mastery as f64 + 1.0)),
+            None => (format!("mastery {}", s.mastery + 1), self.mastery_at(s.mastery)),
         };
         let tl = &self.tl;
         Hud {
@@ -531,7 +531,7 @@ impl Game {
         for key in SHOP_ORDER {
             let (unlock, level, cost, label) = match key {
                 "ascend" => (self.ascend_unlocked(), s.ascend, self.ascend_cost(), "ascend"),
-                "godki" => (s.form >= MUI_FORM && self.god_now() > 0, Big::from(s.gods), self.god_cost(), "god ki"),
+                "godki" => (self.god_open() && self.god_now() > 0, Big::from(s.gods), self.god_cost(), "god ki"),
                 "zeno" => (self.zeno_ready(), Big::from(s.zeno), Big::ZERO, "zeno button"),
                 _ => {
                     let u = Upg::from_key(key).unwrap();
@@ -748,10 +748,11 @@ impl Game {
         self.s.auto_at = (self.s.auto_at + 1) % AUTO_AT.len();
     }
 
-    /// `pick(id)`: plays as another hero, if he's unlocked; the forms past ultra instinct follow him.
+    /// `pick(id)`: plays as another hero, if he's unlocked and not mid-transformation (the scene's forms are his
+    /// ladder's); the forms past ultra instinct follow him.
     pub fn pick_hero(&mut self, id: &str) -> bool {
         let Some(&(h, ..)) = CHARS.iter().find(|c| c.1 == id) else { return false };
-        if !self.hero_open(h) {
+        if !self.hero_open(h) || self.xf.is_some() && h != self.s.hero {
             return false;
         }
         self.s.hero = h;

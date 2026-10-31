@@ -850,7 +850,8 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     for (const c of m.chars) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'char' + (c.on ? ' on' : '') + (c.open ? '' : ' locked');
       b.append(game.thumb(c.id)); b.insertAdjacentHTML('beforeend', `<b>${c.name}</b><span>${c.on ? 'playing' : c.open ? 'tap to play' : 'unlock: ' + c.need}</span>`);
-      if (c.open) b.addEventListener('click', () => { game.pick(c.id); renderMenu(); });
+      // a switch is refused mid-transformation: say so and leave the tab as it is
+      if (c.open) b.addEventListener('click', () => { if (game.pick(c.id)) renderMenu(); else b.querySelector('span').textContent = 'transforming · try again in a moment'; });
       body.append(b);
     }
   };

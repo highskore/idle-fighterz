@@ -7,7 +7,7 @@
 //! `Boss::mech`; anything with words goes in the usual toast.
 
 use crate::big::Big;
-use crate::data::Upg;
+use crate::data::{Hero, Upg};
 use crate::game::Game;
 use crate::geom::{ap, mul};
 use crate::hud::Cue;
@@ -180,10 +180,18 @@ impl Game {
         if self.s.lv(Upg::Piccolo) > 0 {
             v.push(Ally::Piccolo);
         }
-        if self.s.krillin_ally && self.tl.kril.is_none() && !self.tl.date.as_ref().is_some_and(|d| d.kr) {
+        if self.s.krillin_ally && self.s.hero != Hero::Krillin && self.tl.kril.is_none() && !self.tl.date.as_ref().is_some_and(|d| d.kr) {
             v.push(Ally::Krillin);
         }
         v
+    }
+
+    /// What an ally is called: playing piccolo, the one meditating in his place is kid gohan.
+    pub fn ally_name(&self, a: Ally) -> &'static str {
+        match a {
+            Ally::Piccolo if self.s.hero == Hero::Piccolo => "kid gohan",
+            _ => a.name(),
+        }
     }
 
     /// Where an ally stands on the planet (as planet-render places him), if he's on the near side.
@@ -260,7 +268,7 @@ impl Game {
                     let owned = self.allies();
                     if let Some(&who) = owned.get(i as usize % owned.len().max(1)) {
                         self.set_mech(Mech::Cell { next, i, ph: Ph::Reach, p0: t, who, healed });
-                        let n = who.name();
+                        let n = self.ally_name(who);
                         self.mech_say(0, format!("cell grabs {n} — tap {n} to rescue him"), 8.0);
                     }
                 }
@@ -344,7 +352,7 @@ impl Game {
                 let (bx, by) = (b.x, b.y - b.spr().h / 2.0 * b.k);
                 self.hit_boss(max * C_HIT / arm, bx, by, false);
                 self.burst_at(x, y - 8.0, &[0xffffff, 0xffe066, 0x6cc94e], 12, 110.0);
-                self.mech_say(1, format!("{} breaks free and smacks cell", who.name()), 6.0);
+                self.mech_say(1, format!("{} breaks free and smacks cell", self.ally_name(who)), 6.0);
                 true
             }
             _ => false,

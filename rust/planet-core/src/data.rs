@@ -174,6 +174,8 @@ pub const ALL_FORMS: [(&str, f64, f64); 14] = [
 pub const UI_FORM: usize = 8;
 pub const MUI_FORM: usize = 9;
 pub const LATE_STEP: f64 = 1000.0;
+/// The first late form's mark (a saiyan's tenth form): god ki and mastery stars go by it for every hero.
+pub const LATE_AT: f64 = 2e14;
 /// From this limit on, every limit broken is also a form-up.
 pub const LB_FROM: u32 = 3;
 const LATE_X: [f64; 2] = [24.0, 40.0];
