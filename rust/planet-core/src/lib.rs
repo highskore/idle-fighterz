@@ -5,6 +5,8 @@ pub mod big;
 pub mod bridge;
 pub mod bubbles;
 pub mod buy;
+pub mod candy;
+pub mod cellgames;
 pub mod data;
 pub mod dusk;
 pub mod floats;

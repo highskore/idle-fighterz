@@ -323,6 +323,11 @@ impl Game {
             s.p += 0.12 * c;
             return;
         }
+        if self.cg_push(Some(c)) {
+            self.inp.beam = None;
+            self.cue(crate::hud::Cue::Sfx("beam"));
+            return;
+        }
         let mut tx = tx;
         if self.tl.movie.as_ref().is_some_and(|m| m.flip_until > t) {
             tx = self.cam.w - tx;
@@ -501,6 +506,7 @@ impl Game {
     /// `explode(x, y)`: a blast that pays a bit more than a full beam, plus whatever it hits.
     fn explode(&mut self, x: f64, y: f64) {
         self.cue(crate::hud::Cue::Sfx("boom"));
+        self.cg_push(None);
         self.strain_bang();
         let bb = self.s.lvf(Upg::Bigbang);
         let r = 18.0 * (1.0 + 0.25 * (bb - 1.0)) * 1f64.max(self.cam.r / 50.0);

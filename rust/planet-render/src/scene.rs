@@ -474,7 +474,14 @@ impl Scene {
                 o.c = fly.at(t);
             }
             let o2 = o.clone();
-            c.sphere(o2.c, o2.r, id, &mut |c, n, x, y| shade_solid(c, &o2, n, x, y));
+            // buu's candy: a tree or a house he's zapped
+            let sweet = crate::games::sweet(g, o2.c);
+            if sweet != 0 {
+                let (leaf, trunk) = (matches!(o2.kind, Kind::Leaf), matches!(o2.kind, Kind::Trunk));
+                c.sphere(o2.c, o2.r, id, &mut |c, n, x, y| crate::games::candy_shade(c, sweet, leaf, trunk, n, x, y));
+            } else {
+                c.sphere(o2.c, o2.r, id, &mut |c, n, x, y| shade_solid(c, &o2, n, x, y));
+            }
             id = id.wrapping_add(1);
         }
         for s in &self.built.slabs {
@@ -503,6 +510,7 @@ impl Scene {
         if !self.built.decor.is_empty() {
             draw_decor(&mut c, &self.built.decor);
         }
+        crate::games::draw_ring(&mut c, g);
         // the decor a milestone unlocked, stood off the road
         if let Some(l) = g.look(planet_core::looks::LookKind::Decor) {
             let p = g.frame3.cap_pt(1.15, 2.4);
@@ -595,8 +603,10 @@ impl Scene {
             blit(c.fb, sprite::get("puff"), x - 13.0, y - 9.0, false);
         }
         self.draw_boss(&mut c, g, dt);
+        crate::games::draw_candy(&mut c, g);
         self.draw_movie(&mut c, g, dt);
         self.draw_late(&mut c, g, dt);
+        crate::games::draw(&mut c, g, &hero);
         for i in 0..g.tl.meteors.len() {
             if g.tl.meteors[i].delay <= 0.0 {
                 self.draw_meteor(&mut c, g, i, view);

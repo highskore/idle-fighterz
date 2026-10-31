@@ -337,6 +337,12 @@ impl Game {
         if b.surge_until > t {
             fx.push(format!("power surge ×{} {}s", crate::xform::SURGE_X, secs(b.surge_until)));
         }
+        if b.champ_until > t {
+            fx.push(format!("champion ×{} {}s", crate::cellgames::CG_X, secs(b.champ_until)));
+        }
+        if b.sugar_until > t {
+            fx.push(format!("sugar rush ×{} {}s", crate::candy::SUGAR_X, secs(b.sugar_until)));
+        }
         if b.ramen_until > t {
             fx.push(format!("full belly ×{} {}s", crate::ramen::FULL_X, secs(b.ramen_until)));
         }

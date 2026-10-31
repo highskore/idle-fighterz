@@ -62,9 +62,14 @@ impl Game {
     /// Turns the planet `k` of the way to having him on top of it, facing us (unless it's being dragged, or it's the
     /// lookout).
     pub(crate) fn face_us(&mut self, k: f64) {
+        self.turn_to(self.frame3.road_pt(self.phi), [0.0, 0.42, 0.91], k);
+    }
+
+    /// Turns the planet `k` of the way to having `p` (on it) at `u` on screen, unless it's being dragged or it's the
+    /// lookout.
+    pub(crate) fn turn_to(&mut self, p: crate::geom::V3, u: crate::geom::V3, k: f64) {
         if self.inp.drag.is_none() && !self.inp.w2_pole {
-            let v = ap(&self.cam.m, self.frame3.road_pt(self.phi));
-            let u = [0.0, 0.42, 0.91];
+            let v = ap(&self.cam.m, p);
             let ax = cross(v, u);
             let s = hypot(&ax);
             if s > 1e-4 {

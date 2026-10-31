@@ -43,6 +43,10 @@ pub struct Buffs {
     pub surge_until: f64,
     /// a ramen break left alone: a full belly
     pub ramen_until: f64,
+    /// the cell games won: a champion
+    pub champ_until: f64,
+    /// a piece of buu's candy tapped (or the candy melting as he leaves)
+    pub sugar_until: f64,
 }
 
 /// Shenron's timed wish buffs (`wishBuff`), by key.
@@ -417,6 +421,8 @@ impl Game {
                 + on(b.gadget_until, 0.5)
                 + on(b.surge_until, crate::xform::SURGE_X - 1.0)
                 + on(b.ramen_until, crate::ramen::FULL_X - 1.0)
+                + on(b.champ_until, crate::cellgames::CG_X - 1.0)
+                + on(b.sugar_until, crate::candy::SUGAR_X - 1.0)
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
@@ -429,9 +435,9 @@ impl Game {
 
     pub fn passive(&self) -> Big {
         let s = &self.s;
-        (s.lvf(Upg::Partner) * 4.0 * self.ms(Upg::Partner)
-            + s.lvf(Upg::House) * 40.0 * self.ms(Upg::House)
-            + s.lvf(Upg::Piccolo) * 60.0 * self.ms(Upg::Piccolo))
+        (s.lvf(Upg::Partner) * 4.0 * self.ms(Upg::Partner) * self.candy_keep(Upg::Partner)
+            + s.lvf(Upg::House) * 40.0 * self.ms(Upg::House) * self.candy_keep(Upg::House)
+            + s.lvf(Upg::Piccolo) * 60.0 * self.ms(Upg::Piccolo) * self.candy_keep(Upg::Piccolo))
             * (1.0 + 0.5 * self.lvl(N_IDLE))
             * if self.wished(WishBuff::Idle) { 3.0 } else { 1.0 }
             * if self.lvl(N_ETERNAL) > 0.0 { 3.0 } else { 1.0 }
@@ -723,6 +729,7 @@ impl Game {
             && tl.struggle.is_none()
             && !tl.ginyu.as_ref().is_some_and(|g| g.done == 0.0)
             && tl.movie.is_none()
+            && tl.cg.is_none()
     }
 
     /// game.js `itxCan()`: owned, recharged, at home, and calm.
@@ -1068,6 +1075,8 @@ impl Game {
             self.xform_step(t, dt);
             self.limits_step(t, dt);
             self.ramen_step(t, dt);
+            self.cg_step(t, dt);
+            self.candy_step(t, dt);
             let last = self.forms.len() - 1;
             if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.forms[last].at * Big::from(LATE_STEP).pow(self.s.mastery as f64 + 1.0) {
                 self.s.mastery += 1;
@@ -1402,6 +1411,29 @@ impl Game {
             // he goes after a butterfly a second in
             self.tl.bub.plan = 0;
             self.tl.bub.until = 1.0;
+        }
+        if has("cellgames") {
+            // the story beat a second in, perfect cell's saga won
+            self.session = 200.0;
+            self.tl.home_since = self.session;
+            self.s.saga = self.s.saga.max(5);
+            self.tl.cg_story = true;
+            self.tl.cg_next = 0.5;
+            self.tl.next_boss = 1e9;
+        }
+        if has("candy") {
+            self.session = 200.0;
+            self.tl.home_since = self.session;
+            self.s.saga = self.s.saga.max(6);
+            lv(self, Upg::Partner, 3);
+            lv(self, Upg::Piccolo, 1);
+            lv(self, Upg::House, 3);
+            self.scenery_house = 3;
+            self.tl.candy_story = true;
+            self.tl.candy_next = 0.5;
+            self.tl.cg_story = true;
+            self.tl.cg_next = 1e9;
+            self.tl.next_boss = 1e9;
         }
         if has("tournament") {
             self.session = 76.0;

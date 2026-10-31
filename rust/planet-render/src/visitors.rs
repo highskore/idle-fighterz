@@ -1,6 +1,7 @@
 //! Everything game.js draws after the hero and before the particles: friends and visitors on the planet, each
 //! world's residents, the boss and the ginyu force, ki blasts, in game.js's order. Screen spots are written back.
 
+use planet_core::candy::Target;
 use planet_core::data::Upg;
 use planet_core::geom::{add, ap, cross, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, sin};
@@ -119,7 +120,7 @@ impl Scene {
         if g.s.lv(Upg::Piccolo) > 0 {
             let v = ap(&m, mul(g.frame3.cap_pt(0.6, 0.9), 1.28));
             g.tl.piccolo_at = if v[2] > -0.2 { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
-            if let Some((x, y)) = g.tl.piccolo_at.filter(|_| !crate::mech::held(g, Ally::Piccolo)) {
+            if let Some((x, y)) = g.tl.piccolo_at.filter(|_| !crate::mech::held(g, Ally::Piccolo) && !g.candied(Target::Piccolo)) {
                 c.blit_z(sprite::get("PICCOLO"), x, y, 0.0, false, 0.0, v[2] * r + 8.0, 0.95);
             }
         } else {
@@ -498,7 +499,7 @@ impl Scene {
             let ka = ap(&m, g.frame3.road_pt(g.phi - 0.45));
             c.blit_z(sprite::get("KRILLIN"), kx, ky, atan2(kv[0], kv[1]), cx + ka[0] * r < kx, sin(t * 9.0).abs() * 2.0, kv[2] * r + 5.0, 1.0);
         }
-        if g.s.lv(Upg::Partner) > 0 && g.b.fuse_until <= t && !crate::mech::held(g, Ally::Bubbles) {
+        if g.s.lv(Upg::Partner) > 0 && g.b.fuse_until <= t && !crate::mech::held(g, Ally::Bubbles) && !g.candied(Target::Bubbles) {
             crate::snack::draw_butterfly(c, g);
             let bub = g.tl.bub.clone();
             let mv = ap(&m, g.frame3.road_pt(g.bub_phi()));
@@ -902,7 +903,12 @@ impl Scene {
 /// The boss's sprite: his saga's, a movie villain's, nappa, or a universe fighter's current take.
 pub(crate) fn boss_sprite(g: &Game, b: &planet_core::timeline::Boss) -> Option<&'static Sprite> {
     use planet_core::data::VILLAINS;
-    let n = if b.name == "past vegeta" { "vegeta" } else { b.name.as_str() };
+    let n = match b.name.as_str() {
+        "past vegeta" => "vegeta",
+        "perfect cell" => "cell",
+        "majin buu" => return Some(planet_core::candy::buu_sprite()),
+        n => n,
+    };
     if b.uni {
         let key = format!("TOP_FIGHTERS.{n}.{}", b.p);
         return sprite::baked().get(&key).or_else(|| if n == "jiren" { sprite::baked().get("VILLAINS.10.spr") } else { None });
