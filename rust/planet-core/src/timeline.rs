@@ -260,7 +260,7 @@ pub struct Boss {
 }
 
 impl Boss {
-    fn new(id: u32, name: String, spr: Dim, hp: Big, t: f64, until: f64) -> Self {
+    pub(crate) fn new(id: u32, name: String, spr: Dim, hp: Big, t: f64, until: f64) -> Self {
         Boss {
             id,
             name,
@@ -625,6 +625,18 @@ pub struct Tl {
     /// where and when the last jump left from (`itxFx`): the renderer's shimmer and pose
     pub itx_fx: Option<(Spot, f64)>,
     pub later: Vec<(f64, Later)>,
+    /// the cell games (cellgames.rs): on now, the quiet seconds to the next, whether the story beat is due, how many
+    pub cg: Option<crate::cellgames::CellGames>,
+    pub cg_next: f64,
+    pub cg_story: bool,
+    pub cg_n: u32,
+    /// halos on everyone after the planet went up
+    pub halo_until: f64,
+    /// buu's candy (candy.rs), the same way
+    pub candy: Option<crate::candy::Candy>,
+    pub candy_next: f64,
+    pub candy_story: bool,
+    pub candy_n: u32,
     /// the ramen break (ramen.rs): the one on now, the quiet seconds to the next, and how many he's had
     pub ramen: Option<crate::ramen::Ramen>,
     pub next_ramen: f64,
@@ -743,6 +755,15 @@ impl Default for Tl {
             itx_back: f64::NEG_INFINITY,
             itx_fx: None,
             later: Vec::new(),
+            cg: None,
+            cg_next: 0.0,
+            cg_story: false,
+            cg_n: 0,
+            halo_until: 0.0,
+            candy: None,
+            candy_next: 0.0,
+            candy_story: false,
+            candy_n: 0,
             ramen: None,
             next_ramen: crate::ramen::RAMEN_FIRST,
             ramens: 0,
@@ -1501,6 +1522,7 @@ impl Game {
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
             && self.tl.dance.is_none()
+            && self.no_games()
         {
             self.tl.pod_wish = 0;
             self.s.namek_at = self.s.run_best * 4.0;
@@ -1558,6 +1580,7 @@ impl Game {
             && self.s.world == home
             && session > 75.0
             && self.s.best >= 3000.0
+            && self.no_games()
             && tick(&mut self.tl.next_tour, dt)
         {
             self.tl.tour = Some(Tour { t0: t, until: t + 60.0, ko: 0, next: 1.5, villain: false });
@@ -1615,6 +1638,7 @@ impl Game {
             && self.tl.cling.is_none()
             && session > 240.0
             && self.s.best >= 3e5
+            && self.no_games()
             && tick(&mut self.tl.next_movie, dt)
         {
             let who = if !self.tl.movie_force.is_empty() {
@@ -1668,6 +1692,7 @@ impl Game {
             && session > 110.0
             && self.tl.boss.is_none()
             && self.tl.shen.is_none()
+            && self.no_games()
             && if self.s.multi { self.s.saga < sagas && self.tl.next_saga < 0.0 } else { tick(&mut self.tl.next_boss, dt) }
         {
             let n = VILLAINS.len();
@@ -1689,7 +1714,14 @@ impl Game {
             }
             self.krillin_hit(vname);
         }
-        if self.tl.tour.is_none() && session > 110.0 && self.tl.boss.is_none() && self.tl.shen.is_none() && self.s.multi && tick(&mut self.tl.next_boss, dt) {
+        if self.tl.tour.is_none()
+            && session > 110.0
+            && self.tl.boss.is_none()
+            && self.tl.shen.is_none()
+            && self.s.multi
+            && self.no_games()
+            && tick(&mut self.tl.next_boss, dt)
+        {
             let (u, k) = (self.s.uni as usize, self.s.uni_stage as usize);
             let who = uni_fighter(u, k);
             let hp = UNI_HP * crate::jsmath::pow(UNI_STEP, u as f64) * UNI_STAGES[k];
@@ -1710,6 +1742,7 @@ impl Game {
             && self.tl.tour.is_none()
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
+            && self.no_games()
             && tick(&mut self.tl.next_storm, dt)
         {
             self.tl.storm = Some(Storm { until: t + 12.0, next: t, hit: 0 });
@@ -1823,7 +1856,8 @@ impl Game {
                     let msg = format!("{} holds {place} — {}% left. grow, he's back in {next}s", b.name, js_round((b.hp / b.max * 100.0).to_f64()));
                     self.tl.next_boss = next;
                     self.event_ms(msg, 3500.0);
-                } else {
+                } else if b.name != "perfect cell" && b.name != "majin buu" {
+                    // (the games and buu's candy say their own goodbyes)
                     let msg = format!("{} got away", b.name);
                     self.event(msg);
                 }
@@ -2013,7 +2047,7 @@ impl Game {
 
     // ── the pieces the timeline calls
 
-    fn new_boss(&mut self, mut b: Boss) {
+    pub(crate) fn new_boss(&mut self, mut b: Boss) {
         self.tl.boss_ids += 1;
         b.id = self.tl.boss_ids;
         self.tl.boss = Some(b);
@@ -3139,6 +3173,10 @@ impl Game {
         }
         // a tap on him while he eats knocks his ramen over
         if self.ramen_tap(px, py) {
+            return;
+        }
+        // the self-destruct takes every tap; a cell jr., a piece of candy
+        if self.cg_tap(px, py) || self.candy_tap(px, py) {
             return;
         }
         if let Some(d) = self.tl.dance.as_mut().filter(|d| d.done == 0.0) {
