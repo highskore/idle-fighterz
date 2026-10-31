@@ -103,6 +103,8 @@ pub struct Input {
     /// the last tap's time and spot, for double-tap detection (`t` is -9 once a pair has fired)
     pub last_tap: (f64, f64, f64),
     pub blasts: Vec<Blast>,
+    /// the shockwaves full beams and big bangs land as (waves.rs)
+    pub waves: Vec<crate::waves::Wave>,
     /// the great ape's step (`floor(t·3.2)`): each new one stomps
     pub ape_step: f64,
     /// whether the great ape stomped this frame (the renderer kicks up dust then)
@@ -126,6 +128,7 @@ impl Default for Input {
             bang_ready: 0.0,
             last_tap: (-9.0, 0.0, 0.0),
             blasts: Vec::new(),
+            waves: Vec::new(),
             ape_step: 0.0,
             stomp: false,
         }
@@ -455,6 +458,12 @@ impl Game {
             self.inp.beam_hits.push((g.x, g.y - g.spr.h / 2.0));
             self.free_gero();
         }
+        if c >= 2.4 {
+            // the wave lands on what it hit nearest where you aimed, or where you aimed
+            let near = |&(x, y): &(f64, f64)| hypot(&[x - tx, y - ty]);
+            let (wx, wy) = self.inp.beam_hits.iter().copied().min_by(|a, b| near(a).total_cmp(&near(b))).unwrap_or((tx, ty));
+            self.wave(wx, wy, crate::waves::BEAM_REACH);
+        }
     }
 
     /// How far off its line a beam of charge `c` reaches past a target's own half-size: wider with the charge, twice
@@ -477,6 +486,7 @@ impl Game {
     pub(crate) fn draw_step(&mut self, t: f64, dt: f64) {
         self.inp.stomp = false;
         self.inp.blasts.retain(|b| (t - b.t0) / 0.45 <= 1.0);
+        self.waves_step(t);
         if self.s.world == 3 && self.tl.snk.is_some() {
             return;
         }
@@ -515,6 +525,7 @@ impl Game {
         let r = 18.0 * (1.0 + 0.25 * (bb - 1.0)) * 1f64.max(self.cam.r / 50.0);
         self.inp.blasts.push(Blast { x, y, r: r * if self.b.ape_until > self.t { 1.6 } else { 1.0 }, t0: self.t, kaio: self.b.kaio_until > self.t });
         self.shake = self.shake.max(0.45);
+        self.wave(x, y, 0.0);
         let n = self.beam_pay() * Self::bang_x_at(bb);
         self.gain_at(n, x, y - 10.0, true);
         for i in 0..self.tl.saibas.len() {

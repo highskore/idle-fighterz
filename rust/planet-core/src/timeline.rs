@@ -496,6 +496,8 @@ pub enum Later {
     Buffs,
     /// the `#itx` preview hook: the transmission picker opens, once playing (it asks again every 0.5s)
     ItxPicker,
+    /// the `#scaleN` preview hook: a full beam (or with `bang`, a big bang) at the boss or the sky, every 6s
+    Wave(bool),
 }
 
 /// The timeline's runtime state: `mount()`'s closure variables that frame() reads and writes.
@@ -838,6 +840,20 @@ impl Game {
                         // from when this one was due, as a setTimeout set inside a setTimeout counts
                         self.tl.later.push((at + 0.5, Later::ItxPicker));
                     }
+                }
+                Later::Wave(bang) => {
+                    if self.playing {
+                        let (tx, ty) = match self.tl.boss.as_ref().filter(|b| !b.dead) {
+                            Some(b) => (b.x, b.y - b.spr().h / 2.0 * b.k),
+                            None => (self.cam.cx + self.cam.r * 1.45, self.cam.cy - self.cam.r * 0.75),
+                        };
+                        if bang {
+                            self.throw_bang(tx, ty);
+                        } else {
+                            self.fire_beam(2.5, tx, ty);
+                        }
+                    }
+                    self.tl.later.push((at + if self.playing { 6.0 } else { 0.5 }, Later::Wave(bang)));
                 }
                 Later::NextWish => {
                     if let Some(sh) = &self.tl.shen {
