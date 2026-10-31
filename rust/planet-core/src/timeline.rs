@@ -1313,6 +1313,8 @@ impl Game {
                     Hero::Goku => ("vegeta", "gogeta"),
                     Hero::Gohan => ("videl", "gohanVidel"),
                     Hero::Trunks => ("goten", "gotenks"),
+                    // the new heroes' partners are still to be picked
+                    Hero::Piccolo | Hero::Krillin | Hero::Goten | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
@@ -2195,7 +2197,12 @@ impl Game {
                 self.after(2.8, Later::Event("mr. satan: \"i did it! it was all me!\" — tap him for the prize money".into(), 4500.0));
             }
             self.victory();
-            self.s.beaten.insert(b.name.clone());
+            if self.s.beaten.insert(b.name.clone()) {
+                // a story beat that opens a hero
+                if let Some(c) = CHARS.iter().find(|c| matches!(c.3, Need::Beat(v) if v == b.name)) {
+                    self.after(1.4, Later::Event(format!("{} joins you · pick him in the characters tab", c.2), 3200.0));
+                }
+            }
             if !self.s.foes.contains(&b.name) {
                 self.s.foes.push(b.name.clone());
             }

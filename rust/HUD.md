@@ -50,7 +50,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `learn_angel(id)`, `auto_next()` | the angels' tab |
 | `wear(kind, id)` | wears a look the milestones unlocked (`aura`, `decor`, `frame`, `trail`), or takes it off with an empty `id`. `menu().looks` lists each kind with what's worn and every look (`open`, and `need`: the milestone that unlocks it); `card().frame` is the worn share-card frame. Rust only: game.js has none, and the page shows the looks rows only when `menu().looks` is there |
 | `pick_wish(key)`, `itx_jump(w)` | the wish box's and the transmission picker's callbacks |
-| `pick_hero(id) → bool` | the characters tab |
+| `pick_hero(id) → bool` | the characters tab. `menu().chars` lists all nine heroes in story order (`id`, `name`, `open`, `on`, and `need`: what opens him, an achievement's text or `beat <villain>`). Rust only past game.js's four: krillin (open from the start), piccolo, android 17 (id `a17`), tien and goten |
 | `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures: `card_sprite()` is the sprite |
 | `hero_sprite(id)`, `card_sprite()` | `thumb(id)`'s sprite (`HEROES[id].idle`) and `card().spr` (the hero's form as drawn in play, `HERO().forms[FORMS[S.form].i]`, or fused; game.js's `card()` indexes by ladder position, a different sprite past the shared nine forms), as an `Int32Array` `[w, h, ...col]` (`col` 0xRRGGBB a pixel, -1 for none); the shim makes game.js's `{ w, h, col }` of it |
 | `save() → text` | what to store under `hs-power`: `JSON.stringify(S)`, key for key |
