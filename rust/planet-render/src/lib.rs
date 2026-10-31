@@ -12,6 +12,7 @@ pub mod floats;
 pub mod intro;
 mod limits;
 pub mod mech;
+pub mod mech2;
 pub mod px;
 pub mod scene;
 pub mod scenery;

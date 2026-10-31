@@ -59,6 +59,8 @@ pub struct Scene {
     pub(crate) mo: Option<crate::limits::MoFx>,
     /// a saga boss's arrival behind the scouter
     pub(crate) bi: Option<crate::intro::IntroFx>,
+    /// this frame draws the bare widget (no sky)
+    pub(crate) bare: bool,
     /// the sky's glass after a tier 4 shockwave, and the wave that last cracked it
     pub(crate) glass: Option<crate::waves::Glass>,
     pub(crate) glass_last: Option<f64>,
@@ -438,6 +440,7 @@ impl Scene {
 
     fn draw_frame(&mut self, fb: &mut Framebuffer, g: &mut Game, view: &View, dt0: f64) {
         self.sync(g);
+        self.bare = view.bare;
         let t = g.t;
         let dt = if g.b.chamber_until > t && g.s.world != 3 { dt0 * 0.3 } else { dt0 };
         fb.clear();
@@ -622,6 +625,7 @@ impl Scene {
         }
         self.xf_front(&mut c, g, view, dt);
         crate::mech::draw(&mut c, g);
+        crate::mech2::draw(&mut c, g);
         self.mo_front(&mut c, g, view);
         self.waves_front(&mut c, g, view);
         if g.flash_t > 0.0 {
