@@ -33,10 +33,10 @@ impl Proto {
 
 fn toast(h: Hero, o: char) -> &'static str {
     match (h, o) {
-        (Hero::Piccolo, 'A') => "focus ×1.8 · 94s untouched — tap to spend it",
+        (Hero::Piccolo, 'A') => "focus ×1.8 · 80s untouched — tap to spend it",
         (Hero::Piccolo, 'B') => "weights off! 4 min of training released: +1.2M",
-        (Hero::Piccolo, 'C') => "gohan reaches lv 6 · ×1.6 — tap to spar with him",
-        (Hero::Krillin, 'A') => "destructo disc! 3 cut in one throw · chain ×3",
+        (Hero::Piccolo, 'C') => "gohan reaches lv 6 · ×1.8 — tap to spar with him",
+        (Hero::Krillin, 'A') => "destructo disc! 3 cut in one throw · chain ×4",
         (Hero::Krillin, 'B') => "solar flare! the villain is blind for 4s — every tap crits",
         (Hero::Krillin, 'C') => "tag! 18 takes the laps — tag bonus ×2.4",
         (Hero::Goten, 'A') => "fu · sion · ha! a perfect dance — gotenks ×3 for 30s",
