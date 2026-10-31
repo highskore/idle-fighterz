@@ -548,7 +548,8 @@ impl Scene {
         let t = c.t;
         let Some(mut b) = g.tl.boss.clone() else { return };
         let Some(spr) = boss_sprite(g, &b) else { return };
-        let k = 0.9f64.max(c.r / 62.0);
+        // broly grows with his rage
+        let k = 0.9f64.max(c.r / 62.0) * crate::mech2::rage_k(g);
         b.k = k;
         let ent = 1f64.min((t - b.t0) / 1.2);
         let out = if b.dead { 1f64.min((t - b.t1) / 1.2) } else { 0.0 };
@@ -557,12 +558,18 @@ impl Scene {
         b.x = c.cx + c.r * if arena { 1.3 } else { 1.45 } + (1.0 - ent) * c.w * 0.4 + fled(out * c.w * 0.5);
         b.y = c.cy - c.r * if arena { 0.4 } else { 0.75 } + sin(t * 2.0) * 3.0;
         // cell, the one boss taller than 40px, keeps his name and hp bar (his mechanic's gauge) on the canvas
-        if spr.h > 40 {
+        if spr.h > 40 || k > 0.9f64.max(c.r / 62.0) {
             b.y = b.y.max(spr.h as f64 * k + 18.0);
         }
         b.y -= fled(out * 30.0);
         let name_w = text_width(&b.name) / 2.0 + 1.0;
         b.x = b.x.min(c.w - ((spr.w as f64 - spr.ax + 1.0) * k).max(name_w).max(10.0 * k + 1.0) - 3.0 + (1.0 - ent) * c.w * 0.4 + fled(out * c.w * 0.5));
+        // metal cooler: the real one takes his slot among the clones
+        if let Some(m) = g.tl.movie.as_ref().and_then(|m| m.metal.as_ref()) {
+            let (x, y) = crate::mech2::slot_spot(c, m.slot(0), spr, k, 0.0);
+            b.x = x + (1.0 - ent) * c.w * 0.4 + fled(out * c.w * 0.5);
+            b.y = y - fled(out * 30.0);
+        }
         b.flash = 0f64.max(b.flash - dt);
         if !(b.dead && !b.fled) {
             for j in 0..spr.h {
@@ -610,12 +617,15 @@ impl Scene {
                 }
                 x += 1.0;
             }
-            let nm = b.name.to_uppercase();
-            let nx = js_round(b.x - text_width(&nm) / 2.0);
-            for (ox, oy) in [(-1.0, 0.0), (1.0, 0.0), (0.0, -1.0), (0.0, 1.0)] {
-                text(c.fb, &nm, nx + ox, by - 8.0 + oy, 0xffffff, 1.0);
+            // metal cooler goes unnamed, like his clones: his edge is the only tell
+            if !g.tl.movie.as_ref().is_some_and(|m| m.metal.is_some()) {
+                let nm = b.name.to_uppercase();
+                let nx = js_round(b.x - text_width(&nm) / 2.0);
+                for (ox, oy) in [(-1.0, 0.0), (1.0, 0.0), (0.0, -1.0), (0.0, 1.0)] {
+                    text(c.fb, &nm, nx + ox, by - 8.0 + oy, 0xffffff, 1.0);
+                }
+                text(c.fb, &nm, nx, by - 8.0, 0x1d1030, 1.0);
             }
-            text(c.fb, &nm, nx, by - 8.0, 0x1d1030, 1.0);
             if b.uni {
                 let (badge, tc) = uni_badge(g);
                 let bx2 = js_round(b.x - text_width(&badge) / 2.0);
@@ -634,20 +644,25 @@ impl Scene {
         let Some(mut gi) = g.tl.ginyu.clone() else { return };
         for m in gi.members.iter_mut() {
             let k = 0.9f64.max(c.r / 62.0);
-            m.k = k;
             let i = m.i as f64;
             let slot = if gi.androids { ((m.i as i64 + ((t - gi.t0) / 2.5).floor() as i64) % 2) as f64 - 0.5 } else { i - 2.0 };
             let ent = 1f64.min((t - gi.t0) / 1.2 + i * -0.1);
             let out = if gi.done != 0.0 { 1f64.min((t - gi.done) / 1.2) } else { 0.0 };
+            m.k = k;
             m.x = c.cx + slot * c.r * 0.55 + (1.0 - 0f64.max(ent)) * c.w * 0.6;
             m.y = c.cy - c.r * 1.12 - slot.abs() * -c.r * 0.08 + sin(t * 2.0 + i) * 2.0 - out * 40.0;
+        }
+        crate::mech2::spotlights(c, &gi, self.bare);
+        let gi_look = gi.clone();
+        for m in gi.members.iter_mut() {
+            let (k, i) = (m.k, m.i as f64);
             m.flash = 0f64.max(m.flash - dt);
             if m.dead {
                 continue;
             }
             let name = if gi.androids { ["A17", "A18"][m.i] } else { ["GINYU.0.spr", "GINYU.1.spr", "GINYU.2.spr", "GINYU.3.spr", "GINYU.4.spr"][m.i] };
-            let spr = sprite::get(name);
-            let mirror = (t * 2.0 + i) % 2.0 < 1.0;
+            let (spr, still) = crate::mech2::member_look(&gi_look, m.i).unwrap_or((sprite::get(name), false));
+            let mirror = !still && (t * 2.0 + i) % 2.0 < 1.0;
             for j in 0..spr.h {
                 for ii in 0..spr.w {
                     let col = spr.col[j * spr.w + if mirror { ii } else { spr.w - 1 - ii }];
@@ -908,7 +923,15 @@ pub(crate) fn boss_sprite(g: &Game, b: &planet_core::timeline::Boss) -> Option<&
         return sprite::baked().get(&key).or_else(|| if n == "jiren" { sprite::baked().get("VILLAINS.10.spr") } else { None });
     }
     if b.movie {
+        if g.tl.movie.as_ref().is_some_and(|m| m.metal.is_some()) {
+            return Some(crate::mech2::steel(true));
+        }
         return sprite::baked().get(&format!("MOVIE.{n}"));
+    }
+    if n == "broly" {
+        if let Some(s) = crate::mech2::rage_sprite(g) {
+            return Some(s);
+        }
     }
     if n == "nappa" && g.s.world == 2 {
         return Some(sprite::get("NAPPA"));
@@ -957,7 +980,7 @@ impl Scene {
     pub(crate) fn draw_movie(&mut self, c: &mut Ctx, g: &mut Game, dt: f64) {
         let t = c.t;
         let (Some(mut m), Some(b)) = (g.tl.movie.clone(), g.tl.boss.clone()) else { return };
-        let Some(bspr) = sprite::baked().get(&format!("MOVIE.{}", b.name)) else { return };
+        let Some(bspr) = sprite::baked().get(&format!("MOVIE.{}", if m.metal.is_some() { "cooler" } else { b.name.as_str() })) else { return };
         let n = m.o.minions.len() as f64;
         let w = c.w;
         for (i, h) in m.minions.iter_mut().enumerate() {
@@ -1006,6 +1029,9 @@ impl Scene {
                 }
                 x += 1.0;
             }
+        }
+        if let Some(mt) = m.metal.as_mut() {
+            crate::mech2::draw_clones(c, mt, b.k, dt, g.calm);
         }
         let over = m.over != 0.0;
         let web = m.web.is_some();

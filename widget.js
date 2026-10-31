@@ -188,6 +188,7 @@
       const first = conf.layout !== s.layout || conf.skin !== s.skin || !w.firstChild; conf = s;
       idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; background();
       skins.theme(s.theme);
+      if (s.ki_buttons && !/kimeter/.test(location.hash)) kiLook(s.ki_buttons === 'meter' ? 'meter' : 'classic');
       if (first) arrange(s.layout, s.skin);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live

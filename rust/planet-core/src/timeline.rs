@@ -113,6 +113,8 @@ pub struct Ginyu {
     pub until: f64,
     pub next_ki: f64,
     pub done: f64,
+    /// the poses and the body change (mech2.rs); none for the androids
+    pub mech: Option<crate::mech2::GinyuMech>,
 }
 
 #[derive(Clone, Debug)]
@@ -477,6 +479,8 @@ pub struct Movie {
     pub over: f64,
     /// the jelly wobble: every row of the screen sways until then (the renderer's)
     pub wob: f64,
+    /// Metal Cooler's clones (mech2.rs), on every other visit of cooler's
+    pub metal: Option<crate::mech2::Metal>,
 }
 
 /// State game.js changes from `setTimeout`, due at a time.
@@ -492,6 +496,8 @@ pub enum Later {
     Buffs,
     /// the `#itx` preview hook: the transmission picker opens, once playing (it asks again every 0.5s)
     ItxPicker,
+    /// the `#scaleN` preview hook: a full beam (or with `bang`, a big bang) at the boss or the sky, every 6s
+    Wave(bool),
 }
 
 /// The timeline's runtime state: `mount()`'s closure variables that frame() reads and writes.
@@ -563,6 +569,11 @@ pub struct Tl {
     pub next_movie: f64,
     pub last_movie: &'static str,
     pub movie_force: &'static str,
+    /// cooler's visits this run: every other one is Metal Cooler (or the `#metal` hook's next)
+    pub coolers: u32,
+    pub metal_force: bool,
+    /// the `#broly-rage` hook: broly arrives nearly at full rage
+    pub rage_force: bool,
     /// the `#struggle` preview hook (and the difftests' forced struggles): every villain fires back
     pub struggle_force: bool,
     /// the difftest harness's forced wish (an index into `WISHES`): the third of each offer while it's ok
@@ -685,6 +696,9 @@ impl Default for Tl {
             next_movie: 480.0,
             last_movie: "",
             movie_force: "",
+            coolers: 0,
+            metal_force: false,
+            rage_force: false,
             struggle_force: false,
             wish_force: None,
             movie_note: None,
@@ -836,6 +850,20 @@ impl Game {
                         // from when this one was due, as a setTimeout set inside a setTimeout counts
                         self.tl.later.push((at + 0.5, Later::ItxPicker));
                     }
+                }
+                Later::Wave(bang) => {
+                    if self.playing {
+                        let (tx, ty) = match self.tl.boss.as_ref().filter(|b| !b.dead) {
+                            Some(b) => (b.x, b.y - b.spr().h / 2.0 * b.k),
+                            None => (self.cam.cx + self.cam.r * 1.45, self.cam.cy - self.cam.r * 0.75),
+                        };
+                        if bang {
+                            self.throw_bang(tx, ty);
+                        } else {
+                            self.fire_beam(2.5, tx, ty);
+                        }
+                    }
+                    self.tl.later.push((at + if self.playing { 6.0 } else { 0.5 }, Later::Wave(bang)));
                 }
                 Later::NextWish => {
                     if let Some(sh) = &self.tl.shen {
@@ -1097,7 +1125,7 @@ impl Game {
                 .enumerate()
                 .map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 })
                 .collect();
-            self.tl.ginyu = Some(Ginyu { androids: true, members, max: hp * 2.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0 });
+            self.tl.ginyu = Some(Ginyu { androids: true, members, max: hp * 2.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0, mech: None });
             self.event("androids 17 and 18 drop in — \"we're just bored\"");
             self.cue(Cue::Sfx("boss"));
             self.tl.next_andro = 340.0 + self.r() * 60.0;
@@ -1399,8 +1427,9 @@ impl Game {
                 .enumerate()
                 .map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 })
                 .collect();
-            self.tl.ginyu = Some(Ginyu { androids: false, members, max: hp * 5.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0 });
-            self.event("the ginyu force strikes a pose!");
+            self.tl.ginyu = Some(Ginyu { androids: false, members, max: hp * 5.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0, mech: None });
+            self.ginyu_arm();
+            self.event(if self.posing() { "the ginyu force poses — a tap now is rude, and a free crit" } else { "the ginyu force strikes a pose!" });
             self.cue(Cue::Sfx("boss"));
             self.tl.next_ginyu = 300.0 + self.r() * 60.0;
         }
@@ -1411,6 +1440,7 @@ impl Game {
                 self.event(msg);
             }
         }
+        self.ginyu_step(t);
         if self.tl.ginyu.as_ref().is_some_and(|g| g.done != 0.0 && t - g.done > 1.5) {
             self.tl.ginyu = None;
         }
@@ -1593,7 +1623,12 @@ impl Game {
                 let pool: Vec<&'static str> = MOVIES.iter().map(|m| m.who).filter(|&w| w != self.tl.last_movie).collect();
                 pool[(self.r() * pool.len() as f64) as usize]
             };
-            self.start_movie(who, t);
+            let metal = who == "cooler" && {
+                self.tl.coolers += 1;
+                self.tl.metal_force || self.tl.coolers.is_multiple_of(2)
+            };
+            self.tl.metal_force = false;
+            self.start_movie(who, t, metal);
             self.tl.movie_force = "";
             self.tl.next_movie = 480.0 + self.r() * 180.0;
         }
@@ -1817,7 +1852,8 @@ impl Game {
         if let Some(g) = self.tl.ginyu.as_mut() {
             if g.done == 0.0 && tick(&mut g.next_ki, dt) {
                 g.next_ki = 0.8;
-                let m = g.members.iter().position(|x| !x.dead);
+                // with the poses, your ki takes them in story order, the captain last (so he's there to swap bodies)
+                let m = if g.mech.is_some() { crate::mech2::G_ORDER.into_iter().find(|&i| !g.members[i].dead) } else { g.members.iter().position(|x| !x.dead) };
                 let (x, y) = self.hand_pos();
                 if let Some(m) = m {
                     self.tl.kis.push(Ki { x, y, t0: t, m: Some(m), disc: false, done: false });
@@ -2794,7 +2830,7 @@ impl Game {
 
     // ── movies
 
-    fn start_movie(&mut self, who: &'static str, t: f64) {
+    fn start_movie(&mut self, who: &'static str, t: f64, metal: bool) {
         let o = MOVIES.iter().find(|m| m.who == who).unwrap();
         let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
         let bb = self.s.lvf(Upg::Bigbang);
@@ -2804,15 +2840,17 @@ impl Game {
         let wr = self.wrate();
         let hp = Big::from(600.0).max(wr * 26.0).max(dps * o.hp[0]);
         let mh = Big::from(150.0).max(wr * 5.0).max(dps * o.hp[1]);
-        let mut b = Boss::new(0, who.into(), movie_dim(who), hp, t, t + 90.0);
+        let name = if metal { "metal cooler".to_string() } else { who.to_string() };
+        let mut b = Boss::new(0, name, movie_dim(who), hp, t, t + 90.0);
         b.movie = true;
         b.struggled = true;
         self.new_boss(b);
-        let minions = o
-            .minions
+        // metal cooler comes without his squadron: his clones are the guard
+        let minions = (if metal { &[][..] } else { o.minions })
             .iter()
             .map(|&name| Henchman { name, spr: movie_dim(name), hp: mh, max: mh, twin: false, dead: false, x: None, y: 0.0, k: 1.0, flash: 0.0 })
             .collect();
+        let metal = metal.then(|| self.metal_start());
         self.tl.movie = Some(Movie {
             o,
             boss: self.tl.boss_ids,
@@ -2827,12 +2865,21 @@ impl Game {
             nova: None,
             over: 0.0,
             wob: if o.jelly { t + 1.6 } else { 0.0 },
+            metal,
         });
         self.tl.last_movie = who;
         self.krillin_hit(who);
         self.cue(Cue::Sfx("boss"));
         self.shake = 0.5;
-        self.event_ms(o.intro, 5000.0);
+        let clones = self.tl.movie.as_ref().unwrap().metal.as_ref().map(|m| m.alive() > 0);
+        self.event_ms(
+            match clones {
+                Some(true) => "metal coolers — break one, two more appear. find the real one",
+                Some(false) => "metal cooler drops in",
+                None => o.intro,
+            },
+            5000.0,
+        );
     }
 
     fn say(&mut self, s: &str) {
@@ -2938,6 +2985,14 @@ impl Game {
         if m.flip_until > t {
             self.burst_at(px, py, &[0xf0d0ff, 0xa66ae0], 5, 40.0);
         }
+        if let Some(i) = self.clone_at(px, py) {
+            self.combo = if t - self.last_click < 0.6 { self.combo_cap().min(self.combo + 0.1) } else { 1.0 };
+            self.last_click = t;
+            let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
+            self.clone_hit(i, dmg);
+            self.cue(Cue::Sfx("hit"));
+            return true;
+        }
         let m = self.tl.movie.as_ref().unwrap();
         let hit = m
             .minions
@@ -2972,6 +3027,8 @@ impl Game {
         if m.over != 0.0 {
             return;
         }
+        self.clones_wipe();
+        let m = self.tl.movie.as_ref().unwrap();
         for i in 0..m.minions.len() {
             let h = &self.tl.movie.as_ref().unwrap().minions[i];
             if !h.dead && h.x.is_some() {
@@ -2991,6 +3048,7 @@ impl Game {
         let b = self.tl.boss.clone().unwrap();
         if b.dead {
             if m.over == 0.0 {
+                self.clones_wipe();
                 let m = self.tl.movie.as_mut().unwrap();
                 m.over = t;
                 m.web = None;
@@ -3013,7 +3071,7 @@ impl Game {
             return;
         }
         let m = self.tl.movie.as_mut().unwrap();
-        if o.nova > 0.0 && m.nova.is_none() && t > m.t0 + 2.0 && m.minions.iter().all(|h| h.dead) {
+        if o.nova > 0.0 && m.metal.is_none() && m.nova.is_none() && t > m.t0 + 2.0 && m.minions.iter().all(|h| h.dead) {
             m.nova = Some((t, t + o.nova));
             let bm = self.tl.boss.as_mut().unwrap();
             bm.until = bm.until.max(t + o.nova + 2.0);
@@ -3155,8 +3213,8 @@ impl Game {
                 return;
             }
         }
-        // a deflect, a rescue
-        if self.mech_tap(px, py) {
+        // ginyu in your body, a deflect, a rescue
+        if self.ginyu_tap(px, py) || self.mech_tap(px, py) {
             return;
         }
         if let Some(s) = self.tl.struggle.as_mut() {
@@ -3341,7 +3399,11 @@ impl Game {
                 self.combo = if t - self.last_click < 0.6 { self.combo_cap().min(self.combo + 0.1) } else { 1.0 };
                 self.last_click = t;
                 let dmg = self.tap_power() * self.mult(false) * self.combo * 6.0 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL));
-                self.ginyu_hit(mi, dmg);
+                let x = self.ginyu_rude(mi);
+                self.ginyu_hit(mi, dmg * x);
+                if x > 1.0 {
+                    self.ginyu_rude_pop(mi, dmg * x);
+                }
                 self.cue(Cue::Sfx("hit"));
                 return;
             }

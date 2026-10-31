@@ -38,6 +38,8 @@ pub enum Cue {
     /// `["xform", on]`: a transformation's power-up darkens the sky (on), or its form has landed (off); the page
     /// lightens the HUD's text over the dark sky
     Scene(bool),
+    /// `ui.quake()`: a big enough shockwave shakes the game card (the page skips it under reduced motion)
+    Quake,
 }
 
 impl Cue {
@@ -57,6 +59,7 @@ impl Cue {
             Cue::ItxPick(l) => arr(["\"itxPick\"".into(), l.clone()]),
             Cue::Notify(k, a) => arr(["\"notify\"".into(), json::str(k), json::str(a)]),
             Cue::Scene(on) => format!("[\"xform\",{on}]"),
+            Cue::Quake => "[\"quake\"]".into(),
         }
     }
 }
@@ -299,7 +302,7 @@ impl Game {
                 if left > 0 {
                     format!("{left} to go before {}", m.o.who)
                 } else {
-                    format!("{} {}s", m.o.who, secs(until))
+                    format!("{} {}s", if m.metal.is_some() { "metal cooler" } else { m.o.who }, secs(until))
                 }
             };
             if !s.is_empty() {

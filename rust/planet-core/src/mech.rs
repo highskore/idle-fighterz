@@ -117,6 +117,11 @@ pub enum Mech {
         refl: Option<(f64, f64)>,
         stag: f64,
     },
+    /// Broly's rage (mech2.rs): `off` is what calm-downs and struggles took off it, `calm` the last calm-down
+    Broly {
+        off: f64,
+        calm: f64,
+    },
 }
 
 impl Game {
@@ -132,12 +137,13 @@ impl Game {
             "kid buu" => Mech::Buu { zone: false, reforms: 0, reform_until: 0.0, reform_t: -9.0 },
             "hit" => Mech::Hit { next: go + H_FIRST, i: 0, ph: Ph::Idle, p0: 0.0 },
             "jiren" => Mech::Jiren { refl: None, stag: -9.0 },
+            "broly" if b.saga => Mech::Broly { off: if self.tl.rage_force { -0.9 - crate::mech2::R_START / crate::mech2::R_RAMP } else { 0.0 }, calm: -9.0 },
             _ => return None,
         })
     }
 
     /// A mechanic's toast, at most once every `gap` seconds per slot.
-    fn mech_say(&mut self, k: usize, s: impl Into<String>, gap: f64) {
+    pub(crate) fn mech_say(&mut self, k: usize, s: impl Into<String>, gap: f64) {
         if self.t >= self.tl.mech_say[k] {
             self.tl.mech_say[k] = self.t + gap;
             self.event(s);
@@ -225,6 +231,8 @@ impl Game {
                     *next = next.max(t) + dt;
                     *ph = Ph::Idle;
                 }
+                // his rage holds still
+                Mech::Broly { off, .. } => *off += dt / crate::mech2::R_RAMP,
                 _ => {}
             }
             return;
@@ -298,10 +306,11 @@ impl Game {
                     self.mech_say(0, "jiren swats weak beams back — fully charge", 10.0);
                 }
             }
+            Mech::Broly { .. } => self.broly_step(),
         }
     }
 
-    fn set_mech(&mut self, m: Mech) {
+    pub(crate) fn set_mech(&mut self, m: Mech) {
         if let Some(b) = self.tl.boss.as_mut() {
             b.mech = Some(m);
         }
@@ -380,6 +389,9 @@ impl Game {
     /// A beam reaching Jiren: a full charge breaks through for more (the multiplier), a weaker one comes back at you
     /// (None: no damage).
     pub(crate) fn mech_beam(&mut self, c: f64) -> Option<f64> {
+        if self.rage().is_some() {
+            return Some(self.broly_hit(c >= J_FULL));
+        }
         let t = self.t;
         let Some(Mech::Jiren { refl, stag }) = self.tl.boss.as_mut().and_then(|b| b.mech.as_mut()) else { return Some(1.0) };
         if c >= J_FULL {
@@ -391,13 +403,15 @@ impl Game {
         }
     }
 
-    /// A tap on the boss: nothing while you're stunned, double in Hit's opening.
+    /// A tap on the boss: nothing while you're stunned, double in Hit's opening, less the angrier Broly is.
     pub(crate) fn mech_tap_x(&mut self) -> f64 {
         if self.stunned() {
             self.combo = 1.0;
             0.0
         } else if self.opening() {
             H_X
+        } else if self.rage().is_some() {
+            self.broly_hit(false)
         } else {
             1.0
         }
