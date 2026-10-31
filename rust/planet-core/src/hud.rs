@@ -388,8 +388,14 @@ impl Game {
         let parts = [
             if s.form > 0 {
                 format!("{} ×{}", f.name, num(f.x))
-            } else if s.pl > 2000.0 {
-                "next form at 20K".into()
+            } else if s.pl > 2000.0 && self.powered_down().is_none() {
+                // goten's first form comes sooner; everyone else's at 20K, as game.js says it
+                let at = self.forms[1].at;
+                if at == 2e4 {
+                    "next form at 20K".into()
+                } else {
+                    format!("next form at {}", fmt_short(Big::from(at)))
+                }
             } else {
                 String::new()
             },

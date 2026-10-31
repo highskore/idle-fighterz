@@ -8,8 +8,8 @@
 //! cannon, spends focus in proportion to its charge and pays much more for it. Taps and beams themselves pay as anyone's.
 //!
 //! Goten was born super saiyan: his forms come at `GOTEN_MARK` of the usual marks, but he can't hold one. `GOTEN_UP`
-//! seconds after a form-up he runs out of steam and drops a form; `GOTEN_REST` later he powers up again by himself,
-//! the transformation scene replaying it (taps hurry it, as anyone's do), and each tap that would train while he's
+//! seconds after a form-up he runs out of steam and drops to base; `GOTEN_REST` later he powers up again by himself,
+//! the transformation scene replaying straight to his best form (taps hurry it, as anyone's do), and each tap that would train while he's
 //! down takes `GOTEN_CHEER` off his rest. His training taps are a kid's, `GOTEN_TAP` of anyone's. The form he dropped still counts as his for
 //! mastery stars, god ki and the multiverse.
 //!
@@ -45,10 +45,10 @@ pub const PICCOLO_BASE: f64 = 0.5;
 
 /// How long goten holds a form, and how long he rests in base before powering up again by himself.
 pub const GOTEN_UP: f64 = 90.0;
-pub const GOTEN_REST: f64 = 30.0;
+pub const GOTEN_REST: f64 = 10.0;
 /// His forms' marks against the usual ones, and his training taps against anyone's (a kid's punches).
-pub const GOTEN_MARK: f64 = 0.6;
-pub const GOTEN_TAP: f64 = 0.5;
+pub const GOTEN_MARK: f64 = 0.5;
+pub const GOTEN_TAP: f64 = 0.1;
 
 /// Seconds between krillin's discs, and between the ones he throws by himself.
 pub const DISC_GAP: f64 = 0.4;
@@ -219,7 +219,7 @@ impl Game {
         }
     }
 
-    /// Goten, dropped a form, since when (None for everyone else, and for him while he holds his best).
+    /// Goten, dropped to base, since when (None for everyone else, and for him while he holds a form).
     pub fn powered_down(&self) -> Option<f64> {
         match self.hero_rt.kind {
             Kind::Goten { down, .. } => down,
@@ -235,7 +235,7 @@ impl Game {
         }
     }
 
-    /// Goten's step: he drops a form when his time's up, and rests before he powers up again.
+    /// Goten's step: he drops to base when his time's up, and rests before he powers up again.
     fn goten_step(&mut self) {
         let t = self.t;
         let (form, scene) = (self.s.form, self.xf.is_some());
@@ -251,11 +251,10 @@ impl Game {
             }
         } else if form > 0 && !scene && t - *up >= GOTEN_UP {
             *down = Some(t);
-            *seen = form - 1;
-            self.s.form = form - 1;
-            self.cue(crate::hud::Cue::Form(form - 1));
-            let (now, was) = (self.forms[form - 1].name, self.forms[form].name);
-            self.event(format!("goten runs out of steam — {was} drops to {now}. he'll power up again in {GOTEN_REST}s, or tap him"));
+            *seen = 0;
+            self.s.form = 0;
+            self.cue(crate::hud::Cue::Form(0));
+            self.event(format!("goten runs out of steam — back to base. he'll power up again in {GOTEN_REST}s, or tap him"));
         }
     }
 
