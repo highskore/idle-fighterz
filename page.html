@@ -100,6 +100,13 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop { visibility: 
 .shop button.special { border-color: var(--gold); background: #fff8e6; }
 .shop span { color: var(--muted); }
 .shop i { font-style: normal; color: var(--gold); }
+/* every row is two lines, so no name is ever cut off: the whole name on top, then its level and its price */
+.shop [data-buy] { flex-direction: row; flex-wrap: wrap; align-items: baseline; align-content: start; column-gap: 8px; row-gap: 0; }
+.shop [data-buy] > b { flex: 1 0 100%; min-width: 0; white-space: normal; }
+.shop [data-buy] > [data-lv] { font-size: .82em; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+.shop [data-buy] > [data-lv].fx { text-transform: none; }   /* not bought yet: what its first level does */
+.shop [data-buy] > em { margin-left: auto; font-size: .88em; }
+.shop .rows { display: contents; }   /* the rows' own box only where the list scrolls (desktop, the widget) */
 .shop-toggle, .mbtn { display: none; }
 /* the hover card (a long press on touch): what a row's next level does and what it costs, from the Rust engine */
 .tip { position: absolute; z-index: 7; left: 0; top: 0; width: max-content; max-width: min(250px, calc(100% - 16px)); padding: 5px 10px 6px; font-size: 10px; line-height: 1.45; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); pointer-events: none; text-transform: none; font-variant-numeric: tabular-nums; }
@@ -117,12 +124,14 @@ html.touch .shop.bulky .bulk { display: flex; }
 @media (min-width: 761px) {
   .shop { left: 16px; top: 44px; bottom: 12px; transform: none; width: 236px; flex-direction: column; justify-content: center; gap: 2px; }   /* centred in the space below the hint */
   .shop { pointer-events: none; } .shop button { pointer-events: auto; }   /* the column spans the card's height: only the buttons take taps, so the moon or a pod behind it stays clickable */
-  .shop button { width: 100%; min-width: 0; padding: 2px 10px 3px; border-radius: 9px; line-height: 1.25; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; }
-  .shop button { flex-wrap: wrap; row-gap: 0; }
-  .shop b { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-  .shop em { flex: none; }
+  .shop button { width: 100%; min-width: 0; padding: 2px 10px 3px; border-radius: 9px; line-height: 1.25; }
   /* 15 rows: descriptions show on hover, beside the row, instead of taking a line each */
   .shop { flex-wrap: nowrap; }
+  /* a list longer than the column scrolls under the goal, cut to whole rows (shopRows) and snapping to them; the wheel
+     reaches it through the rows */
+  .shop > * { flex: none; }
+  .shop .rows { display: flex; flex-direction: column; gap: inherit; flex: 0 1 auto; min-height: 0; max-height: var(--rows-h, none); overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain; scroll-snap-type: y mandatory; }
+  .shop .rows > * { flex: none; scroll-snap-align: start; }
   .shop button { position: relative; }
   .shop button span { display: none; }
   .shop:not(.bulky) button:hover span, .shop:not(.bulky) button:focus-visible span { display: block; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); width: max-content; max-width: 220px; padding: 4px 9px; font-size: 10px; line-height: 1.3; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); z-index: 6; text-transform: none; }
@@ -216,10 +225,11 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
   .shop { bottom: 50px; width: calc(100% - 12px); padding: 4px; max-height: calc(100% - 60px); align-content: start; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
   .menu { padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
   .menu-body, .asc-body { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
-  .shop button { min-width: 0; padding: 6px 9px; border-radius: 10px; flex-direction: column; gap: 0; }
+  .shop button { min-width: 0; padding: 6px 9px; border-radius: 10px; }
   html:not(.widget) .shop.bulky .bulk { display: flex; padding: 2px 0 1px; }
   .shop b { font-size: 11px; white-space: normal; }
-  .shop span { display: block; font-size: 9.5px; line-height: 1.2; }
+  .shop span { display: block; flex: 1 0 100%; font-size: 9.5px; line-height: 1.2; }
+  html:not(.widget) .shop [data-buy] > [data-lv].fx { visibility: hidden; }   /* the full description is right under it */
   .menu-btn, .rule, .tabbar { display: none; }
   /* full-bleed base for every phone variant: the game is the whole screen */
   .page { position: relative; padding: 0; gap: 0; }
@@ -557,6 +567,8 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   let toastT = 0, buyFn = null, shopBuilt = false, titleFx = null;
   // the shop on the Rust engine (#shop.bulky): shift-click buys ×10 and alt-click max, touch picks ×1 / ×10 / max above
   // the list; bulk holds the prices buying that many. The widget's engine answers these with promises
+  // an unbought row's short effect: the Rust engine sends it, game.js's fallback doesn't
+  const SHORT = { boots: '+1 per step', partner: '+4/s, trains', gravity: '×1.15 everything', itx: 'jump to worlds', cloud: 'comes more often', scouter: '+10% crits', galick: 'charge a beam', senzu: 'tap beans ×1.5', house: '+40/s, a dome', armor: '+50% vs villains', tail: 'great ape +×0.25', kaio: 'big boost button', bigbang: 'double-tap blast', piccolo: '+60/s, meditates', chamber: 'train ×2 inside', ascend: 'reset: ki seeds', godki: 'reset: god ki', zeno: 'erase it all' };
   let shopItems = {}, bulkN = 1, bulk = null, bulkAt = 0, tipFor = null, tipAt = 0;
   const later = (v, f) => v && typeof v.then === 'function' ? v.then(f, e => console.error(e)) : f(v);
   const shopPaint = () => {
@@ -567,6 +579,16 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
       b.disabled = r ? !r.can : !v.can && !v.open;
       b.querySelector('[data-cost]').textContent = r ? `${bulkN === 10 ? '×10' : r.n > 1 ? '×' + r.n : 'max'} ${short(r.cost)}` : short(v.cost);
     }
+  };
+  // where the list scrolls (desktop, the widget) it shows whole rows only: .rows is cut after the last row that fits
+  const rowsRO = new ResizeObserver(() => shopRows());
+  const shopRows = () => {
+    const r = $('shop').querySelector('.rows'); if (!r) return;
+    r.style.removeProperty('--rows-h');
+    if (!r.offsetParent || getComputedStyle(r).overflowY === 'visible' || r.scrollHeight <= r.clientHeight + 1) return;
+    const top = r.getBoundingClientRect().top - r.scrollTop, max = r.clientHeight + r.scrollTop; let h = 0;
+    for (const b of r.children) { const y = b.getBoundingClientRect().bottom - top; if (y > max + .5) break; h = Math.max(h, y); }
+    if (h > 0) r.style.setProperty('--rows-h', Math.ceil(h) + 'px');
   };
   const bulkFetch = force => {
     if (bulkN === 1 || !game || !game.bulk) return;
@@ -645,13 +667,14 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
       if (shopBuilt !== keys) {
         goalKey = ''; tipHide();
         el.innerHTML = '<div class="bulk" role="group" aria-label="how many to buy">' + [1, 10, 0].map(n => `<button type="button" data-n="${n}" aria-pressed="${n === bulkN}">${n === 1 ? '×1' : n === 10 ? '×10' : 'max'}</button>`).join('') + '</div>' +
-          '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label} <i data-lv></i></b><em data-cost></em><span data-c></span></button>`).join('');
+          '<div class="goal" id="goal"><span id="goalText"></span><i><b id="goalBar"></b></i></div>' + '<div class="rows">' + Object.entries(items).map(([k, v]) => `<button type="button" data-buy="${k}"${v.special ? ' class="special"' : ''}><b>${v.label}</b><i data-lv></i><em data-cost></em><span data-c></span></button>`).join('') + '</div>';
         el.querySelectorAll('[data-n]').forEach(b => b.addEventListener('click', () => { bulkN = +b.dataset.n; bulk = null; el.querySelectorAll('[data-n]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); shopPaint(); bulkFetch(true); }));
         el.querySelectorAll('[data-buy]').forEach(b => { const k = b.dataset.buy; b.addEventListener('click', e => buyFn && (k === 'ascend' ? askAscend() : k === 'godki' ? askGod() : k === 'zeno' ? askZeno() : buyFn(k, e.shiftKey ? 10 : e.altKey ? 0 : bulkN))); if (!['ascend', 'godki', 'zeno'].includes(k)) hold(b, () => buyFn && buyFn(k), () => !b.disabled, true); });
+        rowsRO.disconnect(); [el, $('game'), $('goal'), ...el.querySelectorAll('.rows, [data-buy]')].forEach(x => rowsRO.observe(x));   // rows added, one grown (a hero's own name, its price), or less room
         shopBuilt = keys; ui.achieved && ui.achieved();
       }
       $('shopCount').textContent = $('tabCount').textContent = Object.values(items).filter(v => v.can).length || '';
-      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.querySelector('b').firstChild.textContent = v.label + ' '; b.querySelector('[data-lv]').textContent = v.level ? 'lv ' + txt(v.level) : ''; b.querySelector('[data-c]').textContent = v.what; }
+      for (const [k, v] of Object.entries(items)) { const b = el.querySelector(`[data-buy="${k}"]`); b.querySelector('b').textContent = v.label; const lv = b.querySelector('[data-lv]'); lv.textContent = v.level ? 'lv ' + txt(v.level) : v.short || SHORT[k] || ''; lv.classList.toggle('fx', !v.level); b.querySelector('[data-c]').textContent = v.what; }
       shopPaint(); bulkFetch(true); if (tipFor) tipPaint();
     },
     night(on) { document.body.classList.toggle('night', on); },
@@ -705,7 +728,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   root.addEventListener('mouseleave', tipHide);
   // phones: the upgrades sheet grows as upgrades unlock; hide the title only once the sheet's top reaches its letters (the canvas is taller than the letters)
   const shopOver = () => { const sh = $('shop'), b = $('brand').getBoundingClientRect(), r = sh.getBoundingClientRect(); document.body.classList.toggle('shop-over', sh.classList.contains('open') && r.height > 0 && r.top < b.top + b.height * .22); };
-  new ResizeObserver(shopOver).observe($('shop')); new MutationObserver(shopOver).observe($('shop'), { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', shopOver);
+  new ResizeObserver(shopOver).observe($('shop')); document.fonts.ready.then(shopRows); new MutationObserver(shopOver).observe($('shop'), { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', shopOver);
   /* scroll intro: measure where the title and card sit when settled, then interpolate from the hero pose */
   const pageEl = document.querySelector('.page'), scroller = $('scroller'), brandEl = $('brand'), gameEl = $('game'), cueEl = $('cue');
   function introLayout() {
