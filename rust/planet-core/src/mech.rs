@@ -223,7 +223,7 @@ impl Game {
             if !self.no_mechs {
                 let m = self.mech_for();
                 self.tl.boss.as_mut().unwrap().mech = m;
-                self.tl.mech_say = [-9.0; 4];
+                self.tl.mech_say[..4].fill(-9.0);
             }
         }
         let b = self.tl.boss.as_mut().unwrap();
@@ -367,7 +367,7 @@ impl Game {
         let Some(b) = self.tl.boss.as_mut() else { return dmg };
         let (hp, max) = (b.hp, b.max);
         let Some(Mech::Buu { zone, reforms, reform_until, .. }) = b.mech.as_mut() else { return dmg };
-        if t < *reform_until {
+        if t < *reform_until && !big {
             return Big::ZERO;
         }
         let after = hp - dmg * arm;

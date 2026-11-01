@@ -128,7 +128,8 @@ fn the_games_come_as_a_story_beat_then_again_much_later() {
         }
     }
     assert!(started.len() >= 2, "{started:?}");
-    assert!(started[0] < 600.0, "the story beat came at {}", started[0]);
+    let story = planet_core::cellgames::CG_STORY;
+    assert!(started[0] >= story && started[0] < story + 600.0, "the story beat came at {}", started[0]);
     let gap = started[1] - started[0];
     assert!(gap >= 2700.0, "the repeat came {gap}s later");
 }

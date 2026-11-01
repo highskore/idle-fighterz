@@ -1,4 +1,4 @@
-//! The Cell Games: a story beat once Cell's saga is won, then a rare repeat (every 45–55 minutes of play, at the next quiet moment), scaled
+//! The Cell Games: a story beat 20 minutes of play after Cell's saga is won (so perfect Cell isn't back right after it), then a rare repeat (every 45–55 minutes of play, at the next quiet moment), scaled
 //! as everything is, on your rate. Cell builds his ring on the planet and a countdown runs out; five Cell Jr.s hop
 //! about it (tap them; Gohan picks one off every few seconds on his own); then perfect Cell steps up as a boss (the
 //! usual fight: taps, beams, big bangs, and the ki blasts that wear him down idle); beaten, he swells to self-destruct,
@@ -18,7 +18,7 @@ use crate::sprite::{shape_sprite, Pal, Sprite};
 use crate::timeline::{Boss, Later};
 
 /// Seconds of play from Cell's saga being won to the games, and between repeats (then they wait for a quiet moment).
-pub const CG_STORY: f64 = 60.0;
+pub const CG_STORY: f64 = 1200.0;
 pub const CG_REPEAT: [f64; 3] = [2700.0, 3300.0, 3000.0];
 /// The countdown, the Cell Jr.s (when Gohan gets the first, and then how often), what a tapped one pays (seconds of
 /// rate).

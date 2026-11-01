@@ -136,6 +136,8 @@ pub struct Game {
     pub mo: Option<crate::limits::Moment>,
     /// strain from play waiting for the next frame, the last tap that counted, and the strain per second (smoothed)
     pub strain_extra: f64,
+    /// seconds the engine has stood `limits::CEIL_HINT_X` past the ki ceiling, straight (0 when it isn't)
+    pub ceil_held: f64,
     pub strain_tap_t: f64,
     pub strain_rate: f64,
     /// the next milestone, worked out once per milestone (limits.rs)
@@ -201,6 +203,7 @@ impl Game {
             strain_tap_t: -9.0,
             strain_rate: 1.0,
             next_mile: Default::default(),
+            ceil_held: 0.0,
             ceil_memo: Default::default(),
             floor_memo: Default::default(),
             hero_rt: Default::default(),
@@ -872,6 +875,7 @@ impl Game {
         self.ach("ascend");
         self.s.pl = keep;
         self.hero_reset();
+        self.xform_cancel();
         self.s.run_best = keep;
         self.s.namek_at = Big::ZERO;
         self.s.foes.clear();
@@ -907,6 +911,7 @@ impl Game {
         self.s.gods += 1;
         self.ach("godki");
         self.hero_reset();
+        self.xform_cancel();
         let s = &mut self.s;
         s.pl = Big::ZERO;
         s.run_best = Big::ZERO;
@@ -957,6 +962,7 @@ impl Game {
             b.t1 = self.t;
         }
         self.hero_reset();
+        self.xform_cancel();
         let s = &mut self.s;
         s.levels = [0; Upg::ALL.len()];
         (s.pl, s.granted, s.multi, s.multi_t, s.uni_best, s.run_best, s.seeds, s.ascend, s.form, s.wishes, s.saga) =
@@ -967,6 +973,7 @@ impl Game {
         s.trips = 0;
         s.foes.clear();
         s.zeno += 1;
+        (self.tl.cg_story, self.tl.cg_n, self.tl.candy_story, self.tl.candy_n) = (false, 0, false, 0);
         self.tl.zen = None;
         self.tl.preview = None;
         self.tl.next_boss = 60.0;

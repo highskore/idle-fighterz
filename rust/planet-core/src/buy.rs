@@ -14,6 +14,9 @@ pub const BULK_MAX: u32 = 100_000;
 /// A number on the hover card: two decimals at most, then the short suffixes.
 fn nice(v: impl Into<Big>) -> String {
     let v = v.into();
+    if !v.to_f64().is_finite() {
+        return fmt_short(v);
+    }
     if v < 1e4 {
         num(to_fixed(v.to_f64(), 2).parse().unwrap())
     } else {

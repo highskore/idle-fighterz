@@ -28,6 +28,8 @@ pub const G_SWAP: f64 = 12.0;
 pub const G_BACK: f64 = 0.2;
 /// what the swap's wrong taps can take off you, in seconds of rate
 pub const G_LOSS: f64 = 10.0;
+/// the ginyu force's first toast slot (`mech_say`): a boss's mechanic, up at the same time, has the ones below
+pub const G_SAY: usize = 4;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GPh {
@@ -153,7 +155,7 @@ impl Game {
         let t = self.t;
         if let Some(g) = self.tl.ginyu.as_mut().filter(|g| !g.androids) {
             g.mech = Some(GinyuMech { ph: GPh::Pose, p0: t, lost: Big::ZERO, rude: (-9.0, 0), back: -9.0 });
-            self.tl.mech_say = [-9.0; 4];
+            self.tl.mech_say[G_SAY..].fill(-9.0);
         }
     }
 
@@ -171,12 +173,12 @@ impl Game {
             GPh::Fight | GPh::Tell if down => Some((GPh::Over, m.p0)),
             GPh::Fight if low || t - m.p0 >= G_AFTER => Some((GPh::Tell, t)),
             GPh::Tell if t - m.p0 >= G_TELL => {
-                self.mech_say(1, "ginyu took your body — tap yourself to swap back", 10.0);
+                self.mech_say(G_SAY + 1, "ginyu took your body — tap yourself to swap back", 10.0);
                 self.cue(Cue::Sfx("beam"));
                 Some((GPh::Swap, t))
             }
             GPh::Swap if down || t - m.p0 >= G_SWAP => {
-                self.mech_say(2, "the change wears off", 10.0);
+                self.mech_say(G_SAY + 2, "the change wears off", 10.0);
                 Some((GPh::Over, m.p0))
             }
             _ => None,
@@ -206,7 +208,7 @@ impl Game {
             self.floats.push(Float { x, y: y - 10.0, s: fmt_short((max * G_BACK).round()), life: 1.2, gold: true, red: false });
             self.burst_at(k.x, k.y, &[0xffffff, 0xbfe9ff, 0xc8a0ff, 0x9a6ad8], 16, 120.0);
             self.cue(Cue::Sfx("hit"));
-            self.mech_say(2, "you're back — ginyu is dizzy", 6.0);
+            self.mech_say(G_SAY + 2, "you're back — ginyu is dizzy", 6.0);
             return true;
         }
         // the tap hurts you: its training is lost (capped a swap, and never below your form's mark)
@@ -244,7 +246,7 @@ impl Game {
         let s = fmt_short((dmg * (1.0 + 0.5 * self.s.lvf(Upg::Armor))).round());
         self.floats.push(Float { x, y: y - 4.0, s, life: 1.0, gold: true, red: false });
         self.burst_at(x, y + 6.0, &[0xffffff, 0xffe066, 0xf2c84a], 6, 90.0);
-        self.mech_say(0, "rude! a tap mid-pose is a free crit", 6.0);
+        self.mech_say(G_SAY, "rude! a tap mid-pose is a free crit", 6.0);
     }
 
     /// Broly's rage now (0 to 1), if it's Broly's fight.

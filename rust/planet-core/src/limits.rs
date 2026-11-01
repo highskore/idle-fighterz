@@ -81,24 +81,33 @@ impl Moment {
     }
 }
 
+/// The HUD names the ki ceiling only once the engine has stood this far past it (its income well cut) this long.
+pub const CEIL_HINT_X: f64 = 2.0;
+pub const CEIL_HINT_S: f64 = 20.0;
+
 /// log10 of the named milestones; past the table, every ×10 of the exponent.
 const NAMED: [f64; 7] = [10.0, 100.0, 308.2547155599167, 1000.0, 1e4, 1e5, 1e6];
 
 /// The `i`-th milestone past 9,000: log10 of its power, and its named index if it plays a scene. Between two named
 /// ones the small beats fall on each step of the lower one's leading power of ten (1e20 … 1e90, then 1e200, 1e300,
-/// 1e400 … 1e900, then 1e2,000 …), so a beat comes every hour or two.
+/// 1e400 … 1e900, then 1e2,000 …), so a beat comes every hour or two. Past the top of `Big`'s range (`E_MAX`), where
+/// power saturates, there are none: an infinite log10.
 pub fn milestone(i: u32) -> (f64, Option<u32>) {
     let named = |k: usize| if k < NAMED.len() { NAMED[k] } else { 10f64.powi(k as i32) };
+    let top = crate::big::E_MAX as f64;
     let (mut k, mut n) = (0usize, 0u32);
     loop {
         let (a, b) = (named(k), named(k + 1));
+        if a > top {
+            return (f64::INFINITY, None);
+        }
         if n == i {
             return (a, Some(k as u32));
         }
         n += 1;
         let step = (0..log10(a).floor() as i32).fold(1.0, |s, _| s * 10.0);
         let mut x = (a / step).floor() * step + step;
-        while x < b {
+        while x < b && x <= top {
             if n == i {
                 return (x, None);
             }
@@ -191,6 +200,7 @@ impl Game {
 
     /// One frame of strain: the creep, the break meter, the break, the milestones.
     pub(crate) fn limits_step(&mut self, t: f64, dt: f64) {
+        self.ceil_held = if self.core() >= self.ceiling() * CEIL_HINT_X { self.ceil_held + dt } else { 0.0 };
         let kaio = if self.b.kaio_until > t { STRAIN_KAIO } else { 1.0 };
         let s = (dt + std::mem::take(&mut self.strain_extra)) * kaio;
         self.strain_rate += (s / dt.max(1e-9) - self.strain_rate) * (dt / 1.0).min(1.0);
@@ -244,7 +254,7 @@ impl Game {
             return;
         }
         let (at, need, named) = self.milestone_next(|m| (m.at, m.need, m.named));
-        if self.s.best < need {
+        if self.s.best < need || at.is_infinite() {
             return;
         }
         self.s.mile += 1;
@@ -375,11 +385,11 @@ impl Game {
             format!("ki limit {} ({}) — strain {pct}%", roman_static(n), crate::num::fmt_short(Big::exp10(Self::limit_log(n))))
         } else if self.s.limits > 0 {
             format!("limits broken {}", self.s.limits)
-        } else if self.core() > self.ceiling() {
+        } else if self.ceil_held >= CEIL_HINT_S {
             if self.s.multi {
-                "ki ceiling — it rises as you train; clearing universes lifts it too".into()
+                "ki ceiling · clear universes to lift it".into()
             } else {
-                "ki ceiling — reach ultra instinct or finish the sagas: the multiverse lifts it".into()
+                "ki ceiling · train to raise it".into()
             }
         } else {
             String::new()
