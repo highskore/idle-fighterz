@@ -534,6 +534,7 @@ impl Game {
         let Some(&(id, name, _)) = ACH.iter().find(|a| a.0 == id) else { return };
         self.s.ach.insert(id);
         self.s.ach_at.insert(id, self.now_ms());
+        let name = self.ach_name(id, name);
         let unlocks: String = CHARS.iter().filter(|c| c.3 == Need::Ach(id)).map(|c| format!(" · {} unlocked", c.2)).collect();
         self.after(0.9, crate::timeline::Later::Event(format!("achievement — {name}{unlocks}"), 3200.0));
         self.cue(Cue::Sfx("coin"));

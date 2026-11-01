@@ -189,8 +189,8 @@ impl Game {
     pub fn own_label(&self, u: crate::data::Upg) -> Option<&'static str> {
         use crate::data::Upg;
         Some(match (self.s.hero, u) {
-            (Hero::Goku | Hero::Gohan | Hero::Krillin, Upg::Galick) => "kamehameha",
-            (Hero::Piccolo, Upg::Galick) => "special beam cannon",
+            (Hero::Vegeta, Upg::Galick) => return None,
+            (h, Upg::Galick) => crate::data::hero_beam(h).0,
             (Hero::Piccolo, Upg::Piccolo) => "kid gohan",
             (Hero::Piccolo, Upg::Tail) => "giant training",
             (Hero::Krillin, Upg::Tail) => "max power training",
@@ -198,6 +198,14 @@ impl Game {
             (Hero::Krillin, Upg::Armor) => "turtle shell",
             _ => return None,
         })
+    }
+
+    /// An achievement's name as this hero would say it: the full-power beam's is his own.
+    pub fn ach_name(&self, id: &str, name: &'static str) -> String {
+        match id {
+            "flash" => format!("{}!", crate::data::hero_beam(self.s.hero).1),
+            _ => name.into(),
+        }
     }
 
     /// Krillin's cuts toward the barrage (0 for everyone else).

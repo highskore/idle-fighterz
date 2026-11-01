@@ -94,16 +94,14 @@ impl Game {
                 self.ach(id);
             }
         }
+        let charge;
         let note = match u {
             Upg::Partner if first => "bubbles wants to train with you",
             Upg::Galick if first && self.s.hero == Hero::Piccolo => "hold anywhere to charge the special beam cannon: it spends his focus",
             Upg::Piccolo if first && self.s.hero == Hero::Piccolo => "kid gohan lands to meditate",
             Upg::Galick if first => {
-                if self.kame() {
-                    "hold anywhere to charge a kamehameha"
-                } else {
-                    "hold anywhere to charge a galick gun"
-                }
+                charge = format!("hold anywhere to charge a {}", hero_beam(self.s.hero).0);
+                &charge
             }
             Upg::House => "a new capsule house lands",
             Upg::Piccolo if first => "piccolo lands to meditate",

@@ -827,12 +827,24 @@ pub const CHARS: [(Hero, &str, &str, Need); 9] = [
     (Hero::Goten, "goten", "goten", Need::Beat("kid buu")),
 ];
 
+/// Each hero's beam as the game names it: (the beam, its full-power form at beam lv 5).
+pub fn hero_beam(h: Hero) -> (&'static str, &'static str) {
+    match h {
+        Hero::Vegeta => ("galick gun", "final flash"),
+        Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten => ("kamehameha", "super kamehameha"),
+        Hero::Trunks => ("burning attack", "heat dome attack"),
+        Hero::Piccolo => ("special beam cannon", "full-power special beam cannon"),
+        Hero::A17 => ("power blitz", "full-power blitz"),
+        Hero::Tien => ("kikoho", "neo tri-beam"),
+    }
+}
+
 /// Each hero's playstyle in one line, as the settings panel's hero row shows it.
 pub fn hero_style(h: Hero) -> &'static str {
     match h {
         Hero::Vegeta => "the classic: tap to train, hold to charge the galick gun",
         Hero::Goku | Hero::Gohan => "the classic rules, with the kamehameha",
-        Hero::Trunks => "the classic rules, with the galick gun",
+        Hero::Trunks => "the classic rules, with the burning attack",
         Hero::Krillin => "taps throw destructo discs that cut saibamen, meteors and orbs",
         Hero::Piccolo => "meditates: idle builds focus, taps and his beam spend it",
         Hero::Goten => "born super saiyan: forms come early but don't hold; taps cheer him back up",

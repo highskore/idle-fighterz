@@ -1,7 +1,6 @@
 //! The ki effects drawn between the visitors and the boss: the spirit bomb gathering over the hero and its throw, the
 //! beam struggle, and the capsule a beaten boss drops (its fall and its opening run here, as in game.js).
 
-use planet_core::data::Hero;
 use planet_core::fx::Particle;
 use planet_core::jsmath::{cos, hypot, sin};
 use planet_core::num::js_round;
@@ -36,17 +35,6 @@ fn ball(c: &mut Ctx, x: f64, y: f64, r: f64) {
             xx += 1.0;
         }
         yy += 1.0;
-    }
-}
-
-/// `BEAM()`: goku and gohan fire a blue kamehameha, vegeta and trunks a purple galick gun (mid, edge).
-fn beam_pal(g: &Game) -> (u32, u32) {
-    if matches!(g.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten) {
-        (0xcdeeff, 0x1f6ad8)
-    } else if g.s.hero == Hero::Piccolo {
-        (0xfff6c0, 0x7a3ae0)
-    } else {
-        (0xe2cbff, 0x7a3ae0)
     }
 }
 
@@ -124,7 +112,7 @@ pub fn draw(c: &mut Ctx, g: &mut Game) {
             }
         };
         let w = 3.0 + c.r / 40.0;
-        let (mid, edge) = beam_pal(g);
+        let crate::beam::Pal { mid, edge, .. } = *crate::beam::pal(g);
         ray(c, hx, hy, qx, qy, w, mid, edge);
         ray(c, bx, by, qx, qy, w, 0xffd8a0, 0xe0603a);
         ball(c, qx, qy, w * 2.2 + sin(t * 30.0) * 1.2);

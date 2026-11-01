@@ -245,11 +245,6 @@ impl Game {
         self.cues.push(c);
     }
 
-    /// `kame()`: goku, gohan, krillin and goten fire a kamehameha, the others a galick gun (piccolo his own cannon).
-    pub fn kame(&self) -> bool {
-        matches!(self.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten)
-    }
-
     /// The buffs line under the power (`fxs.join(' · ')`).
     pub fn effects(&self) -> String {
         let t = self.t;
@@ -545,17 +540,11 @@ impl Game {
                 num(Self::beam_x_at(s.lvf(u))),
                 num(Self::beam_x_at(s.lvf(u) + 1.0)),
                 if l == 4 {
-                    if self.kame() {
-                        " and super kamehameha"
-                    } else if s.hero == Hero::Piccolo {
-                        " and a full-power special beam cannon"
-                    } else {
-                        " and final flash"
-                    }
+                    format!(" and {}", hero_beam(s.hero).1)
                 } else if l >= 5 {
-                    " · full charge ×1.25"
+                    " · full charge ×1.25".into()
                 } else {
-                    ""
+                    String::new()
                 }
             ),
             Upg::Scouter if self.crit_over() > 0.0 => {
@@ -699,8 +688,9 @@ impl Game {
                 .bool("can", open && s.tree[i] < n.max && s.seeds >= cost)
                 .end()
         });
-        let ach =
-            self.listed_ach().map(|(_, &(id, name, text))| Obj::new().str("id", id).str("name", name).str("text", text).bool("done", s.ach.contains(id)).end());
+        let ach = self.listed_ach().map(|(_, &(id, name, text))| {
+            Obj::new().str("id", id).str("name", &self.ach_name(id, name)).str("text", text).bool("done", s.ach.contains(id)).end()
+        });
         let chars = CHARS.iter().map(|&(h, id, name, need)| {
             // his form ladder for the hero row's strip: each form's name and its aura's outer colour
             let ladder = ladder_of(h, s.limits);
@@ -858,13 +848,16 @@ impl Game {
     /// renderer (`spr`, `scene` in game.js), so they're not here.
     pub fn card_json(&self) -> String {
         let s = &self.s;
-        let mut done: Vec<(usize, &str, f64)> =
-            self.listed_ach().filter(|(_, a)| s.ach.contains(a.0)).map(|(i, a)| (i, a.1, s.ach_at.get(a.0).copied().unwrap_or(0.0))).collect();
+        let mut done: Vec<(usize, String, f64)> = self
+            .listed_ach()
+            .filter(|(_, a)| s.ach.contains(a.0))
+            .map(|(i, a)| (i, self.ach_name(a.0, a.1), s.ach_at.get(a.0).copied().unwrap_or(0.0)))
+            .collect();
         done.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap().then(a.0.cmp(&b.0)));
         let hero = CHARS.iter().find(|c| c.0 == s.hero).unwrap_or(&CHARS[0]).2;
         let uni = if s.multi || s.uni_best > 0 { uni_badge(s.uni.max(s.uni_best) as usize) } else { String::new() };
         Obj::new()
-            .raw("ach", arr(done.iter().map(|d| json::str(d.1))))
+            .raw("ach", arr(done.iter().map(|d| json::str(&d.1))))
             .num("achN", self.listed_ach().count() as f64)
             .num("laps", self.laps as f64)
             .num("time", self.session)
