@@ -735,7 +735,7 @@ impl Scene {
                 while dx <= hw {
                     let x = js_round(c.cx) + dx;
                     let k = (y * c.w + x) as i64;
-                    if x >= 0.0 && x < c.w && !(c.fb.zb[k as usize] as f64 > -1e8) {
+                    if x >= 0.0 && x < c.w && y >= 0.0 && !(c.fb.zb[k as usize] as f64 > -1e8) {
                         let l = 0.62 - dx / hw * 0.4;
                         let ring = (y - y0) % 26.0 < 3.0;
                         let col = if dx.abs() == hw { 0x3a2014 } else { tone(if ring { &POLE_RING } else { &POLE }, l, x as i64, y as i64) };
