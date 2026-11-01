@@ -119,7 +119,9 @@ impl Scene {
         // the piccolo upgrade's helper waits above the planet
         if let Some(helper) = g.helper_here() {
             let v = ap(&m, mul(g.frame3.cap_pt(0.6, 0.9), 1.28));
-            g.tl.piccolo_at = if v[2] > -0.2 { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
+            // 17's helper 16 is away while he raids with 18 (no zaps meanwhile)
+            let away = helper == Helper::A16 && g.tl.ginyu.as_ref().is_some_and(|gi| gi.androids);
+            g.tl.piccolo_at = if v[2] > -0.2 && !away { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
             if let Some((x, y)) = g.tl.piccolo_at.filter(|_| !crate::mech::held(g, Ally::Piccolo) && !g.candied(Target::Piccolo)) {
                 let (spr, k, perch) = crate::mech::helper_look(helper);
                 if let Some((p, pk, deck)) = perch {
