@@ -235,3 +235,17 @@ fn the_seeds_wish_is_a_flat_five() {
         assert_eq!((g.s.seeds - seeds, g.s.ascend - ascend), (Big::from(5.0), Big::from(5.0)), "at {pl:e}");
     }
 }
+
+#[test]
+fn the_ki_ceiling_line_waits_until_it_holds_you_back() {
+    use planet_core::limits::{CEIL_HINT_S, CEIL_HINT_X};
+    let mut g = game(1, "", &[("gravity", 120.0)]);
+    step(&mut g);
+    assert!(g.core() >= g.ceiling() * CEIL_HINT_X, "well past the ceiling");
+    assert!(!g.limit_line().contains("ki ceiling"), "not at once");
+    run(&mut g, CEIL_HINT_S + 1.0);
+    assert!(g.limit_line().starts_with("ki ceiling · train to raise it"), "{}", g.limit_line());
+    g.debug_set("gravity", 0.0);
+    step(&mut g);
+    assert!(!g.limit_line().contains("ki ceiling"), "gone once it stops");
+}

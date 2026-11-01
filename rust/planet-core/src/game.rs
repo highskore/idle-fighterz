@@ -136,6 +136,8 @@ pub struct Game {
     pub mo: Option<crate::limits::Moment>,
     /// strain from play waiting for the next frame, the last tap that counted, and the strain per second (smoothed)
     pub strain_extra: f64,
+    /// seconds the engine has stood `limits::CEIL_HINT_X` past the ki ceiling, straight (0 when it isn't)
+    pub ceil_held: f64,
     pub strain_tap_t: f64,
     pub strain_rate: f64,
     /// the next milestone, worked out once per milestone (limits.rs)
@@ -201,6 +203,7 @@ impl Game {
             strain_tap_t: -9.0,
             strain_rate: 1.0,
             next_mile: Default::default(),
+            ceil_held: 0.0,
             ceil_memo: Default::default(),
             floor_memo: Default::default(),
             hero_rt: Default::default(),

@@ -81,6 +81,10 @@ impl Moment {
     }
 }
 
+/// The HUD names the ki ceiling only once the engine has stood this far past it (its income well cut) this long.
+pub const CEIL_HINT_X: f64 = 2.0;
+pub const CEIL_HINT_S: f64 = 20.0;
+
 /// log10 of the named milestones; past the table, every ×10 of the exponent.
 const NAMED: [f64; 7] = [10.0, 100.0, 308.2547155599167, 1000.0, 1e4, 1e5, 1e6];
 
@@ -196,6 +200,7 @@ impl Game {
 
     /// One frame of strain: the creep, the break meter, the break, the milestones.
     pub(crate) fn limits_step(&mut self, t: f64, dt: f64) {
+        self.ceil_held = if self.core() >= self.ceiling() * CEIL_HINT_X { self.ceil_held + dt } else { 0.0 };
         let kaio = if self.b.kaio_until > t { STRAIN_KAIO } else { 1.0 };
         let s = (dt + std::mem::take(&mut self.strain_extra)) * kaio;
         self.strain_rate += (s / dt.max(1e-9) - self.strain_rate) * (dt / 1.0).min(1.0);
@@ -380,11 +385,11 @@ impl Game {
             format!("ki limit {} ({}) — strain {pct}%", roman_static(n), crate::num::fmt_short(Big::exp10(Self::limit_log(n))))
         } else if self.s.limits > 0 {
             format!("limits broken {}", self.s.limits)
-        } else if self.core() > self.ceiling() {
+        } else if self.ceil_held >= CEIL_HINT_S {
             if self.s.multi {
-                "ki ceiling — it rises as you train; clearing universes lifts it too".into()
+                "ki ceiling · clear universes to lift it".into()
             } else {
-                "ki ceiling — reach ultra instinct or finish the sagas: the multiverse lifts it".into()
+                "ki ceiling · train to raise it".into()
             }
         } else {
             String::new()
