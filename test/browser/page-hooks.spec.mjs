@@ -55,6 +55,108 @@ test('settings take focus and hand it back', async ({ page }) => {
   expect(errors).toEqual([])
 })
 
+// the settings panel's hero row: a carousel over menu().chars, picking through game.pick
+const openSettings = async page => { await page.locator('#gear:visible, #gearM:visible').first().click(); await expect(page.locator('#setBox')).toBeVisible() }
+const centre = page => page.locator('.car .mid .hb')
+
+test('the hero row steps with the arrow keys and picks with Enter', async ({ page }) => {
+  const errors = await open(page, '', { title: false })
+  await start(page)
+  await play(page, 1000)
+  await openSettings(page)
+  const name = page.locator('.hero .cname')
+  await expect(name).toContainText('vegeta')
+  await expect(name).toContainText('playing')
+  await expect(page.locator('.hero .fstrip i')).toHaveCount(11)   // vegeta's ladder: the nine, then his two late forms
+  await expect(page.locator('.hero .fstrip .now')).toHaveText('base')
+  await centre(page).focus()
+  await page.keyboard.press('ArrowRight')   // goku waits for super saiyan
+  await expect(name).toContainText('goku')
+  await expect(name).toContainText('unlock: ')
+  await expect(page.locator('.hero .fstrip')).toHaveClass(/off/)
+  await expect(centre(page)).toHaveAttribute('aria-disabled', 'true')
+  await expect(centre(page)).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(name).toContainText('unlock: ')   // a locked hero can't be picked
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight')
+  await expect(name).toContainText('krillin')
+  await expect(name).toContainText('pick to play')
+  await page.keyboard.press('Enter')
+  await expect(name).toContainText('playing')
+  await expect(centre(page)).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.hero .fstrip i').first()).toHaveText('base')
+  await expect(page.locator('.hero .fstrip i').nth(1)).toHaveText('unlocked potential')   // his own names for the marks
+  await page.keyboard.press('ArrowLeft')
+  await expect(name).toContainText('trunks')
+  expect(errors).toEqual([])
+})
+
+test("a locked hero's unlock shows only on its card, never in a line of its own", async ({ page, isMobile }) => {
+  const errors = await open(page, '', { title: false })
+  await start(page)
+  await play(page, 1000)
+  await openSettings(page)
+  await expect(page.locator('.hero .cname')).not.toContainText('unlock')
+  await expect(page.locator('.hero .lines')).not.toContainText('unlock')
+  const goku = page.locator('.car .side .hb[data-step="1"]')
+  if (isMobile) await expect(page.locator('.car .what').first()).toBeHidden()
+  else {
+    await goku.hover()
+    await expect(goku.locator('xpath=..').locator('.what')).toBeVisible()
+    await expect(goku.locator('xpath=..').locator('.what')).toContainText('unlock: ')
+  }
+  await goku.click()   // stepping onto him
+  await expect(page.locator('.hero .cname')).toContainText('unlock: ')
+  expect(errors).toEqual([])
+})
+
+test('a hero picked mid-transformation waits, and the row says why', async ({ page }) => {
+  const errors = await open(page, '#form1xform', { title: false })
+  await start(page)
+  await play(page, 300)
+  await openSettings(page)
+  for (let i = 0; i < 4; i++) await page.locator('.car .arr[data-step="1"]').click()
+  await expect(page.locator('.hero .cname')).toContainText('krillin')
+  await centre(page).click()
+  await expect(page.locator('.car .mid.no')).toBeVisible()
+  await expect(page.locator('.hero .hno')).toContainText("krillin — he's mid-transformation")
+  await expect(centre(page)).toHaveAttribute('aria-pressed', 'false')
+  await page.locator('.car .arr[data-step="1"]').click()   // stepping on clears it
+  await expect(page.locator('.hero .hno')).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+test("the hero row runs on game.js's fallback, without the ladder it doesn't have", { tag: '@js' }, async ({ page }) => {
+  const errors = await open(page, '', { title: false, js: true })
+  await start(page)
+  await play(page, 1000)
+  await openSettings(page)
+  await expect(page.locator('.hero .cname')).toContainText('vegeta')
+  await expect(page.locator('.hero .fstrip')).toHaveCount(0)
+  await page.locator('.car .arr[data-step="-1"]').click()   // game.js has the first four: trunks, behind vegeta
+  await expect(page.locator('.hero .cname')).toContainText('future trunks')
+  expect(errors).toEqual([])
+})
+
+test('a swipe steps the hero row on phones', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'a touch swipe')
+  const errors = await open(page, '', { title: false })
+  await start(page)
+  await play(page, 1000)
+  await openSettings(page)
+  const r = await page.locator('.car').boundingBox(), y = r.y + r.height / 2
+  const swipe = async (from, to) => {
+    await page.locator('.car').dispatchEvent('pointerdown', { pointerType: 'touch', clientX: from, clientY: y, isPrimary: true })
+    await page.locator('.car').dispatchEvent('pointerup', { pointerType: 'touch', clientX: to, clientY: y, isPrimary: true })
+  }
+  await swipe(r.x + r.width * .7, r.x + r.width * .3)
+  await expect(page.locator('.hero .cname')).toContainText('goku')
+  await swipe(r.x + r.width * .3, r.x + r.width * .7)
+  await expect(page.locator('.hero .cname')).toContainText('vegeta')
+  await expect(page.locator('.hero .lines')).toContainText('galick gun')   // the playstyle, in a line on touch
+  expect(errors).toEqual([])
+})
+
 test('the menu takes focus and hands it back', async ({ page }) => {
   const errors = await open(page, '', { title: false })
   await start(page)

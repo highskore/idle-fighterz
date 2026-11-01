@@ -224,3 +224,28 @@ fn mastery_stars_cost_every_hero_at_least_what_goku_pays() {
         assert_eq!(g.s.mastery, 1, "{h:?}: the first at 2e17");
     }
 }
+
+#[test]
+fn the_menu_gives_each_hero_his_playstyle_and_form_ladder() {
+    let mut g = Game::new(7);
+    g.start();
+    g.s.form = 2;
+    let m: serde_json::Value = serde_json::from_str(&g.menu_json()).unwrap();
+    let chars = m["chars"].as_array().unwrap();
+    for (c, &(h, id, ..)) in chars.iter().zip(CHARS.iter()) {
+        assert_eq!(c["id"], id);
+        assert!(!c["style"].as_str().unwrap().is_empty(), "{id} has a playstyle line");
+        let ladder = ladder_of(h, g.s.limits);
+        let forms = c["forms"].as_array().unwrap();
+        assert_eq!(forms.len(), ladder.len(), "{id}'s strip is his whole ladder");
+        for (f, l) in forms.iter().zip(&ladder) {
+            assert_eq!(f["name"], l.name);
+            assert_eq!(f["aura"], format!("#{:06x}", l.aura()[2]));
+        }
+        assert_eq!(c["form"], 2.0, "{id} shows the form he'd switch in at");
+    }
+    let piccolo = chars.iter().find(|c| c["id"] == "piccolo").unwrap();
+    assert_eq!(piccolo["forms"][2]["name"], "fused with nail");
+    assert_eq!(piccolo["forms"][0]["aura"], "#8ad87a", "a namekian's green aura");
+    assert_eq!(chars[0]["forms"][1]["aura"], "#ffe02e", "super saiyan gold");
+}

@@ -50,7 +50,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `learn_angel(id)`, `auto_next()` | the angels' tab |
 | `wear(kind, id)` | wears a look the milestones unlocked (`aura`, `decor`, `frame`, `trail`), or takes it off with an empty `id`. `menu().looks` lists each kind with what's worn and every look (`open`, and `need`: the milestone that unlocks it); `card().frame` is the worn share-card frame. Rust only: game.js has none, and the page shows the looks rows only when `menu().looks` is there |
 | `pick_wish(key)`, `itx_jump(w)` | the wish box's and the transmission picker's callbacks |
-| `pick_hero(id) → bool` | the characters tab. `menu().chars` lists all nine heroes in story order (`id`, `name`, `open`, `on`, and `need`: what opens him, an achievement's text or `beat <villain>`). Rust only past game.js's four: krillin (open from the start), piccolo, android 17 (id `a17`), tien and goten |
+| `pick_hero(id) → bool` | the characters tab and the settings panel's hero row; `false` for a locked hero or mid-transformation. `menu().chars` lists all nine heroes in story order (`id`, `name`, `open`, `on`, and `need`: what opens him, an achievement's text or `beat <villain>`), and for the hero row `style` (his playstyle in a line), `forms` (his whole form ladder, `ladder_of`: each form's `name` and `aura`, the outer colour of its aura as `#rrggbb`) and `form` (the index in `forms` he'd be in, the current form held to his ladder). Rust only past game.js's four: krillin (open from the start), piccolo, android 17 (id `a17`), tien and goten |
 | `menu()`, `angels()`, `ascend_info()`, `god_info()`, `zeno_info()`, `card()` | the same-named game.js calls, as JSON in their shapes. Exceptions: in `menu().tree`, an uncapped node's `max` is `null` (the shim turns it back into `Infinity`); `card()` has no `spr` or `scene`, which are pictures: `card_sprite()` is the sprite |
 | `hero_sprite(id)`, `card_sprite()` | `thumb(id)`'s sprite (`HEROES[id].idle`) and `card().spr` (the hero's form as drawn in play, `HERO().forms[FORMS[S.form].i]`, or fused; game.js's `card()` indexes by ladder position, a different sprite past the shared nine forms), as an `Int32Array` `[w, h, ...col]` (`col` 0xRRGGBB a pixel, -1 for none); the shim makes game.js's `{ w, h, col }` of it |
 | `save() → text` | what to store under `hs-power`: `JSON.stringify(S)`, key for key |
@@ -78,8 +78,9 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   `pl`, `best` and `seeds`, `ascendInfo().seeds`, `shop_info`'s `rate` (both), `cost`, `x10.cost` and `max.cost`, and
   `bulk()`'s `cost` are numbers below 1e300 and, past it, the text `"<m>e<exponent>"`
   (`"4.5e1204"`, planet-core's `Big`). page.html's `big`, `fmt` and `short` format both; its `sci` is planet-core's `num::sci`.
-- `shop`, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, what, can, open, special}}` in shop
-  order. It's `Game::shop`, rebuilt wherever game.js calls `syncShop` (the HUD point of a frame, mounting, `start`, buys,
+- `shop`, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, short, what, can, open, special}}` in shop
+  order. `short` is new in Rust (game.js has none): what the row's first level does in at most 16 characters, which the
+  page shows under an unbought row's name. It's `Game::shop`, rebuilt wherever game.js calls `syncShop` (the HUD point of a frame, mounting, `start`, buys,
   the tree and the angels), so it can come before play starts, as game.js's does.
 - `world`: the world, when it changed. The page calls `ui.hell(false)` and then `ui.world(w)`.
 - `sky`: shenron's storm over the page (planet-core's `dusk`), every frame it changes while he's out, then `null`:

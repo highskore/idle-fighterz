@@ -32,6 +32,8 @@ const STATES = [
   ['ascend', '#mui', async page => { await play(page, 2000); await openShop(page); await page.locator('[data-buy="ascend"]').click(); await play(page, 500) }],
   ['menu', '', async page => { await play(page, 2000); await page.locator('.hud [data-menu]').click(); await play(page, 500) }],
   ['menu-chars', '', async page => { await play(page, 2000); await page.locator('.hud [data-menu]').click(); await page.locator('[data-mt="chars"]').click(); await play(page, 500) }],
+  ['settings', '', async page => { await play(page, 2000); await page.locator('#gear:visible, #gearM:visible').first().click(); await play(page, 500) }],
+  ['settings-locked', '', async page => { await play(page, 2000); await page.locator('#gear:visible, #gearM:visible').first().click(); await page.locator('.car .arr[data-step="1"]').click(); await play(page, 500) }],
   ['tree', '#seeds', async page => { await play(page, 2000); await openShop(page); await page.locator('[data-buy="ascend"]').click(); await page.locator('#ascTree').click(); await play(page, 500) }],
   ['angels', '#godki', async page => { await play(page, 2000); await page.locator('.hud [data-menu]').click(); await page.locator('[data-mt="angels"]').click(); await play(page, 500) }],
 ]

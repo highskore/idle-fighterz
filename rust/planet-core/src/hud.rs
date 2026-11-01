@@ -139,6 +139,8 @@ pub struct ShopRow {
     pub cost: Big,
     pub level: Big,
     pub label: &'static str,
+    /// What the first level does, in a few words: the row shows it until it's bought.
+    pub short: &'static str,
     pub what: String,
     pub can: bool,
     pub open: bool,
@@ -481,6 +483,35 @@ impl Game {
         MS.iter().find(|&&n| l < n).map_or(100.0 + 50.0 * (((l as f64 - 100.0) / 50.0).floor() + 1.0), |&n| n as f64)
     }
 
+    /// A row's `short`: what its first level does, in at most 16 characters.
+    fn shop_short(&self, key: &str) -> &'static str {
+        match key {
+            "ascend" => return "reset: ki seeds",
+            "godki" => return "reset: god ki",
+            "zeno" => return "erase it all",
+            _ => {}
+        }
+        match (Upg::from_key(key).unwrap(), self.s.hero) {
+            (Upg::Tail, Hero::Piccolo) => "giant +×0.25",
+            (Upg::Tail, Hero::Krillin) => "max power +×0.25",
+            (Upg::Boots, _) => "+1 per step",
+            (Upg::Partner, _) => "+4/s, trains",
+            (Upg::Gravity, _) => "×1.15 everything",
+            (Upg::Cloud, _) => "comes more often",
+            (Upg::Scouter, _) => "+10% crits",
+            (Upg::Galick, _) => "charge a beam",
+            (Upg::Senzu, _) => "tap beans ×1.5",
+            (Upg::House, _) => "+40/s, a dome",
+            (Upg::Armor, _) => "+50% vs villains",
+            (Upg::Kaio, _) => "big boost button",
+            (Upg::Bigbang, _) => "double-tap blast",
+            (Upg::Piccolo, _) => "+60/s, meditates",
+            (Upg::Chamber, _) => "train ×2 inside",
+            (Upg::Tail, _) => "great ape +×0.25",
+            (Upg::Itx, _) => "jump to worlds",
+        }
+    }
+
     fn shop_what(&self, key: &str) -> String {
         let s = &self.s;
         match key {
@@ -565,6 +596,7 @@ impl Game {
                 cost,
                 level,
                 label,
+                short: self.shop_short(key),
                 what: self.shop_what(key),
                 can: s.pl >= cost && (key != "ascend" || s.best >= 1e6 && self.t >= self.b.asc_ready),
                 open: key == "ascend" && self.tree_open(),
@@ -574,7 +606,7 @@ impl Game {
         rows
     }
 
-    /// `ui.shop`'s argument: `{key: {cost, level, label, what, can, open, special}}` in shop order.
+    /// `ui.shop`'s argument: `{key: {cost, level, label, short, what, can, open, special}}` in shop order.
     pub fn shop_json(&self) -> String {
         self.shop()
             .iter()
@@ -585,6 +617,7 @@ impl Game {
                         .big("cost", r.cost)
                         .big("level", r.level)
                         .str("label", r.label)
+                        .str("short", r.short)
                         .str("what", &r.what)
                         .bool("can", r.can)
                         .bool("open", r.open)
@@ -669,7 +702,16 @@ impl Game {
         let ach =
             self.listed_ach().map(|(_, &(id, name, text))| Obj::new().str("id", id).str("name", name).str("text", text).bool("done", s.ach.contains(id)).end());
         let chars = CHARS.iter().map(|&(h, id, name, need)| {
-            let mut o = Obj::new().str("id", id).str("name", name).bool("open", self.hero_open(h));
+            // his form ladder for the hero row's strip: each form's name and its aura's outer colour
+            let ladder = ladder_of(h, s.limits);
+            let forms = ladder.iter().map(|f| Obj::new().str("name", f.name).str("aura", &format!("#{:06x}", f.aura()[2])).end());
+            let mut o = Obj::new()
+                .str("id", id)
+                .str("name", name)
+                .bool("open", self.hero_open(h))
+                .str("style", hero_style(h))
+                .num("form", s.form.min(ladder.len() - 1) as f64)
+                .raw("forms", arr(forms));
             match need {
                 Need::Open => {}
                 Need::Ach(a) => o = o.str("need", ACH.iter().find(|x| x.0 == a).unwrap().2),
