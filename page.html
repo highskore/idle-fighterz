@@ -100,6 +100,10 @@ body.shen .hud, body.shen .pair, body.shen .mbtn, body.shen .shop { visibility: 
 .shop button.special { border-color: var(--gold); background: #fff8e6; }
 .shop span { color: var(--muted); }
 .shop i { font-style: normal; color: var(--gold); }
+/* a name too long for its row (shopFit): a little smaller, and if that's not enough, on two lines; never cut off */
+.shop [data-buy] > b.fit { font-size: .92em; letter-spacing: -.02em; }
+.shop [data-buy] > b.wrap { flex: 1 1 0; min-width: auto; white-space: normal; overflow: visible; text-overflow: clip; } .shop b.wrap [data-lv] { white-space: nowrap; }   /* its longest word still won't fit beside the price: the price drops under it */
+.shop button:has(> b.wrap) { flex-wrap: wrap; } .shop [data-buy] > b.wrap + em { margin-left: auto; }
 .shop-toggle, .mbtn { display: none; }
 /* the hover card (a long press on touch): what a row's next level does and what it costs, from the Rust engine */
 .tip { position: absolute; z-index: 7; left: 0; top: 0; width: max-content; max-width: min(250px, calc(100% - 16px)); padding: 5px 10px 6px; font-size: 10px; line-height: 1.45; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); pointer-events: none; text-transform: none; font-variant-numeric: tabular-nums; }
@@ -522,7 +526,18 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
       b.disabled = r ? !r.can : !v.can && !v.open;
       b.querySelector('[data-cost]').textContent = r ? `${bulkN === 10 ? '×10' : r.n > 1 ? '×' + r.n : 'max'} ${short(r.cost)}` : short(v.cost);
     }
+    shopFit();
   };
+  // measured again only when a row's text changes, or the list's width (shopFitAll)
+  const shopFit = () => {
+    const el = $('shop'); if (!el.offsetParent) return;
+    for (const n of el.querySelectorAll('[data-buy] > b')) {
+      const k = n.textContent + n.nextElementSibling.textContent; if (n._fit === k) continue; n._fit = k;
+      n.classList.remove('fit', 'wrap');
+      if (n.scrollWidth > n.clientWidth) { n.classList.add('fit'); if (n.scrollWidth > n.clientWidth) n.classList.replace('fit', 'wrap'); }
+    }
+  };
+  const shopFitAll = () => { $('shop').querySelectorAll('[data-buy] > b').forEach(n => { n._fit = ''; }); shopFit(); };
   const bulkFetch = force => {
     if (bulkN === 1 || !game || !game.bulk) return;
     const now = performance.now(); if (!force && now - bulkAt < 200) return; bulkAt = now;
@@ -660,7 +675,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   root.addEventListener('mouseleave', tipHide);
   // phones: the upgrades sheet grows as upgrades unlock; hide the title only once the sheet's top reaches its letters (the canvas is taller than the letters)
   const shopOver = () => { const sh = $('shop'), b = $('brand').getBoundingClientRect(), r = sh.getBoundingClientRect(); document.body.classList.toggle('shop-over', sh.classList.contains('open') && r.height > 0 && r.top < b.top + b.height * .22); };
-  new ResizeObserver(shopOver).observe($('shop')); new MutationObserver(shopOver).observe($('shop'), { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', shopOver);
+  let shopW = 0; new ResizeObserver(([e]) => { shopOver(); if (e.contentRect.width !== shopW) { shopW = e.contentRect.width; shopFitAll(); } }).observe($('shop')); document.fonts.ready.then(shopFitAll); new MutationObserver(shopOver).observe($('shop'), { attributes: true, attributeFilter: ['class'] }); addEventListener('resize', shopOver);
   /* scroll intro: measure where the title and card sit when settled, then interpolate from the hero pose */
   const pageEl = document.querySelector('.page'), scroller = $('scroller'), brandEl = $('brand'), gameEl = $('game'), cueEl = $('cue');
   function introLayout() {

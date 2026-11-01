@@ -80,6 +80,7 @@
 .widget[data-skin="capsule"] .shop button.special { border-color: #ffd23a; background: #fffbea; }
 .widget[data-skin="capsule"] .shop b::before { content: counter(cap, decimal-leading-zero); color: #1f5fd1; margin-right: 5px; font-size: .85em; }
 .widget[data-skin="capsule"] .shop i { color: #1f5fd1; }
+.widget[data-skin="capsule"] .shop button:has(> b.wrap) { display: flex; flex-wrap: wrap; align-items: center; }   /* a long name on two lines: its price beside it while there's room, else under it (page.html) */
 .widget[data-skin="capsule"] .shop em { color: #fff; background: #1f5fd1; border-radius: 8px; padding: 0 5px; font-size: .85em; }
 .widget[data-skin="capsule"] .shop button:disabled em { color: #fff; background: #b5c0d6; }
 
