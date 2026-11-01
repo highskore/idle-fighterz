@@ -9,9 +9,6 @@ use crate::game::Game;
 use crate::json::{self, arr, Obj};
 use crate::timeline::Later;
 
-/// localStorage key
-pub const SAVE_KEY: &str = "hs-power";
-
 /// The levels in `S`'s key order, where `save_json` writes them right after `best` (tail comes later: game.js only adds
 /// it once it's bought).
 const LEVEL_KEYS: [Upg; 14] = [
