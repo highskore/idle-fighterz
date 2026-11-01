@@ -77,8 +77,9 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 - **Numbers past 1e300.** `pl`, `best`, `rate`, a shop row's `cost` and `level`, the tree's `seeds` and `cost`, the card's
   `pl`, `best` and `seeds` and `ascendInfo().seeds` are numbers below 1e300 and, past it, the text `"<m>e<exponent>"`
   (`"4.5e1204"`, planet-core's `Big`). page.html's `big`, `fmt` and `short` format both; its `sci` is planet-core's `num::sci`.
-- `shop`, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, what, can, open, special}}` in shop
-  order. It's `Game::shop`, rebuilt wherever game.js calls `syncShop` (the HUD point of a frame, mounting, `start`, buys,
+- `shop`, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, short, what, can, open, special}}` in shop
+  order. `short` is new in Rust (game.js has none): what the row's first level does in at most 16 characters, which the
+  page shows under an unbought row's name. It's `Game::shop`, rebuilt wherever game.js calls `syncShop` (the HUD point of a frame, mounting, `start`, buys,
   the tree and the angels), so it can come before play starts, as game.js's does.
 - `world`: the world, when it changed. The page calls `ui.hell(false)` and then `ui.world(w)`.
 - `sky`: shenron's storm over the page (planet-core's `dusk`), every frame it changes while he's out, then `null`:

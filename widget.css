@@ -45,9 +45,9 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
 
 /* the upgrades list: a panel over the planet */
 .widget .shop.open { position: absolute; display: flex; flex-direction: column; gap: 3px; left: 8px; right: 8px; top: auto; bottom: var(--pb, 8px); width: auto; max-height: var(--ph, 66%); overflow: hidden auto; padding: 6px; background: rgba(255,255,255,.96); border: 1px solid var(--edge); border-radius: 12px; box-shadow: var(--shadow); transform: none; z-index: 5; }
-.widget .shop button { width: 100%; min-width: 0; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 6px; padding: 3px 8px; border-radius: 8px; box-shadow: none; }
+.widget .shop button { width: 100%; min-width: 0; column-gap: 6px; padding: 3px 8px; border-radius: 8px; box-shadow: none; }
 .widget .shop button span { display: none; }
-.widget .shop b { font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.widget .shop b { font-size: 1em; }
 .widget .goal { padding: 2px 4px 4px; }
 .widget .toast { top: auto; bottom: var(--tb); max-width: calc(100% - 16px); font-size: 1.05em; transform: translate(-50%, 0) scale(.5); }
 .widget .toast.on { transform: translate(-50%, 0) scale(1); }
