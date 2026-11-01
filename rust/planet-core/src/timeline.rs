@@ -506,7 +506,7 @@ pub struct Tl {
     /// a boss mechanic's stun: taps on him, beams and big bangs do nothing (idle ki and income go on)
     pub stun_until: f64,
     /// when each mechanic toast may come again
-    pub mech_say: [f64; 4],
+    pub mech_say: [f64; 7],
     pub star: Option<Star>,
     pub next_star: f64,
     pub orbs: Vec<Orb>,
@@ -749,7 +749,7 @@ impl Default for Tl {
             monkey_at: None,
             seen: Vec::new(),
             stun_until: 0.0,
-            mech_say: [-9.0; 4],
+            mech_say: [-9.0; 7],
             itx_ready: 0.0,
             itx_trip: false,
             itx_back: f64::NEG_INFINITY,
@@ -1135,6 +1135,7 @@ impl Game {
         if self.tl.ginyu.is_none()
             && self.tl.tour.is_none()
             && self.tl.boss.is_none()
+            && self.no_games()
             && self.tl.shen.is_none()
             && self.s.world != 8
             && session > 200.0
@@ -1172,7 +1173,8 @@ impl Game {
             self.tl.date = None;
         }
         // dr. gero / android 19
-        if self.tl.gero.is_none() && session > 140.0 && self.tl.shen.is_none() && self.tl.boss.is_none() && tick(&mut self.tl.next_gero, dt) {
+        if self.tl.gero.is_none() && session > 140.0 && self.tl.shen.is_none() && self.tl.boss.is_none() && self.no_games() && tick(&mut self.tl.next_gero, dt)
+        {
             self.s.geros += 1;
             let odd = self.s.geros % 2 == 1;
             let (spr, name) = if odd { (A20, "dr. gero") } else { (A19, "android 19") };
@@ -1244,6 +1246,7 @@ impl Game {
             && self.tl.tour.is_none()
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
+            && self.no_games()
             && !self.tl.ginyu.as_ref().is_some_and(|g| g.done == 0.0)
             && tick(&mut self.tl.next_ship, dt)
         {
@@ -1308,6 +1311,7 @@ impl Game {
             && self.s.best >= 2e5
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
+            && self.no_games()
             && self.tl.tour.is_none()
             && self.s.world == self.home()
             && self.tl.cling.is_none()
@@ -1397,6 +1401,7 @@ impl Game {
             && session > 150.0
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
+            && self.no_games()
             && self.tl.tour.is_none()
             && self.s.world == self.home()
             && tick(&mut self.tl.next_cling, dt)
@@ -1460,6 +1465,7 @@ impl Game {
         if self.tl.ginyu.is_none()
             && self.tl.tour.is_none()
             && self.tl.boss.is_none()
+            && self.no_games()
             && self.tl.shen.is_none()
             && session > 150.0
             && self.s.best >= 5e4
@@ -1887,15 +1893,18 @@ impl Game {
                 }
             }
             self.intro_step(t);
+            // the ki blasts (and krillin's discs) don't reach fat buu's rubbery belly (candy.rs)
+            let buu = self.tl.candy.as_ref().map(|c| c.boss);
             let b = self.tl.boss.as_mut().unwrap();
+            let buu = buu == Some(b.id);
             if b.dead && t - b.t1 > 1.2 {
                 self.tl.boss = None;
-            } else if !b.dead && !struggling && t >= b.go && tick(&mut b.next_ki, dt) {
+            } else if !b.dead && !buu && !struggling && t >= b.go && tick(&mut b.next_ki, dt) {
                 b.next_ki = 0.7;
                 let (x, y) = self.hand_pos();
                 self.tl.kis.push(Ki { x, y, t0: t, m: None, disc: false, done: false });
             }
-            if self.s.krillin_ally {
+            if self.s.krillin_ally && !buu {
                 if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go) {
                     let nd = b.next_disc.unwrap_or(2.0) - dt;
                     b.next_disc = Some(nd);
@@ -2044,7 +2053,7 @@ impl Game {
         }
         if let Some(m) = self.tl.moon.clone() {
             if (self.s.lv(Upg::Tail) > 0 || self.s.big_ape) && m.a > 0.3 && !m.leaving && t - m.born > 6.0 && self.b.ape_until < t {
-                self.click(m.x, m.y);
+                self.moon_transform();
             }
         }
         if self.b.ape_until > t && self.s.lv(Upg::Tail) > 0 {
@@ -3182,6 +3191,37 @@ impl Game {
         }
     }
 
+    /// The full moon takes him: the great ape (a giant one with the wish), and the moon goes.
+    pub(crate) fn moon_transform(&mut self) {
+        let t = self.t;
+        self.tl.ape = Ape { cd: 0.0, rage: 0.0, giant: self.s.big_ape, at: t, k: 2.3 };
+        self.s.big_ape = false;
+        self.b.ape_until = t + self.ape_len();
+        self.tl.moon.as_mut().unwrap().leaving = true;
+        self.ach("ape");
+        let giant = self.tl.ape.giant;
+        if giant {
+            self.ach("giantape");
+        }
+        self.flash_t = 1.0;
+        self.shake = 0.8;
+        let tail = giant || self.s.lv(Upg::Tail) > 0;
+        let msg = format!(
+            "{} — ×{}{}",
+            match self.ape_name(false) {
+                "great ape" if giant => "a giant great ape",
+                "great ape" => "great ape mode",
+                own => own,
+            },
+            1.0 + self.ape_x(),
+            if tail { format!(", tap to {}", if giant { "stomp" } else { "build rage" }) } else { String::new() }
+        );
+        self.event(msg);
+        self.cue(Cue::Fx("super"));
+        let q = self.kid_screen(20.0);
+        self.spray(q.x, q.y, &[0xffffff, 0xffd0a0, 0x7a4a2a], 80, 220.0, 2.0, 1.0);
+    }
+
     // ── taps
 
     /// `onClick(px, py)`: a tap at a spot on the canvas. Whatever's there takes it; anywhere else it trains.
@@ -3282,7 +3322,7 @@ impl Game {
                 return;
             }
         }
-        // ginyu in your body, a deflect, a rescue
+        // ginyu in your body, a deflect, a rescue; swapped in frieza's aim, a tap on yourself swaps back (no deflect)
         if self.ginyu_tap(px, py) || self.mech_tap(px, py) {
             return;
         }
@@ -3510,34 +3550,9 @@ impl Game {
             self.burst_at(mx, my, &[0xffffff, 0xffb35a, 0xe0473e, 0x6c6f7c], 16, 110.0);
             return;
         }
-        if let Some(m) = self.tl.moon.clone() {
+        if let Some(m) = self.tl.moon.as_ref() {
             if m.a > 0.3 && !m.leaving && hypot(&[px - m.x, py - m.y]) < m.r + 6.0 {
-                self.tl.ape = Ape { cd: 0.0, rage: 0.0, giant: self.s.big_ape, at: t, k: 2.3 };
-                self.s.big_ape = false;
-                self.b.ape_until = t + self.ape_len();
-                self.tl.moon.as_mut().unwrap().leaving = true;
-                self.ach("ape");
-                let giant = self.tl.ape.giant;
-                if giant {
-                    self.ach("giantape");
-                }
-                self.flash_t = 1.0;
-                self.shake = 0.8;
-                let tail = giant || self.s.lv(Upg::Tail) > 0;
-                let msg = format!(
-                    "{} — ×{}{}",
-                    match self.ape_name(false) {
-                        "great ape" if giant => "a giant great ape",
-                        "great ape" => "great ape mode",
-                        own => own,
-                    },
-                    1.0 + self.ape_x(),
-                    if tail { format!(", tap to {}", if giant { "stomp" } else { "build rage" }) } else { String::new() }
-                );
-                self.event(msg);
-                self.cue(Cue::Fx("super"));
-                let q = self.kid_screen(20.0);
-                self.spray(q.x, q.y, &[0xffffff, 0xffd0a0, 0x7a4a2a], 80, 220.0, 2.0, 1.0);
+                self.moon_transform();
                 return;
             }
         }

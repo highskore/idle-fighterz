@@ -872,6 +872,7 @@ impl Game {
         self.ach("ascend");
         self.s.pl = keep;
         self.hero_reset();
+        self.xform_cancel();
         self.s.run_best = keep;
         self.s.namek_at = Big::ZERO;
         self.s.foes.clear();
@@ -907,6 +908,7 @@ impl Game {
         self.s.gods += 1;
         self.ach("godki");
         self.hero_reset();
+        self.xform_cancel();
         let s = &mut self.s;
         s.pl = Big::ZERO;
         s.run_best = Big::ZERO;
@@ -957,6 +959,7 @@ impl Game {
             b.t1 = self.t;
         }
         self.hero_reset();
+        self.xform_cancel();
         let s = &mut self.s;
         s.levels = [0; Upg::ALL.len()];
         (s.pl, s.granted, s.multi, s.multi_t, s.uni_best, s.run_best, s.seeds, s.ascend, s.form, s.wishes, s.saga) =
@@ -967,6 +970,7 @@ impl Game {
         s.trips = 0;
         s.foes.clear();
         s.zeno += 1;
+        (self.tl.cg_story, self.tl.cg_n, self.tl.candy_story, self.tl.candy_n) = (false, 0, false, 0);
         self.tl.zen = None;
         self.tl.preview = None;
         self.tl.next_boss = 60.0;

@@ -278,8 +278,12 @@ impl Game {
     /// The beam's charge, once a frame (`frame()` between the moon and the senzu bean).
     pub(crate) fn charge(&mut self, t: f64) {
         match self.inp.drag {
-            // a stun or hit's time skip holds the charge off
-            Some(_) if self.stunned() || self.skipping() => self.inp.charging = 0.0,
+            // a stun or hit's time skip holds the charge off, and the hold starts over after it
+            Some(mut d) if self.stunned() || self.skipping() => {
+                self.inp.charging = 0.0;
+                d.t = t;
+                self.inp.drag = Some(d);
+            }
             Some(d) if (d.moved <= 6.0 || self.inp.charging > 0.0) && self.s.lv(Upg::Galick) > 0 && t - d.t > 0.3 => {
                 self.inp.charging = 2.5f64.min(t - d.t - 0.3);
             }
