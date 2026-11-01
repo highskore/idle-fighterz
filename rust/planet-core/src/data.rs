@@ -226,7 +226,7 @@ fn own_names(h: Hero) -> Option<[&'static str; 9]> {
             "earth's guardian",
             "beyond human",
         ],
-        Hero::Tien => ["base", "max power", "crane master", "four-armed", "tri-beam master", "neo crane", "third eye open", "dojo master", "heaven's eye"],
+        Hero::Tien => ["base", "max power", "crane master", "kikoho stance", "tri-beam master", "neo crane", "all-seeing", "dojo master", "heaven's eye"],
         Hero::A17 => ["base", "limiter off", "barrier", "ranger", "perpetual core", "overclock", "survivor", "last one standing", "infinite"],
         _ => return None,
     })
@@ -256,6 +256,9 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
     // a non-saiyan's own late forms, each with its aura: their looks follow the shared nine in his sprites
     let own_late: &[(&str, [u32; 3])] = match h {
         Hero::Krillin => &[("solar flare", [0xffffff, 0xfffbe0, 0xffe680]), ("taiyoken sun", [0xffffff, 0xfff8b0, 0xffd60a])],
+        Hero::Tien => &[("four witches", [0xffffff, 0xd8ffe0, 0x3aa86a]), ("multi-form", [0xffffff, 0xe8f0ff, 0x8ab0e0])],
+        // android 17's marks past the nine: unseen, like all his marks (a17.rs)
+        Hero::A17 => &[("infinite ii", [0xffffff, 0xd8e8ff, 0x7a9ad8]), ("infinite iii", [0xffffff, 0xd8e8ff, 0x7a9ad8])],
         _ => &[],
     };
     let own = own_names(h);
@@ -271,6 +274,12 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
     }
     for (j, &(name, aura)) in own_late.iter().enumerate() {
         v.push(Form { name, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: 9 + j, lb: 0, own_aura: Some(aura) });
+    }
+    // android 17 has no forms to look like: every mark wears his base look (his overclock picks his look, a17.rs)
+    if h == Hero::A17 {
+        for f in v.iter_mut() {
+            f.look = 0;
+        }
     }
     let top = v[v.len() - 1].clone();
     for n in 1..=limits.saturating_sub(LB_FROM - 1) {
@@ -506,6 +515,7 @@ pub const NAPPA: Dim = dim(28, 34);
 pub const GINYU: [(&str, Dim); 5] = [("ginyu", dim(16, 22)), ("jeice", dim(16, 22)), ("burter", dim(16, 22)), ("recoome", dim(16, 22)), ("guldo", dim(16, 22))];
 pub const A17: Dim = dim(20, 25);
 pub const A18: Dim = dim(16, 24);
+pub const A16: Dim = dim(20, 28);
 pub const A19: Dim = dim(18, 24);
 pub const A20: Dim = dim(18, 26);
 pub const APE0: Dim = dim(22, 25);
@@ -825,7 +835,7 @@ pub const CHARS: [(Hero, &str, &str, Need); 9] = [
     (Hero::Krillin, "krillin", "krillin", Need::Open),
     (Hero::Piccolo, "piccolo", "piccolo", Need::Beat("raditz")),
     (Hero::A17, "a17", "android 17", Need::Ach("androids")),
-    (Hero::Tien, "tien", "tien", Need::Ach("cell")),
+    (Hero::Tien, "tien", "tien", Need::Ach("yamcha")),
     (Hero::Goten, "goten", "goten", Need::Beat("kid buu")),
 ];
 

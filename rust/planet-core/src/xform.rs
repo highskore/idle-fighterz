@@ -85,6 +85,9 @@ impl Game {
     /// A form he holds the power for: the scene starts (on snake way, and for a preview hook's form, it lands at once,
     /// as every form-up did before), and runs.
     pub(crate) fn xform_step(&mut self, t: f64, dt: f64) {
+        if self.a17_marks() {
+            return;
+        }
         let preview = self.tl.preview.is_some();
         if self.xf_instant {
             if self.form_owed() {

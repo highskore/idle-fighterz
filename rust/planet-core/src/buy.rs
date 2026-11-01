@@ -96,6 +96,7 @@ impl Game {
         }
         let note = match u {
             Upg::Partner if first => "bubbles wants to train with you",
+            Upg::Galick if first && self.s.hero == Hero::Tien => "hold anywhere to charge the kikoho: at a villain it stakes a fifth of your power",
             Upg::Galick if first && self.s.hero == Hero::Piccolo => "hold anywhere to charge the special beam cannon: it spends his focus",
             Upg::Galick if first => {
                 if self.kame() {
@@ -107,11 +108,13 @@ impl Game {
             Upg::House => "a new capsule house lands",
             Upg::Piccolo if first => self.helper().arrives(),
             Upg::Chamber if first => "the time chamber door will appear — tap it",
+            Upg::Kaio if first && self.s.hero == Hero::A17 => "infinite energy — hit the button to pin your overclock at the top",
             Upg::Kaio if first => "kaioken unlocked — hit the red button",
             Upg::Bigbang if first => "big bang attack — double-tap anywhere",
             Upg::Itx if first => "instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you've been",
             Upg::Armor if first && self.s.hero == Hero::Piccolo => "weighted cape on — hit villains harder",
             Upg::Armor if first && self.s.hero == Hero::Krillin => "turtle shell on — hit villains harder",
+            Upg::Armor if first && self.s.hero == Hero::Tien => "crane robes on — hit villains harder",
             Upg::Armor if first => "saiyan armor on — hit villains harder",
             _ => "",
         };
@@ -149,6 +152,7 @@ impl Game {
             Upg::Galick if l > 0 => format!("beams ×{}", nice(Self::beam_x_at(lf))),
             Upg::Senzu if l > 0 => format!("a bean every {}s, ×{}", nice(40.0 / lf), nice(Self::senzu_x_at(lf))),
             Upg::Armor => format!("+{}% vs villains", num(50.0 * lf)),
+            Upg::Kaio if l > 0 && self.s.hero == Hero::A17 => format!("overclock pinned {}s", nice(crate::a17::pin_secs_at(lf))),
             Upg::Kaio if l > 0 => format!("×{} for 15s", nice(1.25 + 0.25 * lf)),
             Upg::Bigbang if l > 0 => format!("pays {} beams", nice(Self::bang_x_at(lf))),
             Upg::Chamber if l > 0 => format!("×{} inside", nice(1.5 + 0.5 * lf)),

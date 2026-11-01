@@ -440,7 +440,7 @@ impl Game {
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
-        self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
+        self.capped(self.core()) * self.forms[self.s.form].x * self.oc_x() * self.late_boost() * bonus * tired * awake
     }
 
     /// A botched fusion dance while it lasts (×0.75), on what your taps make; 1 otherwise.
@@ -812,7 +812,7 @@ impl Game {
     }
 
     pub fn kaioken(&mut self) {
-        if !self.playing || self.s.lv(Upg::Kaio) == 0 || self.t < self.b.kaio_ready {
+        if !self.playing || self.s.lv(Upg::Kaio) == 0 || self.t < self.b.kaio_ready || self.infinite_energy() {
             return;
         }
         self.ach("kaioken");

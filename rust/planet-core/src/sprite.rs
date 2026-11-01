@@ -838,56 +838,8 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
                     true,
                 ),
             ),
-            (
-                "tien",
-                make_plain(
-                    &TIEN_HEAD,
-                    &TIEN_HEAD,
-                    &[
-                        ('y', 0x2f8a46),
-                        ('Y', 0x1f6030),
-                        ('a', 0x2f8a46),
-                        ('A', 0x1f6030),
-                        ('g', 0xf6c8a2),
-                        ('G', 0xd99a73),
-                        ('u', 0xc83030),
-                        ('p', 0x23683a),
-                        ('P', 0x164a28),
-                        ('w', 0x22222a),
-                        ('W', 0x111118),
-                        ('b', 0x2f8a46),
-                        ('B', 0x1f6030),
-                    ],
-                    false,
-                ),
-            ),
-            (
-                "a17",
-                make_plain(
-                    &TRUNKS_HEAD,
-                    &TRUNKS_HEAD,
-                    &[
-                        ('h', 0x1a1826),
-                        ('H', 0x4a5080),
-                        ('y', 0xf07a1c),
-                        ('Y', 0xb8561a),
-                        ('a', 0x22222a),
-                        ('A', 0x111118),
-                        ('g', 0xf6c8a2),
-                        ('G', 0xd99a73),
-                        ('u', 0x3a3a48),
-                        ('p', 0x3a5aa0),
-                        ('P', 0x26407a),
-                        ('w', 0xf4f4f6),
-                        ('W', 0xc8ccda),
-                        ('b', 0xf07a1c),
-                        ('B', 0xb8561a),
-                        ('c', 0xf0f0f4),
-                        ('C', 0xc0c4d0),
-                    ],
-                    true,
-                ),
-            ),
+            ("tien", with_late(make_plain(&TIEN_HEAD, &TIEN_HEAD, TIE, false), &tien_late())),
+            ("a17", with_late(make_plain(&TRUNKS_HEAD, &TRUNKS_HEAD, SEV, true), &a17_looks())),
         ];
         for (id, hero) in h.iter_mut() {
             refur(id, &mut hero.fused);
@@ -1014,6 +966,8 @@ fn built(name: &str) -> Option<&'static Sprite> {
     B.get_or_init(|| {
         HashMap::from([
             ("FUSED.roshillin", roshillin()),
+            ("FUSED.tienzu", tienzu()),
+            ("FUSED.android35", android35()),
             ("ALLY.kidGohan", kid_gohan()),
             ("ALLY.yamcha", yamcha()),
             ("ALLY.hoverbike", hoverbike()),
@@ -1039,6 +993,23 @@ const KRI: &[(char, u32)] = &[
     ('P', 0xc0641a),
     ('w', 0x2b4fc8),
     ('W', 0x1c3584),
+];
+
+/// Tien's colours.
+const TIE: &[(char, u32)] = &[
+    ('y', 0x2f8a46),
+    ('Y', 0x1f6030),
+    ('a', 0x2f8a46),
+    ('A', 0x1f6030),
+    ('g', 0xf6c8a2),
+    ('G', 0xd99a73),
+    ('u', 0xc83030),
+    ('p', 0x23683a),
+    ('P', 0x164a28),
+    ('w', 0x22222a),
+    ('W', 0x111118),
+    ('b', 0x2f8a46),
+    ('B', 0x1f6030),
 ];
 
 /// The fusion dance's Metamoran vest: a dark vest, gold shoulder pads, a blue sash, white trousers.
@@ -1208,6 +1179,182 @@ pub fn parse(b: &[u8]) -> HashMap<String, Sprite> {
         }
     }
     m
+}
+
+/// Android 17's colours: black hair, the orange scarf, a black shirt over a white one, blue jeans.
+const SEV: &[(char, u32)] = &[
+    ('h', 0x1a1826),
+    ('H', 0x4a5080),
+    ('y', 0xf07a1c),
+    ('Y', 0xb8561a),
+    ('a', 0x22222a),
+    ('A', 0x111118),
+    ('g', 0xf6c8a2),
+    ('G', 0xd99a73),
+    ('u', 0x3a3a48),
+    ('p', 0x3a5aa0),
+    ('P', 0x26407a),
+    ('w', 0xf4f4f6),
+    ('W', 0xc8ccda),
+    ('b', 0xf07a1c),
+    ('B', 0xb8561a),
+    ('c', 0xf0f0f4),
+    ('C', 0xc0c4d0),
+];
+
+/// Android 17's overclock looks (not forms): core overload, his eyes lit cyan and his core's energy crackling off
+/// him; then redline, eyes and hair-light gone red, skin flushed, heat pouring up off him.
+fn a17_looks() -> [HeroSet; 2] {
+    const CRACKLE: [&str; 26] = [
+        "........l.......l.......",
+        ".........l.....l........",
+        "........lL.....Ll.......",
+        "........................",
+        "........................",
+        "........................",
+        "..l..................l..",
+        "..Ll................lL..",
+        "...L................L...",
+        "..lL................Ll..",
+        ".lL..................Ll.",
+        "..L..................L..",
+        "...Ll..............lL...",
+        "..lL................Ll..",
+        "..L..................L..",
+        ".lL..................Ll.",
+        "..Ll................lL..",
+        "...L................L...",
+        "..lL................Ll..",
+        "..L..................L..",
+        ".lL..................Ll.",
+        "..l..................l..",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+    ];
+    const HEAT: [&str; 26] = [
+        "...l....l..l..l....l....",
+        "..lL...lL..L..Ll...Ll...",
+        "..L...lL..lL...Ll...L...",
+        ".lL..lL...L.....Ll..Ll..",
+        ".L...L...lL......L...L..",
+        ".L..lL...L.......Ll..L..",
+        ".Ll.L...............lL..",
+        "..LlL...............LLl.",
+        "...LL................L..",
+        "..lL................Ll..",
+        ".lL..................Ll.",
+        ".LL..................LL.",
+        "..LL................LL..",
+        "..lL................Ll..",
+        ".lL..................Ll.",
+        ".LL..................LL.",
+        "..LL................LL..",
+        "..lL................Ll..",
+        ".lL..................Ll.",
+        ".LL..................LL.",
+        "..LL................LL..",
+        "..lL................Ll..",
+        "...l................l...",
+        "........................",
+        "........................",
+        "........................",
+    ];
+    let core = set_of(&TRUNKS_HEAD, &layers(&[SEV, &[('E', 0x2ec8e8)]]));
+    let red = set_of(&TRUNKS_HEAD, &layers(&[SEV, &[('E', 0xe02828), ('H', 0x9a2a3a), ('s', 0xf8c0a8), ('S', 0xe0907a), ('g', 0xf8c0a8), ('G', 0xe0907a)]]));
+    [stamp(&core, 4, 4, 4, &CRACKLE, &[('L', 0x2ec8e8), ('l', 0xc8f8ff)]), stamp(&red, 4, 4, 4, &HEAT, &[('L', 0xe02828), ('l', 0xffb0a0)])]
+}
+
+/// Android 35: 17 and 18 fused, his hair grown out half black and half her blonde, in the vest.
+fn android35() -> Sprite {
+    let head: Vec<String> = TRUNKS_HEAD
+        .iter()
+        .map(|r| {
+            r.char_indices()
+                .map(|(i, c)| {
+                    if i >= 8 && c == 'h' {
+                        'z'
+                    } else if i >= 8 && c == 'H' {
+                        'Z'
+                    } else {
+                        c
+                    }
+                })
+                .collect()
+        })
+        .collect();
+    let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
+    set_of(&head, &layers(&[META, &[('z', 0xf2d36b), ('Z', 0xfff0b0), ('E', 0x2a6ad8)]])).idle
+}
+
+/// Tien's late forms: the four witches technique, a second pair of arms out from his shoulders; then the multi-form,
+/// two more of him stepping out to either side, pale and half there.
+fn tien_late() -> [HeroSet; 2] {
+    // the second pair raised from his shoulders, hands up by his head
+    const ARMS: [&str; 18] = [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ".oo................oo.",
+        "osso..............osso",
+        "oSso..............osSo",
+        ".oso..............oso.",
+        "..oso............oso..",
+        "...oso..........oso...",
+        "....oso........oso....",
+        ".....oo........oo.....",
+    ];
+    let base = set_of(&TIEN_HEAD, TIE);
+    let four = stamp(&base, 3, 0, 3, &ARMS, &[('o', 0x120c18), ('s', 0xf6c8a2), ('S', 0xd99a73)]);
+    // the copies: his own frame shifted out to each side, washed pale
+    let ghosts = |s: &Sprite| -> Sprite {
+        let pad = 6;
+        let w = s.w + 2 * pad;
+        let mut col = vec![-1; w * s.h];
+        let mut emit = vec![false; w * s.h];
+        for j in 0..s.h {
+            for i in 0..s.w {
+                let c = s.col[j * s.w + i];
+                if c < 0 {
+                    continue;
+                }
+                let pale = (((c as u32 >> 16 & 255) + 255) / 2) << 16 | (((c as u32 >> 8 & 255) + 255) / 2) << 8 | (((c as u32 & 255) + 255) / 2);
+                for x in [i, i + 2 * pad] {
+                    col[j * w + x] = pale as i32;
+                }
+            }
+        }
+        for j in 0..s.h {
+            for i in 0..s.w {
+                let c = s.col[j * s.w + i];
+                if c >= 0 {
+                    col[j * w + i + pad] = c;
+                    emit[j * w + i + pad] = s.emit[j * s.w + i];
+                }
+            }
+        }
+        Sprite { w, h: s.h, col, emit, ax: s.ax + pad as f64, ay: s.ay }
+    };
+    let multi = HeroSet { pose: ghosts(&base.pose), idle: ghosts(&base.idle), run: base.run.clone().map(|x| ghosts(&x)) };
+    [four, multi]
+}
+
+/// Tienzu: tien and chiaotzu fused, tien's third eye in chiaotzu's pale face with its red cheeks, in the vest.
+fn tienzu() -> Sprite {
+    let mut head: Vec<String> = TIEN_HEAD.iter().map(|s| s.to_string()).collect();
+    for (j, i) in [(12, 4), (12, 11)] {
+        head[j].replace_range(i..i + 1, "R");
+    }
+    let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
+    set_of(&head, &layers(&[META, &[('s', 0xfbe6dc), ('S', 0xe8c4b4), ('R', 0xe8505a)]])).idle
 }
 
 // ── the piccolo upgrade's helpers game.js never drew
