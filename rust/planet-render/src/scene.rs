@@ -817,16 +817,20 @@ impl Scene {
             };
             draw_hero(c, spr, lift, depth, 1.05, kd.x, kd.y, kd.ang);
         } else if fly {
-            // the flight wish: a white-blue streak along the orbit, the superman pose
+            // the flight wish: the superman pose, tipped toward the way he's going round the planet (not the screen
+            // side the road heads to, which flew him backwards into his streak), and a short white-blue comet
             let pal = [0xffffff, 0xcdeeff, 0x7ac8ff];
-            let n = 50;
-            let w0 = 3.6;
-            let dir = if flip { -1.0 } else { 1.0 };
-            let tilt = 1.2;
+            let (n, w0) = (14, 5.0);
             let sh = spr.h as f64 * hk;
+            let (ux, uy) = (sin(kd.ang), -cos(kd.ang));
+            let ay = c.cy - ahead[1] * c.r + c.bob;
+            let (tx, ty) = (ax - kd.x, ay - kd.y);
+            let tl = hypot(&[tx, ty]).max(1e-6);
+            let back = tx * cos(kd.ang) + ty * sin(kd.ang) < 0.0;
+            let dir = if back { -1.0 } else { 1.0 };
             let at = |j: f64| {
                 let v = ap(&c.m, g.frame3.road_pt(g.phi - j * 0.013));
-                let r = c.r + lift + sh * 0.45;
+                let r = c.r + lift + sh * 0.4;
                 (c.cx + v[0] * r, c.cy - v[1] * r + c.bob, v[2] * r)
             };
             for j in (1..=n).rev() {
@@ -872,19 +876,34 @@ impl Scene {
                     s += 0.34;
                 }
             }
-            let (ux, uy) = (sin(kd.ang), -cos(kd.ang));
-            let a2 = kd.ang + dir * tilt;
+            let a2 = kd.ang + dir * 1.2;
             let (mx, my) = (kd.x + ux * (lift + sh / 2.0), kd.y + uy * (lift + sh / 2.0));
             if seen {
+                // the comet's head: sparks shed behind him and a dithered glow round his body
                 for _ in 0..3 {
                     let r = 5.0 + g.rng.random() * 7.0;
                     let a = g.rng.random() * 6.28;
-                    g.fx.push(
-                        Particle::new(mx + cos(a) * r, my + sin(a) * r * 0.7, &pal).v(-cos(a2) * dir * 30.0, -sin(a2) * dir * 30.0).life(0.4).size(1.0, 1.0),
-                    );
+                    g.fx.push(Particle::new(mx + cos(a) * r, my + sin(a) * r, &pal).v(-tx / tl * 25.0, -ty / tl * 25.0).life(0.35).size(1.0, 1.0));
+                }
+                let gl = 13.0;
+                let mut y = -gl;
+                while y <= gl {
+                    let mut x = -gl;
+                    while x <= gl {
+                        let d = hypot(&[x, y]) / gl;
+                        if d <= 1.0 && bayer(js_round(mx + x) as i64 as i32, js_round(my + y) as i64 as i32) < (1.0 - d) * 0.5 {
+                            c.fb.px(mx + x, my + y, if d < 0.6 { pal[1] } else { pal[2] }, 0.6);
+                        }
+                        x += 1.0;
+                    }
+                    y += 1.0;
                 }
             }
-            draw_hero(c, spr, 0.0, depth, hk, mx - sin(a2) * sh / 2.0, my + cos(a2) * sh / 2.0, a2);
+            let (bx, by) = (mx - sin(a2) * sh / 2.0, my + cos(a2) * sh / 2.0);
+            c.blit_z(spr, bx, by, a2, back, 0.0, depth, hk);
+            if kaio {
+                c.kaio_aura(spr, bx, by, a2, back, 0.0, depth, hk, t);
+            }
         } else if (0.0..0.18).contains(&bl) {
             // he steps in out of the light
             let ghost = itx_ghost(&itx_pose(&set.idle), bl / 0.18, t);
