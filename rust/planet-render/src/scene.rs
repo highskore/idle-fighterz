@@ -596,6 +596,7 @@ impl Scene {
         crate::snack::draw_ramen(&mut c, g, &hero);
         self.draw_visitors(&mut c, g, &hero, dt);
         crate::heroes::draw_discs(&mut c, g);
+        crate::heroes::draw_crater(&mut c, g);
         crate::beam::draw_charge(&mut c, g);
         crate::effects::draw(&mut c, g);
         crate::beam::draw_beam(&mut c, g);

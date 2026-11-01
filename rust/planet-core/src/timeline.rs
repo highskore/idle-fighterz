@@ -1336,7 +1336,8 @@ impl Game {
                     Hero::Krillin => ("master roshi", "roshillin"),
                     // the other new heroes' fusions come with their own work
                     Hero::Goten => ("kid trunks", "gotenks"),
-                    Hero::Piccolo | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
+                    Hero::Tien => ("chiaotzu", "tienzu"),
+                    Hero::Piccolo | Hero::A17 => ("goku", "gogeta"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
@@ -1353,6 +1354,7 @@ impl Game {
                 // the new heroes' fusions have no fat or skinny one: a botched dance is still them, weaker
                 let own = match res {
                     "roshillin" => Some("FUSED.roshillin"),
+                    "tienzu" => Some("FUSED.tienzu"),
                     // goten's gotenks: a botched dance is still gotenks (trunks' keeps the old fat and skinny ones)
                     "gotenks" if self.s.hero == Hero::Goten => Some("FUSED.gotenks"),
                     _ => None,
