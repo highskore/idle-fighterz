@@ -96,6 +96,7 @@ impl Game {
         }
         let note = match u {
             Upg::Partner if first => "bubbles wants to train with you",
+            Upg::Galick if first && self.s.hero == Hero::Tien => "hold anywhere to charge the kikoho: at a villain it stakes a fifth of your power",
             Upg::Galick if first && self.s.hero == Hero::Piccolo => "hold anywhere to charge the special beam cannon: it spends his focus",
             Upg::Piccolo if first && self.s.hero == Hero::Piccolo => "kid gohan lands to meditate",
             Upg::Galick if first => {
@@ -113,6 +114,7 @@ impl Game {
             Upg::Itx if first => "instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you've been",
             Upg::Armor if first && self.s.hero == Hero::Piccolo => "weighted cape on — hit villains harder",
             Upg::Armor if first && self.s.hero == Hero::Krillin => "turtle shell on — hit villains harder",
+            Upg::Armor if first && self.s.hero == Hero::Tien => "crane robes on — hit villains harder",
             Upg::Armor if first => "saiyan armor on — hit villains harder",
             _ => "",
         };

@@ -376,6 +376,9 @@ impl Game {
         if self.powered_down().is_some() {
             fx.push("powered down · tap him".into());
         }
+        if let Some(st) = self.stake() {
+            fx.push(format!("kikoho {} at stake {}s", fmt_short(st.n), num((crate::heroes::KIKOHO_SECS - (self.t - st.t0)).max(0.0).ceil())));
+        }
         if self.cuts() > 0 {
             fx.push(format!("discs {}/{BARRAGE}", self.cuts().min(crate::heroes::BARRAGE_CUTS), BARRAGE = crate::heroes::BARRAGE_CUTS));
         }
@@ -547,6 +550,8 @@ impl Game {
                 if l == 4 {
                     if self.kame() {
                         " and super kamehameha"
+                    } else if s.hero == Hero::Tien {
+                        " and a full-power kikoho"
                     } else if s.hero == Hero::Piccolo {
                         " and a full-power special beam cannon"
                     } else {
