@@ -484,7 +484,7 @@ __WIDGET_CSS__
 let BARE = WIDGET;   // the floating widget draws no sky or backdrops; its window mode (a setting) turns them back on
 /*/widget*/__WORLD__
 __PLANET__
-__MAIN__(engine => {   // engine: a promise when the game waits for the Rust engine (loader.js); the rest of the page doesn't
+__MAIN__(engine => {   // engine: set when the game waits for the Rust engine (loader.js), which mounts it; the rest of the page doesn't
   const $ = id => document.getElementById(id), root = document.documentElement;
 
   const SUF = ['', '', '', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
@@ -497,6 +497,8 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   // shop prices stay short so a row never wraps: 950,000 then 1.2M, 21.9M …
   const short = n => { if (typeof n === 'string') return sci(n, 1).join(''); n = Math.floor(n); if (n < 1e6) return n.toLocaleString('en-US'); const e = Math.floor(Math.log10(n) / 3), m = n / 10 ** (e * 3); return e < SUF.length ? m.toFixed(m < 10 ? 2 : m < 100 ? 1 : 0) + (['', '', 'M'][e] || SUF[e]) : n.toExponential(1).replace('+', ''); };
   let lastCombo = 1, goalKey = '';
+  // the HUD's text, written only when it changes: the HUD updates every frame
+  const say = (el, v) => { v = String(v); if (el.textContent !== v) el.textContent = v; };
   // hold a buy button to keep buying: a click buys one; held past 400ms it repeats, quicker and quicker, until you let go or run out
   let holdT = 0; const holdStop = () => { clearTimeout(holdT); holdT = 0; }; addEventListener('pointerup', holdStop); addEventListener('pointercancel', holdStop);
   // (shop rows don't on touch: there a long press shows their card)
@@ -566,6 +568,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   if (/kimeter/.test(location.hash)) kiBtns = 'meter';
   const kiLook = v => { kiBtns = v; document.documentElement.dataset.kibtn = v; };
   kiLook(kiBtns);
+  const narrow = matchMedia('(max-width: 760px)');
   const kiFill = (bs, ready, left) => {
     const b0 = bs[0]; b0._max = ready ? 0 : Math.max(b0._max || 0, left);
     const f = ready ? 100 : left > 0 && b0._max ? (1 - left / b0._max) * 100 : 0;
@@ -578,18 +581,18 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
       const kb = $('kaio'), meter = kiBtns === 'meter'; kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kiOwned = s.kaio.own || !!(s.itx && s.itx.own);
       const kt = s.kaio.ready ? 'kaioken' : meter ? `kaioken<small>${s.kaio.left}s</small>` : 'kaioken ' + s.kaio.left + 's'; if (kb.dataset.t !== kt) { kb.dataset.t = kt; kb.innerHTML = kt; }
-      kiFill([kb, ...document.querySelectorAll('.w [data-w="kaio"]')], s.kaio.ready, s.kaio.left);
-      if (s.itx) { const ib = $('itxBtn'), name = matchMedia('(max-width: 760px)').matches ? 'IT' : 'transmission', clock = `${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}`; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut();
+      kiFill([kb/*widget*/, ...document.querySelectorAll('.w [data-w="kaio"]')/*/widget*/], s.kaio.ready, s.kaio.left);
+      if (s.itx) { const ib = $('itxBtn'), name = narrow.matches ? 'IT' : 'transmission', clock = `${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}`; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut();
         const it = s.itx.left > 0 ? (meter ? `${name}<small>${clock}</small>` : `${name} ${clock}`) : name; if (ib.dataset.t !== it) { ib.dataset.t = it; ib.innerHTML = it; }
-        kiFill([ib, ...document.querySelectorAll('.w [data-w="itx"]')], s.itx.ready, s.itx.left); }   // phones keep it short: it shares a row with upgrades and kaioken
+        kiFill([ib/*widget*/, ...document.querySelectorAll('.w [data-w="itx"]')/*/widget*/], s.itx.ready, s.itx.left); }   // phones keep it short: it shares a row with upgrades and kaioken
       const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
       if (pl.dataset.v !== txt) { pl.dataset.v = txt; pl.innerHTML = num + (suf ? `<small>${suf}</small>` : ''); pl.style.setProperty('--len', Math.max(9, num.length + suf.length * .6)); }
-      const mx = $('mx'); mx.textContent = s.combo > 1 ? '×' + s.combo.toFixed(2).replace(/\.?0+$/, '') : ''; mx.classList.toggle('hot', s.combo >= 2);
+      const mx = $('mx'); say(mx, s.combo > 1 ? '×' + s.combo.toFixed(2).replace(/\.?0+$/, '') : ''); mx.classList.toggle('hot', s.combo >= 2);
       if (s.combo > lastCombo) { mx.classList.add('pop'); clearTimeout(ui._m); ui._m = setTimeout(() => mx.classList.remove('pop'), 90); } lastCombo = s.combo;
-      $('fname').textContent = s.form.name + (s.form.x > 1 ? ' ×' + s.form.x : ''); $('fbar').style.width = (s.form.p * 100).toFixed(1) + '%'; $('fnext').textContent = s.form.next ? 'next ' + s.form.next.replace('super saiyan', 'ss') : 'max';
+      say($('fname'), s.form.name + (s.form.x > 1 ? ' ×' + s.form.x : '')); $('fbar').style.width = (s.form.p * 100).toFixed(1) + '%'; say($('fnext'), s.form.next ? 'next ' + s.form.next.replace('super saiyan', 'ss') : 'max');
       const dots = $('dots'); if (dots.childElementCount !== 7) dots.innerHTML = '<i></i>'.repeat(7); [...dots.children].forEach((d, i) => d.classList.toggle('on', i < s.balls));
-      $('bmeta').textContent = [s.wishes ? 'wishes ' + s.wishes : '', s.ascend ? 'ascended ×' + s.ascend : ''].filter(Boolean).join(' · ');
- $('rate').textContent = fmt(s.rate); $('laps').textContent = s.laps; const m = Math.floor(s.time / 60), sec = Math.floor(s.time % 60); $('time').textContent = String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0'); $('boost').textContent = s.effects; const g = $('game'), bd = document.body; g.classList.toggle('buffs', !!s.effects); bd.classList.toggle('snake', !!s.snake); bd.classList.toggle('busy', !!s.busy); if (s.pl >= Number.MAX_SAFE_INTEGER) bd.classList.add('cv'); if ($('extra').dataset.v !== s.extra) { $('extra').dataset.v = s.extra; $('extra').innerHTML = s.extra.split(' · ').map(x => `<span>${x}</span>`).join(''); } },
+      say($('bmeta'), [s.wishes ? 'wishes ' + s.wishes : '', s.ascend ? 'ascended ×' + s.ascend : ''].filter(Boolean).join(' · '));
+ say($('rate'), fmt(s.rate)); say($('laps'), s.laps); const m = Math.floor(s.time / 60), sec = Math.floor(s.time % 60); say($('time'), String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0')); say($('boost'), s.effects); const g = $('game'), bd = document.body; g.classList.toggle('buffs', !!s.effects); bd.classList.toggle('snake', !!s.snake); bd.classList.toggle('busy', !!s.busy); if (s.pl >= Number.MAX_SAFE_INTEGER) bd.classList.add('cv'); if ($('extra').dataset.v !== s.extra) { $('extra').dataset.v = s.extra; $('extra').innerHTML = s.extra.split(' · ').map(x => `<span>${x}</span>`).join(''); } },
     shop(items) {
       const el = $('shop');
       const keys = Object.keys(items).join();
@@ -719,12 +722,13 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   sndLabel();
   // share the exact power level: the native share sheet where there is one, otherwise the clipboard
   // share: the card opens in a popup first; share (or copy) and download from there
-  let cardBlob = null, cardUrl = '';
+  let cardBlob = null, cardUrl = '', shareFrom = null;
   const shareText = () => `i just hit a power level of ${typeof lastPl === 'string' ? fmt(lastPl) : Math.floor(lastPl).toLocaleString('en-US')} on`;
   const openShare = async () => {
+    shareFrom = document.activeElement;
     try { await document.fonts.ready; cardBlob = await new Promise(r => drawCard().toBlob(r, 'image/png')); } catch (_) { cardBlob = null; }
     if (cardUrl) URL.revokeObjectURL(cardUrl); cardUrl = cardBlob ? URL.createObjectURL(cardBlob) : ''; $('shareImg').src = cardUrl; $('shareDl').hidden = !cardBlob;
-    $('shareBox').hidden = false;
+    $('shareBox').hidden = false; $('shareGo').focus();
   };
   const flash = (btn, text) => { const was = btn._was || (btn._was = btn.textContent); btn.textContent = text; clearTimeout(btn._t); btn._t = setTimeout(() => { btn.textContent = was; }, 1600); };
   $('shareGo').addEventListener('click', async () => {
@@ -758,9 +762,12 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   $('godNo').addEventListener('click', closeGod); $('godX').addEventListener('click', closeGod);
   $('godBox').addEventListener('click', e => { if (e.target === $('godBox')) closeGod(); });
   addEventListener('keydown', e => { if (e.key === 'Escape') closeGod(); });
-  $('shareX').addEventListener('click', () => { $('shareBox').hidden = true; });
-  $('shareBox').addEventListener('click', e => { if (e.target === $('shareBox')) $('shareBox').hidden = true; });
-  addEventListener('keydown', e => { if (e.key === 'Escape') $('shareBox').hidden = true; });
+  // closing hands focus back to what opened it
+  const refocus = from => { if (from && from.isConnected) from.focus({ preventScroll: true }); };
+  const closeShare = () => { if ($('shareBox').hidden) return; $('shareBox').hidden = true; refocus(shareFrom); };
+  $('shareX').addEventListener('click', closeShare);
+  $('shareBox').addEventListener('click', e => { if (e.target === $('shareBox')) closeShare(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeShare(); });
   for (const b of [$('share'), $('shareM')]) b.addEventListener('click', openShare);
   let lastTapSfx = 0;
   function tone(f0, f1, dur, type = 'square', vol = .06, delay = 0) {
@@ -788,7 +795,7 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
   let game = null, goSoon = false;
   const mount = () => { game = GAMES.find(g => g.id === 'planet').mount(st, ui); $('shop').classList.toggle('bulky', !!(game.bulk && game.info)); if (goSoon) go(); };
   const go = () => { if (!game) { goSoon = true; return; } if ($('game').classList.contains('playing')) return; $('game').classList.add('playing'); game.start(); ui.fx('lap'); };
-  if (engine) engine.then(mount); else mount();
+  const mounted = engine ? engine(mount) : mount();
   $('play').addEventListener('click', e => { e.stopPropagation(); go(); });
   $('intro').addEventListener('click', go);
   $('kaio').addEventListener('click', () => game.kaioken());
@@ -849,22 +856,25 @@ __MAIN__(engine => {   // engine: a promise when the game waits for the Rust eng
     }
     for (const c of m.chars) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'char' + (c.on ? ' on' : '') + (c.open ? '' : ' locked');
+      if (!c.open) b.setAttribute('aria-disabled', 'true');   // still focusable: its unlock hint is read out
       b.append(game.thumb(c.id)); b.insertAdjacentHTML('beforeend', `<b>${c.name}</b><span>${c.on ? 'playing' : c.open ? 'tap to play' : 'unlock: ' + c.need}</span>`);
       // a switch is refused mid-transformation: say so and leave the tab as it is
       if (c.open) b.addEventListener('click', () => { if (game.pick(c.id)) renderMenu(); else b.querySelector('span').textContent = 'transforming · try again in a moment'; });
       body.append(b);
     }
   };
-  const openMenu = () => { renderMenu(); $('menu').hidden = false; };
+  let menuFrom = null;
+  const openMenu = () => { renderMenu(); if ($('menu').hidden) menuFrom = document.activeElement; $('menu').hidden = false; $('menuX').focus(); };
+  const closeMenu = () => { if ($('menu').hidden) return; $('menu').hidden = true; refocus(menuFrom); };
   let treeNote = '';
   const openTree = (note = '') => { treeNote = note; menuTab = 'tree'; $('menu').classList.add('tree-only'); openMenu(); };
   ui.treeGift = note => setTimeout(() => openTree(note), 900);   // a wish of seeds or ranks opens the tree, even before the first ascend
   document.addEventListener('click', e => { if (e.target.closest('[data-menu]')) { if (menuTab === 'tree') menuTab = 'ach'; $('menu').classList.remove('tree-only'); openMenu(); } });
   document.querySelectorAll('[data-mt]').forEach(b => b.addEventListener('click', () => { menuTab = b.dataset.mt; renderMenu(); }));
-  $('menuX').addEventListener('click', () => { $('menu').hidden = true; treeNote = ''; });
-  $('menu').addEventListener('click', e => { if (e.target === $('menu')) $('menu').hidden = true; });
-  addEventListener('keydown', e => { if (e.key === 'Escape') $('menu').hidden = true; });
-  ui.achieved = achCount; if (game) achCount(); else engine.then(achCount);
+  $('menuX').addEventListener('click', () => { closeMenu(); treeNote = ''; });
+  $('menu').addEventListener('click', e => { if (e.target === $('menu')) closeMenu(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+  ui.achieved = achCount; if (game) achCount(); else mounted.then(achCount);
 
   // the share card, 1200×630: the game beside your power, a stat strip, dragon balls and achievements
   function drawCard(demo) {

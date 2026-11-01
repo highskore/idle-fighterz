@@ -6,7 +6,20 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
   const RUST = wasm_bindgen, { memory } = await RUST({ module_or_path: wasm });
   let planet = GAMES.find(g => g.id === 'planet');
   if (!planet) GAMES.push(planet = { id: 'planet' });
+  // panic = "abort": after a trap every call into the module throws, so the first one stops the game and says so, and
+  // one during mount fails it, for the loader to run game.js instead
   planet.mount = (st, ui) => {
+    let dead = false;
+    const safe = f => (...a) => {
+      if (dead) return;
+      try { return f(...a); } catch (e) {
+        if (!(e instanceof WebAssembly.RuntimeError)) throw e;
+        dead = true; console.error('planet: the Rust engine stopped', e); ui.event('the game stopped · reload the page to play on', 1e9);
+      }
+    };
+    try { return mount(st, ui, safe); } catch (e) { dead = true; throw e; }
+  };
+  const mount = (st, ui, safe) => {
     // seeded so the game's first random draw is the one Math.random just gave, as game.js would have drawn it (the
     // LCG step backwards): with the test harness's seeded Math.random both engines play the same game
     const s = (Math.random() * 4294967296) >>> 0, seed = Math.imul(s - 1013904223, 4276115653) >>> 0;
@@ -41,49 +54,69 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
     const back = { wish: k => { due(); P.pick_wish(k); }, itxPick: w => { due(); P.itx_jump(w); } };
     // shenron's storm over the page: its colours, and the pillar from the card's top edge up (page.html's body.dusk)
     const dusk = s => {
-      const bs = document.body.style;
+      const bs = document.body.style, was = document.body.className;
       document.body.classList.toggle('dusk', !!s);
       // the dim-slate dip: the page text turns light while the page is dark
       const c = s ? parseInt(s.page.slice(1), 16) : 0xffffff;
       document.body.classList.toggle('dusk-dark', (c >> 16) * .3 + (c >> 8 & 255) * .59 + (c & 255) * .11 < 110);
+      if (document.body.className !== was) moved();
       if (!s) return;
-      const r = st.cv.getBoundingClientRect(), k = r.width / st.W;
+      const r = cvRect(), k = r.width / st.W;
       bs.setProperty('--dusk-page', s.page); bs.setProperty('--dusk-top', s.top); bs.setProperty('--dusk-bot', s.bot); bs.setProperty('--dusk-foot', s.foot);
       bs.setProperty('--dusk-pil', s.pil); bs.setProperty('--dusk-pil-x', (r.left + s.x * k) + 'px'); bs.setProperty('--dusk-pil-w', (s.w * k) + 'px'); bs.setProperty('--dusk-pil-h', Math.max(0, r.top) + 'px');
     };
+    // the canvas's and #front's boxes, measured again only once something may have moved them (the card's shake animates)
+    let cvBox = null, frontBox = null;
+    const moved = () => { cvBox = frontBox = null; }, stage = document.getElementById('game') || st.el, still = () => !stage.getAnimations?.().length;
+    const cvRect = () => cvBox && still() ? cvBox : cvBox = st.cv.getBoundingClientRect();
+    const frontRect = el => frontBox && still() ? frontBox : frontBox = el.getBoundingClientRect();
+    const ro = new ResizeObserver(moved);
+    for (const el of [st.cv, document.body, document.getElementById('front')?.parentElement]) if (el) ro.observe(el);
+    addEventListener('scroll', moved, { passive: true, capture: true });
+    addEventListener('resize', moved);
     const deliver = () => {
       const m = JSON.parse(P.frame());
       if ('world' in m) { ui.hell && ui.hell(false); ui.world && ui.world(m.world); }
       if (m.hud) {
         ui.update(m.hud); itxOwn = m.hud.itx.own;
         if (m.hud.night !== night) { night = m.hud.night; ui.night && ui.night(night); }
-        if (m.hud.shen !== shen) document.body.classList.toggle('shen', shen = m.hud.shen);
-        if (m.hud.look !== look) { document.body.classList.remove('jelly', 'earth'); look = m.hud.look; if (look) document.body.classList.add(look); }
+        if (m.hud.shen !== shen) { document.body.classList.toggle('shen', shen = m.hud.shen); moved(); }
+        if (m.hud.look !== look) { document.body.classList.remove('jelly', 'earth'); look = m.hud.look; if (look) document.body.classList.add(look); moved(); }
       }
       if ('sky' in m) dusk(m.sky);
       if (m.shop) ui.shop(m.shop);
       for (const [text, ms] of m.events) ui.event(text, ms);
-      for (const [call, ...args] of m.cues) if (call === 'xform') document.body.classList.toggle('xdark', args[0]); else if (back[call]) ui[call](args[0], v => { back[call](v); deliver(); }); else if (typeof ui[call] === 'function') ui[call](...args);
+      for (const [call, ...args] of m.cues) if (call === 'xform') document.body.classList.toggle('xdark', args[0]); else if (back[call]) ui[call](args[0], safe(v => { back[call](v); deliver(); })); else if (typeof ui[call] === 'function') ui[call](...args);
     };
     // n: how many (shift-click 10, alt-click 0 for max); a plain click is one buy
-    ui.onBuy((k, n = 1) => { due(); if (n === 1) P.buy(k); else P.buy_n(k, n); deliver(); });
+    ui.onBuy(safe((k, n = 1) => { due(); if (n === 1) P.buy(k); else P.buy_n(k, n); deliver(); }));
 
     const cv = st.cv;
-    cv.addEventListener('pointerdown', e => { const [bx, by] = st.toBuf(e); due(); P.pointer_down(e.clientX, e.clientY, bx, by, e.pointerId, e.button, e.pointerType === 'touch'); deliver(); });
-    cv.addEventListener('pointermove', e => { const [bx, by] = st.toBuf(e); due(); P.pointer_move(e.clientX, e.clientY, bx, by, e.pointerId); });
-    cv.addEventListener('pointerup', e => { const [bx, by] = st.toBuf(e); due(); P.pointer_up(bx, by, e.pointerId); deliver(); });
-    cv.addEventListener('pointercancel', () => { due(); P.pointer_cancel(); });
+    // a press is captured, as game.js does, so its release lands here even off the canvas; a capture lost before the
+    // release (not the one every release ends) drops the press. held: the pointers pressed and not yet released
+    const held = new Set();
+    cv.addEventListener('pointerdown', safe(e => { const [bx, by] = st.toBuf(e); held.add(e.pointerId); try { cv.setPointerCapture(e.pointerId); } catch (_) {} due(); P.pointer_down(e.clientX, e.clientY, bx, by, e.pointerId, e.button, e.pointerType === 'touch'); deliver(); }));
+    cv.addEventListener('pointermove', safe(e => { const [bx, by] = st.toBuf(e); due(); P.pointer_move(e.clientX, e.clientY, bx, by, e.pointerId); }));
+    cv.addEventListener('pointerup', safe(e => { const [bx, by] = st.toBuf(e); held.delete(e.pointerId); due(); P.pointer_up(bx, by, e.pointerId); deliver(); }));
+    cv.addEventListener('pointercancel', safe(() => { held.clear(); due(); P.pointer_cancel(); }));
+    cv.addEventListener('lostpointercapture', safe(e => { if (held.delete(e.pointerId)) { due(); P.pointer_cancel(); } }));
     cv.addEventListener('contextmenu', e => { if (itxOwn) e.preventDefault(); });   // right-click is instant transmission's once it's owned
-    addEventListener('keydown', e => {
-      if (!P.playing() || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, [contenteditable]')) return;
+    // space and enter press a focused button or link, if it's still shown (start can keep focus once the intro has
+    // faded); nothing reaches the game while a popup or the wish box is open
+    const control = 'button, a, input, select, textarea, [role=button]';
+    addEventListener('keydown', safe(e => {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable]')) return;
+      const press = (e.key === ' ' || e.key === 'Enter') && e.target.closest?.(control);
+      if (press && press.checkVisibility?.({ opacityProperty: true, visibilityProperty: true }) !== false || document.querySelector('.menu:not([hidden]), #wish:not([hidden])')) return;
+      if (!P.playing()) return;
       due();
       if (P.key(e.key.toLowerCase())) e.preventDefault();
       deliver();
-    });
+    }));
 
-    // saved every 3s of play, as game.js does, and when the page goes away
+    // saved every 3s of play, as game.js does, and when the page goes away: only the daily bonus's date, all a visit reads
     let lastSave = 0;
-    const save = () => { try { localStorage.setItem('hs-power', P.save()); } catch (_) {} };
+    const save = () => { try { localStorage.setItem('hs-power', JSON.stringify({ daily: JSON.parse(P.save()).daily })); } catch (_) {} };
     addEventListener('pagehide', save);
     document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
     // while the dragon is out, his pixels where they cross the title go again on page.html's #front, above the title, so
@@ -93,7 +126,7 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
     const putFront = () => {
       const box = shen && logo && logo.box;
       if (!fctx || !box) { if (front && !front.hidden) front.hidden = true; return; }
-      const W = st.W, H = st.H, r = st.cv.getBoundingClientRect(), sx = r.width / W, sy = r.height / H, buf = memory.buffer;
+      const W = st.W, H = st.H, r = cvRect(), sx = r.width / W, sy = r.height / H, buf = memory.buffer;
       if (!fimg || fimg.width !== W || fimg.height !== H) { fimg = new ImageData(W, H); front.width = W; front.height = H; }
       const out = new Uint32Array(fimg.data.buffer), px = new Uint32Array(buf, P.pixels_ptr(), W * H), dm = new Uint8Array(buf, P.dragon_ptr(), W * H);
       out.fill(0);
@@ -101,17 +134,17 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
       const y0 = Math.max(0, Math.floor((box[1] - r.top) / sy)), y1 = Math.min(H, Math.ceil((box[3] - r.top) / sy));
       for (let y = y0; y < y1; y++) for (let i = y * W + x0, e = y * W + x1; i < e; i++) if (dm[i]) out[i] = px[i];
       fctx.putImageData(fimg, 0, 0);
-      const pr = front.parentElement.getBoundingClientRect();
+      const pr = frontRect(front.parentElement);
       Object.assign(front.style, { left: r.left - pr.left + 'px', top: r.top - pr.top + 'px', width: r.width + 'px', height: r.height + 'px' });
       front.hidden = false;
     };
-    const frame = (t, dt) => {
+    const frame = safe((t, dt) => {
       P.frame_drawn(t, dt, Date.now());
       put();
       deliver();
       putFront();
       if (P.playing() && t - lastSave >= 3) { lastSave = t; save(); }
-    };
+    });
     deliver();
 
     const menu = () => { const m = JSON.parse(P.menu()); for (const n of m.tree) if (n.max === null) n.max = Infinity; return m; };
@@ -134,17 +167,17 @@ self.planetRust = async ({ GAMES, HASH, wasm }) => {
       menu, card, frame, thumb,
       info: k => JSON.parse(P.shop_info(k)), bulk: n => JSON.parse(P.bulk(n)),
       ascendInfo: () => JSON.parse(P.ascend_info()), angels: () => JSON.parse(P.angels()), godInfo: () => JSON.parse(P.god_info()), zenoInfo: () => JSON.parse(P.zeno_info()),
-      learn: id => { due(); P.learn(id); deliver(); },
-      respec: () => { due(); P.respec(); deliver(); },
-      learnAngel: id => { due(); P.learn_angel(id); deliver(); },
-      autoNext: () => { due(); P.auto_next(); },
-      wear: (kind, id) => { due(); P.wear(kind, id); },
-      pick: id => { due(); return P.pick_hero(id); },
-      kaioken: () => { due(); P.kaioken(); deliver(); },
-      itx: () => { due(); P.itx(); deliver(); },
-      train: () => { due(); P.train(); deliver(); },
-      start: () => { const now = Date.now(); P.timeouts_now(now); P.start(new Date(now).toDateString(), now); deliver(); save(); },
-      resize: () => { P.resize(st.W, st.H, st.scale); img = null; },
+      learn: safe(id => { due(); P.learn(id); deliver(); }),
+      respec: safe(() => { due(); P.respec(); deliver(); }),
+      learnAngel: safe(id => { due(); P.learn_angel(id); deliver(); }),
+      autoNext: safe(() => { due(); P.auto_next(); }),
+      wear: safe((kind, id) => { due(); P.wear(kind, id); }),
+      pick: safe(id => { due(); return P.pick_hero(id); }),
+      kaioken: safe(() => { due(); P.kaioken(); deliver(); }),
+      itx: safe(() => { due(); P.itx(); deliver(); }),
+      train: safe(() => { due(); P.train(); deliver(); }),
+      start: safe(() => { const now = Date.now(); P.timeouts_now(now); P.start(new Date(now).toDateString(), now); deliver(); save(); }),
+      resize: safe(() => { P.resize(st.W, st.H, st.scale); img = null; }),
     };
   };
 };

@@ -46,8 +46,8 @@ export const hasRust = () => existsSync(join(ROOT, 'dist', 'planet-rust.wasm'))
 
 // errors collects every uncaught exception, console.error and blocked request. The page runs the Rust engine; js opens
 // it with ?js, and wasm: false takes WebAssembly away, both for game.js's fallback. It waits for the engine and checks
-// which one runs
-export async function open(page, hash = '', { seed = 1, title = true, js = false, wasm = true } = {}) {
+// which one runs (engine: the one expected, where those don't say)
+export async function open(page, hash = '', { seed = 1, title = true, js = false, wasm = true, engine: want = js || !wasm || !hasRust() ? 'js' : 'rust' } = {}) {
   const errors = []
   page.on('pageerror', e => errors.push('pageerror: ' + (e.stack || e.message)))
   page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text()) })
@@ -58,7 +58,7 @@ export async function open(page, hash = '', { seed = 1, title = true, js = false
   await page.addInitScript(init, [seed, EPOCH, wasm])
   await page.goto(ORIGIN + '/' + (js ? '?js' : '') + hash, { waitUntil: 'load' })
   await page.waitForSelector('html[data-engine]', { state: 'attached' })
-  const engine = await page.evaluate(() => document.documentElement.dataset.engine), want = js || !wasm || !hasRust() ? 'js' : 'rust'
+  const engine = await page.evaluate(() => document.documentElement.dataset.engine)
   if (engine !== want) throw new Error(`the page ran ${engine}, not ${want}`)
   await page.evaluate(() => Promise.all(['16px "Fragment Mono"', 'italic 16px "Fragment Mono"', '16px "Instrument Serif"', 'italic 16px "Instrument Serif"', '16px "Press Start 2P"'].map(f => document.fonts.load(f))))
   await settle(page)
