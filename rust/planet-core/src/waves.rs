@@ -53,14 +53,14 @@ impl Game {
     /// `#scaleN` (1–4): a run at tier N's best power with the final flash, a full beam at the sky 3s in and every 6s
     /// after (`#scaleNbang`: a big bang).
     pub(crate) fn waves_preview(&mut self, hash: &str) {
-        let Some(i) = hash.find("scale") else { return };
+        let Some(i) = hash.find(crate::hooks::key("scale")) else { return };
         let Some(n) = hash[i + 5..].chars().next().and_then(|c| c.to_digit(10)).filter(|n| (1..=4).contains(n)) else { return };
         let best = Big::from(SCALE_AT[n as usize - 1] * 1.5);
         self.s.best = self.s.best.max(best);
         self.s.run_best = self.s.run_best.max(best);
         self.s.levels[crate::data::Upg::Galick as usize] = self.s.levels[crate::data::Upg::Galick as usize].max(5);
         self.s.levels[crate::data::Upg::Bigbang as usize] = self.s.levels[crate::data::Upg::Bigbang as usize].max(1);
-        self.tl.later.push((3.0, crate::timeline::Later::Wave(hash[i..].contains("bang"))));
+        self.tl.later.push((3.0, crate::timeline::Later::Wave(hash[i..].contains(crate::hooks::key("bang")))));
     }
 }
 

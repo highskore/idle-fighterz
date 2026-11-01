@@ -14,6 +14,7 @@ pub mod fx;
 pub mod game;
 pub mod geom;
 pub mod heroes;
+pub mod hooks;
 pub mod hud;
 pub mod input;
 pub mod intro;

@@ -8,7 +8,6 @@
 //! slowly. Nothing else big starts meanwhile (no saga boss, universe fight, tournament, movie, storm or trip).
 //! planet-render draws it from `Tl::cg`; the words go in the usual toasts.
 
-use crate::data::Dim;
 use crate::game::Game;
 use crate::geom::{add, norm, V3};
 use crate::hud::Cue;
@@ -130,11 +129,6 @@ pub fn jr_sprite() -> &'static Sprite {
             &[('b', 'B'), ('g', 'G')],
         )
     })
-}
-
-pub fn jr_dim() -> Dim {
-    let s = jr_sprite();
-    Dim { w: s.w as f64, h: s.h as f64 }
 }
 
 impl Game {
