@@ -129,6 +129,13 @@ impl Game {
         }
     }
 
+    /// An ascend, god ki or zeno took the power the scene was for: it's off before it lands a form.
+    pub(crate) fn xform_cancel(&mut self) {
+        if self.xf.take().is_some_and(|x| x.rv.is_none()) {
+            self.cue(Cue::Scene(false));
+        }
+    }
+
     /// The form lands, with every other form the power already holds (they came one a frame before the scene).
     fn xform_land(&mut self, t: f64, taps: u32) {
         let preview = self.tl.preview.is_some();
@@ -165,9 +172,23 @@ impl Game {
         x.to = to;
     }
 
-    /// A tap while he powers up goes into it. False when there's no power-up to take it.
+    /// A fight that wants taps now: a beam struggle, ginyu in your body, frieza's aim, cell's grab, the self-destruct or
+    /// the cell jrs.
+    fn fight_taps(&self) -> bool {
+        use crate::mech::{Mech, Ph};
+        let mech = self.tl.boss.as_ref().filter(|b| !b.dead).and_then(|b| b.mech.as_ref());
+        self.tl.struggle.is_some()
+            || self.swapped()
+            || matches!(mech, Some(Mech::Frieza { ph: Ph::Aim, .. } | Mech::Cell { ph: Ph::Reach | Ph::Drain, .. }))
+            || self.tl.cg.as_ref().is_some_and(|g| matches!(g.ph, crate::cellgames::CgPh::Boom | crate::cellgames::CgPh::Jrs))
+    }
+
+    /// A tap while he powers up goes into it. False when there's no power-up to take it, or a fight wants the tap.
     pub(crate) fn xform_tap(&mut self) -> bool {
         let t = self.t;
+        if self.fight_taps() {
+            return false;
+        }
         let Some(x) = self.xf.as_mut().filter(|x| x.rv.is_none()) else { return false };
         x.p = 1f64.min(x.p + XF_TAP);
         x.taps += 1;

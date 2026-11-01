@@ -37,7 +37,7 @@ pub const FOCUS_REST: f64 = 2.0;
 pub const FOCUS_TAP: f64 = 0.04;
 /// Seconds of his recent income a full bar pays when taps spend it, and when the cannon does.
 pub const TAP_SECS: f64 = 20.0;
-pub const CANNON_SECS: f64 = 155.0;
+pub const CANNON_SECS: f64 = 180.0;
 /// Strain (limits.rs) for a full bar of focus the cannon spends: the hundred seconds of meditation it took count as
 /// training, as a tapping player's taps do.
 pub const STRAIN_FOCUS: f64 = 100.0;

@@ -604,7 +604,7 @@ impl Game {
                 let nf = &self.forms[(self.s.form + 1).min(self.forms.len() - 1)];
                 (format!("a taste of {}", nf.name), format!("×{} for 60 seconds", num(nf.x)))
             }
-            "seeds" => (label.into(), format!("+{} ki seeds, kept forever", big_string((self.seeds_now() / 5.0).ceil().max(3.0)))),
+            "seeds" => (label.into(), format!("+{} ki seeds, kept forever", crate::data::WISH_SEEDS)),
             "kaio" => (label.into(), format!("kaioken ×{} now, no tiredness after", num(self.kaio_x()))),
             "senzu" => (label.into(), format!("senzu ×{} for 2 minutes", num(self.senzu_x()))),
             "krillin" => (label.into(), format!("he trains with you: idle ×1.5 and destructo discs. next death: rage ×{}", 3 + self.s.krillin_revives)),
