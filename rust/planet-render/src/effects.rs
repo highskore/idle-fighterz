@@ -47,6 +47,8 @@ fn beam_pal(g: &Game) -> (u32, u32) {
         (0xfff8d8, 0xd88a18)
     } else if g.s.hero == Hero::Piccolo {
         (0xfff6c0, 0x7a3ae0)
+    } else if g.s.hero == Hero::A17 {
+        (0xd8ffe4, 0x14a050)
     } else {
         (0xe2cbff, 0x7a3ae0)
     }

@@ -664,7 +664,15 @@ impl Scene {
             if m.dead {
                 continue;
             }
-            let name = if gi.androids { ["A17", "A18"][m.i] } else { ["GINYU.0.spr", "GINYU.1.spr", "GINYU.2.spr", "GINYU.3.spr", "GINYU.4.spr"][m.i] };
+            let name = if gi.androids {
+                if g.s.hero == planet_core::data::Hero::A17 {
+                    ["A18", "A16"][m.i]
+                } else {
+                    ["A17", "A18"][m.i]
+                }
+            } else {
+                ["GINYU.0.spr", "GINYU.1.spr", "GINYU.2.spr", "GINYU.3.spr", "GINYU.4.spr"][m.i]
+            };
             let (spr, still) = crate::mech2::member_look(&gi_look, m.i).unwrap_or((sprite::get(name), false));
             let mirror = !still && (t * 2.0 + i) % 2.0 < 1.0;
             for j in 0..spr.h {

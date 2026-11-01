@@ -30,6 +30,8 @@ const KAME: Pal = Pal { aim: 0x4aa8f0, ball: 0xb8e4ff, ball_edge: 0x2a8ae8, spar
 const SBC: Pal = Pal { aim: 0xffd84a, ball: 0xfff2a0, ball_edge: 0x8a4ae8, spark: 0xffe86a, glow: 0xd8b0ff, mid: 0xfff6c0, edge: 0x7a3ae0 };
 /// Tien's kikoho: gold, with a hot white core.
 const KIKOHO: Pal = Pal { aim: 0xffc83a, ball: 0xfff4c0, ball_edge: 0xe8a020, spark: 0xffe080, glow: 0xffd060, mid: 0xfff8d8, edge: 0xd88a18 };
+/// Android 17's power blitz: green, with a pale core.
+const BLITZ: Pal = Pal { aim: 0x4ae88a, ball: 0xc8ffd8, ball_edge: 0x22b860, spark: 0x9affb8, glow: 0x6af0a0, mid: 0xd8ffe4, edge: 0x14a050 };
 const KAIO: Pal = Pal { aim: 0, ball: 0xffb0a4, ball_edge: 0, spark: 0xff9a8a, glow: 0xff6a5a, mid: 0xffc8bf, edge: 0xc8201a };
 
 fn kame(g: &Game) -> bool {
@@ -44,6 +46,8 @@ fn pal(g: &Game) -> &'static Pal {
         &KIKOHO
     } else if g.s.hero == Hero::Piccolo {
         &SBC
+    } else if g.s.hero == Hero::A17 {
+        &BLITZ
     } else {
         &GALICK
     }
