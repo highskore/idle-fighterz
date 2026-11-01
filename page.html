@@ -395,6 +395,36 @@ body.night .game { background-color: #07070d !important; background-image: radia
 @media (hover: none) { .set-body .opt .what { display: none; } .set-body .lines { display: block; } }
 @media (hover: hover) { .set-body { overflow: visible; } }
 .set-body h3 { flex-basis: 100%; margin: 6px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font: inherit; font-size: 11px; text-transform: uppercase; color: var(--muted); }
+/* the hero row: a carousel, the picked hero big in the middle with his neighbours, his form ladder under him */
+.set-body .hero > span:first-child { flex-basis: 100%; }
+.car { flex-basis: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; touch-action: pan-y; }
+.car .arr { flex: none; width: 28px; height: 28px; padding: 0; font: inherit; font-size: 18px; line-height: 1; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 50%; cursor: pointer; }
+.car .opt { position: relative; display: block; }
+.car .hb { display: grid; place-items: center; padding: 0; font: inherit; background: #fff; border: 1px solid var(--line); cursor: pointer; }
+.car canvas { display: block; height: auto; image-rendering: pixelated; }
+.car .side .hb { width: 40px; height: 56px; border-radius: 12px; opacity: .7; } .car .side canvas { width: 22px; }
+.car .far .hb { opacity: .4; transform: scale(.85); }
+.car .mid .hb { width: 104px; height: 128px; border: 2px solid var(--gold); border-radius: 18px; background: radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--aura) 30%, #fff), #fff 70%); }
+.car .mid canvas { width: 56px; }
+.car .locked canvas { filter: brightness(0) opacity(.16); }
+.car .mid .locked { border: 1px dashed #d6d2c8; background: #f7f6f2; cursor: default; }
+.car .mid .hb.in-r { animation: car-r .22s ease-out; } .car .mid .hb.in-l { animation: car-l .22s ease-out; }
+@keyframes car-r { from { transform: translateX(24px); opacity: .4; } } @keyframes car-l { from { transform: translateX(-24px); opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { .car .mid .hb.in-r, .car .mid .hb.in-l { animation: none; } }
+.car .no .hb { outline: 2px solid #e0a63a; outline-offset: 2px; }
+.car .no::after { content: 'wait'; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); font-size: 9px; line-height: 14px; text-transform: uppercase; color: #8a5a08; background: #fff3dc; border: 1px solid #f2d79a; border-radius: 999px; padding: 0 6px; pointer-events: none; }
+.car .what b { font-weight: inherit; text-transform: uppercase; }
+.hero .cname { flex-basis: 100%; display: flex; justify-content: center; align-items: baseline; gap: 8px; margin-top: 2px; }
+.hero .cname b { font-weight: inherit; text-transform: uppercase; } .hero .cname span { color: var(--muted); font-size: 11px; text-transform: none; }
+.hero .fstrip { flex-basis: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
+.hero .fstrip i { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px 2px 3px; font-style: normal; font-size: 9px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; }
+.hero .fstrip s { display: block; width: 8px; height: 8px; border-radius: 50%; opacity: .35; }
+.hero .fstrip .now { color: var(--ink); border-color: var(--gold); } .hero .fstrip .now s { opacity: 1; }
+.hero .fstrip.off { opacity: .45; }
+.hero .dots { flex-basis: 100%; display: flex; justify-content: center; gap: 5px; }
+.hero .dots i { width: 6px; height: 6px; border-radius: 3px; background: #dcd9d2; } .hero .dots .lk { background: #efede8; } .hero .dots .on { width: 16px; background: var(--gold); }
+.hero .hno { flex-basis: 100%; margin: 0; font-size: 11px; line-height: 1.4; color: #8a5a08; text-transform: none; } .hero .hno b { font-weight: inherit; text-transform: uppercase; }
+@media (max-width: 560px) { .car .far { display: none; } }
 .share-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .share-body img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; image-rendering: pixelated; background: #fcfcfb; }
 .share-actions { display: flex; gap: 8px; justify-content: center; }
@@ -891,6 +921,8 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   let setFrom = null;
   const renderSet = () => {
     const body = $('setBody'); body.innerHTML = ''; let n = 0;
+    const m = game && game.menu();
+    if (m && m.chars) heroRow(body, m.chars);
     // opts: { name, on, what, tip (the hover card only), open (false: locked), pick }; the row's what stands in for theirs
     const row = (label, opts, what = '') => {
       const r = document.createElement('div'); r.className = 'looks'; r.innerHTML = `<span>${label}</span>`;
@@ -908,13 +940,64 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
     // the buttons' look, once there's kaioken or instant transmission to show it on
     if (kiOwned) row('ki buttons', [['meter', 'ki meter', 'the kaioken and instant transmission buttons fill up as their ki recharges, with the seconds left'], ['classic', 'classic', 'the kaioken and instant transmission buttons fade while they recharge and count down the seconds']]
       .map(([v, name, what]) => ({ name, what, on: kiBtns === v, pick: () => { kiLook(v); try { localStorage.setItem('hs-kibtn', v); } catch (_) {} } })));
-    const m = game && game.menu();
     if (m && m.looks && m.looks.some(k => k.items.some(i => i.open))) {
       body.insertAdjacentHTML('beforeend', '<h3>looks</h3>');
       for (const k of m.looks) row(k.label, k.items.map(it => ({ name: it.open ? it.name : 'at ' + it.need, on: k.on === it.id, open: it.open, tip: it.open ? '' : `${LOOK_WHAT[k.kind] || ''} · unlocks at ${it.need}`, pick: () => game.wear(k.kind, k.on === it.id ? '' : it.id) })), LOOK_WHAT[k.kind] || '');
     }
   };
-  const openSet = () => { setFrom = document.activeElement; renderSet(); $('setBox').hidden = false; $('setX').focus(); };
+  // the hero row: ‹ › (or the arrow keys, or a swipe) step through the heroes; the one in the middle is picked with a
+  // tap or Enter. A pick mid-transformation is refused: that card waits, and a line says why
+  let heroAt = -1, heroNo = '', heroIn = '';
+  const heroRow = (body, chars) => {
+    const n = chars.length, at = (heroAt + n) % n, c = chars[at], r = document.createElement('div'); r.className = 'looks hero';
+    const ids = [], card = (h, k) => { const id = 'seth' + ids.length; ids.push(id); return `<span class="what" role="tooltip" id="${id}"><b>${h.name}</b>${h.open ? '' : ' · unlock: ' + h.need}${h.style ? ' · ' + h.style : ''}</span>`; };
+    r.innerHTML = '<span>hero</span><div class="car" role="group" aria-roledescription="carousel" aria-label="heroes"></div>';
+    const car = r.querySelector('.car'), arrow = (d, label, txt) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'arr'; b.dataset.step = d; b.setAttribute('aria-label', label); b.textContent = txt; return b; };
+    const slot = (d, cls) => {
+      const h = chars[(at + d + n) % n], w = document.createElement('span'), b = document.createElement('button');
+      w.className = 'opt ' + cls + (d === 0 && heroNo === h.id ? ' no' : ''); b.type = 'button'; b.className = 'hb' + (h.open ? '' : ' locked') + (d === 0 && heroIn ? ' in-' + heroIn : '');
+      b.dataset.step = d; b.append(game.thumb(h.id, d ? 3 : 7));
+      if (d === 0) { b.setAttribute('aria-pressed', String(!!h.on)); if (!h.open) b.setAttribute('aria-disabled', 'true'); b.setAttribute('aria-label', h.name + (h.on ? ', playing' : h.open ? '' : ', locked')); }
+      else b.setAttribute('aria-label', 'show ' + h.name);
+      w.append(b); w.insertAdjacentHTML('beforeend', card(h)); b.setAttribute('aria-describedby', ids[ids.length - 1]);
+      return w;
+    };
+    car.append(arrow(-1, 'previous hero', '‹'), slot(-2, 'side far'), slot(-1, 'side'), slot(0, 'mid'), slot(1, 'side'), slot(2, 'side far'), arrow(1, 'next hero', '›'));
+    const f = c.forms && c.forms[c.form];
+    if (f) car.querySelector('.mid .hb').style.setProperty('--aura', f.aura);
+    r.insertAdjacentHTML('beforeend', `<div class="cname" aria-live="polite"><b>${c.name}</b><span>${c.on ? 'playing' : c.open ? 'pick to play' : 'unlock: ' + c.need}</span></div>`);
+    if (c.forms) r.insertAdjacentHTML('beforeend', `<div class="fstrip${c.open ? '' : ' off'}" aria-label="his forms">${c.forms.map((x, i) => `<i${i === c.form ? ' class="now"' : ''}><s style="background:${x.aura}"></s>${x.name}</i>`).join('')}</div>`);
+    r.insertAdjacentHTML('beforeend', `<div class="dots" aria-hidden="true">${chars.map((h, i) => `<i class="${i === at ? 'on' : ''}${h.open ? '' : ' lk'}"></i>`).join('')}</div>`);
+    if (c.style) r.insertAdjacentHTML('beforeend', `<p class="lines" aria-hidden="true"><b>${c.name}</b> — ${c.style}</p>`);
+    if (heroNo) r.insertAdjacentHTML('beforeend', `<p class="hno"><b>${chars.find(h => h.id === heroNo).name}</b> — he's mid-transformation: pick him again once he lands</p>`);
+    body.append(r);
+  };
+  const heroGo = (d, focus) => {
+    if (d) { heroAt += d; heroNo = ''; heroIn = d > 0 ? 'r' : 'l'; }
+    else {
+      const chars = game.menu().chars, c = chars[(heroAt % chars.length + chars.length) % chars.length];
+      if (!c.open || c.on) return;
+      heroIn = ''; heroNo = game.pick(c.id) ? '' : c.id;
+    }
+    renderSet(); heroIn = '';
+    $('setBody').querySelector(focus)?.focus({ preventScroll: true });
+  };
+  let swipeX = null, swiped = false;
+  $('setBody').addEventListener('click', e => {
+    const b = e.target.closest('.car [data-step]'); if (!b) return;
+    if (swiped) { swiped = false; return; }   // the tap that ended a swipe
+    const d = +b.dataset.step; heroGo(d, b.classList.contains('arr') ? `.arr[data-step="${d}"]` : '.mid .hb');
+  });
+  $('setBody').addEventListener('keydown', e => {
+    if (!e.target.closest('.car') || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    e.preventDefault(); heroGo(e.key === 'ArrowLeft' ? -1 : 1, '.mid .hb');
+  });
+  $('setBody').addEventListener('pointerdown', e => { swipeX = e.pointerType !== 'mouse' && e.target.closest('.car') ? e.clientX : null; swiped = false; });
+  $('setBody').addEventListener('pointerup', e => {
+    if (swipeX === null) return; const dx = e.clientX - swipeX; swipeX = null;
+    if (Math.abs(dx) > 30) { swiped = true; heroGo(dx < 0 ? 1 : -1, '.mid .hb'); }
+  });
+  const openSet = () => { setFrom = document.activeElement; heroAt = game ? Math.max(0, game.menu().chars.findIndex(c => c.on)) : 0; heroNo = ''; renderSet(); $('setBox').hidden = false; $('setX').focus(); };
   const closeSet = () => { if ($('setBox').hidden) return; $('setBox').hidden = true; refocus(setFrom); };
   for (const b of [$('gear'), $('gearM')]) b.addEventListener('click', openSet);
   $('setX').addEventListener('click', closeSet);

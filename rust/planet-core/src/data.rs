@@ -827,6 +827,19 @@ pub const CHARS: [(Hero, &str, &str, Need); 9] = [
     (Hero::Goten, "goten", "goten", Need::Beat("kid buu")),
 ];
 
+/// Each hero's playstyle in one line, as the settings panel's hero row shows it.
+pub fn hero_style(h: Hero) -> &'static str {
+    match h {
+        Hero::Vegeta => "the classic: tap to train, hold to charge the galick gun",
+        Hero::Goku | Hero::Gohan => "the classic rules, with the kamehameha",
+        Hero::Trunks => "the classic rules, with the galick gun",
+        Hero::Krillin => "taps throw destructo discs that cut saibamen, meteors and orbs",
+        Hero::Piccolo => "meditates: idle builds focus, taps and his beam spend it",
+        Hero::Goten => "born super saiyan: forms come early but don't hold; taps cheer him back up",
+        Hero::Tien | Hero::A17 => "the classic rules, with forms of his own",
+    }
+}
+
 /// The angels' rules as the menu shows them, in `ANGELS` order: (name, what).
 pub const ANGEL_TEXT: [(&str, &str); 8] = [
     ("divine seeds", "ki seeds grow with power^0.55, not its square root"),

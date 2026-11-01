@@ -669,7 +669,16 @@ impl Game {
         let ach =
             self.listed_ach().map(|(_, &(id, name, text))| Obj::new().str("id", id).str("name", name).str("text", text).bool("done", s.ach.contains(id)).end());
         let chars = CHARS.iter().map(|&(h, id, name, need)| {
-            let mut o = Obj::new().str("id", id).str("name", name).bool("open", self.hero_open(h));
+            // his form ladder for the hero row's strip: each form's name and its aura's outer colour
+            let ladder = ladder_of(h, s.limits);
+            let forms = ladder.iter().map(|f| Obj::new().str("name", f.name).str("aura", &format!("#{:06x}", f.aura()[2])).end());
+            let mut o = Obj::new()
+                .str("id", id)
+                .str("name", name)
+                .bool("open", self.hero_open(h))
+                .str("style", hero_style(h))
+                .num("form", s.form.min(ladder.len() - 1) as f64)
+                .raw("forms", arr(forms));
             match need {
                 Need::Open => {}
                 Need::Ach(a) => o = o.str("need", ACH.iter().find(|x| x.0 == a).unwrap().2),
