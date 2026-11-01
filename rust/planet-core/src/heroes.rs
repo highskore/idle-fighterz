@@ -174,14 +174,12 @@ impl Game {
         }
     }
 
-    /// What the full moon makes him: a saiyan's great ape (or giant ape), piccolo's giant namekian, krillin's max
-    /// power (his gi torn off, every muscle up).
+    /// What the full moon makes him (only saiyans transform): the great ape, or a giant one.
     pub fn ape_name(&self, giant: bool) -> &'static str {
-        match self.s.hero {
-            Hero::Piccolo => "giant namekian",
-            Hero::Krillin => "max power",
-            _ if giant => "giant ape",
-            _ => "great ape",
+        if giant {
+            "giant ape"
+        } else {
+            "great ape"
         }
     }
 
@@ -192,8 +190,6 @@ impl Game {
             (Hero::Goku | Hero::Gohan | Hero::Krillin, Upg::Galick) => "kamehameha",
             (Hero::Piccolo, Upg::Galick) => "special beam cannon",
             (Hero::Piccolo, Upg::Piccolo) => "kid gohan",
-            (Hero::Piccolo, Upg::Tail) => "giant training",
-            (Hero::Krillin, Upg::Tail) => "max power training",
             (Hero::Piccolo, Upg::Armor) => "weighted cape",
             (Hero::Krillin, Upg::Armor) => "turtle shell",
             _ => return None,

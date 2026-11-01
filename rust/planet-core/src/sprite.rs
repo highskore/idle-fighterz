@@ -1106,12 +1106,6 @@ fn krillin_late() -> [HeroSet; 2] {
     ]
 }
 
-/// Krillin's stand-in for the great ape: max power, Roshi's trick, his gi torn off and every muscle up.
-pub fn krillin_max_power() -> &'static HeroSet {
-    static S: OnceLock<HeroSet> = OnceLock::new();
-    S.get_or_init(|| set_of(&KRILLIN_HEAD, &layers(&[KRI, &[('y', 0xf6c8a2), ('Y', 0xd99a73), ('a', 0xf6c8a2), ('A', 0xd99a73)]])))
-}
-
 /// Roshillin: krillin and master roshi fused, roshi's beard and shades on krillin's dotted head, in the vest.
 fn roshillin() -> Sprite {
     let mut head: Vec<String> = [
