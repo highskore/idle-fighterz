@@ -668,6 +668,12 @@ impl Scene {
         // his drawn size: goten is a kid, tien is tall
         let hk = 1.05 * sprite::hero_scale(hero_id(g));
         let shown = g.forms[crate::xform::shown_form(g, t)].look;
+        // android 17 wears his overclock's look and aura instead of a form's
+        let (fi, aura, shown) = match g.oc_look() {
+            Some(l) => (0, planet_core::a17::LOOK_AURA[l], planet_core::a17::LOOK_SPRITE[l]),
+            None => (fi, aura, shown),
+        };
+        let formed = g.oc_look().map_or(g.s.form > 0, |l| l > 0);
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[shown] };
         let bl = match &self.itx_fx {
             Some(b) if t - b.t0 < 0.75 => t - b.t0,
@@ -718,8 +724,8 @@ impl Scene {
         }
         let kaio = g.b.kaio_until > t;
         let worn = g.look(planet_core::looks::LookKind::Aura);
-        if seen && (g.tl.aura || g.b.boost_until > t || g.riding > 0.0 || g.s.form > 0 || kaio || g.s.aura > 0 || worn.is_some()) {
-            let n = if g.s.form > 0 { 4 } else { 3 };
+        if seen && (g.tl.aura || g.b.boost_until > t || g.riding > 0.0 || formed || kaio || g.s.aura > 0 || worn.is_some()) {
+            let n = if formed { 4 } else { 3 };
             for _ in 0..n {
                 let a = kd.ang + (g.rng.random() - 0.5) * 0.9;
                 let r = 4.0 + g.rng.random() * 8.0;
@@ -727,7 +733,7 @@ impl Scene {
                     vec![0xffffff, 0xff9a8a, 0xe0332b]
                 } else if let Some(l) = worn {
                     l.cols[..3].to_vec()
-                } else if g.s.form == 0 && g.s.aura > 0 {
+                } else if !formed && g.s.aura > 0 {
                     AURAS[((g.s.aura - 1) % 4) as usize].to_vec()
                 } else {
                     aura.to_vec()

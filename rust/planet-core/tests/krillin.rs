@@ -382,7 +382,7 @@ fn playing_krillin_theres_no_other_krillin() {
 }
 
 #[test]
-fn the_androids_dont_drop_in_on_seventeen() {
+fn eighteen_and_sixteen_drop_in_on_seventeen() {
     let mut g = Game::new(7);
     g.preview("#hero-a17#androids");
     g.start();
@@ -390,7 +390,8 @@ fn the_androids_dont_drop_in_on_seventeen() {
         let t = g.t + DT;
         g.frame(t, DT);
     }
-    assert!(g.tl.ginyu.is_none(), "17 doesn't drop in on himself");
+    let raid = g.tl.ginyu.as_ref().expect("the androids drop in");
+    assert_eq!(raid.members.iter().map(|m| m.name).collect::<Vec<_>>(), ["android 18", "android 16"], "17 doesn't drop in on himself");
 }
 
 #[test]

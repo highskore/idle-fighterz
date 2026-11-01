@@ -1146,18 +1146,20 @@ impl Game {
             && self.s.world != 8
             && session > 200.0
             && self.s.best >= 2e5
-            && self.s.hero != Hero::A17
             && tick(&mut self.tl.next_andro, dt)
         {
             self.krillin_hit("the androids");
             let hp = Big::from(500.0).max(self.wrate() * 14.0);
-            let members = [("android 17", A17), ("android 18", A18)]
+            // playing 17, it's his sister and 16 who come looking
+            let a17 = self.s.hero == Hero::A17;
+            let members = if a17 { [("android 18", A18), ("android 16", A16)] } else { [("android 17", A17), ("android 18", A18)] };
+            let members = members
                 .iter()
                 .enumerate()
                 .map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 })
                 .collect();
             self.tl.ginyu = Some(Ginyu { androids: true, members, max: hp * 2.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0, mech: None });
-            self.event("androids 17 and 18 drop in — \"we're just bored\"");
+            self.event(if a17 { "androids 18 and 16 drop in — \"you're coming home, 17\"" } else { "androids 17 and 18 drop in — \"we're just bored\"" });
             self.cue(Cue::Sfx("boss"));
             self.tl.next_andro = 340.0 + self.r() * 60.0;
         }
@@ -1336,7 +1338,8 @@ impl Game {
                     Hero::Krillin => ("master roshi", "roshillin"),
                     // the other new heroes' fusions come with their own work
                     Hero::Goten => ("kid trunks", "gotenks"),
-                    Hero::Piccolo | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
+                    Hero::A17 => ("android 18", "android35"),
+                    Hero::Piccolo | Hero::Tien => ("goku", "gogeta"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
@@ -1353,6 +1356,7 @@ impl Game {
                 // the new heroes' fusions have no fat or skinny one: a botched dance is still them, weaker
                 let own = match res {
                     "roshillin" => Some("FUSED.roshillin"),
+                    "android35" => Some("FUSED.android35"),
                     // goten's gotenks: a botched dance is still gotenks (trunks' keeps the old fat and skinny ones)
                     "gotenks" if self.s.hero == Hero::Goten => Some("FUSED.gotenks"),
                     _ => None,
@@ -2147,7 +2151,11 @@ impl Game {
                 let prize = (max * 2.0).max(self.wrate() * 200.0) * (1.0 + 0.5 * self.lvl(N_BOUNTY));
                 let (cx, cy) = (self.cam.cx, self.cam.cy - self.cam.r * 1.3);
                 self.gain_at(prize, cx, cy, true);
-                let who = if androids { "androids 17 and 18 are" } else { "the ginyu force is" };
+                let who = match (androids, self.s.hero == Hero::A17) {
+                    (true, true) => "androids 18 and 16 are",
+                    (true, false) => "androids 17 and 18 are",
+                    _ => "the ginyu force is",
+                };
                 self.event(format!("{who} defeated! +{}", fmt_short(js_round(prize))));
                 self.cue(Cue::Fx("star"));
                 self.cue(Cue::Sfx("boom"));
@@ -2691,14 +2699,14 @@ impl Game {
 
     fn wish_ok(&self, key: &str) -> bool {
         match key {
-            "form" => self.s.form < self.forms.len() - 1,
+            "form" => self.s.form < self.forms.len() - 1 && self.s.hero != Hero::A17,
             "bigape" => self.s.ach.contains("ape") && !self.s.big_ape,
             "skills" => TREE.iter().enumerate().any(|(i, n)| self.s.tree[i] > 0 && self.s.tree[i] < n.max),
             "gear" => self.s.levels.iter().any(|&l| l > 0),
             "fly" => !self.wished(WishBuff::Fly),
             "idle" => self.passive() > 0.0,
             "fuse" | "bubbles" => self.s.lv(Upg::Partner) > 0,
-            "kaio" => self.s.lv(Upg::Kaio) > 0,
+            "kaio" => self.s.lv(Upg::Kaio) > 0 && self.s.hero != Hero::A17,
             "trip" => self.s.world == self.home(),
             _ => true,
         }

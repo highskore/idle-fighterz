@@ -86,7 +86,7 @@ pub struct Hud {
     pub effects: String,
     pub extra: String,
     pub combo: f64,
-    pub form_name: &'static str,
+    pub form_name: String,
     pub form_x: f64,
     pub form_next: String,
     pub form_p: f64,
@@ -118,7 +118,7 @@ impl Hud {
             .str("effects", &self.effects)
             .str("extra", &self.extra)
             .num("combo", self.combo)
-            .raw("form", Obj::new().str("name", self.form_name).num("x", self.form_x).str("next", &self.form_next).num("p", self.form_p).end())
+            .raw("form", Obj::new().str("name", &self.form_name).num("x", self.form_x).str("next", &self.form_next).num("p", self.form_p).end())
             .num("balls", self.balls as f64)
             .num("wishes", self.wishes as f64)
             .str("ascend", &self.ascend)
@@ -430,6 +430,10 @@ impl Game {
             Some(nf) => (nf.name.to_string(), Big::from(nf.at)),
             None => (format!("mastery {}", s.mastery + 1), self.mastery_at(s.mastery)),
         };
+        // android 17 shows his overclock in place of a form
+        let (form_name, form_x, form_next, form_p) = self
+            .a17_form_line()
+            .unwrap_or_else(|| (if s.form > 0 { cf.name } else { "base" }.to_string(), cf.x, next_name, 1f64.min((s.pl / next_at).to_f64())));
         let tl = &self.tl;
         Hud {
             goal_text: g.text,
@@ -449,10 +453,10 @@ impl Game {
             effects: self.effects(),
             extra: self.extra(),
             combo: self.combo,
-            form_name: if s.form > 0 { cf.name } else { "base" },
-            form_x: cf.x,
-            form_next: next_name,
-            form_p: 1f64.min((s.pl / next_at).to_f64()),
+            form_name,
+            form_x,
+            form_next,
+            form_p,
             balls: s.orbs7,
             wishes: s.granted,
             ascend: if s.ascend != 0.0 { fixed1(self.seed_boost()) } else { String::new() },
@@ -538,6 +542,12 @@ impl Game {
         }
         match u {
             Upg::Chamber if l > 0 => format!("train ×{} inside · next ×{}", num(self.chamber_x()), num(1.5 + 0.5 * (s.lvf(u) + 1.0))),
+            Upg::Kaio if s.hero == Hero::A17 => format!(
+                "overclock pinned at {}% for {}s, no tiredness · next {}s",
+                num((crate::a17::OC_MAX * 100.0).round()),
+                num(crate::a17::pin_secs_at(s.lvf(u).max(1.0))),
+                num(crate::a17::pin_secs_at(s.lvf(u) + 1.0))
+            ),
             Upg::Kaio if l > 0 => format!("×{} for 15s, then ×0.75", num(self.kaio_x())),
             Upg::Bigbang if l > 0 => format!("pays {} beams · next {}, bigger blast", num(Self::bang_x_at(s.lvf(u))), num(Self::bang_x_at(s.lvf(u) + 1.0))),
             Upg::Galick if l > 0 => format!(
@@ -703,14 +713,32 @@ impl Game {
             self.listed_ach().map(|(_, &(id, name, text))| Obj::new().str("id", id).str("name", name).str("text", text).bool("done", s.ach.contains(id)).end());
         let chars = CHARS.iter().map(|&(h, id, name, need)| {
             // his form ladder for the hero row's strip: each form's name and its aura's outer colour
+            // (android 17 has no ladder: his strip is his overclock's looks)
             let ladder = ladder_of(h, s.limits);
-            let forms = ladder.iter().map(|f| Obj::new().str("name", f.name).str("aura", &format!("#{:06x}", f.aura()[2])).end());
+            let forms: Vec<String> = if h == Hero::A17 {
+                crate::a17::LOOK_NAMES
+                    .iter()
+                    .zip(crate::a17::LOOK_AURA)
+                    .map(|(n, a)| Obj::new().str("name", n).str("aura", &format!("#{:06x}", a[2])).end())
+                    .collect()
+            } else {
+                ladder.iter().map(|f| Obj::new().str("name", f.name).str("aura", &format!("#{:06x}", f.aura()[2])).end()).collect()
+            };
+            let form = if h == Hero::A17 {
+                if s.hero == h {
+                    self.oc_look().unwrap_or(0)
+                } else {
+                    0
+                }
+            } else {
+                s.form.min(ladder.len() - 1)
+            };
             let mut o = Obj::new()
                 .str("id", id)
                 .str("name", name)
                 .bool("open", self.hero_open(h))
                 .str("style", hero_style(h))
-                .num("form", s.form.min(ladder.len() - 1) as f64)
+                .num("form", form as f64)
                 .raw("forms", arr(forms));
             match need {
                 Need::Open => {}
@@ -870,7 +898,7 @@ impl Game {
             .num("time", self.session)
             .big("best", s.best.floor())
             .big("pl", s.pl.floor())
-            .str("form", self.forms[s.form].name)
+            .str("form", self.oc_look().map_or(self.forms[s.form].name, |l| crate::a17::LOOK_NAMES[l]))
             .str("hero", hero)
             .num("world", s.world as f64)
             .str("worldName", WORLD_FULL[s.world as usize])

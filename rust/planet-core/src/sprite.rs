@@ -861,33 +861,7 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
                     false,
                 ),
             ),
-            (
-                "a17",
-                make_plain(
-                    &TRUNKS_HEAD,
-                    &TRUNKS_HEAD,
-                    &[
-                        ('h', 0x1a1826),
-                        ('H', 0x4a5080),
-                        ('y', 0xf07a1c),
-                        ('Y', 0xb8561a),
-                        ('a', 0x22222a),
-                        ('A', 0x111118),
-                        ('g', 0xf6c8a2),
-                        ('G', 0xd99a73),
-                        ('u', 0x3a3a48),
-                        ('p', 0x3a5aa0),
-                        ('P', 0x26407a),
-                        ('w', 0xf4f4f6),
-                        ('W', 0xc8ccda),
-                        ('b', 0xf07a1c),
-                        ('B', 0xb8561a),
-                        ('c', 0xf0f0f4),
-                        ('C', 0xc0c4d0),
-                    ],
-                    true,
-                ),
-            ),
+            ("a17", with_late(make_plain(&TRUNKS_HEAD, &TRUNKS_HEAD, SEV, true), &a17_looks())),
         ]
     })
 }
@@ -989,7 +963,7 @@ pub fn get(name: &str) -> &'static Sprite {
 /// dance looks them up under.
 fn built(name: &str) -> Option<&'static Sprite> {
     static B: OnceLock<HashMap<&'static str, Sprite>> = OnceLock::new();
-    B.get_or_init(|| HashMap::from([("FUSED.roshillin", roshillin())])).get(name)
+    B.get_or_init(|| HashMap::from([("FUSED.roshillin", roshillin()), ("FUSED.android35", android35())])).get(name)
 }
 
 // ── the new heroes' late forms and fusion results (from the heroes pickers)
@@ -1183,4 +1157,111 @@ pub fn parse(b: &[u8]) -> HashMap<String, Sprite> {
         }
     }
     m
+}
+
+/// Android 17's colours: black hair, the orange scarf, a black shirt over a white one, blue jeans.
+const SEV: &[(char, u32)] = &[
+    ('h', 0x1a1826),
+    ('H', 0x4a5080),
+    ('y', 0xf07a1c),
+    ('Y', 0xb8561a),
+    ('a', 0x22222a),
+    ('A', 0x111118),
+    ('g', 0xf6c8a2),
+    ('G', 0xd99a73),
+    ('u', 0x3a3a48),
+    ('p', 0x3a5aa0),
+    ('P', 0x26407a),
+    ('w', 0xf4f4f6),
+    ('W', 0xc8ccda),
+    ('b', 0xf07a1c),
+    ('B', 0xb8561a),
+    ('c', 0xf0f0f4),
+    ('C', 0xc0c4d0),
+];
+
+/// Android 17's overclock looks (not forms): core overload, his eyes lit cyan and his core's energy crackling off
+/// him; then redline, eyes and hair-light gone red, skin flushed, heat pouring up off him.
+fn a17_looks() -> [HeroSet; 2] {
+    const CRACKLE: [&str; 26] = [
+        "........l.......l.......",
+        ".........l.....l........",
+        "........lL.....Ll.......",
+        "........................",
+        "........................",
+        "........................",
+        "..l..................l..",
+        "..Ll................lL..",
+        "...L................L...",
+        "..lL................Ll..",
+        ".lL..................Ll.",
+        "..L..................L..",
+        "...Ll..............lL...",
+        "..lL................Ll..",
+        "..L..................L..",
+        ".lL..................Ll.",
+        "..Ll................lL..",
+        "...L................L...",
+        "..lL................Ll..",
+        "..L..................L..",
+        ".lL..................Ll.",
+        "..l..................l..",
+        "........................",
+        "........................",
+        "........................",
+        "........................",
+    ];
+    const HEAT: [&str; 26] = [
+        "...l....l..l..l....l....",
+        "..lL...lL..L..Ll...Ll...",
+        "..L...lL..lL...Ll...L...",
+        ".lL..lL...L.....Ll..Ll..",
+        ".L...L...lL......L...L..",
+        ".L..lL...L.......Ll..L..",
+        ".Ll.L...............lL..",
+        "..LlL...............LLl.",
+        "...LL................L..",
+        "..lL................Ll..",
+        ".lL..................Ll.",
+        ".LL..................LL.",
+        "..LL................LL..",
+        "..lL................Ll..",
+        ".lL..................Ll.",
+        ".LL..................LL.",
+        "..LL................LL..",
+        "..lL................Ll..",
+        ".lL..................Ll.",
+        ".LL..................LL.",
+        "..LL................LL..",
+        "..lL................Ll..",
+        "...l................l...",
+        "........................",
+        "........................",
+        "........................",
+    ];
+    let core = set_of(&TRUNKS_HEAD, &layers(&[SEV, &[('E', 0x2ec8e8)]]));
+    let red = set_of(&TRUNKS_HEAD, &layers(&[SEV, &[('E', 0xe02828), ('H', 0x9a2a3a), ('s', 0xf8c0a8), ('S', 0xe0907a), ('g', 0xf8c0a8), ('G', 0xe0907a)]]));
+    [stamp(&core, 4, 4, 4, &CRACKLE, &[('L', 0x2ec8e8), ('l', 0xc8f8ff)]), stamp(&red, 4, 4, 4, &HEAT, &[('L', 0xe02828), ('l', 0xffb0a0)])]
+}
+
+/// Android 35: 17 and 18 fused, his hair grown out half black and half her blonde, in the vest.
+fn android35() -> Sprite {
+    let head: Vec<String> = TRUNKS_HEAD
+        .iter()
+        .map(|r| {
+            r.char_indices()
+                .map(|(i, c)| {
+                    if i >= 8 && c == 'h' {
+                        'z'
+                    } else if i >= 8 && c == 'H' {
+                        'Z'
+                    } else {
+                        c
+                    }
+                })
+                .collect()
+        })
+        .collect();
+    let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
+    set_of(&head, &layers(&[META, &[('z', 0xf2d36b), ('Z', 0xfff0b0), ('E', 0x2a6ad8)]])).idle
 }

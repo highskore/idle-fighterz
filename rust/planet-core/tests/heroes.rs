@@ -210,7 +210,7 @@ fn god_ki_opens_at_the_same_mark_for_every_hero() {
 
 #[test]
 fn mastery_stars_cost_every_hero_at_least_what_goku_pays() {
-    for h in [Hero::Piccolo, Hero::Tien, Hero::A17, Hero::Goku] {
+    for h in [Hero::Piccolo, Hero::Tien, Hero::Goku] {
         let mut g = Game::new(7);
         g.start();
         g.s.hero = h;
@@ -235,8 +235,15 @@ fn the_menu_gives_each_hero_his_playstyle_and_form_ladder() {
     for (c, &(h, id, ..)) in chars.iter().zip(CHARS.iter()) {
         assert_eq!(c["id"], id);
         assert!(!c["style"].as_str().unwrap().is_empty(), "{id} has a playstyle line");
-        let ladder = ladder_of(h, g.s.limits);
         let forms = c["forms"].as_array().unwrap();
+        if h == Hero::A17 {
+            // no ladder: his strip is his overclock's looks, and he'd switch in at base
+            let names: Vec<&str> = forms.iter().map(|f| f["name"].as_str().unwrap()).collect();
+            assert_eq!(names, planet_core::a17::LOOK_NAMES);
+            assert_eq!(c["form"], 0.0);
+            continue;
+        }
+        let ladder = ladder_of(h, g.s.limits);
         assert_eq!(forms.len(), ladder.len(), "{id}'s strip is his whole ladder");
         for (f, l) in forms.iter().zip(&ladder) {
             assert_eq!(f["name"], l.name);
