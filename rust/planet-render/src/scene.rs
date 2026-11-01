@@ -514,9 +514,6 @@ impl Scene {
             b.sx = if v[2] > 0.0 { Some((c.cx + v[0] * c.r, c.cy - v[1] * c.r + c.bob)) } else { None };
         }
         px::outline(c.fb);
-        if !self.built.decor.is_empty() {
-            draw_decor(&mut c, &self.built.decor);
-        }
         crate::games::draw_ring(&mut c, g);
         // the decor a milestone unlocked, stood off the road
         if let Some(l) = g.look(planet_core::looks::LookKind::Decor) {
@@ -1498,67 +1495,4 @@ fn itx_ghost(spr: &Sprite, a: f64, t: f64) -> Sprite {
         })
         .collect();
     Sprite { col, ..spr.clone() }
-}
-
-/// `Built::decor`: shaded spheres depth-tested against the scene and each other, with the props' outline, in the colour
-/// buffer only. The scene's depth and id buffers are left as they were, so the game reads the same thing back from the
-/// drawing (`hero_seen`) as without them; the hero and visitors drawn later stand in front of them.
-fn draw_decor(c: &mut Ctx, decor: &[Solid]) {
-    let (w, h) = (c.fb.w, c.fb.h);
-    let mut zb = c.fb.zb.clone();
-    let mut mark = vec![0u16; w * h];
-    for (i, o) in decor.iter().enumerate() {
-        let v = ap(&c.m, o.c);
-        let (x_, y_, z_) = (c.cx + v[0] * c.r, c.cy - v[1] * c.r + c.bob, v[2] * c.r);
-        let pr = o.r * c.r;
-        let x0 = 0f64.max((x_ - pr).floor()) as i64;
-        let x1 = (c.w - 1.0).min((x_ + pr).ceil()) as i64;
-        let y0 = 0f64.max((y_ - pr).floor()) as i64;
-        let y1 = (c.h - 1.0).min((y_ + pr).ceil()) as i64;
-        for y in y0..=y1 {
-            let dy = y as f64 + 0.5 - y_;
-            for x in x0..=x1 {
-                let dx = x as f64 + 0.5 - x_;
-                let q = pr * pr - dx * dx - dy * dy;
-                if q < 0.0 {
-                    continue;
-                }
-                let sq = q.sqrt();
-                let z = z_ + sq;
-                let k = y as usize * w + x as usize;
-                if z <= zb[k] as f64 {
-                    continue;
-                }
-                zb[k] = z as f32;
-                mark[k] = i as u16 + 1;
-                let col = shade_solid(c, o, [dx / pr, -dy / pr, sq / pr], x, y);
-                c.fb.buf[k] = pk(col, 255);
-            }
-        }
-    }
-    // the outline, as px::outline draws it round the props: a darkened edge where something nearer meets, and a dark
-    // rim drawn out onto bare sky
-    let buf = c.fb.buf.clone();
-    let dark = |p: u32, k: f64, kb: f64| {
-        let (r, g, b) = (p & 255, (p >> 8) & 255, (p >> 16) & 255);
-        pk((((r as f64 * k) as u32) << 16) | (((g as f64 * k) as u32) << 8) | (b as f64 * kb) as u32, 255)
-    };
-    for y in 1..h - 1 {
-        for x in 1..w - 1 {
-            let k = y * w + x;
-            let ds = [k - 1, k + 1, k - w, k + w];
-            if mark[k] != 0 {
-                let zk = zb[k] as f64 + 1.2;
-                if ds.iter().any(|&j| mark[j] != 0 && mark[j] != mark[k] && zb[j] as f64 > zk) {
-                    c.fb.buf[k] = dark(buf[k], 0.4, 0.45);
-                }
-            } else if let Some(&j) = ds.iter().find(|&&j| mark[j] != 0) {
-                if c.fb.ib[k] == 0 {
-                    c.fb.buf[k] = dark(buf[j], 0.32, 0.36);
-                } else if zb[j] as f64 > zb[k] as f64 + 1.2 {
-                    c.fb.buf[k] = dark(buf[k], 0.4, 0.45);
-                }
-            }
-        }
-    }
 }
