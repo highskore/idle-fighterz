@@ -900,7 +900,13 @@ impl Game {
     // ── geometry
 
     pub fn kid_screen(&self, lift: f64) -> Spot {
-        self.cam.screen(self.frame3.road_pt(self.phi), lift)
+        let p = self.frame3.road_pt(self.phi);
+        // the lookout's road rings its bulb: standing off the bulb would hang him sideways or upside down, so he stands up
+        if self.inp.w2_pole {
+            let s = self.cam.screen(p, 0.0);
+            return Spot { y: s.y - lift, ang: 0.0, ..s };
+        }
+        self.cam.screen(p, lift)
     }
 
     /// Where the hero's ki leaves his hands (`liftNow`/`flipNow` come from the renderer; 0 and unflipped headless).
