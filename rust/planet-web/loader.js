@@ -1,8 +1,8 @@
 // The site page runs the planet on the Rust engine, whose files preload.js started fetching from the <head>. Where it
 // can't (no WebAssembly, ?js or #js, or the engine failed to load) it runs game.js, the frozen legacy engine, from
 // planet-game.js next to the page. The page, its title and intro start at once either way; only the game's mount waits,
-// for the promise handed to main, and the card shows a ki-charging dragon ball if it's on screen (or start was pressed)
-// before the engine is in.
+// for the engine main hands its mount to (a mount that fails on the Rust engine runs game.js too), and the card shows
+// a ki-charging dragon ball if it's on screen (or start was pressed) before the engine is in.
 const planetMain = main => {
   const L = self.planetLoad || {}, root = document.documentElement;
   // game.js's: preview hooks only on dev hosts and branch previews, never on a live copy of the site
@@ -14,7 +14,11 @@ const planetMain = main => {
     document.body.append(s);
   }).then(() => { root.dataset.engine = 'js'; });
   let ready = false, ki = null;
-  const engine = (L.js ? L.js.then(() => self.planetRust({ GAMES, HASH: hash, wasm: L.wasm })).catch(e => { console.warn('planet: the Rust engine did not load, running game.js', e || ''); return legacy(); }) : legacy())
+  const engine = mount => (L.js ? L.js.then(() => self.planetRust({ GAMES, HASH: hash, wasm: L.wasm })).then(mount).catch(e => {
+    console.warn('planet: the Rust engine did not load, running game.js', e || '');
+    for (let i = GAMES.length; i--;) if (GAMES[i].id === 'planet') GAMES.splice(i, 1);   // game.js adds its own
+    return legacy().then(mount);
+  }) : legacy().then(mount))
     .finally(() => { ready = true; if (ki) { ki.remove(); ki = null; } });
   main(engine);
   if (ready) return;
