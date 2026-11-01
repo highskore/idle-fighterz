@@ -73,13 +73,14 @@
 [data-skin="capsule"] .cc-b button:disabled { opacity: .5; }
 [data-skin="capsule"] .cc-b [data-w="snd"][aria-pressed="false"], [data-skin="capsule"] .cc-b [data-w="close"] { color: rgba(255,255,255,.7); }
 [data-skin="capsule"] .cc-b button i { right: -4px; top: -5px; color: #10213f; background: #ffd23a; }
-.widget[data-skin="capsule"] .shop.open { left: max(8px, 50% - 166px); right: max(8px, 50% - 166px); display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 4px; padding: 8px; background: linear-gradient(#ffffff, #eef1f6); border: 1px solid rgba(16,33,63,.18); border-radius: 16px; box-shadow: 0 8px 22px rgba(10,30,70,.3); counter-reset: cap; }
+.widget[data-skin="capsule"] .shop.open { left: max(8px, 50% - 166px); right: max(8px, 50% - 166px); gap: 4px; padding: 8px; background: linear-gradient(#ffffff, #eef1f6); border: 1px solid rgba(16,33,63,.18); border-radius: 16px; box-shadow: 0 8px 22px rgba(10,30,70,.3); counter-reset: cap; }
 .widget[data-skin="capsule"] .shop .goal { grid-column: 1 / -1; color: #43506a; background: none; } .widget[data-skin="capsule"] .shop .goal b { background: #1f5fd1; }
 .widget[data-skin="capsule"] .shop button { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 5px 8px; color: #10213f; background: #fff; border: 1px solid #d6dce8; border-radius: 10px; font-size: .9em; counter-increment: cap; }
 .widget[data-skin="capsule"] .shop button:hover:not(:disabled) { border-color: #1f5fd1; }
 .widget[data-skin="capsule"] .shop button.special { border-color: #ffd23a; background: #fffbea; }
 .widget[data-skin="capsule"] .shop b::before { content: counter(cap, decimal-leading-zero); color: #1f5fd1; margin-right: 5px; font-size: .85em; }
 .widget[data-skin="capsule"] .shop i { color: #1f5fd1; }
+.widget[data-skin="capsule"] .shop .rows { display: grid; grid-template-columns: 1fr 1fr; align-content: start; } .widget[data-skin="capsule"] .shop [data-buy] > b { grid-column: 1 / -1; }   /* the name across the card, its level and price under it (page.html) */
 .widget[data-skin="capsule"] .shop em { color: #fff; background: #1f5fd1; border-radius: 8px; padding: 0 5px; font-size: .85em; }
 .widget[data-skin="capsule"] .shop button:disabled em { color: #fff; background: #b5c0d6; }
 
@@ -120,11 +121,11 @@ html.dw-open .dw { transform: none; }
 .dw .char { padding: 8px 4px 6px; border-radius: 10px; } .dw .char.on { border-color: var(--gold); background: var(--can); }
 .dw .char canvas { width: 44px; }
 .dw .tree-head { margin: 0 2px 2px; font-size: .9em; }
-.widget[data-skin="drawer"] .shop.open { scrollbar-width: none; left: auto; right: 0; top: 44px; bottom: 9px; width: var(--dw); max-height: none; flex-direction: column; gap: 2px; padding: 4px 6px; overflow: hidden auto; background: none; border: 0; border-radius: 0; box-shadow: none; }
+.widget[data-skin="drawer"] .shop.open { scrollbar-width: none; left: auto; right: 0; top: 44px; bottom: 9px; width: var(--dw); max-height: none; flex-direction: column; gap: 2px; padding: 4px 6px; overflow: hidden; background: none; border: 0; border-radius: 0; box-shadow: none; }
 .widget[data-skin="drawer"] .shop button { padding: 4px 6px; font-size: .92em; color: var(--ink); background: var(--row); border: 0; border-radius: 8px; }
 .widget[data-skin="drawer"] .shop button:not(:disabled) { background: var(--can); }
 .widget[data-skin="drawer"] .shop button:disabled { opacity: .55; }
-.widget[data-skin="drawer"] .shop b { text-transform: none; }
+.widget[data-skin="drawer"] .shop b { text-transform: none; } .widget[data-skin="drawer"] .shop .rows { scrollbar-width: none; }
 .widget[data-skin="drawer"] .goal { padding: 4px 2px 6px; background: none; }
 
 /* dark: smoked glass with gold, for classic (every layout) and the drawer; the scouter has its own dark, capsule corp
