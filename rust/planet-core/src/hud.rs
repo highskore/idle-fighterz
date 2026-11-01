@@ -376,6 +376,9 @@ impl Game {
         if self.powered_down().is_some() {
             fx.push("powered down · tap him".into());
         }
+        if let Some(st) = self.stake() {
+            fx.push(format!("kikoho {} at stake {}s", fmt_short(st.n), num((crate::heroes::KIKOHO_SECS - (self.t - st.t0)).max(0.0).ceil())));
+        }
         if self.cuts() > 0 {
             fx.push(format!("discs {}/{BARRAGE}", self.cuts().min(crate::heroes::BARRAGE_CUTS), BARRAGE = crate::heroes::BARRAGE_CUTS));
         }
@@ -496,8 +499,6 @@ impl Game {
             _ => {}
         }
         match (Upg::from_key(key).unwrap(), self.s.hero) {
-            (Upg::Tail, Hero::Piccolo) => "giant +×0.25",
-            (Upg::Tail, Hero::Krillin) => "max power +×0.25",
             (Upg::Boots, _) => "+1 per step",
             (Upg::Partner, _) => "+4/s, trains",
             (Upg::Gravity, _) => "×1.15 everything",
@@ -528,11 +529,6 @@ impl Game {
         let u = Upg::from_key(key).unwrap();
         let l = s.lv(u);
         let base = SHOP[u as usize].what;
-        match (u, self.s.hero) {
-            (Upg::Tail, Hero::Piccolo) => return "giant namekian: +×0.25, +8% size, +2s (size and time slow past lv 10)".into(),
-            (Upg::Tail, Hero::Krillin) => return "max power: +×0.25, +8% size, +2s (size and time slow past lv 10)".into(),
-            _ => {}
-        }
         if u == Upg::Itx && l > 0 {
             let min: f64 = to_fixed(self.itx_cd() / 60.0, 1).parse().unwrap();
             return format!("jump every {} min · trips {}% sooner", num(min), num(js_round(100.0 - 100.0 * self.soon())));
@@ -557,6 +553,8 @@ impl Game {
                 if l == 4 {
                     if self.kame() {
                         " and super kamehameha"
+                    } else if s.hero == Hero::Tien {
+                        " and a full-power kikoho"
                     } else if s.hero == Hero::Piccolo {
                         " and a full-power special beam cannon"
                     } else {
@@ -676,7 +674,7 @@ impl Game {
 
     /// The achievements the menu and the share card list: all but snake way's while it's parked.
     fn listed_ach(&self) -> impl Iterator<Item = (usize, &'static (&'static str, &'static str, &'static str))> + '_ {
-        ACH.iter().enumerate().filter(|(_, a)| self.snake_way || !SNAKE_ACH.contains(&a.0))
+        ACH.iter().enumerate().filter(|(_, a)| (self.snake_way || !SNAKE_ACH.contains(&a.0)) && (self.s.hero.saiyan() || !APE_ACH.contains(&a.0)))
     }
 
     fn hero_open(&self, h: Hero) -> bool {
@@ -839,6 +837,12 @@ impl Game {
         }
         self.s.hero = h;
         self.hero_sync();
+        if !h.saiyan() {
+            self.b.ape_until = self.b.ape_until.min(self.t);
+            if let Some(m) = self.tl.moon.as_mut() {
+                m.leaving = true;
+            }
+        }
         self.forms = ladder_of(h, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
         true

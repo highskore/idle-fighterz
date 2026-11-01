@@ -596,6 +596,7 @@ impl Scene {
         crate::snack::draw_ramen(&mut c, g, &hero);
         self.draw_visitors(&mut c, g, &hero, dt);
         crate::heroes::draw_discs(&mut c, g);
+        crate::heroes::draw_crater(&mut c, g);
         crate::beam::draw_charge(&mut c, g);
         crate::effects::draw(&mut c, g);
         crate::beam::draw_beam(&mut c, g);
@@ -783,11 +784,7 @@ impl Scene {
                 c.kaio_aura(s, x, y, a, flip, l, d, k, t);
             }
         };
-        if g.b.ape_until > t && g.s.hero == planet_core::data::Hero::Krillin {
-            // krillin's stand-in for the great ape: max power, bigger and bare-chested
-            let mp = sprite::krillin_max_power();
-            draw_hero(c, &mp.run[((t * 9.0).floor() as i64 % 4) as usize], lift, depth, hk * 1.3, kd.x, kd.y, kd.ang);
-        } else if g.b.ape_until > t {
+        if g.b.ape_until > t {
             // the great ape stomps: a little hop each step, a screen shake on landing
             // (the step and its shake are planet-core's: Game::draw_step)
             let step = (t * 3.2).floor();
@@ -805,14 +802,12 @@ impl Scene {
                 .min((kd.y + uy * lift) / (1.001 - uy))
                 .min((c.h - kd.y - uy * lift) / (1.001 + uy))
                 - 3.0;
-            // piccolo grows into a giant namekian: himself, huge, in place of the ape
-            let namek = g.s.hero == planet_core::data::Hero::Piccolo;
-            let a0 = if namek { &set.run[0] } else { sprite::get("APE.0") };
+            let a0 = sprite::get("APE.0");
             let ape = &g.tl.ape;
             let want = 2.3 * (1.0 + 0.08 * g.tail_lv()) * if ape.giant { 1.0 + 0.5 * 1f64.min((t - ape.at) / 1.2) } else { 1.0 };
             let k = ape.k + (1.5f64.max(want.min(2.0 * half / (a0.w.max(a0.h) as f64))) - ape.k) * 1f64.min(dt * 2.0);
             g.tl.ape.k = k;
-            let spr = if namek { &set.run[step as i64 as usize % 4] } else { sprite::get(if step as i64 % 2 == 0 { "APE.0" } else { "APE.1" }) };
+            let spr = sprite::get(if step as i64 % 2 == 0 { "APE.0" } else { "APE.1" });
             draw_hero(c, spr, lift + sin(t * 3.2 * std::f64::consts::PI).abs() * 3.0, depth + 30.0, k, kd.x, kd.y, kd.ang);
         } else if g.b.fused.is_some_and(|f| f.1 > t) {
             let look = g.tl.fused_look;

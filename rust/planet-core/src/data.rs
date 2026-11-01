@@ -226,7 +226,7 @@ fn own_names(h: Hero) -> Option<[&'static str; 9]> {
             "earth's guardian",
             "beyond human",
         ],
-        Hero::Tien => ["base", "max power", "crane master", "four-armed", "tri-beam master", "neo crane", "third eye open", "dojo master", "heaven's eye"],
+        Hero::Tien => ["base", "max power", "crane master", "kikoho stance", "tri-beam master", "neo crane", "all-seeing", "dojo master", "heaven's eye"],
         Hero::A17 => ["base", "limiter off", "barrier", "ranger", "perpetual core", "overclock", "survivor", "last one standing", "infinite"],
         _ => return None,
     })
@@ -256,6 +256,7 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
     // a non-saiyan's own late forms, each with its aura: their looks follow the shared nine in his sprites
     let own_late: &[(&str, [u32; 3])] = match h {
         Hero::Krillin => &[("solar flare", [0xffffff, 0xfffbe0, 0xffe680]), ("taiyoken sun", [0xffffff, 0xfff8b0, 0xffd60a])],
+        Hero::Tien => &[("four witches", [0xffffff, 0xd8ffe0, 0x3aa86a]), ("multi-form", [0xffffff, 0xe8f0ff, 0x8ab0e0])],
         // android 17's marks past the nine: unseen, like all his marks (a17.rs)
         Hero::A17 => &[("infinite ii", [0xffffff, 0xd8e8ff, 0x7a9ad8]), ("infinite iii", [0xffffff, 0xd8e8ff, 0x7a9ad8])],
         _ => &[],
@@ -475,6 +476,8 @@ pub const TRIPS: [u32; 11] = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12];
 pub const SNAKE_WAY_ENABLED: bool = false;
 /// The achievements only snake way gives: hidden while it's parked.
 pub const SNAKE_ACH: [&str; 4] = ["snakeway", "hfil", "streak", "souls10"];
+/// The great ape's achievements: only saiyans see them, since only saiyans transform on the full moon.
+pub const APE_ACH: [&str; 5] = ["ape", "giantape", "tail10", "tail25", "tail50"];
 /// Worlds that sit the planet bigger or higher (`W2L`): (world, zoom, dy).
 pub const W2L: [(u32, f64, f64); 4] = [(2, 1.22, 0.0), (10, 0.82, -0.07), (11, 1.0, 0.0), (12, 1.0, 0.0)];
 pub const WORLD_NAMES: [&str; 13] =
@@ -832,7 +835,7 @@ pub const CHARS: [(Hero, &str, &str, Need); 9] = [
     (Hero::Krillin, "krillin", "krillin", Need::Open),
     (Hero::Piccolo, "piccolo", "piccolo", Need::Beat("raditz")),
     (Hero::A17, "a17", "android 17", Need::Ach("androids")),
-    (Hero::Tien, "tien", "tien", Need::Ach("cell")),
+    (Hero::Tien, "tien", "tien", Need::Ach("yamcha")),
     (Hero::Goten, "goten", "goten", Need::Beat("kid buu")),
 ];
 

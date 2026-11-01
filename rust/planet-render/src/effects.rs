@@ -43,6 +43,8 @@ fn ball(c: &mut Ctx, x: f64, y: f64, r: f64) {
 fn beam_pal(g: &Game) -> (u32, u32) {
     if matches!(g.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten) {
         (0xcdeeff, 0x1f6ad8)
+    } else if g.s.hero == Hero::Tien {
+        (0xfff8d8, 0xd88a18)
     } else if g.s.hero == Hero::Piccolo {
         (0xfff6c0, 0x7a3ae0)
     } else if g.s.hero == Hero::A17 {

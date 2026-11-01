@@ -335,6 +335,7 @@ impl Game {
             self.cue(crate::hud::Cue::Sfx("beam"));
             return;
         }
+        self.hero_aim(c);
         let mut tx = tx;
         if self.tl.movie.as_ref().is_some_and(|m| m.flip_until > t) {
             tx = self.cam.w - tx;

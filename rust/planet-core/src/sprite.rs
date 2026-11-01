@@ -838,29 +838,7 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
                     true,
                 ),
             ),
-            (
-                "tien",
-                make_plain(
-                    &TIEN_HEAD,
-                    &TIEN_HEAD,
-                    &[
-                        ('y', 0x2f8a46),
-                        ('Y', 0x1f6030),
-                        ('a', 0x2f8a46),
-                        ('A', 0x1f6030),
-                        ('g', 0xf6c8a2),
-                        ('G', 0xd99a73),
-                        ('u', 0xc83030),
-                        ('p', 0x23683a),
-                        ('P', 0x164a28),
-                        ('w', 0x22222a),
-                        ('W', 0x111118),
-                        ('b', 0x2f8a46),
-                        ('B', 0x1f6030),
-                    ],
-                    false,
-                ),
-            ),
+            ("tien", with_late(make_plain(&TIEN_HEAD, &TIEN_HEAD, TIE, false), &tien_late())),
             ("a17", with_late(make_plain(&TRUNKS_HEAD, &TRUNKS_HEAD, SEV, true), &a17_looks())),
         ]
     })
@@ -963,7 +941,7 @@ pub fn get(name: &str) -> &'static Sprite {
 /// dance looks them up under.
 fn built(name: &str) -> Option<&'static Sprite> {
     static B: OnceLock<HashMap<&'static str, Sprite>> = OnceLock::new();
-    B.get_or_init(|| HashMap::from([("FUSED.roshillin", roshillin()), ("FUSED.android35", android35())])).get(name)
+    B.get_or_init(|| HashMap::from([("FUSED.roshillin", roshillin()), ("FUSED.tienzu", tienzu()), ("FUSED.android35", android35())])).get(name)
 }
 
 // ── the new heroes' late forms and fusion results (from the heroes pickers)
@@ -982,6 +960,23 @@ const KRI: &[(char, u32)] = &[
     ('P', 0xc0641a),
     ('w', 0x2b4fc8),
     ('W', 0x1c3584),
+];
+
+/// Tien's colours.
+const TIE: &[(char, u32)] = &[
+    ('y', 0x2f8a46),
+    ('Y', 0x1f6030),
+    ('a', 0x2f8a46),
+    ('A', 0x1f6030),
+    ('g', 0xf6c8a2),
+    ('G', 0xd99a73),
+    ('u', 0xc83030),
+    ('p', 0x23683a),
+    ('P', 0x164a28),
+    ('w', 0x22222a),
+    ('W', 0x111118),
+    ('b', 0x2f8a46),
+    ('B', 0x1f6030),
 ];
 
 /// The fusion dance's Metamoran vest: a dark vest, gold shoulder pads, a blue sash, white trousers.
@@ -1078,12 +1073,6 @@ fn krillin_late() -> [HeroSet; 2] {
         stamp(&set_of(&KRILLIN_HEAD, KRI), 4, 4, 4, &FLARE, &[('L', 0xfff8c0), ('l', 0xffffff)]),
         stamp(&set_of(&KRILLIN_HEAD, &layers(&[KRI, &[('s', 0xfff0d0), ('S', 0xf0c890)]])), 4, 4, 4, &FLARE_BIG, &[('L', 0xfff27a), ('l', 0xffffff)]),
     ]
-}
-
-/// Krillin's stand-in for the great ape: max power, Roshi's trick, his gi torn off and every muscle up.
-pub fn krillin_max_power() -> &'static HeroSet {
-    static S: OnceLock<HeroSet> = OnceLock::new();
-    S.get_or_init(|| set_of(&KRILLIN_HEAD, &layers(&[KRI, &[('y', 0xf6c8a2), ('Y', 0xd99a73), ('a', 0xf6c8a2), ('A', 0xd99a73)]])))
 }
 
 /// Roshillin: krillin and master roshi fused, roshi's beard and shades on krillin's dotted head, in the vest.
@@ -1264,4 +1253,73 @@ fn android35() -> Sprite {
         .collect();
     let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
     set_of(&head, &layers(&[META, &[('z', 0xf2d36b), ('Z', 0xfff0b0), ('E', 0x2a6ad8)]])).idle
+}
+
+/// Tien's late forms: the four witches technique, a second pair of arms out from his shoulders; then the multi-form,
+/// two more of him stepping out to either side, pale and half there.
+fn tien_late() -> [HeroSet; 2] {
+    // the second pair raised from his shoulders, hands up by his head
+    const ARMS: [&str; 18] = [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ".oo................oo.",
+        "osso..............osso",
+        "oSso..............osSo",
+        ".oso..............oso.",
+        "..oso............oso..",
+        "...oso..........oso...",
+        "....oso........oso....",
+        ".....oo........oo.....",
+    ];
+    let base = set_of(&TIEN_HEAD, TIE);
+    let four = stamp(&base, 3, 0, 3, &ARMS, &[('o', 0x120c18), ('s', 0xf6c8a2), ('S', 0xd99a73)]);
+    // the copies: his own frame shifted out to each side, washed pale
+    let ghosts = |s: &Sprite| -> Sprite {
+        let pad = 6;
+        let w = s.w + 2 * pad;
+        let mut col = vec![-1; w * s.h];
+        let mut emit = vec![false; w * s.h];
+        for j in 0..s.h {
+            for i in 0..s.w {
+                let c = s.col[j * s.w + i];
+                if c < 0 {
+                    continue;
+                }
+                let pale = (((c as u32 >> 16 & 255) + 255) / 2) << 16 | (((c as u32 >> 8 & 255) + 255) / 2) << 8 | (((c as u32 & 255) + 255) / 2);
+                for x in [i, i + 2 * pad] {
+                    col[j * w + x] = pale as i32;
+                }
+            }
+        }
+        for j in 0..s.h {
+            for i in 0..s.w {
+                let c = s.col[j * s.w + i];
+                if c >= 0 {
+                    col[j * w + i + pad] = c;
+                    emit[j * w + i + pad] = s.emit[j * s.w + i];
+                }
+            }
+        }
+        Sprite { w, h: s.h, col, emit, ax: s.ax + pad as f64, ay: s.ay }
+    };
+    let multi = HeroSet { pose: ghosts(&base.pose), idle: ghosts(&base.idle), run: base.run.clone().map(|x| ghosts(&x)) };
+    [four, multi]
+}
+
+/// Tienzu: tien and chiaotzu fused, tien's third eye in chiaotzu's pale face with its red cheeks, in the vest.
+fn tienzu() -> Sprite {
+    let mut head: Vec<String> = TIEN_HEAD.iter().map(|s| s.to_string()).collect();
+    for (j, i) in [(12, 4), (12, 11)] {
+        head[j].replace_range(i..i + 1, "R");
+    }
+    let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
+    set_of(&head, &layers(&[META, &[('s', 0xfbe6dc), ('S', 0xe8c4b4), ('R', 0xe8505a)]])).idle
 }

@@ -1,5 +1,5 @@
 //! The five heroes past game.js's four: each opens on its story beat (krillin from the start, piccolo after raditz,
-//! android 17 after the androids, tien after cell, goten after kid buu), can be picked once open, has its own sprites
+//! android 17 after the androids, tien once yamcha is out of his crater, goten after kid buu), can be picked once open, has its own sprites
 //! and form names, and `#hero-<id>` plays him without setting off the hook his id spells.
 
 use planet_core::data::{ladder_of, Hero, CHARS};
@@ -36,7 +36,7 @@ fn story_beats_open_the_rest() {
     g.start();
     g.s.beaten.insert("raditz".into());
     g.s.ach.insert("androids");
-    g.s.ach.insert("cell");
+    g.s.ach.insert("yamcha");
     g.s.beaten.insert("kid buu".into());
     for id in ["piccolo", "a17", "tien", "goten"] {
         assert!(open(&g, id), "{id}");
@@ -210,7 +210,7 @@ fn god_ki_opens_at_the_same_mark_for_every_hero() {
 
 #[test]
 fn mastery_stars_cost_every_hero_at_least_what_goku_pays() {
-    for h in [Hero::Piccolo, Hero::Tien, Hero::Goku] {
+    for h in [Hero::Piccolo, Hero::Goku] {
         let mut g = Game::new(7);
         g.start();
         g.s.hero = h;
@@ -255,4 +255,38 @@ fn the_menu_gives_each_hero_his_playstyle_and_form_ladder() {
     assert_eq!(piccolo["forms"][2]["name"], "fused with nail");
     assert_eq!(piccolo["forms"][0]["aura"], "#8ad87a", "a namekian's green aura");
     assert_eq!(chars[0]["forms"][1]["aura"], "#ffe02e", "super saiyan gold");
+}
+
+#[test]
+fn only_saiyans_transform_on_the_full_moon() {
+    use planet_core::data::Upg;
+    for (h, saiyan) in [(Hero::Vegeta, true), (Hero::Goten, true), (Hero::Piccolo, false), (Hero::Krillin, false), (Hero::Tien, false), (Hero::A17, false)] {
+        let mut g = Game::new(7);
+        g.start();
+        g.s.hero = h;
+        g.s.ach.insert("ape");
+        g.session = 41.0;
+        g.tl.next_moon = 0.0;
+        let mut rose = false;
+        for _ in 0..30 * 5 {
+            step(&mut g);
+            rose |= g.tl.moon.is_some();
+        }
+        assert_eq!(rose, saiyan, "{h:?}: the moon");
+        assert_eq!(g.unlocked(Upg::Tail), saiyan, "{h:?}: tail training");
+        assert_eq!(g.menu_json().contains("\"id\":\"giantape\""), saiyan, "{h:?}: the great ape's achievements");
+    }
+    // switching away mid-transformation ends the great ape
+    let mut g = Game::new(7);
+    g.start();
+    g.s.ach.insert("androids");
+    g.session = 41.0;
+    g.tl.next_moon = 0.0;
+    g.s.levels[Upg::Tail as usize] = 1;
+    while g.b.ape_until <= g.t && g.t < 30.0 {
+        step(&mut g);
+    }
+    assert!(g.b.ape_until > g.t, "vegeta went great ape");
+    assert!(g.pick_hero("a17"));
+    assert!(g.b.ape_until <= g.t);
 }

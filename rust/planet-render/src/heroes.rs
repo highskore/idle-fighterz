@@ -69,3 +69,21 @@ pub fn draw_discs(c: &mut Ctx, g: &Game) {
         c.fb.px((x + cos(spin) * rx).round(), (y + sin(spin) * ry).round(), 0xffffff, 1.0);
     }
 }
+
+/// Where tien's kikoho hit: its triangle burnt round the villain, gold fading to embers over `CRATER_SECS`.
+pub fn draw_crater(c: &mut Ctx, g: &Game) {
+    let Some((x, y, t0)) = g.crater() else { return };
+    let k = 1.0 - (c.t - t0) / planet_core::heroes::CRATER_SECS;
+    let r = 22.0;
+    let tri = [(x, y - r * 0.9), (x - r, y + r * 0.6), (x + r, y + r * 0.6)];
+    for e in 0..3 {
+        let ((x0, y0), (x1, y1)) = (tri[e], tri[(e + 1) % 3]);
+        let n = 40;
+        for i in 0..=n {
+            let f = i as f64 / n as f64;
+            let (px, py) = (x0 + (x1 - x0) * f, y0 + (y1 - y0) * f);
+            c.fb.px(px.round(), py.round(), 0xffd060, 0.9 * k);
+            c.fb.px(px.round(), py.round() + 1.0, 0xd88a18, 0.7 * k);
+        }
+    }
+}

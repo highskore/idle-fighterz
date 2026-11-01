@@ -51,6 +51,28 @@ pub const GOTEN_REST: f64 = 10.0;
 pub const GOTEN_MARK: f64 = 0.5;
 pub const GOTEN_TAP: f64 = 0.1;
 
+/// Tien's kikoho, his full-charge beam with a villain up: it stakes a share of his power, which comes back ×`KIKOHO_BACK`
+/// if the villain falls within `KIKOHO_SECS`, or is lost. Left alone he fires a small, safe one himself when a villain is
+/// under `KIKOHO_LOW` of his hp (a safe stake is never lost), every `KIKOHO_AUTO` at most. A kikoho's triangle stays
+/// burnt round the villain for `CRATER_SECS`.
+pub const KIKOHO_STAKE: f64 = 0.2;
+pub const KIKOHO_SAFE: f64 = 0.05;
+pub const KIKOHO_BACK: f64 = 1.6;
+pub const KIKOHO_SECS: f64 = 10.0;
+pub const KIKOHO_LOW: f64 = 0.3;
+pub const KIKOHO_AUTO: f64 = 30.0;
+pub const CRATER_SECS: f64 = 6.0;
+/// Tien's steady income: a touch under vegeta's, since the kikoho pays on top.
+pub const TIEN_BASE: f64 = 0.95;
+
+/// A kikoho's stake while it rides on the villain: how much, since when, and whether it's a safe one.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Stake {
+    pub n: Big,
+    pub t0: f64,
+    pub safe: bool,
+}
+
 /// Seconds between krillin's discs, and between the ones he throws by himself.
 pub const DISC_GAP: f64 = 0.4;
 pub const DISC_AUTO: f64 = 15.0;
@@ -97,6 +119,12 @@ pub enum Kind {
         best: usize,
         seen: usize,
     },
+    Tien {
+        /// the kikoho riding on the villain, the next safe one he may fire himself, and its triangle (where, since when)
+        stake: Option<Stake>,
+        auto: f64,
+        crater: Option<(f64, f64, f64)>,
+    },
     A17 {
         /// his overclock, the next auto-beam, and until when infinite energy pins it
         oc: f64,
@@ -122,6 +150,7 @@ impl Kind {
             Hero::Piccolo => Kind::Piccolo { focus: 1.0 },
             Hero::Krillin => Kind::Krillin { cuts: 0, last: -9.0, auto: DISC_AUTO, discs: Vec::new() },
             Hero::Goten => Kind::Goten { up: 0.0, down: None, best: 0, seen: 0 },
+            Hero::Tien => Kind::Tien { stake: None, auto: 0.0, crater: None },
             Hero::A17 => Kind::A17 { oc: 1.0, auto: crate::a17::AUTO_BEAM, pin: 0.0 },
             _ => Kind::None,
         }
@@ -177,19 +206,18 @@ impl Game {
     pub fn hero_x(&self) -> f64 {
         match self.hero_rt.kind {
             Kind::Piccolo { focus } => PICCOLO_BASE * (1.0 + focus),
+            Kind::Tien { .. } => TIEN_BASE,
             Kind::A17 { .. } => crate::a17::A17_BASE,
             _ => 1.0,
         }
     }
 
-    /// What the full moon makes him: a saiyan's great ape (or giant ape), piccolo's giant namekian, krillin's max
-    /// power (his gi torn off, every muscle up).
+    /// What the full moon makes him (only saiyans transform): the great ape, or a giant one.
     pub fn ape_name(&self, giant: bool) -> &'static str {
-        match self.s.hero {
-            Hero::Piccolo => "giant namekian",
-            Hero::Krillin => "max power",
-            _ if giant => "giant ape",
-            _ => "great ape",
+        if giant {
+            "giant ape"
+        } else {
+            "great ape"
         }
     }
 
@@ -200,15 +228,82 @@ impl Game {
             (Hero::Goku | Hero::Gohan | Hero::Krillin, Upg::Galick) => "kamehameha",
             (Hero::Piccolo, Upg::Galick) => "special beam cannon",
             (Hero::Piccolo, Upg::Piccolo) => "kid gohan",
-            (Hero::Piccolo, Upg::Tail) => "giant training",
-            (Hero::Krillin, Upg::Tail) => "max power training",
             (Hero::Piccolo, Upg::Armor) => "weighted cape",
             (Hero::Krillin, Upg::Armor) => "turtle shell",
+            (Hero::Tien, Upg::Galick) => "kikoho",
+            (Hero::Tien, Upg::Armor) => "crane robes",
             (Hero::A17, Upg::Galick) => "power blitz",
             (Hero::A17, Upg::Kaio) => "infinite energy",
             (Hero::A17, Upg::Bigbang) => "barrier burst",
             _ => return None,
         })
+    }
+
+    /// Tien's kikoho riding on the villain, if there is one.
+    pub fn stake(&self) -> Option<&Stake> {
+        match &self.hero_rt.kind {
+            Kind::Tien { stake, .. } => stake.as_ref(),
+            _ => None,
+        }
+    }
+
+    /// Where tien's last kikoho left its triangle, and since when.
+    pub fn crater(&self) -> Option<(f64, f64, f64)> {
+        match self.hero_rt.kind {
+            Kind::Tien { crater, .. } => crater.filter(|c| self.t - c.2 < CRATER_SECS),
+            _ => None,
+        }
+    }
+
+    /// Tien's step: a kikoho's stake comes back when the villain falls in time, or is lost (a safe one is handed back);
+    /// left alone, he finishes a weak villain with a safe one himself.
+    fn tien_step(&mut self, dt: f64) {
+        let t = self.t;
+        let boss = self.tl.boss.as_ref().filter(|b| !b.dead).map(|b| (b.hp / b.max, b.x, b.y - b.spr().h / 2.0 * b.k));
+        let Kind::Tien { stake, auto, .. } = &mut self.hero_rt.kind else { return };
+        *auto -= dt;
+        let mut fire = false;
+        if let Some(s) = stake.clone() {
+            if boss.is_none() {
+                *stake = None;
+                let back = s.n * KIKOHO_BACK;
+                let (x, y) = self.hand_pos();
+                self.own_pay(back, x, y - 30.0);
+                self.event(format!("the kikoho finished him — {} back", crate::num::fmt_short(back.round())));
+                return;
+            }
+            if t - s.t0 > KIKOHO_SECS {
+                *stake = None;
+                if s.safe {
+                    self.s.pl += s.n;
+                } else {
+                    self.event("he's still standing — the kikoho's stake is lost");
+                }
+                return;
+            }
+        } else if let Some((hp, _, _)) = boss {
+            fire = hp < KIKOHO_LOW && *auto <= 0.0 && self.s.lv(crate::data::Upg::Galick) > 0 && !self.stunned() && !self.swapped();
+        }
+        if let (true, Some((_, x, y))) = (fire, boss) {
+            if let Kind::Tien { auto, .. } = &mut self.hero_rt.kind {
+                *auto = KIKOHO_AUTO;
+            }
+            self.kikoho(true, x, y);
+            self.fire_beam(2.5, x, y);
+        }
+    }
+
+    /// A kikoho at a villain at (x, y): the stake leaves his power (a safe one is a small share) and rides on him.
+    fn kikoho(&mut self, safe: bool, x: f64, y: f64) {
+        let n = (self.s.pl * if safe { KIKOHO_SAFE } else { KIKOHO_STAKE }).floor();
+        self.s.pl -= n;
+        let t = self.t;
+        if let Kind::Tien { stake, crater, .. } = &mut self.hero_rt.kind {
+            *stake = Some(Stake { n, t0: t, safe });
+            *crater = Some((x, y, t));
+        }
+        let pct = if safe { KIKOHO_SAFE } else { KIKOHO_STAKE } * 100.0;
+        self.event(format!("kikoho! {pct}% of his power staked — ×{KIKOHO_BACK} back if he falls in {KIKOHO_SECS}s"));
     }
 
     /// Krillin's cuts toward the barrage (0 for everyone else).
@@ -347,6 +442,7 @@ impl Game {
             (r.earned, r.tick) = (Big::ZERO, 0.0);
         }
         self.goten_step();
+        self.tien_step(dt);
         self.a17_step(dt);
         if self.meditating() {
             let f = self.focus();
@@ -436,6 +532,14 @@ impl Game {
             self.throw_disc(x, y);
         }
         true
+    }
+
+    /// A beam of charge `c` as it's fired: tien's full one with a villain up is a staked kikoho.
+    pub(crate) fn hero_aim(&mut self, c: f64) {
+        let villain = self.tl.boss.as_ref().filter(|b| !b.dead).map(|b| (b.x, b.y - b.spr().h / 2.0 * b.k));
+        if let (true, Some((x, y))) = (matches!(self.hero_rt.kind, Kind::Tien { stake: None, .. }) && c >= 2.4, villain) {
+            self.kikoho(false, x, y);
+        }
     }
 
     /// A beam of charge `c` from (x, y): Piccolo's special beam cannon spends focus with its charge.
