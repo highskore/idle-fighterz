@@ -467,6 +467,8 @@ pub const TRIPS: [u32; 11] = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12];
 pub const SNAKE_WAY_ENABLED: bool = false;
 /// The achievements only snake way gives: hidden while it's parked.
 pub const SNAKE_ACH: [&str; 4] = ["snakeway", "hfil", "streak", "souls10"];
+/// The great ape's achievements: only saiyans see them, since only saiyans transform on the full moon.
+pub const APE_ACH: [&str; 5] = ["ape", "giantape", "tail10", "tail25", "tail50"];
 /// Worlds that sit the planet bigger or higher (`W2L`): (world, zoom, dy).
 pub const W2L: [(u32, f64, f64); 4] = [(2, 1.22, 0.0), (10, 0.82, -0.07), (11, 1.0, 0.0), (12, 1.0, 0.0)];
 pub const WORLD_NAMES: [&str; 13] =

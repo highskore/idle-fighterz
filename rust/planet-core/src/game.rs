@@ -482,7 +482,7 @@ impl Game {
             Upg::Senzu => best >= 1000.0,
             Upg::House => best >= 2000.0,
             Upg::Armor => best >= 5000.0,
-            Upg::Tail => self.s.ach.contains("ape"),
+            Upg::Tail => self.s.ach.contains("ape") && self.s.hero.saiyan(),
             Upg::Kaio => best >= 8000.0,
             Upg::Bigbang => best >= 20000.0,
             Upg::Piccolo => best >= 10000.0,

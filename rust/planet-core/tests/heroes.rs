@@ -249,3 +249,37 @@ fn the_menu_gives_each_hero_his_playstyle_and_form_ladder() {
     assert_eq!(piccolo["forms"][0]["aura"], "#8ad87a", "a namekian's green aura");
     assert_eq!(chars[0]["forms"][1]["aura"], "#ffe02e", "super saiyan gold");
 }
+
+#[test]
+fn only_saiyans_transform_on_the_full_moon() {
+    use planet_core::data::Upg;
+    for (h, saiyan) in [(Hero::Vegeta, true), (Hero::Goten, true), (Hero::Piccolo, false), (Hero::Krillin, false), (Hero::Tien, false), (Hero::A17, false)] {
+        let mut g = Game::new(7);
+        g.start();
+        g.s.hero = h;
+        g.s.ach.insert("ape");
+        g.session = 41.0;
+        g.tl.next_moon = 0.0;
+        let mut rose = false;
+        for _ in 0..30 * 5 {
+            step(&mut g);
+            rose |= g.tl.moon.is_some();
+        }
+        assert_eq!(rose, saiyan, "{h:?}: the moon");
+        assert_eq!(g.unlocked(Upg::Tail), saiyan, "{h:?}: tail training");
+        assert_eq!(g.menu_json().contains("\"id\":\"giantape\""), saiyan, "{h:?}: the great ape's achievements");
+    }
+    // switching away mid-transformation ends the great ape
+    let mut g = Game::new(7);
+    g.start();
+    g.s.ach.insert("androids");
+    g.session = 41.0;
+    g.tl.next_moon = 0.0;
+    g.s.levels[Upg::Tail as usize] = 1;
+    while g.b.ape_until <= g.t && g.t < 30.0 {
+        step(&mut g);
+    }
+    assert!(g.b.ape_until > g.t, "vegeta went great ape");
+    assert!(g.pick_hero("a17"));
+    assert!(g.b.ape_until <= g.t);
+}
