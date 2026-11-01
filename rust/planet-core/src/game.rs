@@ -280,7 +280,8 @@ impl Game {
     /// God ki opens at `LATE_AT`: a form held at that mark (a saiyan's tenth on), or the top of a ladder that stops
     /// short of it with the power for it this run.
     pub fn god_open(&self) -> bool {
-        let f = self.s.form;
+        // goten's dropped form still counts
+        let f = self.held_form();
         self.forms[f].at >= LATE_AT || f == self.forms.len() - 1 && self.s.run_best >= LATE_AT
     }
 
@@ -692,7 +693,8 @@ impl Game {
             * self.combo
             * if crit { self.crit_hit() } else { 1.0 }
             * (1.0 + 0.5 * self.lvl(N_FIST))
-            * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 };
+            * if self.wished(WishBuff::Taps) { 3.0 } else { 1.0 }
+            * self.hero_tap_x();
         let k = self.kid_screen(14.0);
         self.gain_at(n, k.x, k.y - 10.0, crit);
         self.hero_tap(k.x, k.y - 20.0);
@@ -1102,7 +1104,7 @@ impl Game {
             self.cg_step(t, dt);
             self.candy_step(t, dt);
             let last = self.forms.len() - 1;
-            if self.s.form == last && self.tl.preview.is_none() && self.s.pl >= self.mastery_at(self.s.mastery) {
+            if self.held_form() == last && self.tl.preview.is_none() && self.s.pl >= self.mastery_at(self.s.mastery) {
                 self.s.mastery += 1;
                 self.ach("mastery");
                 let next = crate::num::fmt_short(self.mastery_at(self.s.mastery));

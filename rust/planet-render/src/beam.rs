@@ -31,7 +31,7 @@ const SBC: Pal = Pal { aim: 0xffd84a, ball: 0xfff2a0, ball_edge: 0x8a4ae8, spark
 const KAIO: Pal = Pal { aim: 0, ball: 0xffb0a4, ball_edge: 0, spark: 0xff9a8a, glow: 0xff6a5a, mid: 0xffc8bf, edge: 0xc8201a };
 
 fn kame(g: &Game) -> bool {
-    matches!(g.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin)
+    matches!(g.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten)
 }
 
 /// `BEAM()`

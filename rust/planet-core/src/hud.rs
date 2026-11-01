@@ -243,9 +243,9 @@ impl Game {
         self.cues.push(c);
     }
 
-    /// `kame()`: goku, gohan and krillin fire a kamehameha, the others a galick gun (piccolo his own cannon).
+    /// `kame()`: goku, gohan, krillin and goten fire a kamehameha, the others a galick gun (piccolo his own cannon).
     pub fn kame(&self) -> bool {
-        matches!(self.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin)
+        matches!(self.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten)
     }
 
     /// The buffs line under the power (`fxs.join(' · ')`).
@@ -368,6 +368,12 @@ impl Game {
             // how full his focus is (his steady income runs from half at empty to whole at full)
             fx.push(format!("focus {}%", num(js_round(self.focus() * 100.0))));
         }
+        if let Some(left) = self.form_left() {
+            fx.push(format!("{} {}s", self.forms[self.s.form].name, num(left.ceil())));
+        }
+        if self.powered_down().is_some() {
+            fx.push("powered down · tap him".into());
+        }
         if self.cuts() > 0 {
             fx.push(format!("discs {}/{BARRAGE}", self.cuts().min(crate::heroes::BARRAGE_CUTS), BARRAGE = crate::heroes::BARRAGE_CUTS));
         }
@@ -382,8 +388,14 @@ impl Game {
         let parts = [
             if s.form > 0 {
                 format!("{} ×{}", f.name, num(f.x))
-            } else if s.pl > 2000.0 {
-                "next form at 20K".into()
+            } else if s.pl > 2000.0 && self.powered_down().is_none() {
+                // goten's first form comes sooner; everyone else's at 20K, as game.js says it
+                let at = self.forms[1].at;
+                if at == 2e4 {
+                    "next form at 20K".into()
+                } else {
+                    format!("next form at {}", fmt_short(Big::from(at)))
+                }
             } else {
                 String::new()
             },
