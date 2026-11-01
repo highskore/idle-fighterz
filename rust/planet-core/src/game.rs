@@ -1449,7 +1449,7 @@ impl Game {
         }
         if has("bubbles") {
             lv(self, Upg::Partner, 3);
-            // he goes after a butterfly a second in
+            // he wanders off a second in
             self.tl.bub.plan = 0;
             self.tl.bub.until = 1.0;
         }

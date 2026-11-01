@@ -1,5 +1,5 @@
-//! The small extras: the ramen break's bowl (steam, chopsticks, a noodle on its way up; knocked over, a puddle) and
-//! the butterfly bubbles chases. Shapes only, no random draws; reduced motion keeps the steam and wings still.
+//! The small extras: the ramen break's bowl (steam, chopsticks, a noodle on its way up; knocked over, a puddle).
+//! Shapes only, no random draws; reduced motion keeps the steam still.
 
 use planet_core::jsmath::{cos, sin};
 use planet_core::ramen::SPILL_T;
@@ -88,31 +88,5 @@ pub fn draw_ramen(c: &mut Ctx, g: &Game, hero: &HeroAt) {
         let i = kk * 2.0 - 2.0 + sway;
         put(c, bx, by, hero.ang, i, 5.0 + rise * 6.0, 0xffffff, 0.85 * (1.0 - rise));
         put(c, bx, by, hero.ang, i, 6.0 + rise * 6.0, 0xffffff, 0.6 * (1.0 - rise));
-    }
-}
-
-/// The butterfly bubbles goes after.
-pub fn draw_butterfly(c: &mut Ctx, g: &Game) {
-    let Some(f) = g.tl.bub.fly.as_ref() else { return };
-    let t = c.t;
-    let up = f.gone.map_or(0.0, |s| (t - s) * 26.0);
-    let a = f.gone.map_or(1.0, |s| (1.0 - (t - s) / 2.5).max(0.0));
-    let s = g.cam.screen(g.frame3.road_pt(f.phi), 13.0 + up + if g.calm { 0.0 } else { 3.0 * sin((t - f.t0) * 3.1) });
-    if s.v[2] < 0.05 || a <= 0.0 {
-        return;
-    }
-    let open = g.calm || (t * 11.0).floor() as i64 % 2 == 0;
-    let rows: &[&str] = if open { &["eww.wwe", "wwwbwww", ".wwbww.", "..wbw.."] } else { &["...b...", "..wbw..", "..ebe..", "...b..."] };
-    let w = rows[0].len() as f64;
-    for (j, row) in rows.iter().enumerate() {
-        for (i, ch) in row.bytes().enumerate() {
-            let col = match ch {
-                b'w' => 0xffa63c,
-                b'e' => 0x7a3a12,
-                b'b' => 0x3a2a1a,
-                _ => continue,
-            };
-            c.fb.px(s.x + i as f64 - (w - 1.0) / 2.0, s.y + j as f64 - 1.0, col, a);
-        }
     }
 }
