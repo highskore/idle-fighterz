@@ -67,7 +67,8 @@ fn a_long_run_never_enters_snake_way() {
     }
 }
 
-const SEEDS: u32 = 16;
+// 16 seeds left the ratio to luck: seeds 17-32 put it 7% off on main too
+const SEEDS: u32 = 48;
 /// At least a full rotation of 11 trips with snake way in it.
 const ROTATION: f64 = 36.0 * 60.0;
 
