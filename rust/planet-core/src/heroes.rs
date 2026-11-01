@@ -191,21 +191,39 @@ impl Game {
         Some(match (self.s.hero, u) {
             (Hero::Vegeta, Upg::Galick) => return None,
             (h, Upg::Galick) => crate::data::hero_beam(h).0,
+            (h, Upg::Kaio) => crate::data::hero_moves(h).0,
+            (h, Upg::Bigbang) => crate::data::hero_moves(h).1,
             (Hero::Piccolo, Upg::Piccolo) => "kid gohan",
             (Hero::Piccolo, Upg::Tail) => "giant training",
             (Hero::Krillin, Upg::Tail) => "max power training",
             (Hero::Piccolo, Upg::Armor) => "weighted cape",
             (Hero::Krillin, Upg::Armor) => "turtle shell",
+            (Hero::Tien, Upg::Armor) => "crane gi",
+            (Hero::A17, Upg::Armor) => "ranger vest",
             _ => return None,
         })
     }
 
-    /// An achievement's name as this hero would say it: the full-power beam's is his own.
+    /// An achievement's name as this hero would say it: the full-power beam's and the boost's are his own.
     pub fn ach_name(&self, id: &str, name: &'static str) -> String {
         match id {
             "flash" => format!("{}!", crate::data::hero_beam(self.s.hero).1),
+            "kaioken" => self.boost().into(),
             _ => name.into(),
         }
+    }
+
+    /// What earns an achievement, in this hero's words.
+    pub fn ach_text(&self, id: &str, text: &'static str) -> String {
+        match id {
+            "kaioken" => format!("use {}", self.boost()),
+            _ => text.into(),
+        }
+    }
+
+    /// The hero's boost: the kaioken upgrade's red button, by his own name.
+    pub fn boost(&self) -> &'static str {
+        crate::data::hero_moves(self.s.hero).0
     }
 
     /// Krillin's cuts toward the barrage (0 for everyone else).

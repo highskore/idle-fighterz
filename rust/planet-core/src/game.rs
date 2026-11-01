@@ -822,7 +822,7 @@ impl Game {
         self.b.kaio_ready = self.t + 45.0;
         self.shake = 0.5;
         self.flash_t = 0.4;
-        let msg = format!("kaioken! ×{}", self.kaio_x());
+        let msg = format!("{}! ×{}", self.boost(), self.kaio_x());
         self.event(msg);
         let (x, y) = self.hand_pos();
         self.burst_at(x, y, &[0xffffff, 0xff9a8a, 0xe0332b], 40, 200.0);

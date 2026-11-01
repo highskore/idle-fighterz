@@ -618,7 +618,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
     });
   };
   const tipOpen = b => { if (!game || !game.info || !$('shop').classList.contains('bulky')) return; tipFor = b; tipPaint(); };
-  let lastPl = 0, kiOwned = false;
+  let lastPl = 0, kiOwned = false, kiName = 'kaioken';
   const SEAS = ['#e2a93a', '#1e7a7a', '#a03a1c', '#e2a93a', '#6a3ea0', '#d2dce8', '#d2dce8', '#d2dce8', '#1e242c', '#0c0618', '#d2dce8', '#d89ab8', '#c89ab8'];   // each world's deepest sea tone
   // the wish box, which instant transmission's picker (class itxp) borrows: a button with data-i picks, any other closes it
   const closeBox = () => { const box = $('wish'); box.hidden = true; box.classList.remove('itxp'); $('game').classList.remove('wishing'); };
@@ -646,8 +646,8 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
     update(s) {
       lastPl = s.pl; bulkFetch(); if (tipFor && performance.now() - tipAt > 250) tipPaint();
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
-      const kb = $('kaio'), meter = kiBtns === 'meter'; kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kiOwned = s.kaio.own || !!(s.itx && s.itx.own);
-      const kt = s.kaio.ready ? 'kaioken' : narrow.matches ? s.kaio.left + 's' : meter ? `kaioken<small>${s.kaio.left}s</small>` : 'kaioken ' + s.kaio.left + 's'; if (kb.dataset.t !== kt) { kb.dataset.t = kt; kb.innerHTML = kt; }
+      const kb = $('kaio'), meter = kiBtns === 'meter'; kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kiOwned = s.kaio.own || !!(s.itx && s.itx.own); kiName = s.kaio.name || 'kaioken';   // game.js's state has no name
+      const kt = s.kaio.ready ? kiName : narrow.matches ? s.kaio.left + 's' : meter ? `${kiName}<small>${s.kaio.left}s</small>` : kiName + ' ' + s.kaio.left + 's'; if (kb.dataset.t !== kt) { kb.dataset.t = kt; kb.innerHTML = kt; }
       kiFill([kb/*widget*/, ...document.querySelectorAll('.w [data-w="kaio"]')/*/widget*/], s.kaio.ready, s.kaio.left);
       if (s.itx) { const ib = $('itxBtn'), name = narrow.matches ? 'IT' : 'transmission', clock = `${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}`; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut();
         const it = s.itx.left > 0 ? (narrow.matches ? clock : meter ? `${name}<small>${clock}</small>` : `${name} ${clock}`) : name; if (ib.dataset.t !== it) { ib.dataset.t = it; ib.innerHTML = it; }
@@ -961,7 +961,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
     };
     row('sound', [{ name: 'on', on: soundOn, what: 'little 8-bit blips when you train, buy, transform and fight', pick: () => sndSet(true) }, { name: 'off', on: !soundOn, what: 'no sound at all', pick: () => sndSet(false) }]);
     // the buttons' look, once there's kaioken or instant transmission to show it on
-    if (kiOwned) row('ki buttons', [['meter', 'ki meter', 'the kaioken and instant transmission buttons fill up as their ki recharges, with the seconds left'], ['classic', 'classic', 'the kaioken and instant transmission buttons fade while they recharge and count down the seconds']]
+    if (kiOwned) row('ki buttons', [['meter', 'ki meter', `the ${kiName} and instant transmission buttons fill up as their ki recharges, with the seconds left`], ['classic', 'classic', `the ${kiName} and instant transmission buttons fade while they recharge and count down the seconds`]]
       .map(([v, name, what]) => ({ name, what, on: kiBtns === v, pick: () => { kiLook(v); try { localStorage.setItem('hs-kibtn', v); } catch (_) {} } })));
     if (m && m.looks && m.looks.some(k => k.items.some(i => i.open))) {
       body.insertAdjacentHTML('beforeend', '<h3>looks</h3>');

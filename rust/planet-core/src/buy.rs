@@ -106,11 +106,19 @@ impl Game {
             Upg::House => "a new capsule house lands",
             Upg::Piccolo if first => "piccolo lands to meditate",
             Upg::Chamber if first => "the time chamber door will appear — tap it",
-            Upg::Kaio if first => "kaioken unlocked — hit the red button",
-            Upg::Bigbang if first => "big bang attack — double-tap anywhere",
+            Upg::Kaio if first => {
+                charge = format!("{} unlocked — hit the red button", self.boost());
+                &charge
+            }
+            Upg::Bigbang if first => {
+                charge = format!("{} — double-tap anywhere", hero_moves(self.s.hero).1);
+                &charge
+            }
             Upg::Itx if first => "instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you've been",
             Upg::Armor if first && self.s.hero == Hero::Piccolo => "weighted cape on — hit villains harder",
             Upg::Armor if first && self.s.hero == Hero::Krillin => "turtle shell on — hit villains harder",
+            Upg::Armor if first && self.s.hero == Hero::Tien => "crane gi on — hit villains harder",
+            Upg::Armor if first && self.s.hero == Hero::A17 => "ranger vest on — hit villains harder",
             Upg::Armor if first => "saiyan armor on — hit villains harder",
             _ => "",
         };

@@ -839,6 +839,22 @@ pub fn hero_beam(h: Hero) -> (&'static str, &'static str) {
     }
 }
 
+/// Each hero's boost (the kaioken upgrade's red button) and blast (the big bang's double-tap), as the game names them.
+pub fn hero_moves(h: Hero) -> (&'static str, &'static str) {
+    match h {
+        Hero::Vegeta => ("majin power", "big bang attack"),
+        Hero::Goku => ("kaioken", "dragon fist"),
+        Hero::Gohan => ("potential unleashed", "masenko"),
+        Hero::Trunks => ("burning rage", "finish buster"),
+        // "max power" is his giant mode and "weights off" piccolo's first form
+        Hero::Krillin => ("full power", "scattering bullet"),
+        Hero::Piccolo => ("cape off", "hellzone grenade"),
+        Hero::A17 => ("infinite energy", "barrier burst"),
+        Hero::Tien => ("kiai", "dodon ray"),
+        Hero::Goten => ("tantrum", "jan ken"),
+    }
+}
+
 /// Each hero's playstyle in one line, as the settings panel's hero row shows it.
 pub fn hero_style(h: Hero) -> &'static str {
     match h {

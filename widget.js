@@ -80,7 +80,7 @@
       if (num.dataset.v !== $('pl').dataset.v) { num.dataset.v = $('pl').dataset.v; num.innerHTML = $('pl').innerHTML; }
       rate.textContent = $('rate').textContent + '/s';
       bar.firstChild.style.width = (s.form.p * 100).toFixed(1) + '%'; ring.lastChild.setAttribute('stroke-dashoffset', (100 - s.form.p * 100).toFixed(1));
-      B.kaio.hidden = !s.kaio.own; B.kaio.disabled = !s.kaio.ready; B.kaio.title = s.kaio.ready ? 'kaioken' : `kaioken in ${s.kaio.left}s`;
+      B.kaio.hidden = !s.kaio.own; B.kaio.disabled = !s.kaio.ready; B.kaio.title = s.kaio.ready ? s.kaio.name || 'kaioken' : `${s.kaio.name || 'kaioken'} in ${s.kaio.left}s`;
       if (s.itx) { B.itx.hidden = !s.itx.own; B.itx.disabled = !s.itx.ready; B.itx.title = s.itx.ready ? 'instant transmission' : s.itx.left > 0 ? `instant transmission in ${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}` : 'instant transmission: from home, with no fight on'; }
       const f = s.form, key = [f.name, f.next, s.balls, s.wishes].join();
       if (info.dataset.k !== key) {

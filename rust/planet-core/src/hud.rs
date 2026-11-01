@@ -71,6 +71,8 @@ pub struct Hud {
     pub goal_text: &'static str,
     pub goal_p: f64,
     pub goal_n: f64,
+    /// the boost button's name: the hero's own kaioken
+    pub kaio_name: &'static str,
     pub kaio_own: bool,
     pub kaio_ready: bool,
     pub kaio_left: f64,
@@ -108,7 +110,7 @@ impl Hud {
     pub fn to_json(&self) -> String {
         Obj::new()
             .raw("goal", Obj::new().str("text", self.goal_text).num("p", self.goal_p).num("n", self.goal_n).end())
-            .raw("kaio", Obj::new().bool("own", self.kaio_own).bool("ready", self.kaio_ready).num("left", self.kaio_left).end())
+            .raw("kaio", Obj::new().str("name", self.kaio_name).bool("own", self.kaio_own).bool("ready", self.kaio_ready).num("left", self.kaio_left).end())
             .raw("itx", Obj::new().bool("own", self.itx_own).bool("ready", self.itx_ready).num("left", self.itx_left).end())
             .big("pl", self.pl)
             .big("best", self.best)
@@ -330,7 +332,7 @@ impl Game {
             fx.push(format!("tournament {}s · {} KO", secs(tr.until), tr.ko));
         }
         if b.kaio_until > t {
-            fx.push(format!("kaioken ×{} {}s", num(self.kaio_x()), secs(b.kaio_until)));
+            fx.push(format!("{} ×{} {}s", self.boost(), num(self.kaio_x()), secs(b.kaio_until)));
         } else if b.tired_until > t {
             fx.push(format!("tired ×0.75 {}s", secs(b.tired_until)));
         }
@@ -430,6 +432,7 @@ impl Game {
             goal_text: g.text,
             goal_p: s.goal_p.min(g.n),
             goal_n: g.n,
+            kaio_name: self.boost(),
             kaio_own: s.lv(Upg::Kaio) > 0,
             kaio_ready: t >= self.b.kaio_ready,
             kaio_left: ceil(self.b.kaio_ready - t),
@@ -627,7 +630,7 @@ impl Game {
                 (format!("a taste of {}", nf.name), format!("×{} for 60 seconds", num(nf.x)))
             }
             "seeds" => (label.into(), format!("+{} ki seeds, kept forever", crate::data::WISH_SEEDS)),
-            "kaio" => (label.into(), format!("kaioken ×{} now, no tiredness after", num(self.kaio_x()))),
+            "kaio" => (label.into(), format!("{} ×{} now, no tiredness after", self.boost(), num(self.kaio_x()))),
             "senzu" => (label.into(), format!("senzu ×{} for 2 minutes", num(self.senzu_x()))),
             "krillin" => (label.into(), format!("he trains with you: idle ×1.5 and destructo discs. next death: rage ×{}", 3 + self.s.krillin_revives)),
             _ => (label.into(), what.into()),
@@ -689,7 +692,7 @@ impl Game {
                 .end()
         });
         let ach = self.listed_ach().map(|(_, &(id, name, text))| {
-            Obj::new().str("id", id).str("name", &self.ach_name(id, name)).str("text", text).bool("done", s.ach.contains(id)).end()
+            Obj::new().str("id", id).str("name", &self.ach_name(id, name)).str("text", &self.ach_text(id, text)).bool("done", s.ach.contains(id)).end()
         });
         let chars = CHARS.iter().map(|&(h, id, name, need)| {
             // his form ladder for the hero row's strip: each form's name and its aura's outer colour
