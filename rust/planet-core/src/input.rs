@@ -192,7 +192,7 @@ impl Game {
             self.inp.vrx = if pole { 0.0 } else { dy * k * 30.0 };
             if pole {
                 self.inp.yaw += dx * k;
-                self.cam.m = crate::geom::rot(self.frame3.n, self.inp.yaw);
+                self.cam.m = self.lookout_m();
             } else {
                 self.cam.turn(dy * k, dx * k);
             }
@@ -617,12 +617,20 @@ impl Game {
                     self.inp.yaw += self.inp.vry * dt;
                 }
                 self.inp.yaw += crate::geom::AUTO_SPIN * dt;
-                self.cam.m = crate::geom::rot(self.frame3.n, self.inp.yaw);
+                self.cam.m = self.lookout_m();
             }
         }
     }
 
     fn w2_pole(&self) -> bool {
         self.inp.w2_pole
+    }
+
+    /// The lookout's view: turned `yaw` round its pole, which stands up on screen tipped 25° toward us, so the tiles
+    /// are seen from a little above with korin's tower straight below.
+    fn lookout_m(&self) -> crate::geom::M3 {
+        let n = self.frame3.n;
+        let tip = crate::jsmath::atan2(n[1], n[2]) - 65f64.to_radians();
+        crate::geom::m_mul(&crate::geom::rx(tip), &crate::geom::rot(n, self.inp.yaw))
     }
 }
