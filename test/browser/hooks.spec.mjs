@@ -1,13 +1,13 @@
-// Every preview hook in game.js (each marked "// preview hook"), played for 15 game seconds: no uncaught exception, no
-// console error and no blocked request
+// Every preview hook the Rust engine takes (rust/planet-core/src/hooks.txt, the list Game::preview reads its keys from),
+// played for 15 game seconds: no uncaught exception, no console error and no blocked request
 import { readFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import { open, start, play } from './page.mjs'
 
-const game = readFileSync(new URL('../../game.js', import.meta.url), 'utf8')
-const HOOKS = [...new Set(game.split('\n').flatMap(l => (l.match(/preview hooks?: (.*)/) || ['', ''])[1].match(/#[\w=.-]+/g) || []))].sort()
+const list = readFileSync(new URL('../../rust/planet-core/src/hooks.txt', import.meta.url), 'utf8')
+const HOOKS = list.split('\n').filter(l => l.startsWith('#')).map(l => l.split(/\s/)[0])
 
-test('game.js has preview hooks', () => expect(HOOKS.length).toBeGreaterThan(50))
+test('hooks.txt has preview hooks', () => expect(HOOKS.length).toBeGreaterThan(50))
 
 for (const hook of HOOKS) {
   test(hook, async ({ page }) => {

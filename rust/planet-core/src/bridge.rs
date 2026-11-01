@@ -168,12 +168,6 @@ impl Bridge {
         self.game.bulk_json(n)
     }
 
-    /// A probe for a renderer running in lockstep: `{t, pl, draws, mult, passive}`.
-    pub fn probe_json(&self) -> String {
-        let g = &self.game;
-        Obj::new().num("t", self.t).big("pl", g.s.pl).num("draws", g.rng.draws() as f64).big("mult", g.mult(false)).big("passive", g.passive()).end()
-    }
-
     /// Applies a renderer's screen spots (`spots.rs`); ignores anything `json::parse` refuses.
     pub fn spots(&mut self, s: &str) {
         if let Some(v) = json::parse(s) {

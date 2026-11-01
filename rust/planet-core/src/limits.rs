@@ -407,7 +407,7 @@ impl Game {
     /// `#mile0` (… `#mileK`) with the K-th named milestone (0: 1e10, 1: 1e100, 2: infinity, 3: 1e1000 …) about to land.
     pub(crate) fn limits_preview(&mut self, hash: &str) {
         let num = |k: &str| -> Option<u32> {
-            let i = hash.find(k)? + k.len();
+            let i = hash.find(crate::hooks::key(k))? + k.len();
             hash[i..].chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().ok()
         };
         let late = |g: &mut Game, pl: Big| {

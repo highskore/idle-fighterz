@@ -18,7 +18,7 @@ const read = f => readFileSync(join(here, f), 'utf8').replace(/\r\n/g, '\n')
 
 const widget = process.argv.includes('--widget')
 const rust = process.argv.includes('--rust')
-if (rust && widget) throw new Error('--rust builds the site page; the widget gets the Rust core natively (stage 5)')
+if (rust && widget) throw new Error('--rust builds the site page; the widget runs the Rust core natively, in its own app')
 const engine = widget ? null : rustEngine()
 if (rust && !engine) throw new Error('no wasm build in rust/planet-web/pkg: run sh rust/planet-web/build.sh first')
 // widget-only code is fenced by /*widget*/…/*/widget*/: the site build drops it whole, so its output is unchanged
