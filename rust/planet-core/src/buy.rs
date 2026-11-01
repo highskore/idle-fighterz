@@ -97,6 +97,7 @@ impl Game {
         let charge;
         let note = match u {
             Upg::Partner if first => "bubbles wants to train with you",
+            Upg::Galick if first && self.s.hero == Hero::Tien => "hold anywhere to charge the kikoho: at a villain it stakes a fifth of your power",
             Upg::Galick if first && self.s.hero == Hero::Piccolo => "hold anywhere to charge the special beam cannon: it spends his focus",
             Upg::Piccolo if first && self.s.hero == Hero::Piccolo => "kid gohan lands to meditate",
             Upg::Galick if first => {

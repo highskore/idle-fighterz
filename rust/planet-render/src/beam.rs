@@ -32,8 +32,8 @@ const SBC: Pal = Pal { aim: 0xffd84a, ball: 0xfff2a0, ball_edge: 0x8a4ae8, spark
 const BURNING: Pal = Pal { aim: 0xf0a03a, ball: 0xffe0a0, ball_edge: 0xe87a1a, spark: 0xffc86a, glow: 0xffb050, mid: 0xfff0c8, edge: 0xd8601a };
 /// Android 17's power blitz: green.
 const BLITZ: Pal = Pal { aim: 0x5ad86a, ball: 0xc0ffc8, ball_edge: 0x2ab84a, spark: 0xa2f0b0, glow: 0x7ae88a, mid: 0xd4ffda, edge: 0x1f9a3a };
-/// Tien's kikoho: gold.
-const KIKOHO: Pal = Pal { aim: 0xf0c83a, ball: 0xfff0a8, ball_edge: 0xd8a018, spark: 0xffe070, glow: 0xffd050, mid: 0xfff4c4, edge: 0xb88010 };
+/// Tien's kikoho: gold, with a hot white core.
+const KIKOHO: Pal = Pal { aim: 0xffc83a, ball: 0xfff4c0, ball_edge: 0xe8a020, spark: 0xffe080, glow: 0xffd060, mid: 0xfff8d8, edge: 0xd88a18 };
 const KAIO: Pal = Pal { aim: 0, ball: 0xffb0a4, ball_edge: 0, spark: 0xff9a8a, glow: 0xff6a5a, mid: 0xffc8bf, edge: 0xc8201a };
 
 /// `BEAM()`

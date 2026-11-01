@@ -1,0 +1,82 @@
+// The preview hooks Game::preview takes, one a line: the hook, then what it shows. Hooks combine (#form2#raid).
+// test/browser/hooks.spec.mjs plays every one; planet-core's tests fail on a key preview reads that no hook here has.
+#androids	17 and 18
+#ape	the full moon, at once
+#beerus	beerus' planet
+#bojack	bojack raids now
+#broly-rage	broly arrives nearly at full rage
+#bubbles	bubbles wanders off a second in
+#buffs	a long buff line
+#candy	buu's candy, a second in
+#car	king kai's car
+#cellgames	the cell games, a second in
+#cling	a saibaman hugs you
+#cooler	cooler raids now
+#dance	the fusion dance
+#date	18 visits krillin
+#door	the time chamber door
+#foes	villains beaten this run, for hfil
+#form12	any form by index
+#frieza	his ship lands
+#fusion	the fusion dance, partner trained
+#future	trunks' timeline
+#galick	hold to charge a beam
+#galick5	the final flash
+#gero	dr. gero
+#ginyu	the ginyu force
+#godki	the god ki reset is up, 6 god ki to spend
+#gregory	the gregory race
+#hero-goku	play as any character; the other hooks don't see the id
+#itx	instant transmission owned, every world visited, the picker opens
+#janemba	janemba raids now
+#kaio	kaioken owned
+#kaiworld	the supreme kai's world
+#kame	kame house
+#krillin	krillin
+#limit1	limit I about to break, late in the tournament of power
+#limit2	limit II about to break
+#limit3	limit III about to break
+#lookout	kami's lookout
+#looks0	the 1e10 milestone's looks, worn
+#looks1	the 1e100 milestone's looks, worn
+#looks3	the 1e1000 milestone's looks, worn
+#metal	metal cooler
+#mile0	the 1e10 milestone landing
+#mile1	the 1e100 milestone landing
+#mile2	the infinity milestone landing
+#mile3	the 1e1000 milestone landing
+#mui	the first form past ultra instinct
+#namek	a namek visit
+#ozaru	great ape, tail training lv 3
+#ozaru-giant	and the giant wish
+#paozu	mount paozu
+#pod	a saiyan space pod
+#porunga	a namek visit, then summon porunga
+#raid	a villain raid
+#ramen	the ramen break
+#roshi	master roshi
+#saga3	that saga's villain raids now
+#scale1	shockwave tier 1's best power, a full beam 3s in and every 6s
+#scale2	shockwave tier 2
+#scale3	shockwave tier 3
+#scale4	shockwave tier 4
+#scale4bang	shockwave tier 4, big bangs instead
+#seeds	40 ki seeds to spend
+#shenron	summon shenron
+#shenron3	summon shenron, in look 3
+#sixteen	16 and the birds
+#snake	snake way
+#snake-nimbus	snake way, riding the nimbus
+#spirit	a nearly full spirit bomb
+#storm	a meteor storm
+#struggle	a villain who fires back
+#top	the arena
+#tournament	the tournament
+#universe3	that universe's boss raids now
+#vegeta	planet vegeta, then nappa
+#visitors	gregory and king kai
+#westcity	west city
+#xform	the transformation scene from the first frame
+#yamcha	yamcha in his crater
+#yardrat	yardrat
+#zeno	he shows up

@@ -1336,7 +1336,8 @@ impl Game {
                     Hero::Krillin => ("master roshi", "roshillin"),
                     // the other new heroes' fusions come with their own work
                     Hero::Goten => ("kid trunks", "gotenks"),
-                    Hero::Piccolo | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
+                    Hero::Tien => ("chiaotzu", "tienzu"),
+                    Hero::Piccolo | Hero::A17 => ("goku", "gogeta"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
@@ -1353,6 +1354,7 @@ impl Game {
                 // the new heroes' fusions have no fat or skinny one: a botched dance is still them, weaker
                 let own = match res {
                     "roshillin" => Some("FUSED.roshillin"),
+                    "tienzu" => Some("FUSED.tienzu"),
                     // goten's gotenks: a botched dance is still gotenks (trunks' keeps the old fat and skinny ones)
                     "gotenks" if self.s.hero == Hero::Goten => Some("FUSED.gotenks"),
                     _ => None,
@@ -2046,7 +2048,13 @@ impl Game {
     pub(crate) fn timeline_moon(&mut self, t: f64, dt: f64) {
         let session = self.session;
         let (w, h) = (self.cam.w, self.cam.h);
-        if (session > 40.0 || self.s.world == 2) && self.s.world != 3 && self.tl.moon.is_none() && self.b.ape_until < t && tick(&mut self.tl.next_moon, dt) {
+        if (session > 40.0 || self.s.world == 2)
+            && self.s.world != 3
+            && self.s.hero.saiyan()
+            && self.tl.moon.is_none()
+            && self.b.ape_until < t
+            && tick(&mut self.tl.next_moon, dt)
+        {
             let r = 9f64.max(js_round(w.min(h) * 0.07));
             self.tl.moon = Some(Moon { x: w * 0.2, y: h * 0.22, r, a: 0.0, born: t, leaving: false });
             self.once("moon", "a full moon is rising… click it to transform");
@@ -2425,7 +2433,12 @@ impl Game {
         self.shake = 0.5;
         let (x, y) = self.hand_pos();
         self.burst_at(x, y, &[0xffffff, 0xdfe6e8, 0x9adada], 40, 220.0);
-        self.event_ms(TRAVEL[w as usize], if w >= 3 { 6000.0 } else { 2600.0 });
+        let msg = if w == 2 && !self.s.hero.saiyan() {
+            "a space pod takes you to planet vegeta for 45 seconds — the saiyans' homeworld, and nappa's"
+        } else {
+            TRAVEL[w as usize]
+        };
+        self.event_ms(msg, if w >= 3 { 6000.0 } else { 2600.0 });
         if w != 0 {
             self.cue(crate::hud::Cue::Notify("trip", crate::hud::WORLD_FULL[w as usize].into()));
         }
@@ -2692,7 +2705,7 @@ impl Game {
     fn wish_ok(&self, key: &str) -> bool {
         match key {
             "form" => self.s.form < self.forms.len() - 1,
-            "bigape" => self.s.ach.contains("ape") && !self.s.big_ape,
+            "bigape" => self.s.ach.contains("ape") && !self.s.big_ape && self.s.hero.saiyan(),
             "skills" => TREE.iter().enumerate().any(|(i, n)| self.s.tree[i] > 0 && self.s.tree[i] < n.max),
             "gear" => self.s.levels.iter().any(|&l| l > 0),
             "fly" => !self.wished(WishBuff::Fly),

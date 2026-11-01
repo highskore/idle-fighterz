@@ -482,7 +482,7 @@ impl Game {
             Upg::Senzu => best >= 1000.0,
             Upg::House => best >= 2000.0,
             Upg::Armor => best >= 5000.0,
-            Upg::Tail => self.s.ach.contains("ape"),
+            Upg::Tail => self.s.ach.contains("ape") && self.s.hero.saiyan(),
             Upg::Kaio => best >= 8000.0,
             Upg::Bigbang => best >= 20000.0,
             Upg::Piccolo => best >= 10000.0,
@@ -1198,18 +1198,19 @@ impl Game {
 }
 
 impl Game {
-    /// game.js's preview hooks (`#raid`, `#namek`, `#form12`, `#hero-goku`, ...), applied as `mount()` applies them,
-    /// after the world is set up and before `start()`. Of those that wait on a `setTimeout`, `#shenron` is ported;
-    /// `#flight`, `#chamber` and `#cvlink` aren't.
+    /// The preview hooks in `hooks.txt` (`#raid`, `#namek`, `#form12`, `#hero-goku`, ...), applied as game.js's
+    /// `mount()` applies them, after the world is set up and before `start()`. Of game.js's that wait on a
+    /// `setTimeout`, `#shenron` is ported; `#flight`, `#chamber` and `#cvlink` aren't.
     pub fn preview(&mut self, hash: &str) {
         use crate::data::{Upg, LADDER, MUI_FORM, VILLAINS};
+        use crate::hooks::key;
         // `#hero-<id>` picks the hero; the other hooks never see it, so `#hero-krillin` doesn't also call krillin in
-        let hero_id: Option<String> = hash.find("hero-").map(|i| hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect());
+        let hero_id: Option<String> = hash.find(key("hero-")).map(|i| hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect());
         let rest = hero_id.as_ref().map_or_else(|| hash.to_string(), |id| hash.replacen(&format!("hero-{id}"), "", 1));
         let hash = rest.as_str();
-        let has = |k: &str| hash.contains(k);
+        let has = |k: &str| hash.contains(key(k));
         let num = |k: &str| -> Option<usize> {
-            let i = hash.find(k)? + k.len();
+            let i = hash.find(key(k))? + k.len();
             let d: String = hash[i..].chars().take_while(|c| c.is_ascii_digit()).collect();
             d.parse().ok()
         };
@@ -1436,7 +1437,7 @@ impl Game {
             // `setTimeout(() => { …a long buff line… }, 800)`
             self.tl.later.push((0.8, crate::timeline::Later::Buffs));
         }
-        if let Some(i) = hash.find("shenron") {
+        if let Some(i) = hash.find(key("shenron")) {
             // `setTimeout(() => summon(look), 800)`
             if let Some(d) = hash[i + 7..].chars().next().and_then(|c| c.to_digit(10)) {
                 self.tl.shen_look = d as usize;

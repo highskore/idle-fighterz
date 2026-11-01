@@ -39,10 +39,10 @@ fn every_hero_names_his_own_beam() {
         assert_eq!(g.own_label(Upg::Galick).is_none(), hero == Hero::Vegeta, "{id}");
 
         assert!(g.buy("galick"), "{id} buys the beam");
-        let toast = if hero == Hero::Piccolo {
-            "hold anywhere to charge the special beam cannon: it spends his focus".to_string()
-        } else {
-            format!("hold anywhere to charge a {beam}")
+        let toast = match hero {
+            Hero::Piccolo => "hold anywhere to charge the special beam cannon: it spends his focus".to_string(),
+            Hero::Tien => "hold anywhere to charge the kikoho: at a villain it stakes a fifth of your power".to_string(),
+            _ => format!("hold anywhere to charge a {beam}"),
         };
         assert!(g.events.iter().any(|e| e.0 == toast), "{id}: {:?}", g.events);
 

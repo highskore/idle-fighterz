@@ -3,11 +3,9 @@
 //! `Planet` is the HUD bridge (planet-core's `Bridge`) exported with wasm-bindgen: page.html's JS shim
 //! (`rust/planet-web/shim.js`) calls it from requestAnimationFrame and from the canvas's pointer events, and feeds
 //! the HTML HUD from `frame()`. Every value crossing is a number, a bool or a JSON string, the same messages the native
-//! widget sends over Tauri IPC (rust/HUD.md). `WebGame` is the framebuffer side stage 1 draws into.
+//! widget sends over Tauri IPC (rust/HUD.md).
 
 use planet_core::bridge::Bridge;
-use planet_core::hud::Hud;
-use planet_core::{Clock, Game};
 use planet_render::Framebuffer;
 use wasm_bindgen::prelude::*;
 
@@ -59,10 +57,6 @@ impl Planet {
     /// The delta message for the HUD (see `Bridge::frame_json`).
     pub fn frame(&mut self) -> String {
         self.0.frame_json()
-    }
-
-    pub fn resend(&mut self) {
-        self.0.resend();
     }
 
     pub fn resize(&mut self, w: f64, h: f64, scale: f64) {
@@ -233,12 +227,6 @@ impl Planet {
         }
     }
 
-    /// `step`, drawing every step with planet-render (call `draw_with_rust` first). Then `pixels_ptr` holds the frame.
-    pub fn step_drawn(&mut self, elapsed: f64, now_ms: f64) -> u32 {
-        let Some(d) = self.1.as_mut() else { return self.0.step(elapsed, now_ms) };
-        self.0.step_drawn(elapsed, now_ms, &mut |g, dt| d.scene.draw(&mut d.fb, g, &d.view, dt))
-    }
-
     /// Where the frame's RGBA bytes are in the module's memory (`w`×`h`×4 of them, as ImageData takes them, the widget's
     /// rim applied when it's bare), so the page puts them on the canvas without a copy; 0 before `draw_with_rust`.
     pub fn pixels_ptr(&mut self) -> *const u8 {
@@ -279,57 +267,9 @@ fn sprite_px(s: &planet_core::sprite::Sprite) -> Vec<i32> {
     v
 }
 
-/// The game plus the framebuffer planet-render draws into (stage 1); not exported yet.
-pub struct WebGame {
-    pub game: Game,
-    clock: Clock,
-    pub fb: Framebuffer,
-}
-
-impl WebGame {
-    pub fn new(seed: u32, w: usize, h: usize) -> Self {
-        let mut game = Game::new(seed);
-        game.start();
-        WebGame { game, clock: Clock::default(), fb: Framebuffer::new(w, h) }
-    }
-
-    /// Advances the simulation by real elapsed seconds in fixed steps; returns how many ran.
-    pub fn step(&mut self, elapsed: f64) -> u32 {
-        self.clock.advance(&mut self.game, elapsed, 8)
-    }
-
-    pub fn tap(&mut self) {
-        self.game.train();
-    }
-
-    pub fn buy(&mut self, key: &str) -> bool {
-        self.game.buy(key)
-    }
-
-    pub fn pixels(&self) -> &[u8] {
-        self.fb.rgba()
-    }
-
-    /// What `ui.update` gets (planet-core builds it once a frame while playing).
-    pub fn hud(&self) -> &Hud {
-        self.game.hud()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_second_of_play_earns_income() {
-        let mut w = WebGame::new(1, 8, 8);
-        assert_eq!(w.step(1.01), 8); // capped per call
-        for _ in 0..12 {
-            w.step(0.1);
-        }
-        assert!(w.hud().pl >= 1.0);
-        assert_eq!(w.pixels().len(), 8 * 8 * 4);
-    }
 
     #[test]
     fn the_bridge_round_trips_a_tap() {

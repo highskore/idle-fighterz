@@ -12,7 +12,7 @@ How the page is put together, how to build it, the preview hooks, the Rust engin
   - 15 upgrades, from weighted boots to Piccolo, the time chamber, instant transmission and ascension.
   - Forms from super saiyan to ultra instinct.
   - Events: dragon balls and Shenron, great ape mode, villain raids (Frieza, Cell, Kid Buu, Beerus), the Ginyu Force, the Tournament of Power, the fusion dance, Gregory, King Kai's jokes, Saibamen and meteor showers.
-  - Other worlds: the first trip comes at 1M power and each later one further out (`PLANET_EVERY` in `game.js`): a 45-second visit to Namek (where Porunga grants wishes), Planet Vegeta, Beerus' planet, West City, Kame House, Mount Paozu, the future, Kami's lookout, the Kais' world and Yardrat, in turn. Snake Way (a 75-second run) is parked: out of the rotation, `#snake` still shows it.
+  - Other worlds: the first trip comes at 1M power and each later one further out (`PLANET_EVERY` in `rust/planet-core/src/data.rs`): a 45-second visit to Namek (where Porunga grants wishes), Planet Vegeta, Beerus' planet, West City, Kame House, Mount Paozu, the future, Kami's lookout, the Kais' world and Yardrat, in turn. Snake Way (a 75-second run) is parked: out of the rotation, `#snake` still shows it.
 
 Every visit starts from zero: power, upgrades, achievements and characters all reset on refresh. Only the date of the last daily bonus is kept in `localStorage` (`hs-power`).
 
@@ -72,22 +72,18 @@ Add these to the URL to jump straight to something. They only work off the live 
 | `#storm` | a meteor storm |
 | `#spirit` | a nearly full spirit bomb |
 | `#struggle` | a villain who starts a beam struggle |
-| `#chamber` | the time chamber |
+| `#chamber` | the time chamber (game.js only) |
 | `#limit1` … `#limitN` | (Rust) limit N about to break, late in the tournament of power |
 | `#looks0`, `#looks1`, `#looks3` | (Rust) the looks the 1e10, 1e100 or 1e1000 milestone unlocks, worn |
 | `#mile0` … `#mileK` | (Rust) the K-th named milestone landing: 0 is 1e10, 1 is 1e100, 2 is past infinity, 3 is 1e1000 |
 | `#scale1` … `#scale4` | (Rust) a run at shockwave tier N's best power, a full beam at the sky (or the boss) 3s in and every 6s; `#scale4bang` throws big bangs instead |
-| `#kimeter` | the "ki meter" buttons (kaioken and transmission fill as they recharge), whatever the setting says |
+| `#kimeter` | the "ki meter" buttons (kaioken and transmission fill as they recharge), whatever the setting says (page.html's own) |
 
-`game.js` has more (`#lookout`, `#beerus`, `#form12`, `#saga3`, `#universe3`, `#godki`…), each marked with a `// preview hook` comment, and hooks combine (`#form2#raid`):
-
-```sh
-grep -n 'preview hook' game.js
-```
+There are more (`#lookout`, `#beerus`, `#form12`, `#saga3`, `#universe3`, `#godki`…), and hooks combine (`#form2#raid`). Every hook the Rust engine takes is listed, with what it shows, in [`rust/planet-core/src/hooks.txt`](../rust/planet-core/src/hooks.txt): `Game::preview` reads its keys from that list (planet-core's tests fail on one it doesn't have), and `npm run test:hooks` plays every one.
 
 ## The Rust engine
 
-`rust/` is the game in Rust, built two ways: to WebAssembly for the site, and natively for the Idle FighterZ widget. The site page runs it: the top of the page starts `planet-rust.js` and `planet-rust.wasm` (streaming compile) while the page, its title and intro start, and the game mounts once they're in; if it's late, the card shows a ki-charging dragon ball. Where WebAssembly is missing, or if the engine fails to load, the page fetches `planet-game.js` (game.js and shenron.js, minified) and runs that; `?js` forces it. Deploying means copying all three files beside `planet.html`. The plan and its stages are in [rust/PLAN.md](../rust/PLAN.md), and the HUD bridge in [rust/HUD.md](../rust/HUD.md).
+`rust/` is the game in Rust, built two ways: to WebAssembly for the site, and natively for the Idle FighterZ widget. The site page runs it: the top of the page starts `planet-rust.js` and `planet-rust.wasm` (streaming compile) while the page, its title and intro start, and the game mounts once they're in; if it's late, the card shows a ki-charging dragon ball. Where WebAssembly is missing, or if the engine fails to load, the page fetches `planet-game.js` (game.js and shenron.js, minified) and runs that; `?js` forces it. Deploying means copying all three files beside `planet.html`. How it is laid out and tested is in [rust/PLAN.md](../rust/PLAN.md), what it has that game.js doesn't in [rust/FEATURES.md](../rust/FEATURES.md), and the HUD bridge in [rust/HUD.md](../rust/HUD.md).
 
 ```sh
 npm run wasm:rust       # sh rust/planet-web/build.sh
@@ -107,7 +103,7 @@ npm test             # both builds, rustfmt, the tests and the golden traces
 npm run golden       # the golden traces only (rust/golden)
 npm run golden:update  # re-record them, when a change means to change what the game does or draws
 npm run difftest:js  # optional: planet-core against game.js (JS_PARITY=1), for behaviour game.js still has
-npm run test:hooks   # every preview hook (each "// preview hook" in game.js) at 1280×800 and 390×844: no page or console errors
+npm run test:hooks   # every preview hook in rust/planet-core/src/hooks.txt at 1280×800 and 390×844: no page or console errors
 npm run test:visual  # the pixel baselines in test/browser/__screenshots__ (Linux only: they're rendered on CI), on the engine dist has
 npm run shots        # the same screenshots into shots/, without comparing
 ```

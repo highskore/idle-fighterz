@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["planet-core", "planet-render", "planet-web", "planet-native"]
+members = ["planet-core", "planet-render", "planet-web"]
 
 [workspace.package]
 version = "0.1.0"
