@@ -218,3 +218,20 @@ fn milestones_stop_at_the_top_of_the_range() {
     run(&mut g, 2.0);
     assert_eq!(g.s.mile, i, "the last one fires once, then none");
 }
+
+#[test]
+fn the_seeds_wish_is_a_flat_five() {
+    for pl in [1e6, 1e40] {
+        let mut g = game(1, "", &[("pl", pl), ("best", pl)]);
+        g.summon();
+        while g.tl.shen.as_ref().is_none_or(|s| s.phase != planet_core::timeline::Phase::Wish) {
+            assert!(g.t < 60.0, "the dragon offers");
+            step(&mut g);
+        }
+        let w = planet_core::data::WISHES.iter().position(|w| w.0 == "seeds").unwrap();
+        g.tl.shen.as_mut().unwrap().offer = vec![w];
+        let (seeds, ascend) = (g.s.seeds, g.s.ascend);
+        g.pick("seeds");
+        assert_eq!((g.s.seeds - seeds, g.s.ascend - ascend), (Big::from(5.0), Big::from(5.0)), "at {pl:e}");
+    }
+}

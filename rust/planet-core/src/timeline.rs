@@ -932,7 +932,7 @@ impl Game {
     }
 
     fn wish_seeds(&self) -> Big {
-        Big::from(3.0).max((self.seeds_now() / 5.0).ceil())
+        Big::from(WISH_SEEDS)
     }
 
     fn uni_time(&self) -> f64 {
