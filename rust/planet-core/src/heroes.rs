@@ -22,7 +22,7 @@
 //! one that takes a fifth of its hp.
 
 use crate::big::Big;
-use crate::data::{Hero, LAP, N_LEGS, N_STRIDE};
+use crate::data::{Helper, Hero, Upg, LAP, N_LEGS, N_STRIDE};
 use crate::jsmath::{cos, hypot, sin};
 use crate::Game;
 
@@ -185,17 +185,26 @@ impl Game {
         }
     }
 
+    /// Who the piccolo upgrade brings for this hero.
+    pub fn helper(&self) -> Helper {
+        Helper::of(self.s.hero)
+    }
+
+    /// Who the piccolo upgrade brought, while he's on the planet.
+    pub fn helper_here(&self) -> Option<Helper> {
+        (self.s.lv(Upg::Piccolo) > 0).then(|| self.helper())
+    }
+
     /// The shop's names for the upgrades the hero has his own of.
-    pub fn own_label(&self, u: crate::data::Upg) -> Option<&'static str> {
-        use crate::data::Upg;
+    pub fn own_label(&self, u: Upg) -> Option<&'static str> {
         Some(match (self.s.hero, u) {
             (Hero::Goku | Hero::Gohan | Hero::Krillin, Upg::Galick) => "kamehameha",
             (Hero::Piccolo, Upg::Galick) => "special beam cannon",
-            (Hero::Piccolo, Upg::Piccolo) => "kid gohan",
             (Hero::Piccolo, Upg::Tail) => "giant training",
             (Hero::Krillin, Upg::Tail) => "max power training",
             (Hero::Piccolo, Upg::Armor) => "weighted cape",
             (Hero::Krillin, Upg::Armor) => "turtle shell",
+            (_, Upg::Piccolo) => self.helper().name(),
             _ => return None,
         })
     }

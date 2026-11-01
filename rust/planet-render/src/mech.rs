@@ -5,6 +5,7 @@
 //! gauge. Shapes and colour only: words go in the toasts, and the "+4" is a gain-float-sized number. Reduced motion
 //! drops the pulsing, flicker and wobble.
 
+use planet_core::data::Helper;
 use planet_core::jsmath::{cos, hypot, sin};
 use planet_core::mech::{Ally, Mech, Ph, B_REFORMS, B_REFORM_T, B_ZONE, C_CAP, C_REACH, F_AIM, H_SKIP, J_BACK, J_FULL};
 use planet_core::num::js_round;
@@ -166,12 +167,29 @@ fn bar(b: &planet_core::timeline::Boss, spr: &Sprite) -> (f64, f64, f64) {
     (js_round(b.x - bw / 2.0), bw, js_round(b.y - spr.h as f64 * b.k - 7.0))
 }
 
+/// The helper the piccolo upgrade brought, as drawn: his sprite and its scale, and what he rides (bulma's hover-bike,
+/// roshi's turtle, chi-chi's flying nimbus): its sprite, its scale and how far above its bottom row his feet go.
+pub fn helper_look(h: Helper) -> (&'static Sprite, f64, Option<(&'static Sprite, f64, f64)>) {
+    match h {
+        Helper::Bulma => (sprite::get("BULMA"), 1.0, Some((sprite::get("ALLY.hoverbike"), 1.0, 2.0))),
+        Helper::Roshi => (sprite::get("ROSHI"), 0.95, Some((sprite::get("ALLY.umigame"), 1.0, 11.0))),
+        Helper::Piccolo => (sprite::get("PICCOLO"), 0.95, None),
+        Helper::FutureGohan => (sprite::get("FUSED.futureGohan"), 0.85, None),
+        Helper::A18 => (sprite::get("A18"), 1.0, None),
+        Helper::KidGohan => (sprite::get("ALLY.kidGohan"), 0.75, None),
+        Helper::A16 => (sprite::get("A16"), 0.95, None),
+        Helper::Yamcha => (sprite::get("ALLY.yamcha"), 0.95, None),
+        Helper::ChiChi => (sprite::get("NPCS.chichi"), 1.0, Some((sprite::get("puff"), 1.0, 7.0))),
+    }
+}
+
 fn ally_sprite(g: &Game, a: Ally, t: f64) -> (&'static Sprite, f64) {
     match a {
-        // playing piccolo, the ally in his place is kid gohan (visitors.rs)
-        Ally::Piccolo if g.s.hero == planet_core::data::Hero::Piccolo => (&sprite::hero("gohan").forms[0].idle, 0.75),
         Ally::Bubbles => (sprite::get(if (t * 14.0).floor() as i64 % 2 == 0 { "MONKEY.0" } else { "MONKEY.1" }), 1.7),
-        Ally::Piccolo => (sprite::get("PICCOLO"), 0.95),
+        Ally::Piccolo => {
+            let (spr, k, _) = helper_look(g.helper());
+            (spr, k)
+        }
         Ally::Krillin => (sprite::get("KRILLIN"), 1.0),
     }
 }

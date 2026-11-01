@@ -827,6 +827,96 @@ pub const CHARS: [(Hero, &str, &str, Need); 9] = [
     (Hero::Goten, "goten", "goten", Need::Beat("kid buu")),
 ];
 
+/// Who the piccolo upgrade brings to the planet, by hero: the same +60/s and meteor zaps, his own look and beam.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Helper {
+    Bulma,
+    Roshi,
+    Piccolo,
+    FutureGohan,
+    A18,
+    KidGohan,
+    A16,
+    Yamcha,
+    ChiChi,
+}
+
+impl Helper {
+    pub fn of(h: Hero) -> Helper {
+        match h {
+            Hero::Vegeta => Helper::Bulma,
+            Hero::Goku => Helper::Roshi,
+            Hero::Gohan => Helper::Piccolo,
+            Hero::Trunks => Helper::FutureGohan,
+            Hero::Krillin => Helper::A18,
+            Hero::Piccolo => Helper::KidGohan,
+            Hero::A17 => Helper::A16,
+            Hero::Tien => Helper::Yamcha,
+            Hero::Goten => Helper::ChiChi,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Helper::Bulma => "bulma",
+            Helper::Roshi => "master roshi",
+            Helper::Piccolo => "piccolo",
+            Helper::FutureGohan => "future gohan",
+            Helper::A18 => "android 18",
+            Helper::KidGohan => "kid gohan",
+            Helper::A16 => "android 16",
+            Helper::Yamcha => "yamcha",
+            Helper::ChiChi => "chi-chi",
+        }
+    }
+
+    /// The toast when the first one is bought.
+    pub fn arrives(self) -> &'static str {
+        match self {
+            Helper::Bulma => "bulma parks her hover-bike above the planet",
+            Helper::Roshi => "master roshi rides in on turtle to keep watch",
+            Helper::Piccolo => "piccolo lands to meditate",
+            Helper::FutureGohan => "future gohan lands to meditate",
+            Helper::A18 => "android 18 drops in to keep an eye on him",
+            Helper::KidGohan => "kid gohan lands to meditate",
+            Helper::A16 => "android 16 lands to watch the birds",
+            Helper::Yamcha => "yamcha lands — the saibamen had better stay away",
+            Helper::ChiChi => "chi-chi rides in on the flying nimbus — homework first",
+        }
+    }
+
+    /// His zap at a meteor: (wave, core, the burst's colour). Bulma's capsule blaster, roshi's kamehameha, piccolo's
+    /// special beam cannon, the gohans' masenko, 18's energy blast, 16's hell flash, yamcha's spirit ball, chi-chi's
+    /// tiara blade.
+    pub fn beam(self) -> (u32, u32, u32) {
+        match self {
+            Helper::Bulma => (0x5ad8ff, 0xffffff, 0x5ad8ff),
+            Helper::Roshi => (0x5ab0ff, 0xe8f6ff, 0x5ab0ff),
+            Helper::Piccolo => (0xc89aff, 0xfff6a0, 0x9a6ad8),
+            Helper::FutureGohan | Helper::KidGohan => (0xffc83a, 0xfff8d0, 0xffc83a),
+            Helper::A18 => (0x9ae0ff, 0xffffff, 0x9ae0ff),
+            Helper::A16 => (0xff6030, 0xffe0a0, 0xff6030),
+            Helper::Yamcha => (0xfff27a, 0xffffff, 0xfff27a),
+            Helper::ChiChi => (0xff7aa8, 0xffe0ec, 0xff7aa8),
+        }
+    }
+}
+
+/// What he and bubbles are called, fused.
+pub fn bubbles_fusion(h: Hero) -> &'static str {
+    match h {
+        Hero::Vegeta => "vegebubs",
+        Hero::Goku => "gobubs",
+        Hero::Gohan => "gohubs",
+        Hero::Trunks => "bunks",
+        Hero::Krillin => "krilbubs",
+        Hero::Piccolo => "piccubbles",
+        Hero::A17 => "androbubs",
+        Hero::Tien => "tienbubs",
+        Hero::Goten => "gotenbubs",
+    }
+}
+
 /// Each hero's playstyle in one line, as the settings panel's hero row shows it.
 pub fn hero_style(h: Hero) -> &'static str {
     match h {

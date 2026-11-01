@@ -186,10 +186,10 @@ impl Game {
         v
     }
 
-    /// What an ally is called: playing piccolo, the one meditating in his place is kid gohan.
+    /// What an ally is called: piccolo's slot holds whoever the hero's piccolo upgrade brought.
     pub fn ally_name(&self, a: Ally) -> &'static str {
         match a {
-            Ally::Piccolo if self.s.hero == Hero::Piccolo => "kid gohan",
+            Ally::Piccolo => self.helper().name(),
             _ => a.name(),
         }
     }

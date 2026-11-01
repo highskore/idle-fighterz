@@ -1045,9 +1045,10 @@ impl Game {
                 }
             }
         }
-        // master roshi
+        // master roshi, unless he's already here as goku's helper
         if self.tl.roshi.is_none()
             && self.s.world != 6
+            && self.helper_here() != Some(Helper::Roshi)
             && session > 90.0
             && self.tl.shen.is_none()
             && self.tl.boss.is_none()
@@ -1208,7 +1209,7 @@ impl Game {
             }
         }
         // android 16 and the birds
-        if self.tl.a16.is_none() && session > 100.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_a16, dt) {
+        if self.tl.a16.is_none() && self.helper_here() != Some(Helper::A16) && session > 100.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_a16, dt) {
             let c = self.cap_pt(0.35, 2.2);
             let birds = (0..3).map(|i| Bird { i, free: 0.0, kind: (self.r() * 4.0) as u32, sx: None }).collect();
             self.tl.a16 = Some(A16 { c, t0: t, until: t + 16.0, birds });
@@ -1463,7 +1464,8 @@ impl Game {
                 self.goal("meteor", 1.0, false);
                 let n = self.meteor_pay();
                 self.gain_at(n, mx, my - 6.0, true);
-                self.burst_at(mx, my, &[0xffffff, 0xfff08a, 0x9a6ad8], 12, 90.0);
+                let burst = self.helper().beam().2;
+                self.burst_at(mx, my, &[0xffffff, 0xfff08a, burst], 12, 90.0);
                 self.cue(Cue::Sfx("beam"));
             }
         }
@@ -3355,7 +3357,7 @@ impl Game {
                 self.ach("fusion");
                 self.flash_t = 1.0;
                 self.shake = 0.6;
-                self.event("fusion ha! vegebubs — ×2 for 30s");
+                self.event(format!("fusion ha! {} — ×2 for 30s", bubbles_fusion(self.s.hero)));
                 self.cue(Cue::Fx("super"));
                 self.burst_at(mx, my - 6.0, &[0xffffff, 0xffe08a, 0xff9a3c, 0x6fb0ff], 50, 200.0);
                 return;
