@@ -128,9 +128,6 @@ pub struct Built {
     pub fut_andro: Vec<V3>,
     /// paozu's dinos: (sprite, th, a, k, sway, hop)
     pub dinos: Vec<(&'static str, f64, f64, f64, f64, f64)>,
-    /// decoration (yardrat's crystals): drawn over the props after their outline, and never into the depth or id buffers,
-    /// so nothing the game reads back from the drawing (whether the hero is in view) changes
-    pub decor: Vec<Solid>,
 }
 
 struct B<'a> {
@@ -731,7 +728,7 @@ impl B<'_> {
                 let n = (h / (0.006 * 0.8)).ceil().min(40.0) as i64;
                 for i in 0..=n {
                     let f = i as f64 / n as f64;
-                    b.o.decor.push(Solid { c: add(s, dir, h * f), r: r0 + (0.004 - r0) * f, kind: Kind::Pal { pal: p.to_vec(), lift: 0.1 }, fly: None });
+                    b.pal(add(s, dir, h * f), r0 + (0.004 - r0) * f, p, 0.1);
                 }
             };
             for (k, (th, a, sz)) in
