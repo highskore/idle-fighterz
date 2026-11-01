@@ -67,7 +67,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 - `cues` may hold `["quake"]`: a tier 3 or 4 shockwave (planet-core's `waves`) shakes the game card; page.html's
   `ui.quake` skips it under reduced motion.
 - `hud`, while playing, when anything on it has changed. This is `ui.update`'s argument: `goal {text, p, n}`,
-  `kaio {own, ready, left}`, `pl`, `best`, `rate`, `laps`, `time`, `effects` (the buffs line; playing piccolo it carries how full his focus is, `focus 60%`, and krillin his cuts toward the disc barrage, `discs 3/10`), `extra` (the run's
+  `kaio {own, ready, left}`, `itx {own, ready, left}` (the transmission button, as `kaio`), `pl`, `best`, `rate`, `laps`, `time`, `effects` (the buffs line; playing piccolo it carries how full his focus is, `focus 60%`, and krillin his cuts toward the disc barrage, `discs 3/10`), `extra` (the run's
   standing), `combo`, `form {name, x, next, p}`, `balls`, `wishes`, `ascend`, `snake`, `busy`. Four fields that
   game.js sets elsewhere ride along: `night` (`ui.night`), `world`, `shen` and `look` (game.js's `shen`, `jelly` and
   `earth` body classes), as they stand at that point of the frame. It's planet-core's `Hud` struct, built where game.js
@@ -75,7 +75,8 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   seconds, but `pl`, `combo` and the form's progress are the raw numbers, so in play the snapshot changes on most steps.
   The struct is `PartialEq`, so checking for a change costs one comparison.
 - **Numbers past 1e300.** `pl`, `best`, `rate`, a shop row's `cost` and `level`, the tree's `seeds` and `cost`, the card's
-  `pl`, `best` and `seeds` and `ascendInfo().seeds` are numbers below 1e300 and, past it, the text `"<m>e<exponent>"`
+  `pl`, `best` and `seeds`, `ascendInfo().seeds`, `shop_info`'s `rate` (both), `cost`, `x10.cost` and `max.cost`, and
+  `bulk()`'s `cost` are numbers below 1e300 and, past it, the text `"<m>e<exponent>"`
   (`"4.5e1204"`, planet-core's `Big`). page.html's `big`, `fmt` and `short` format both; its `sci` is planet-core's `num::sci`.
 - `shop`, when a row changed: `ui.shop`'s argument, `{key: {cost, level, label, short, what, can, open, special}}` in shop
   order. `short` is new in Rust (game.js has none): what the row's first level does in at most 16 characters, which the

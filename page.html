@@ -43,7 +43,7 @@ a:hover, a:focus-visible { text-decoration: underline; text-underline-offset: 3p
 @media (prefers-reduced-motion: reduce) { .tag .t { animation: none; max-width: none; } }
 .foot .short { display: none; }
 .snd { font: inherit; color: inherit; text-transform: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-#snd svg { width: 16px; height: 16px; display: block; } #snd[aria-pressed="true"] .off, #snd[aria-pressed="false"] .on { display: none; } #snd[aria-pressed="false"] { color: #9a9a9a; }
+#snd svg, #gear svg { width: 16px; height: 16px; display: block; } .snd:focus-visible, .mbtn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; } #snd[aria-pressed="true"] .off, #snd[aria-pressed="false"] .on { display: none; } #snd[aria-pressed="false"] { color: #9a9a9a; }
 
 .hud { position: absolute; right: max(20px, env(safe-area-inset-right, 0px)); top: 18px; text-align: right; pointer-events: none; z-index: 2; }
 .hud .label { text-transform: uppercase; color: var(--muted); }
@@ -163,7 +163,7 @@ html.touch .shop.bulky .bulk { display: flex; }
 /* instant transmission: a blue button above kaioken once it's bought; it counts down after a jump */
 .kaio.itxb { bottom: 58px; background: #2f8ae0; } .kaio.itxb:disabled { background: #b8d6f4; }
 .wish.itxp { display: grid; grid-template-columns: 1fr 1fr; width: min(420px, 92%); } .wish.itxp p, .wish.itxp .stay { grid-column: 1 / -1; } .wish.itxp button { padding: 8px 12px; } .wish .stay { align-items: center; color: var(--muted); }   /* the picker: two columns of worlds */
-/* the "ki meter" buttons (a setting, menu → achievements): a recharging button fills left to right in its own colour
+/* the "ki meter" buttons (a setting, the gear's): a recharging button fills left to right in its own colour
    over today's pale, instead of counting down */
 @property --f { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
 .kaio { --kc: #e0332b; --kp: #f1b9b4; } .kaio.itxb { --kc: #2f8ae0; --kp: #b8d6f4; }
@@ -207,13 +207,12 @@ body:not(.cv) .foot a.cv { display: none; }   /* the cv link only shows once you
   .toast { top: 26%; font-size: 22px; }
   .hint { display: none; }
   .shop-toggle { display: flex; align-items: center; gap: 8px; position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; font: inherit; text-transform: uppercase; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; box-shadow: 0 1px 0 rgba(0,0,0,.06); cursor: pointer; }
-  /* sound and share sit either side of the upgrades pill on phones, instead of in the footer */
+  /* settings and share sit either side of the upgrades pill on phones, instead of in the footer (sound is in settings) */
   .mbtn { display: grid; place-items: center; position: absolute; bottom: 12px; z-index: 3; width: 34px; height: 34px; padding: 0; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 50%; box-shadow: 0 1px 0 rgba(0,0,0,.06); cursor: pointer; }
   .mbtn svg { width: 18px; height: 18px; } .mbtn.done { color: #1a9a4a; }
-  #sndM[aria-pressed="true"] .off, #sndM[aria-pressed="false"] .on { display: none; } #sndM[aria-pressed="false"] { color: #9a9a9a; }
-  #sndM { left: 16px; } #shareM { right: 16px; }
+  #gearM { left: 16px; } #shareM { right: 16px; }
   .shop-toggle { position: static; transform: none; height: 34px; box-sizing: border-box; padding-block: 0; white-space: nowrap; flex: none; }
-  /* upgrades (and kaioken, once bought) sit as one centred row between the sound and share buttons */
+  /* upgrades (and kaioken, once bought) sit as one centred row between the settings and share buttons */
   .pair { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; display: flex; flex-wrap: nowrap; gap: 8px; width: max-content; }
   .foot .snd { display: none; }
   .shop-toggle i, .tabbar i { font-style: normal; color: #fff; background: var(--gold); border-radius: 999px; padding: 0 6px; min-width: 18px; text-align: center; }
@@ -394,6 +393,18 @@ body.night .game { background-color: #07070d !important; background-image: radia
 .asc-body p { margin: 0; }
 .asc-body b { color: var(--gold); font-weight: inherit; }
 .share-title { text-transform: uppercase; color: var(--muted); }
+/* settings, from the gear: each option says what it does in a hover card (the shop's), or in lines under its row on touch */
+.set-card { width: min(480px, 100%); overflow: visible; }
+.menu-body.set-body { padding-bottom: 6px; }
+.set-body .looks > .opt { position: relative; display: inline-flex; min-width: 0; }
+.set-body .what { display: none; position: absolute; z-index: 2; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); width: max-content; max-width: 230px; padding: 5px 10px 6px; font-size: 10px; line-height: 1.45; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.08); pointer-events: none; text-transform: none; }
+.set-body .opt:hover .what, .set-body .opt:has(:focus-visible) .what { display: block; }
+.set-body button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.set-body .lines { display: none; flex-basis: 100%; margin: 0; font-size: 11px; line-height: 1.4; color: var(--muted); text-transform: none; }
+.set-body .lines b { font-weight: inherit; color: var(--ink); }
+@media (hover: none) { .set-body .opt .what { display: none; } .set-body .lines { display: block; } }
+@media (hover: hover) { .set-body { overflow: visible; } }
+.set-body h3 { flex-basis: 100%; margin: 6px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font: inherit; font-size: 11px; text-transform: uppercase; color: var(--muted); }
 .share-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .share-body img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 12px; image-rendering: pixelated; background: #fcfcfb; }
 .share-actions { display: flex; gap: 8px; justify-content: center; }
@@ -460,7 +471,7 @@ __WIDGET_CSS__
       <button type="button" class="kaio" id="kaio" hidden>kaioken</button>
       <button type="button" class="kaio itxb" id="itxBtn" title="instant transmission" aria-label="instant transmission" hidden>transmission</button>
     </div>
-    <button type="button" class="mbtn" id="sndM" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="mbtn" id="shareM" aria-label="share your power level"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11H6v9h12v-9h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button type="button" class="mbtn" id="gearM" aria-label="settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button><button type="button" class="mbtn" id="shareM" aria-label="share your power level"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11H6v9h12v-9h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="shop" id="shop"></div>
     <div class="hint">click — train · hold — charge · drag — spin</div>
     <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false">menu</button>
@@ -482,7 +493,11 @@ __WIDGET_CSS__
     <header><span class="share-title" id="godTitle">god ki?</span><button type="button" class="menu-x" id="godX" aria-label="close">×</button></header>
     <div class="asc-body"><p id="godLose"></p><p id="godKeep"></p><div class="share-actions"><button type="button" class="share-go" id="godGo">reset</button><button type="button" id="godNo">not yet</button></div></div>
   </div></div>
-  <footer class="foot gutter" id="foot"><span class="copy"><button type="button" class="snd" id="snd" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="snd" id="share"><span class="long">share score</span><span class="short">share</span></button></span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a class="cv" href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
+  <div class="menu" id="setBox" hidden><div class="menu-card set-card" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <header><span class="share-title" id="setTitle">settings</span><button type="button" class="menu-x" id="setX" aria-label="close">×</button></header>
+    <div class="menu-body set-body" id="setBody" data-icons="pills"></div>
+  </div></div>
+  <footer class="foot gutter" id="foot"><span class="copy"><button type="button" class="snd" id="snd" aria-pressed="false" aria-label="sound"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="on" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="off" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button><button type="button" class="snd" id="gear" aria-label="settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button><button type="button" class="snd" id="share"><span class="long">share score</span><span class="short">share</span></button></span><nav><a href="https://github.com/highskore" target="_blank" rel="noopener noreferrer">github</a><a class="cv" href="https://hackmd.io/@highskore/HyLNOLeRkl" target="_blank" rel="noopener noreferrer">cv</a><a href="https://twitter.com/0xhighskore" target="_blank" rel="noopener noreferrer">twitter</a><a href="https://medium.com/@lu_ka_ra_ch_ki" target="_blank" rel="noopener noreferrer">medium</a><a href="https://sikboi.tumblr.com" target="_blank" rel="noopener noreferrer">tumblr</a><a href="mailto:hi@highskore.com"><span class="long">hi@highskore.com</span><span class="short">email</span></a></nav></footer>
   <nav class="tabbar" aria-label="Game menu"><button type="button" data-tab="shop">upgrades <i id="tabCount"></i></button><button type="button" data-tab="train" class="train">train</button><button type="button" data-tab="links">links</button></nav>
   <div class="edge" aria-hidden="true"></div>
 </div>
@@ -584,9 +599,9 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
     box.querySelector('button').focus({ preventScroll: true });
   };
   const itxShut = () => { if ($('wish').classList.contains('itxp')) closeBox(); };
-  // the buttons' look (a setting): classic counts down; the ki meter fills each button as it recharges. #kimeter
-  // previews it. A cooldown's length is the most seconds left seen since the button was last ready
-  let kiBtns = 'classic'; try { kiBtns = localStorage.getItem('hs-kibtn') || 'classic'; } catch (_) {}
+  // the buttons' look (a setting): the ki meter (the default) fills each button as it recharges; classic counts down.
+  // #kimeter previews it. A cooldown's length is the most seconds left seen since the button was last ready
+  let kiBtns = 'meter'; try { kiBtns = localStorage.getItem('hs-kibtn') || 'meter'; } catch (_) {}
   if (/kimeter/.test(location.hash)) kiBtns = 'meter';
   const kiLook = v => { kiBtns = v; document.documentElement.dataset.kibtn = v; };
   kiLook(kiBtns);
@@ -602,11 +617,11 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
       lastPl = s.pl; bulkFetch(); if (tipFor && performance.now() - tipAt > 250) tipPaint();
       const gk = s.goal.text + s.goal.p; if (gk !== goalKey && $('goal')) { goalKey = gk; $('goalText').textContent = `training · ${s.goal.text}${s.goal.n > 1 ? ` ${s.goal.p}/${s.goal.n}` : ''}`; $('goalBar').style.width = (s.goal.p / s.goal.n * 100) + '%'; }
       const kb = $('kaio'), meter = kiBtns === 'meter'; kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kiOwned = s.kaio.own || !!(s.itx && s.itx.own);
-      const kt = s.kaio.ready ? 'kaioken' : meter ? `kaioken<small>${s.kaio.left}s</small>` : 'kaioken ' + s.kaio.left + 's'; if (kb.dataset.t !== kt) { kb.dataset.t = kt; kb.innerHTML = kt; }
+      const kt = s.kaio.ready ? 'kaioken' : narrow.matches ? s.kaio.left + 's' : meter ? `kaioken<small>${s.kaio.left}s</small>` : 'kaioken ' + s.kaio.left + 's'; if (kb.dataset.t !== kt) { kb.dataset.t = kt; kb.innerHTML = kt; }
       kiFill([kb/*widget*/, ...document.querySelectorAll('.w [data-w="kaio"]')/*/widget*/], s.kaio.ready, s.kaio.left);
       if (s.itx) { const ib = $('itxBtn'), name = narrow.matches ? 'IT' : 'transmission', clock = `${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}`; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut();
-        const it = s.itx.left > 0 ? (meter ? `${name}<small>${clock}</small>` : `${name} ${clock}`) : name; if (ib.dataset.t !== it) { ib.dataset.t = it; ib.innerHTML = it; }
-        kiFill([ib/*widget*/, ...document.querySelectorAll('.w [data-w="itx"]')/*/widget*/], s.itx.ready, s.itx.left); }   // phones keep it short: it shares a row with upgrades and kaioken
+        const it = s.itx.left > 0 ? (narrow.matches ? clock : meter ? `${name}<small>${clock}</small>` : `${name} ${clock}`) : name; if (ib.dataset.t !== it) { ib.dataset.t = it; ib.innerHTML = it; }
+        kiFill([ib/*widget*/, ...document.querySelectorAll('.w [data-w="itx"]')/*/widget*/], s.itx.ready, s.itx.left); }   // phones keep it short: it shares a row with upgrades and kaioken, and a recharging button shows only its time left
       const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
       if (pl.dataset.v !== txt) { pl.dataset.v = txt; pl.innerHTML = num + (suf ? `<small>${suf}</small>` : ''); pl.style.setProperty('--len', Math.max(9, num.length + suf.length * .6)); }
       const mx = $('mx'); say(mx, s.combo > 1 ? '×' + s.combo.toFixed(2).replace(/\.?0+$/, '') : ''); mx.classList.toggle('hot', s.combo >= 2);
@@ -740,8 +755,9 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   for (const ev of ['dblclick', 'gesturestart', 'gesturechange']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
   // sound: tiny square-wave blips, off until you turn it on
   let actx = null, soundOn = false; try { soundOn = localStorage.getItem('hs-sound') === '1'; } catch (_) {}
-  const sndBtns = [$('snd'), $('sndM')], sndLabel = () => { for (const b of sndBtns) b.setAttribute('aria-pressed', String(soundOn)); };
-  for (const b of sndBtns) b.addEventListener('click', () => { soundOn = !soundOn; try { localStorage.setItem('hs-sound', soundOn ? '1' : '0'); } catch (_) {} sndLabel(); if (soundOn) sfx('coin'); });
+  const sndBtns = [$('snd')], sndLabel = () => { for (const b of sndBtns) b.setAttribute('aria-pressed', String(soundOn)); };
+  const sndSet = on => { soundOn = on; try { localStorage.setItem('hs-sound', soundOn ? '1' : '0'); } catch (_) {} sndLabel(); if (soundOn) sfx('coin'); };
+  for (const b of sndBtns) b.addEventListener('click', () => sndSet(!soundOn));
   sndLabel();
   // share the exact power level: the native share sheet where there is one, otherwise the clipboard
   // share: the card opens in a popup first; share (or copy) and download from there
@@ -836,18 +852,12 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
     delete body.dataset.icons;
     if (menuTab === 'ach') {
       body.dataset.icons = 'pills';   // compact pills, gold once earned
-      // the buttons' look, once there's kaioken or instant transmission to show it on
-      if (kiOwned) {
-        const row = document.createElement('div'); row.className = 'looks'; row.innerHTML = '<span>buttons</span>';
-        for (const [v, name] of [['classic', 'classic'], ['meter', 'ki meter']]) { const b = document.createElement('button'); b.type = 'button'; b.className = 'ach' + (kiBtns === v ? ' done' : ''); b.innerHTML = `<b>${name}</b>`; b.addEventListener('click', () => { kiLook(v); try { localStorage.setItem('hs-kibtn', v); } catch (_) {} renderMenu(); }); row.append(b); }
-        body.append(row);
-      }
-      // the looks the milestones unlocked (the Rust engine's): one row a kind, tap one to wear it, again to take it off
-      if (m.looks && m.looks.some(k => k.items.some(i => i.open))) for (const k of m.looks) {
+      // the widget's gear opens its own settings, so its looks stay here: one row a kind, tap one to wear it, again to take it off
+      /*widget*/if (m.looks && m.looks.some(k => k.items.some(i => i.open))) for (const k of m.looks) {
         const row = document.createElement('div'); row.className = 'looks'; row.innerHTML = `<span>${k.label}</span>`;
         for (const it of k.items) { const b = document.createElement('button'); b.type = 'button'; b.className = 'ach' + (k.on === it.id ? ' done' : ''); b.disabled = !it.open; b.innerHTML = `<b>${it.open ? it.name : 'at ' + it.need}</b>`; b.addEventListener('click', () => { game.wear(k.kind, k.on === it.id ? '' : it.id); renderMenu(); }); row.append(b); }
         body.append(row);
-      }
+      }/*/widget*/
       m.ach.forEach(a => { const d = document.createElement('button'); d.type = 'button'; d.className = 'ach' + (a.done ? ' done' : ''); d.title = a.text; d.innerHTML = `<b>${a.name}</b><span>${a.text}</span>`; d.addEventListener('click', () => d.classList.toggle('open')); body.append(d); });   // tap a pill for how to earn it
       return;
     }
@@ -898,6 +908,41 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   $('menu').addEventListener('click', e => { if (e.target === $('menu')) closeMenu(); });
   addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
   ui.achieved = achCount; if (game) achCount(); else mounted.then(achCount);
+
+  // settings, from the gear beside sound: each option's what in a hover card (on focus too), in lines under it on touch
+  const LOOK_WHAT = { aura: 'the colour of your aura while you charge', decor: 'a keepsake standing on the planet', frame: 'the border round your share card', trail: 'what streams behind your hero as he runs' };
+  let setFrom = null;
+  const renderSet = () => {
+    const body = $('setBody'); body.innerHTML = ''; let n = 0;
+    // opts: { name, on, what, tip (the hover card only), open (false: locked), pick }; the row's what stands in for theirs
+    const row = (label, opts, what = '') => {
+      const r = document.createElement('div'); r.className = 'looks'; r.innerHTML = `<span>${label}</span>`;
+      for (const o of opts) {
+        const w = document.createElement('span'), b = document.createElement('button'), id = 'setw' + n++; w.className = 'opt';
+        b.type = 'button'; b.className = 'ach' + (o.on ? ' done' : ''); b.setAttribute('aria-pressed', String(!!o.on)); b.setAttribute('aria-describedby', id); b.disabled = o.open === false; b.innerHTML = `<b>${o.name}</b>`;
+        b.addEventListener('click', () => { const i = [...body.querySelectorAll('button')].indexOf(b); o.pick(); renderSet(); body.querySelectorAll('button')[i]?.focus({ preventScroll: true }); });   // the redraw keeps focus where it was
+        w.append(b); w.insertAdjacentHTML('beforeend', `<span class="what" role="tooltip" id="${id}">${o.tip || o.what || what}</span>`); r.append(w);
+      }
+      const own = opts.filter(o => o.what);
+      r.insertAdjacentHTML('beforeend', `<p class="lines" aria-hidden="true">${own.length ? own.map(o => `<b>${o.name}</b> — ${o.what}`).join('<br>') : what}</p>`);
+      body.append(r);
+    };
+    row('sound', [{ name: 'on', on: soundOn, what: 'little 8-bit blips when you train, buy, transform and fight', pick: () => sndSet(true) }, { name: 'off', on: !soundOn, what: 'no sound at all', pick: () => sndSet(false) }]);
+    // the buttons' look, once there's kaioken or instant transmission to show it on
+    if (kiOwned) row('ki buttons', [['meter', 'ki meter', 'the kaioken and instant transmission buttons fill up as their ki recharges, with the seconds left'], ['classic', 'classic', 'the kaioken and instant transmission buttons fade while they recharge and count down the seconds']]
+      .map(([v, name, what]) => ({ name, what, on: kiBtns === v, pick: () => { kiLook(v); try { localStorage.setItem('hs-kibtn', v); } catch (_) {} } })));
+    const m = game && game.menu();
+    if (m && m.looks && m.looks.some(k => k.items.some(i => i.open))) {
+      body.insertAdjacentHTML('beforeend', '<h3>looks</h3>');
+      for (const k of m.looks) row(k.label, k.items.map(it => ({ name: it.open ? it.name : 'at ' + it.need, on: k.on === it.id, open: it.open, tip: it.open ? '' : `${LOOK_WHAT[k.kind] || ''} · unlocks at ${it.need}`, pick: () => game.wear(k.kind, k.on === it.id ? '' : it.id) })), LOOK_WHAT[k.kind] || '');
+    }
+  };
+  const openSet = () => { setFrom = document.activeElement; renderSet(); $('setBox').hidden = false; $('setX').focus(); };
+  const closeSet = () => { if ($('setBox').hidden) return; $('setBox').hidden = true; refocus(setFrom); };
+  for (const b of [$('gear'), $('gearM')]) b.addEventListener('click', openSet);
+  $('setX').addEventListener('click', closeSet);
+  $('setBox').addEventListener('click', e => { if (e.target === $('setBox')) closeSet(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeSet(); });
 
   // the share card, 1200×630: the game beside your power, a stat strip, dragon balls and achievements
   function drawCard(demo) {

@@ -33,6 +33,17 @@ impl JsRound for Big {
     }
 }
 
+/// `String(x)` for NaN and the infinities, which no formatter here takes apart.
+fn non_finite(x: f64) -> Option<String> {
+    let s = match x {
+        f64::INFINITY => "Infinity",
+        f64::NEG_INFINITY => "-Infinity",
+        _ if x.is_nan() => "NaN",
+        _ => return None,
+    };
+    Some(s.into())
+}
+
 /// Rounds the decimal digit string `d` (no sign, no point) to `keep` digits, halves up as JS does;
 /// returns the digits and whether a carry added a leading digit.
 fn round_half_up(d: &[u8], keep: usize) -> (Vec<u8>, bool) {
@@ -55,6 +66,9 @@ fn round_half_up(d: &[u8], keep: usize) -> (Vec<u8>, bool) {
 
 /// `Number.prototype.toFixed` for |x| < 1e21.
 pub fn to_fixed(x: f64, digits: usize) -> String {
+    if let Some(s) = non_finite(x) {
+        return s;
+    }
     let neg = x < 0.0;
     // the exact binary value in decimal: enough places that a tie is a real tie
     let exact = format!("{:.1100}", x.abs());
@@ -74,6 +88,9 @@ pub fn to_fixed(x: f64, digits: usize) -> String {
 
 /// `Number.prototype.toExponential(digits)`, e.g. `1.8e+308`.
 pub fn to_exponential(x: f64, digits: usize) -> String {
+    if let Some(s) = non_finite(x) {
+        return s;
+    }
     if x == 0.0 {
         return format!("{}e+0", to_fixed(0.0, digits));
     }
@@ -170,6 +187,9 @@ pub fn fmt_short(n: impl Into<Big>) -> String {
 }
 
 fn short_f64(n: f64) -> String {
+    if let Some(s) = non_finite(n) {
+        return s;
+    }
     if n < 1e4 {
         return js_string(n);
     }
@@ -192,6 +212,9 @@ fn short_f64(n: f64) -> String {
 pub fn hud_big(n: impl Into<Big>) -> (String, String) {
     let n = n.into();
     let Some(n) = n.as_plain() else { return sci(n, 2) };
+    if let Some(s) = non_finite(n) {
+        return (s, String::new());
+    }
     let n = n.floor();
     if n < 1e9 {
         return (locale_en(n), String::new());
@@ -228,6 +251,9 @@ pub fn hud_fmt(n: impl Into<Big>) -> String {
 pub fn hud_short(n: impl Into<Big>) -> String {
     let n = n.into();
     let Some(n) = n.as_plain() else { return fmt_short(n) };
+    if let Some(s) = non_finite(n) {
+        return s;
+    }
     let n = n.floor();
     if n < 1e6 {
         return locale_en(n);

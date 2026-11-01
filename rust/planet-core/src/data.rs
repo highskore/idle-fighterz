@@ -665,6 +665,9 @@ pub enum Tier {
     Legendary,
 }
 
+/// The seeds wish: this many ki seeds, however strong you are.
+pub const WISH_SEEDS: f64 = 5.0;
+
 impl Tier {
     pub fn odds(self) -> f64 {
         match self {
