@@ -22,7 +22,7 @@
 //! one that takes `BARRAGE_HP` of its hp.
 
 use crate::big::Big;
-use crate::data::{Hero, LAP, N_LEGS, N_STRIDE};
+use crate::data::{Helper, Hero, Upg, LAP, N_LEGS, N_STRIDE};
 use crate::jsmath::{cos, hypot, sin};
 use crate::Game;
 
@@ -231,19 +231,33 @@ impl Game {
         }
     }
 
+    /// Who the piccolo upgrade brings for this hero.
+    pub fn helper(&self) -> Helper {
+        Helper::of(self.s.hero)
+    }
+
+    /// Who the piccolo upgrade brought, once bought.
+    pub fn helper_here(&self) -> Option<Helper> {
+        (self.s.lv(Upg::Piccolo) > 0).then(|| self.helper())
+    }
+
+    /// Whether the helper is off in an event as themselves (a raid with 18 or 16): not drawn, no zaps.
+    pub fn helper_away(&self) -> bool {
+        self.helper_here().is_some_and(|h| self.tl.ginyu.as_ref().is_some_and(|g| g.androids && g.members.iter().any(|m| m.name == h.data().name)))
+    }
+
     /// The shop's names for the upgrades the hero has his own of.
-    pub fn own_label(&self, u: crate::data::Upg) -> Option<&'static str> {
-        use crate::data::Upg;
+    pub fn own_label(&self, u: Upg) -> Option<&'static str> {
         Some(match (self.s.hero, u) {
             (Hero::Vegeta, Upg::Galick) => return None,
             (h, Upg::Galick) => crate::data::hero_beam(h).0,
             (h, Upg::Kaio) => crate::data::hero_boost(h).name,
             (h, Upg::Bigbang) => crate::data::hero_blast(h),
-            (Hero::Piccolo, Upg::Piccolo) => "kid gohan",
             (Hero::Piccolo, Upg::Armor) => "weighted cape",
             (Hero::Krillin, Upg::Armor) => "turtle shell",
             (Hero::Tien, Upg::Armor) => "crane gi",
             (Hero::A17, Upg::Armor) => "ranger vest",
+            (_, Upg::Piccolo) => self.helper().data().name,
             _ => return None,
         })
     }

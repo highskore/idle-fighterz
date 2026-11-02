@@ -7,7 +7,7 @@
 //! `Boss::mech`; anything with words goes in the usual toast.
 
 use crate::big::Big;
-use crate::data::{Hero, Upg};
+use crate::data::Upg;
 use crate::game::Game;
 use crate::geom::{ap, mul};
 use crate::hud::Cue;
@@ -69,16 +69,6 @@ pub enum Ally {
     Bubbles,
     Piccolo,
     Krillin,
-}
-
-impl Ally {
-    pub fn name(self) -> &'static str {
-        match self {
-            Ally::Bubbles => "bubbles",
-            Ally::Piccolo => "piccolo",
-            Ally::Krillin => "krillin",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -177,7 +167,7 @@ impl Game {
         if self.s.lv(Upg::Partner) > 0 && self.b.fuse_until <= self.t {
             v.push(Ally::Bubbles);
         }
-        if self.s.lv(Upg::Piccolo) > 0 {
+        if self.s.lv(Upg::Piccolo) > 0 && !self.helper_away() {
             v.push(Ally::Piccolo);
         }
         if self.krillin_helps() && self.tl.kril.is_none() && !self.tl.date.as_ref().is_some_and(|d| d.kr) {
@@ -186,11 +176,19 @@ impl Game {
         v
     }
 
-    /// What an ally is called: playing piccolo, the one meditating in his place is kid gohan.
+    /// What an ally is called: piccolo's slot holds whoever the hero's piccolo upgrade brought.
     pub fn ally_name(&self, a: Ally) -> &'static str {
         match a {
-            Ally::Piccolo if self.s.hero == Hero::Piccolo => "kid gohan",
-            _ => a.name(),
+            Ally::Bubbles => "bubbles",
+            Ally::Piccolo => self.helper().data().name,
+            Ally::Krillin => "krillin",
+        }
+    }
+
+    fn ally_pronoun(&self, a: Ally) -> &'static str {
+        match a {
+            Ally::Piccolo => self.helper().data().pronoun,
+            _ => "him",
         }
     }
 
@@ -268,8 +266,8 @@ impl Game {
                     let owned = self.allies();
                     if let Some(&who) = owned.get(i as usize % owned.len().max(1)) {
                         self.set_mech(Mech::Cell { next, i, ph: Ph::Reach, p0: t, who, healed });
-                        let n = self.ally_name(who);
-                        self.mech_say(0, format!("cell grabs {n} — tap {n} to rescue him"), 8.0);
+                        let (n, p) = (self.ally_name(who), self.ally_pronoun(who));
+                        self.mech_say(0, format!("cell grabs {n} — tap {n} to rescue {p}"), 8.0);
                     }
                 }
                 Ph::Reach if t - p0 >= C_REACH => self.set_mech(Mech::Cell { next, i, ph: Ph::Drain, p0: t, who, healed }),

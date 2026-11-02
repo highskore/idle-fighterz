@@ -99,13 +99,12 @@ impl Game {
             Upg::Partner if first => "bubbles wants to train with you",
             Upg::Galick if first && self.s.hero == Hero::Tien => "hold anywhere to charge the kikoho: at a villain it stakes a fifth of your power",
             Upg::Galick if first && self.s.hero == Hero::Piccolo => "hold anywhere to charge the special beam cannon: it spends his focus",
-            Upg::Piccolo if first && self.s.hero == Hero::Piccolo => "kid gohan lands to meditate",
             Upg::Galick if first => {
                 charge = format!("hold anywhere to charge a {}", hero_beam(self.s.hero).0);
                 &charge
             }
             Upg::House => "a new capsule house lands",
-            Upg::Piccolo if first => "piccolo lands to meditate",
+            Upg::Piccolo if first => self.helper().data().arrives,
             Upg::Chamber if first => "the time chamber door will appear — tap it",
             Upg::Kaio if first && self.s.hero == Hero::A17 => "infinite energy — hit the button to pin your overclock at the top",
             Upg::Kaio if first => {

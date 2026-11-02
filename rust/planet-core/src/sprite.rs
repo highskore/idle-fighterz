@@ -717,7 +717,7 @@ fn make_hero_with(head: &[&str], pal: &[(char, u32)], gi: bool, o: Opt) -> Hero 
 pub fn heroes() -> &'static [(&'static str, Hero); 9] {
     static H: OnceLock<[(&'static str, Hero); 9]> = OnceLock::new();
     H.get_or_init(|| {
-        [
+        let mut h = [
             ("vegeta", make_hero(&VEGETA_HEAD, &[], false)),
             (
                 "goku",
@@ -790,8 +790,30 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
             ("goten", with_late_backs(make_hero(&GOKU_HEAD, GOT, true), &goten_late(), &[1, 0])),
             ("tien", with_late(make_plain(&TIEN_HEAD, &TIEN_HEAD, TIE, false), &tien_late())),
             ("a17", with_late(make_plain(&TRUNKS_HEAD, &TRUNKS_HEAD, SEV, true), &a17_looks())),
-        ]
+        ];
+        for (id, hero) in h.iter_mut() {
+            refur(id, &mut hero.fused);
+        }
+        h
     })
+}
+
+/// Bubbles' fused fur, where the default overlay would vanish into an orange gi or turn piccolo's cape tan.
+fn refur(id: &str, set: &mut HeroSet) {
+    const FUR: i32 = 0x8a5a36;
+    const FUR_DARK: i32 = 0x5e3a20;
+    let swap: &[(i32, i32)] = match id {
+        "goku" | "goten" | "krillin" => &[(0xf28a1c, FUR), (0xc0601a, FUR_DARK)],
+        "piccolo" => &[(0xf0c9a0, 0xf4f4f6), (0x7a4ab0, FUR), (0x4e2c78, FUR_DARK)],
+        _ => return,
+    };
+    for s in [&mut set.pose, &mut set.idle].into_iter().chain(set.run.iter_mut()) {
+        for c in s.col.iter_mut() {
+            if let Some(&(_, to)) = swap.iter().find(|w| w.0 == *c) {
+                *c = to;
+            }
+        }
+    }
 }
 
 /// Piccolo sitting cross-legged to meditate (his design: turban, purple gi, red wristbands), and his cape apart from
@@ -905,11 +927,20 @@ pub fn get(name: &str) -> &'static Sprite {
 }
 
 /// The sprites built here rather than baked from game.js: the new heroes' fusion results, by the name the fusion
-/// dance looks them up under.
+/// dance looks them up under, and the helpers the piccolo upgrade brings that game.js never drew.
 fn built(name: &str) -> Option<&'static Sprite> {
     static B: OnceLock<HashMap<&'static str, Sprite>> = OnceLock::new();
     B.get_or_init(|| {
-        HashMap::from([("FUSED.roshillin", roshillin()), ("FUSED.tienzu", tienzu()), ("FUSED.android35", android35()), ("FUSED.piccohan", piccohan())])
+        HashMap::from([
+            ("FUSED.roshillin", roshillin()),
+            ("FUSED.tienzu", tienzu()),
+            ("FUSED.android35", android35()),
+            ("FUSED.piccohan", piccohan()),
+            ("ALLY.kidGohan", kid_gohan()),
+            ("ALLY.yamcha", yamcha()),
+            ("ALLY.hoverbike", hoverbike()),
+            ("ALLY.umigame", umigame()),
+        ])
     })
     .get(name)
 }
@@ -1462,4 +1493,103 @@ fn goten_late() -> [HeroSet; 2] {
     ];
     let saiyaman = make_hero_with(&masked, suit, true, Opt { cape: true, ..Opt::default() }).forms[0].clone();
     [teen, saiyaman]
+}
+
+// ── the piccolo upgrade's helpers game.js never drew
+
+/// Kid Gohan as Piccolo trained him: spiky black hair, a purple gi like his master's, a red sash.
+fn kid_gohan() -> Sprite {
+    const HEAD: [&str; 16] = [
+        "................",
+        "......o..o......",
+        ".o...oho.oho..o.",
+        ".oho.ohHoohHooho",
+        "..ohhhhhhhhhhho.",
+        ".ohhhhHhhhhhhho.",
+        "ohhhhhhhhhhhhhho",
+        ".ohhhhhhhhhhhho.",
+        "..ohhhhhshhhho..",
+        "...ohhsshsshho..",
+        "...ohEEssEEsho..",
+        "...osrEEsEErso..",
+        "...ossssssssSo..",
+        "...oSsssMMsSo...",
+        "....oSsssSo.....",
+        ".....ooSSoo.....",
+    ];
+    let purple = [('y', 0x5a3a9a), ('Y', 0x3e2670), ('a', 0x5a3a9a), ('A', 0x3e2670), ('b', 0x5a3a9a), ('B', 0x3e2670), ('p', 0x5a3a9a), ('P', 0x3e2670)];
+    let rest = [('g', 0xd8323a), ('G', 0x962028), ('u', 0xd8323a), ('w', 0x7a4a2a), ('W', 0x553018)];
+    set_of(&HEAD, &layers(&[&purple, &rest])).idle
+}
+
+/// Yamcha standing (the baked one lies in his crater): his long spiky hair, the scars, the turtle school's orange gi.
+fn yamcha() -> Sprite {
+    const HEAD: [&str; 16] = [
+        "..o.............",
+        ".oho..o.o.......",
+        ".ohhoohoho..o...",
+        "..ohhhhhhhhoho..",
+        "..ohhHhhhhhhhho.",
+        ".ohhhhhhhhhhhho.",
+        "ohhhhhhhhhhhhho.",
+        ".ohhhhhhhhhhhho.",
+        "..ohhhhhhshhho..",
+        "...ohhsshsshho..",
+        "...ohEEssEEsho..",
+        "...osrEEsKErso..",
+        "...ossssKsssSo..",
+        "...oSsssMMsSo...",
+        "....oSsssSo.....",
+        ".....ooSSoo.....",
+    ];
+    let gi = [('K', 0xb0604a), ('y', 0xf08a24), ('Y', 0xc0641a), ('a', 0xf08a24), ('A', 0xc0641a), ('p', 0xf08a24), ('P', 0xc0641a)];
+    let blue = [('g', 0x2b4fc8), ('G', 0x1c3584), ('u', 0x2b4fc8), ('w', 0x2b4fc8), ('W', 0x1c3584)];
+    set_of(&HEAD, &layers(&[&gi, &blue])).idle
+}
+
+/// Bulma's capsule corp hover-bike, for her to stand on above the planet: a windscreen at the front, a jet glowing
+/// at the back.
+fn hoverbike() -> Sprite {
+    const ROWS: [&str; 7] = [
+        "..............ooo.....",
+        ".............okkko....",
+        "..ooooooooooookkkoooo.",
+        ".oaaaaaaaaaaaaaaaaaaao",
+        "lloarrrrrrrrrrrrrrraAo",
+        "lloAAAAAAAAAAAAAAAAAo.",
+        "..oooooooooooooooooo..",
+    ];
+    let pal = Pal::new(&[('o', 0x120c18), ('a', 0xf4f4f6), ('A', 0xc2c6d2), ('r', 0xd8323a), ('k', 0x7ad0ff), ('l', 0x9ae8ff)]);
+    make_sprite(&ROWS, &pal, "l", None, None)
+}
+
+/// Umigame, roshi's sea turtle, awake and swimming through the air for him to stand on: shell plates, a pale
+/// belly, flippers out, head up at the front.
+fn umigame() -> Sprite {
+    let pal = Pal::new(&[
+        ('o', 0x120c18),
+        ('t', 0xb07a3a),
+        ('T', 0x7a4e22),
+        ('d', 0xd8a058),
+        ('g', 0x8ac850),
+        ('G', 0x5a9a34),
+        ('b', 0xe8d890),
+        ('B', 0xb8a860),
+        ('e', 0x120c18),
+    ]);
+    let paint = |g: &mut Grid| {
+        // the shell's dome, cut flat underneath
+        g.ell(12.5, 9.0, 10.0, 6.5, 't');
+        g.rect(2, 9, 21, 7, '.');
+        g.rect(4, 9, 17, 2, 'b');
+        g.poly(&[[5.0, 10.0], [0.5, 13.5], [4.0, 13.5], [9.0, 11.0]], 'g');
+        g.poly(&[[17.0, 10.0], [25.0, 13.5], [21.0, 14.0], [15.0, 11.5]], 'g');
+        g.line(&[[20.0, 8.5], [24.0, 6.0]], 3.0, 3.0, 'g');
+        g.ell(26.0, 5.5, 3.0, 2.5, 'g');
+        for (x, y) in [(8, 5), (12, 4), (16, 5), (10, 7), (14, 7), (6, 8), (18, 8)] {
+            g.rect(x, y, 2, 1, 'd');
+        }
+        g.set(27, 5, 'e');
+    };
+    shape_sprite(30, 15, paint, &pal, &[('t', 'T'), ('g', 'G'), ('b', 'B')])
 }
