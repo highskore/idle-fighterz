@@ -543,6 +543,7 @@ let BARE = WIDGET;   // the floating widget draws no sky or backdrops; its windo
 __PLANET__
 __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (loader.js), which mounts it; the rest of the page doesn't
   const $ = id => document.getElementById(id), root = document.documentElement;
+  const narrow = () => innerWidth <= 760;   // the phone layout, as the 760px breakpoint has it (the widget build makes it always)
 
   const SUF = ['', '', '', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
   // past 1e300 the engine sends a number as text, '<m>e<exponent>': e-notation with the exponent grouped (4.50e1,204), past a million short (7.1e1.2M), as planet-core's num::sci
@@ -637,7 +638,6 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   if (/kimeter/.test(location.hash)) kiBtns = 'meter';
   const kiLook = v => { kiBtns = v; document.documentElement.dataset.kibtn = v; };
   kiLook(kiBtns);
-  const narrow = matchMedia('(max-width: 760px)');
   const kiFill = (bs, ready, left) => {
     const b0 = bs[0]; b0._max = ready ? 0 : Math.max(b0._max || 0, left);
     const f = ready ? 100 : left > 0 && b0._max ? (1 - left / b0._max) * 100 : 0;
@@ -651,11 +651,11 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
       const kb = $('kaio'), meter = kiBtns === 'meter'; kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kiOwned = s.kaio.own || !!(s.itx && s.itx.own); kiName = s.kaio.name || 'kaioken';   // game.js's state has no name, short or colours
       const ks = s.kaio.short || kiName; if (kb.title !== kiName) { kb.title = kiName; kb.setAttribute('aria-label', kiName); }
       if (s.kaio.fill) for (const b of [kb/*widget*/, ...document.querySelectorAll('.w [data-w="kaio"]')/*/widget*/]) if (b.dataset.c !== s.kaio.fill) { b.dataset.c = s.kaio.fill; for (const [v, c] of [['--kc', s.kaio.fill], ['--kp', s.kaio.pale], ['--ki', s.kaio.ink], ['--kr', s.kaio.ink === '#ffffff' ? 'transparent' : s.kaio.ink + '33']]) b.style.setProperty(v, c); }
-      const kt = s.kaio.ready ? [ks] : narrow.matches ? [s.kaio.left + 's'] : meter ? [ks, s.kaio.left + 's'] : [ks + ' ' + s.kaio.left + 's'], kk = kt.join('|');
+      const kt = s.kaio.ready ? [ks] : narrow() ? [s.kaio.left + 's'] : meter ? [ks, s.kaio.left + 's'] : [ks + ' ' + s.kaio.left + 's'], kk = kt.join('|');
       if (kb.dataset.t !== kk) { kb.dataset.t = kk; kb.replaceChildren(kt[0], ...kt.slice(1).map(t => Object.assign(document.createElement('small'), { textContent: t }))); }
       kiFill([kb/*widget*/, ...document.querySelectorAll('.w [data-w="kaio"]')/*/widget*/], s.kaio.ready, s.kaio.left);
-      if (s.itx) { const ib = $('itxBtn'), name = narrow.matches ? 'IT' : 'transmission', clock = `${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}`; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut();
-        const it = s.itx.left > 0 ? (narrow.matches ? clock : meter ? `${name}<small>${clock}</small>` : `${name} ${clock}`) : name; if (ib.dataset.t !== it) { ib.dataset.t = it; ib.innerHTML = it; }
+      if (s.itx) { const ib = $('itxBtn'), name = narrow() ? 'IT' : 'transmission', clock = `${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}`; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut();
+        const it = s.itx.left > 0 ? (narrow() ? clock : meter ? `${name}<small>${clock}</small>` : `${name} ${clock}`) : name; if (ib.dataset.t !== it) { ib.dataset.t = it; ib.innerHTML = it; }
         kiFill([ib/*widget*/, ...document.querySelectorAll('.w [data-w="itx"]')/*/widget*/], s.itx.ready, s.itx.left); }   // phones keep it short: it shares a row with upgrades and kaioken, and a recharging button shows only its time left
       const [num, suf] = big(s.pl), pl = $('pl'), txt = num + suf;
       if (pl.dataset.v !== txt) { pl.dataset.v = txt; pl.innerHTML = num + (suf ? `<small>${suf}</small>` : ''); pl.style.setProperty('--len', Math.max(9, num.length + suf.length * .6)); }
@@ -738,7 +738,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   const pageEl = document.querySelector('.page'), scroller = $('scroller'), brandEl = $('brand'), gameEl = $('game'), cueEl = $('cue');
   function introLayout() {
     for (const el of [brandEl, gameEl]) el.style.setProperty('--e', 1);
-    const vh = innerHeight, b = brandEl.getBoundingClientRect(), g = gameEl.getBoundingClientRect(), phone = innerWidth <= 760;
+    const vh = innerHeight, b = brandEl.getBoundingClientRect(), g = gameEl.getBoundingClientRect(), phone = narrow();
     const s = phone ? 1 : Math.min(2.1, Math.max(1.2, innerWidth * .66 / (b.width * .46))), heroY = vh * (phone ? .44 : .45);
     root.style.setProperty('--brand-s', s.toFixed(3));
     root.style.setProperty('--brand-dy', (heroY - (b.top + b.height / 2)).toFixed(1) + 'px');
@@ -748,7 +748,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   let introE = 1;   // read by the title: 0 = intro pose, 1 = settled
   // phones don't scroll at all (scrolling made safari's bars slide and the page jump): the cue becomes a button
   // that plays the same intro, so introP stands in for the scroll position there
-  const noScroll = () => innerWidth <= 760;
+  const noScroll = () => narrow();
   let introP = 0;
   function introScroll() {
     const span = Math.max(1, scroller.offsetHeight - innerHeight), p = noScroll() ? introP : Math.min(1, Math.max(0, scrollY / span)), e = 1 - Math.pow(1 - p, 3);
@@ -760,7 +760,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   addEventListener('scroll', () => { if (!introRaf) introRaf = requestAnimationFrame(() => { introRaf = 0; introScroll(); }); }, { passive: true });
   // phones fire resize whenever the toolbar slides; only a real width change re-lays out the intro
   let introW = innerWidth;
-  addEventListener('resize', () => { if (innerWidth === introW && innerWidth <= 760) return; introW = innerWidth; requestAnimationFrame(introLayout); });
+  addEventListener('resize', () => { if (innerWidth === introW && narrow()) return; introW = innerWidth; requestAnimationFrame(introLayout); });
   // the cue glides you through the intro: our own eased scroll, so it's the same in every browser
   const ease = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
   let introPlaying = false;
@@ -1109,7 +1109,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
   const logo = $('logo'), glint = $('glint'); let R3 = null;
   const title = () => { try {
     const renderer = new THREE.WebGLRenderer({ canvas: logo, antialias: (window.devicePixelRatio || 1) < 2, alpha: true, powerPreference: 'high-performance' });   // retina screens don't need MSAA
-    renderer.setPixelRatio(innerWidth <= 760 ? Math.min(window.devicePixelRatio || 1, 1.75) : Math.min((window.devicePixelRatio || 1) * 1.4, 2.5));   // kept modest: this canvas redraws every frame of the scroll
+    renderer.setPixelRatio(narrow() ? Math.min(window.devicePixelRatio || 1, 1.75) : Math.min((window.devicePixelRatio || 1) * 1.4, 2.5));   // kept modest: this canvas redraws every frame of the scroll
     renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; renderer.setClearColor(0, 0);
     const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(22, 1, .1, 100);
     scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new THREE.RoomEnvironment(), .03).texture;
@@ -1135,7 +1135,7 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
     // phones: the canvas is tall; settled, the word sits near its top, and in the intro the letters
     // stack big as "high / skore" with a little tilt, sliding into one line as you scroll
     function introPose(r) {
-      const phone = innerWidth <= 760, VH = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * cam.position.z, VW = VH * cam.aspect;
+      const phone = narrow(), VH = 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * cam.position.z, VW = VH * cam.aspect;
       group.position.y = baseGY + (phone ? (r.height / 2 - innerWidth * .2) / r.height * VH : 0);
       if (!phone) { for (const l of letters) { l.hero.copy(l.base); l.hk = 1; l.hr = 0; } return; }
       const lines = [letters.slice(0, 4), letters.slice(4)], adv = l => (letters[l.idx + 1] ? letters[l.idx + 1].pen : W0 - .3) - l.pen;

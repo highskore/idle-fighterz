@@ -11,6 +11,7 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gameFile, rustEngine, rustLoader, rustPreload } from './rust/planet-web/assemble.mjs'
+import { phoneLayout } from './widget-layout.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 // a Windows checkout may have CRLF sources: everything below matches on \n, and the output must not depend on it
@@ -116,12 +117,7 @@ async function sitePage(page) {
 // the widget runs offline and has no title, so no three.js, and the fonts are inlined from @fontsource (installed with
 // the widget's own dependencies, in node_modules where it runs)
 async function widgetPage(page) {
-  // the widget is the phone layout at any size: a window stretched past 760px (window mode, fullscreen) would otherwise
-  // get the site's desktop layout over its own, a second upgrades list, bare toasts and site-wide overlays among it.
-  // Before widget.css goes in, which keeps its own wide-window rules
-  page = page.replaceAll('@media (max-width: 760px)', '@media all').replaceAll("matchMedia('(max-width: 760px)')", "matchMedia('all')")
-    .replace(/@media \(min-width: 761px\)( and \([a-z-]+: [a-z]+\))?/g, '@media not all')
-  if (/\((max|min)-width: 76[01]px\)/.test(page)) throw new Error('a site breakpoint is left in the widget page')
+  page = phoneLayout(page)
   page = page.replace('__WIDGET_CSS__', () => read('widget.css') + read('skins.css')).replace('__WIDGET_JS__', () => read('skins.js') + read('widget.js'))
   page = page.replace(/<link [^>]*fonts\.(googleapis|gstatic)\.com[^>]*>\n/g, '').replace('<script id="three">__THREE__</script>\n', '')
   if (/<(script|link)[^>]+(src|href)="https?:/.test(page)) throw new Error('the widget page still loads something remote')

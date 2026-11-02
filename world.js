@@ -25,14 +25,25 @@ function makeSprite(rows, pal, opts = {}) {
 }
 
 /*widget*/
-// window mode and fullscreen (st.fill: the planet size setting, a share of the window's short side): the whole-pixel scale
-// whose planet comes nearest that share, clear of the HUD (64px above and below it) and with the scene at least 200 game
-// pixels across, which the dragon, the ape and the raids need. Its radius is the game's: a fifth of the short side, 56–70
-function fillScale(w, h, fill) {
-  const side = Math.min(w, h), want = side * fill, d = k => 2 * k * Math.max(56, Math.min(70, Math.round(Math.min(Math.ceil(w / k), Math.ceil(h / k)) * .2)));
-  let best = 1;
-  for (let k = 2; side / k >= 200; k++) if (d(k) <= h - 128 && Math.abs(d(k) - want) < Math.abs(d(best) - want)) best = k;
-  return best;
+// The widget's sizes in window mode (and the app's fullscreen), by the window. The planet: the biggest whole-pixel scale
+// that leaves the scene at least `floor` game pixels across (the planet size setting: the smaller the floor, the bigger the
+// planet, whose radius is the game's 56–70 game pixels) and the planet clear of the HUD's `room` (its dock) at the bottom, at the
+// biggest any world draws it (game.js W2L: planet vegeta's zoom; the lookout's lift and .82 stay inside that). `prev`, the
+// scale it has, holds within 4% of the floor while a window is resized
+const PLANET_FLOOR = { small: 260, medium: 200, large: 170, huge: 140 }, WORLD_ZOOM = 1.22;
+function fillScale(w, h, floor, room = 40, prev = 0) {
+  const side = Math.min(w, h), r = k => Math.max(56, Math.min(70, Math.round(Math.min(Math.ceil(w / k), Math.ceil(h / k)) * .2)));
+  const fits = (k, f) => k === 1 || (side / k >= f && r(k) * k * WORLD_ZOOM <= h / 2 - room);
+  let k = 1;
+  while (fits(k + 1, floor)) k++;
+  if (prev > k && fits(prev, floor * .96)) return prev;
+  if (prev && prev < k && !fits(k, floor * 1.04)) return prev;
+  return k;
+}
+// The HUD's zoom (the UI size setting): with the window's short side from 640px up to twice that, times the pick
+const UI_SIZE = { small: .8, medium: 1, large: 1.25, huge: 1.5 };
+function uiScale(w, h, size) {
+  return Math.round(Math.min(2, Math.max(1, Math.min(w, h) / 640)) * (UI_SIZE[size] || 1) * 100) / 100;
 }
 /*/widget*/
 function makeStage(section) {
@@ -41,7 +52,7 @@ function makeStage(section) {
   let img, buf;
   st.resize = () => {
     const r = el.getBoundingClientRect();
-    st.scale = r.width < 560 ? 2 : 3;/*widget*/ if (WIDGET) st.scale = st.fill ? fillScale(r.width, r.height, st.fill) : r.width >= 520 ? 2 : 1;   // floating: 1× up to medium, 2× at large, so a site-sized planet fits with room round it/*/widget*/
+    st.scale = r.width < 560 ? 2 : 3;/*widget*/ if (WIDGET) st.scale = st.floor ? fillScale(r.width, r.height, st.floor, st.room, st.scale) : r.width >= 520 ? 2 : 1;   // floating: 1× up to medium, 2× at large, so a site-sized planet fits with room round it/*/widget*/
     st.W = Math.ceil(r.width / st.scale); st.H = Math.ceil(r.height / st.scale);
     cv.width = st.W; cv.height = st.H;
     if (PX) {   // the pixels, depth, ids and mask in the module's memory: drawn into from both sides, put on the canvas uncopied
