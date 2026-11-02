@@ -144,9 +144,10 @@
           // no core to ask (game.js in the page): its widget camera, as geom.rs's layout() puts it
           s = s || { w: cv.width, h: cv.height, cx: Math.round(cv.width / 2), cy: Math.round(cv.height / 2), r: Math.max(56, Math.min(70, Math.round(Math.min(cv.width, cv.height) * .2))) };
           // the buffer or the core not resized to the stage yet: again shortly
-          const b = cv.getBoundingClientRect(), kx = b.width / s.w;
+          // in window mode the hud is zoomed (--ui, widget.css): it's laid out in its own, zoomed, pixels
+          const b = cv.getBoundingClientRect(), kx = b.width / s.w, z = parseFloat(getComputedStyle(c.root).getPropertyValue('--ui')) || 1;
           if (s.w !== cv.width || s.h !== cv.height || Math.abs(kx - b.height / s.h) > .02) { clearTimeout(again); again = setTimeout(place, 100); return; }
-          const f = fit({ x: b.left + s.cx * kx, y: b.top + s.cy * kx, r: (s.r + 1) * kx }, innerWidth, innerHeight, { w: sc.offsetWidth, h: sc.offsetHeight }, { w: tr.offsetWidth, h: tr.offsetHeight });
+          const f = fit({ x: (b.left + s.cx * kx) / z, y: (b.top + s.cy * kx) / z, r: (s.r + 1) * kx / z }, innerWidth / z, innerHeight / z, { w: sc.offsetWidth, h: sc.offsetHeight }, { w: tr.offsetWidth, h: tr.offsetHeight });
           const v = [f.k, f.kt, f.top + 'px', f.shop.left + 'px', f.shop.top + 'px', f.shop.right + 'px', f.shop.h + 'px'], key = v.join();
           if (key !== placed) { placed = key; VARS.forEach((n, i) => c.root.style.setProperty(n, v[i])); }
         });

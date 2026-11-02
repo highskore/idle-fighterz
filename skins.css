@@ -103,7 +103,7 @@
 [data-skin="drawer"] .dw-rail button { --b: 26px; }
 html.dw-open .w .dw-tab { opacity: 0; pointer-events: none; }
 .widget[data-skin="drawer"] .stage { transition: transform .35s; }
-html.dw-open .stage { transform: translateX(calc(var(--dw) * -.4)) !important; }
+html.dw-open .stage { transform: translateX(calc(var(--dw) * var(--ui, 1) * -.4)) !important; }   /* the drawer is zoomed with the hud (widget.css), the stage isn't */
 .dw { position: absolute; right: 0; top: 8px; bottom: 8px; width: var(--dw); display: flex; flex-direction: column; color: var(--ink); background: var(--chip); border: 1px solid var(--edge); border-right: 0; border-radius: 14px 0 0 14px; box-shadow: -4px 0 14px rgba(0,0,0,.2); z-index: 4; transform: translateX(105%); transition: transform .35s cubic-bezier(.3,1.2,.5,1), visibility .35s; }
 html:not(.dw-open) .dw { visibility: hidden; box-shadow: none; }
 html.dw-open .dw { transform: none; }
