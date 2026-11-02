@@ -583,7 +583,8 @@ impl Game {
         let mut rows = Vec::new();
         for key in SHOP_ORDER {
             let (unlock, level, cost, label) = match key {
-                "ascend" => (self.ascend_unlocked(), s.ascend, self.ascend_cost(), "ascend"),
+                // `s.ascend` counts ki seeds, not ascensions, so the row shows no level
+                "ascend" => (self.ascend_unlocked(), Big::ZERO, self.ascend_cost(), "ascend"),
                 "godki" => (self.god_open() && self.god_now() > 0, Big::from(s.gods), self.god_cost(), "god ki"),
                 "zeno" => (self.zeno_ready(), Big::from(s.zeno), Big::ZERO, "zeno button"),
                 _ => {
