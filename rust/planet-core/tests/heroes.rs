@@ -266,6 +266,46 @@ fn the_menu_gives_each_hero_his_playstyle_and_form_ladder() {
     assert_eq!(piccolo["forms"][2]["name"], "demon king");
     assert_eq!(piccolo["forms"][0]["aura"], "#8ad87a", "a namekian's green aura");
     assert_eq!(chars[0]["forms"][1]["aura"], "#ffe02e", "super saiyan gold");
+    let form = |id: &str, i: usize| chars.iter().find(|c| c["id"] == id).unwrap()["forms"][i]["name"].as_str().unwrap().to_string();
+    assert_eq!([form("gohan", 6), form("gohan", 8)], ["great saiyaman", "ultimate"]);
+    assert_eq!([form("trunks", 6), form("trunks", 8)], ["super saiyan third grade", "sword of hope"]);
+    assert_eq!([form("goten", 6), form("goten", 8)], ["saiyaman x-2", "prodigy unleashed"]);
+    assert_eq!(form("krillin", 4), "destructo master");
+}
+
+#[test]
+fn only_vegeta_and_goku_reach_ultra_ego_and_ultra_instinct() {
+    let theirs: Vec<&str> = [Hero::Vegeta, Hero::Goku].iter().flat_map(|&h| ladder_of(h, 0)).map(|f| f.name).collect();
+    for h in [Hero::Gohan, Hero::Trunks, Hero::Goten] {
+        let names: Vec<&str> = ladder_of(h, 0).iter().map(|f| f.name).collect();
+        for i in [6, 8] {
+            assert!(!theirs.contains(&names[i]), "{h:?}'s {} is his own", names[i]);
+            assert_eq!(names.iter().filter(|&&n| n == names[i]).count(), 1, "{h:?}'s {} names one form", names[i]);
+        }
+        let ladder = ladder_of(h, 0);
+        assert_ne!(ladder[6].aura(), ladder[8].aura(), "{h:?}: each has its own aura");
+        let s = sprite::hero(sprite_id(h));
+        for i in [6, 8] {
+            for j in 0..9 {
+                assert!(i == j || s.forms[i].idle.col != s.forms[j].idle.col, "{h:?}: looks {i} and {j} differ");
+            }
+        }
+    }
+}
+
+#[test]
+fn renamed_forms_keep_their_marks_and_multipliers() {
+    for h in [Hero::Gohan, Hero::Trunks, Hero::Goten] {
+        let base = ladder_of(Hero::Vegeta, 0);
+        for (f, v) in ladder_of(h, 0).iter().zip(&base).take(9) {
+            assert_eq!(f.x, v.x, "{h:?} {}", f.name);
+            assert_eq!(f.at / ladder_of(h, 0)[1].at, v.at / base[1].at, "{h:?} {}", f.name);
+        }
+    }
+}
+
+fn sprite_id(h: Hero) -> &'static str {
+    CHARS.iter().find(|c| c.0 == h).unwrap().1
 }
 
 #[test]

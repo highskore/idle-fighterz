@@ -234,6 +234,30 @@ fn own_aura(h: Hero) -> Option<[u32; 3]> {
     }
 }
 
+/// Krillin's auras at the shared nine: the base aura, the undershirt's blue, guru's gold, the gi's orange, the disc's
+/// yellow, old kai's white, the police blue, the tournament's teal, beyond human's blue.
+const KRI_AURA: [[u32; 3]; 9] = [
+    FORM_AURA[0],
+    [0xffffff, 0xd8ecff, 0x6aa8e8],
+    [0xffffff, 0xfff4d0, 0xe8c860],
+    [0xffffff, 0xffe8c8, 0xf08a24],
+    [0xffffff, 0xfffbc0, 0xf2dc3a],
+    [0xffffff, 0xf0f0ff, 0xb8c0e0],
+    [0xffffff, 0xc8d8ff, 0x2a4ab0],
+    [0xffffff, 0xe0fff0, 0x4ad8a0],
+    [0xffffff, 0xd8f0ff, 0x3ab8ff],
+];
+
+/// The saiyans who don't reach ultra ego and ultra instinct: their own forms at those two marks, with their auras.
+fn saiyan_own(h: Hero) -> Option<[(&'static str, [u32; 3]); 2]> {
+    Some(match h {
+        Hero::Gohan => [("great saiyaman", [0xffffff, 0xd8ffd8, 0x2e9a48]), ("ultimate", [0xffffff, 0xf4f4ff, 0xc8d0e8])],
+        Hero::Trunks => [("super saiyan third grade", [0xffffff, 0xfff0a0, 0xffc81a]), ("sword of hope", [0xffffff, 0xc8e8ff, 0x3a8ae8])],
+        Hero::Goten => [("saiyaman x-2", [0xffffff, 0xc8f4ff, 0x3ac8e8]), ("prodigy unleashed", [0xffffff, 0xfffbe0, 0xffd60a])],
+        _ => return None,
+    })
+}
+
 /// `ladderOf`: the shared nine, then the hero's late forms at 2e14, ×1000 each; then, once limit III is broken, a
 /// limit-breaker form for each limit broken past it (×2 each, held at the last canon form's mark).
 pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
@@ -277,6 +301,19 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         v[2].own_aura = Some([0xffffff, 0xc8a8e8, 0x4a2a6a]);
         v[7].own_aura = Some([0xffffff, 0xffd8a8, 0xf2913a]);
         v[8].own_aura = Some([0xffffff, 0xffd8a8, 0xf2913a]);
+    }
+    // krillin's forms each have their own aura too (sprite.rs)
+    if h == Hero::Krillin {
+        for (f, a) in v.iter_mut().zip(KRI_AURA) {
+            f.own_aura = Some(a);
+        }
+    }
+    // gohan, trunks and goten have their own forms where vegeta and goku reach ultra ego and ultra instinct
+    if let Some(own) = saiyan_own(h) {
+        for (i, (name, aura)) in [6, 8].into_iter().zip(own) {
+            v[i].name = name;
+            v[i].own_aura = Some(aura);
+        }
     }
     // android 17 has no forms to look like: every mark wears his base look (his overclock picks his look, a17.rs)
     if h == Hero::A17 {
