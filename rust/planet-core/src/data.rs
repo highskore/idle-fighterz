@@ -67,7 +67,7 @@ pub const SHOP: [ShopItem; 15] = [
     ShopItem { key: "senzu", base: 4000.0, k: 2.2, label: "senzu tree", what: "beans: tap for ×1.5" },
     ShopItem { key: "house", base: 6000.0, k: 2.3, label: "capsule house", what: "+40/s (a new dome up to lv 9)" },
     ShopItem { key: "armor", base: 12000.0, k: 2.4, label: "saiyan armor", what: "+50% vs villains & saibamen" },
-    ShopItem { key: "kaio", base: 20000.0, k: 2.6, label: "kaioken", what: "red button: big boost, then tired" },
+    ShopItem { key: "kaio", base: 20000.0, k: 2.6, label: "kaioken", what: "boost button: big boost, then tired" },
     ShopItem { key: "bigbang", base: 60000.0, k: 2.5, label: "big bang attack", what: "double-tap: an exploding ki ball" },
     ShopItem { key: "piccolo", base: 30000.0, k: 2.4, label: "piccolo", what: "+60/s, zaps meteors" },
     ShopItem { key: "chamber", base: 150000.0, k: 2.8, label: "time chamber", what: "a door appears: train ×2 for 15s inside" },
@@ -259,7 +259,7 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         _ => &[],
     };
     let own = own_names(h);
-    // goten was born super saiyan: his marks come at a tenth (he can't hold a form for long, heroes.rs)
+    // goten was born super saiyan: his marks come at half (he can't hold a form for long, heroes.rs)
     let mark = if h == Hero::Goten { crate::heroes::GOTEN_MARK } else { 1.0 };
     let mut v: Vec<Form> = ALL_FORMS[..9]
         .iter()
@@ -317,7 +317,7 @@ pub const TREE: [Node; 21] = [
     Node { id: "stride", branch: Branch::Body, tier: 1, name: "long stride", what: "he runs 10% faster a rank: more laps", max: 5 },
     Node { id: "brawl", branch: Branch::Body, tier: 1, name: "brawler", what: "villain taps +50% a rank", max: INF },
     Node { id: "critx", branch: Branch::Body, tier: 2, name: "pressure point", what: "crits hit ×1 harder a rank", max: INF },
-    Node { id: "pride", branch: Branch::Body, tier: 3, name: "saiyan pride", what: "combo goes to ×4", max: 1 },
+    Node { id: "pride", branch: Branch::Body, tier: 3, name: "warrior's pride", what: "combo goes to ×4", max: 1 },
     Node { id: "idle", branch: Branch::Spirit, tier: 0, name: "meditation", what: "idle income +50% a rank", max: INF },
     Node { id: "beam", branch: Branch::Spirit, tier: 0, name: "ki control", what: "beams +25% a rank", max: INF },
     Node { id: "chamber", branch: Branch::Spirit, tier: 1, name: "patience", what: "the chamber door comes 25% more often a rank", max: INF },
@@ -734,8 +734,8 @@ pub const LATE_ACH: [(&str, &str); 5] = [
 pub const ACH: [(&str, &str, &str); 87] = [
     ("lap1", "first steps", "run a lap of the planet"),
     ("laps100", "marathon", "run 100 laps"),
-    ("ss", "super saiyan", "reach super saiyan"),
-    ("ui", "ultra instinct", "reach ultra instinct"),
+    ("ss", "super saiyan", "reach super saiyan, as a saiyan"),
+    ("ui", "ultra instinct", "reach ultra instinct, as a saiyan"),
     ("o9k", "it's over 9000", "pass 9,000 power"),
     ("villains10", "villain slayer", "beat 10 villains"),
     ("frieza", "emperor down", "beat frieza"),
@@ -776,7 +776,7 @@ pub const ACH: [(&str, &str, &str); 87] = [
     ("coolerdown", "cooler down", "beat cooler and his armoured squadron"),
     ("unwarped", "janemba unwarped", "beat janemba, double and all"),
     ("sealed", "bojack sealed", "beat bojack and his gang"),
-    ("mui", "beyond instinct", "reach your hero's first form past ultra instinct"),
+    ("mui", "beyond instinct", "reach your first form past ultra instinct's mark"),
     ("universe", "universe star", "clear a universe"),
     ("multiverse", "last one standing", "clear universe 11 in the tournament of power"),
     ("mastery", "beyond the forms", "earn a mastery star"),
@@ -932,12 +932,163 @@ pub fn bubbles_fusion(h: Hero) -> &'static str {
     }
 }
 
+/// Each hero's beam as the game names it: (the beam, its full-power form at beam lv 5).
+pub fn hero_beam(h: Hero) -> (&'static str, &'static str) {
+    match h {
+        Hero::Vegeta => ("galick gun", "final flash"),
+        Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten => ("kamehameha", "super kamehameha"),
+        Hero::Trunks => ("burning attack", "heat dome attack"),
+        Hero::Piccolo => ("special beam cannon", "full-power special beam cannon"),
+        Hero::A17 => ("power blitz", "full-power blitz"),
+        Hero::Tien => ("kikoho", "full-power kikoho"),
+    }
+}
+
+/// Each hero's blast (the big bang upgrade's double-tap), as the game names it.
+pub fn hero_blast(h: Hero) -> &'static str {
+    match h {
+        Hero::Vegeta => "big bang attack",
+        Hero::Goku => "dragon fist",
+        Hero::Gohan => "masenko",
+        Hero::Trunks => "finish buster",
+        Hero::Krillin => "scattering bullet",
+        Hero::Piccolo => "hellzone grenade",
+        Hero::A17 => "barrier burst",
+        Hero::Tien => "dodon ray",
+        Hero::Goten => "jan ken",
+    }
+}
+
+/// A hero's boost (the kaioken upgrade's button): its name, the button's short label, fill, pale fill while
+/// recharging and ink; the colour his sprite is washed toward, the rim (pulse up, down), the flames (tip to base) and their embers;
+/// the sparks (white, light, deep); and the beam and blast while it's on (ball, glow, mid, edge).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Boost {
+    pub name: &'static str,
+    pub short: &'static str,
+    pub fill: u32,
+    pub pale: u32,
+    pub ink: u32,
+    pub wash: u32,
+    pub rim: [u32; 2],
+    pub flame: [u32; 3],
+    pub ember: u32,
+    pub spark: [u32; 3],
+    pub ball: u32,
+    pub glow: u32,
+    pub mid: u32,
+    pub edge: u32,
+}
+
+/// The kaioken's red.
+const RED: Boost = Boost {
+    name: "kaioken",
+    short: "kaioken",
+    fill: 0xe0332b,
+    pale: 0xf1b9b4,
+    ink: 0xffffff,
+    wash: 0xff0000,
+    rim: [0xff4a3a, 0xe0332b],
+    flame: [0xffd0c0, 0xff8a6a, 0xff4a3a],
+    ember: 0xb0201a,
+    spark: [0xffffff, 0xff9a8a, 0xe0332b],
+    ball: 0xffb0a4,
+    glow: 0xff6a5a,
+    mid: 0xffc8bf,
+    edge: 0xc8201a,
+};
+/// The plain white aura, rimmed in a cool grey so it reads on the pale worlds; its button is silver so the meter shows.
+const WHITE: Boost = Boost {
+    name: "",
+    short: "",
+    fill: 0xc8d2e0,
+    pale: 0xf2f4f7,
+    ink: 0x2a2f3a,
+    wash: 0xffffff,
+    rim: [0xffffff, 0xc8d4e2],
+    flame: [0xffffff, 0xeef4ff, 0xc8d8ea],
+    ember: 0x8a9ab0,
+    spark: [0xffffff, 0xeef4ff, 0xb0c0d4],
+    ball: 0xf4f8ff,
+    glow: 0xdce8f6,
+    mid: 0xffffff,
+    edge: 0xa0b4cc,
+};
+/// Super saiyan gold.
+const GOLD: Boost = Boost {
+    name: "",
+    short: "",
+    fill: 0xf5c518,
+    pale: 0xf8e3a0,
+    ink: 0x3a2a00,
+    wash: 0xffd000,
+    rim: [0xffe04a, 0xf0b820],
+    flame: [0xfff4c0, 0xffe070, 0xf0c030],
+    ember: 0xc08a10,
+    spark: [0xffffff, 0xfff0a0, 0xe8b020],
+    ball: 0xfff0a8,
+    glow: 0xffd850,
+    mid: 0xfff6c8,
+    edge: 0xd09a10,
+};
+/// Super saiyan rage's electric blue.
+const BLUE: Boost = Boost {
+    name: "",
+    short: "",
+    fill: 0x2a5cf0,
+    pale: 0xbccbf8,
+    ink: 0xffffff,
+    wash: 0x2a8aff,
+    rim: [0x4ac8ff, 0x1a7ae8],
+    flame: [0xd0f4ff, 0x7ad8ff, 0x3aa8ff],
+    ember: 0x1a5ac0,
+    spark: [0xffffff, 0x9ae0ff, 0x2a8ae8],
+    ball: 0xb0e8ff,
+    glow: 0x5ac0ff,
+    mid: 0xd0f0ff,
+    edge: 0x1a6ad8,
+};
+/// Android 17's barrier green.
+const GREEN: Boost = Boost {
+    name: "",
+    short: "",
+    fill: 0x1fa855,
+    pale: 0xb4e4c4,
+    ink: 0xffffff,
+    wash: 0x20d060,
+    rim: [0x4ae87a, 0x22b850],
+    flame: [0xd0ffe0, 0x7af0a0, 0x3ad86a],
+    ember: 0x1a8a40,
+    spark: [0xffffff, 0xa0f4c0, 0x22b850],
+    ball: 0xb8ffd0,
+    glow: 0x5ae890,
+    mid: 0xd4ffe2,
+    edge: 0x1a9a48,
+};
+
+/// Each hero's boost look: canon colours where the show has one, his plain aura otherwise.
+pub fn hero_boost(h: Hero) -> Boost {
+    match h {
+        Hero::Vegeta => Boost { name: "majin power", short: "majin", ..GOLD },
+        Hero::Goku => RED,
+        Hero::Gohan => Boost { name: "potential unleashed", short: "unleash", ..WHITE },
+        Hero::Trunks => Boost { name: "burning rage", short: "rage", ..BLUE },
+        // "max power" is his giant mode and "weights off" piccolo's first form
+        Hero::Krillin => Boost { name: "full power", short: "power", ..WHITE },
+        Hero::Piccolo => Boost { name: "cape off", short: "cape off", ..WHITE },
+        // "infinite" is one of his forms
+        Hero::A17 => Boost { name: "infinite energy", short: "energy", ..GREEN },
+        Hero::Tien => Boost { name: "kiai", short: "kiai", ..WHITE },
+        Hero::Goten => Boost { name: "tantrum", short: "tantrum", ..GOLD },
+    }
+}
+
 /// Each hero's playstyle in one line, as the settings panel's hero row shows it.
 pub fn hero_style(h: Hero) -> &'static str {
     match h {
         Hero::Vegeta => "the classic: tap to train, hold to charge the galick gun",
         Hero::Goku | Hero::Gohan => "the classic rules, with the kamehameha",
-        Hero::Trunks => "the classic rules, with the galick gun",
+        Hero::Trunks => "the classic rules, with the burning attack",
         Hero::Krillin => "taps throw destructo discs that cut saibamen, meteors and orbs",
         Hero::Piccolo => "meditates: idle builds focus, taps and his beam spend it",
         Hero::Goten => "born super saiyan: forms come early but don't hold; taps cheer him back up",
@@ -948,7 +1099,7 @@ pub fn hero_style(h: Hero) -> &'static str {
 /// The angels' rules as the menu shows them, in `ANGELS` order: (name, what).
 pub const ANGEL_TEXT: [(&str, &str); 8] = [
     ("divine seeds", "ki seeds grow with power^0.55, not its square root"),
-    ("born golden", "every ascension starts at super saiyan"),
+    ("born golden", "every ascension starts in your first form"),
     ("whis' staff", "whis' training is always on at beerus' planet"),
     ("self-ascension", "ascends on its own at the power you pick"),
     ("vados' notes", "ascending keeps a tenth of every upgrade"),

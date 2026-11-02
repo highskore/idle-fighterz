@@ -94,27 +94,32 @@ impl Game {
                 self.ach(id);
             }
         }
+        let charge;
         let note = match u {
             Upg::Partner if first => "bubbles wants to train with you",
             Upg::Galick if first && self.s.hero == Hero::Tien => "hold anywhere to charge the kikoho: at a villain it stakes a fifth of your power",
             Upg::Galick if first && self.s.hero == Hero::Piccolo => "hold anywhere to charge the special beam cannon: it spends his focus",
             Upg::Galick if first => {
-                if self.kame() {
-                    "hold anywhere to charge a kamehameha"
-                } else {
-                    "hold anywhere to charge a galick gun"
-                }
+                charge = format!("hold anywhere to charge a {}", hero_beam(self.s.hero).0);
+                &charge
             }
             Upg::House => "a new capsule house lands",
             Upg::Piccolo if first => self.helper().arrives(),
             Upg::Chamber if first => "the time chamber door will appear — tap it",
             Upg::Kaio if first && self.s.hero == Hero::A17 => "infinite energy — hit the button to pin your overclock at the top",
-            Upg::Kaio if first => "kaioken unlocked — hit the red button",
-            Upg::Bigbang if first => "big bang attack — double-tap anywhere",
+            Upg::Kaio if first => {
+                charge = format!("{} unlocked — hit the {} button", self.boost(), hero_boost(self.s.hero).short);
+                &charge
+            }
+            Upg::Bigbang if first => {
+                charge = format!("{} — double-tap anywhere", hero_blast(self.s.hero));
+                &charge
+            }
             Upg::Itx if first => "instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you've been",
             Upg::Armor if first && self.s.hero == Hero::Piccolo => "weighted cape on — hit villains harder",
             Upg::Armor if first && self.s.hero == Hero::Krillin => "turtle shell on — hit villains harder",
-            Upg::Armor if first && self.s.hero == Hero::Tien => "crane robes on — hit villains harder",
+            Upg::Armor if first && self.s.hero == Hero::Tien => "crane gi on — hit villains harder",
+            Upg::Armor if first && self.s.hero == Hero::A17 => "ranger vest on — hit villains harder",
             Upg::Armor if first => "saiyan armor on — hit villains harder",
             _ => "",
         };

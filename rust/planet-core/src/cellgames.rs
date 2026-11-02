@@ -8,6 +8,7 @@
 //! slowly. Nothing else big starts meanwhile (no saga boss, universe fight, tournament, movie, storm or trip).
 //! planet-render draws it from `Tl::cg`; the words go in the usual toasts.
 
+use crate::data::Hero;
 use crate::game::Game;
 use crate::geom::{add, norm, V3};
 use crate::hud::Cue;
@@ -180,7 +181,8 @@ impl Game {
                     .collect();
                 let g = self.tl.cg.as_mut().unwrap();
                 (g.ph, g.t0, g.jrs, g.next_jr) = (CgPh::Jrs, t, jrs, t + CG_JR_FIRST);
-                self.event_ms("cell: \"meet my children!\" — tap the cell jr.s (gohan takes them on too)", 3200.0);
+                let msg = format!("cell: \"meet my children!\" — tap the cell jr.s ({} take them on too)", self.cg_helper().0);
+                self.event_ms(msg, 3200.0);
                 self.cue(Cue::Sfx("boss"));
             }
             CgPh::Jrs => {
@@ -200,7 +202,8 @@ impl Game {
                     let at = (b.x, b.y, b.k);
                     let g = self.tl.cg.as_mut().unwrap();
                     (g.ph, g.t0, g.at, g.p) = (CgPh::Boom, t, at, 0.5);
-                    self.after(1.0, Later::Event("cell swells up to self-destruct! beam it back — tap, or fire (gohan pushes too)".into(), 3500.0));
+                    let msg = format!("cell swells up to self-destruct! beam it back — tap, or fire ({} pushes too)", self.cg_helper().1);
+                    self.after(1.0, Later::Event(msg, 3500.0));
                     self.cue(Cue::Sfx("boss"));
                 }
                 Some(b) if b.fled => {
@@ -259,6 +262,16 @@ impl Game {
         self.turn_to(ring, [0.0, 0.5, 0.87], 1f64.min(dt * 1.2));
     }
 
+    /// Who fights the Cell Games beside you, as the lines name them (jr.s, the push, wearing him down, the finish):
+    /// gohan, or for gohan himself the z fighters and goku's spirit; the father-son kamehameha is goku's and gohan's.
+    fn cg_helper(&self) -> (&'static str, &'static str, &'static str, &'static str) {
+        match self.s.hero {
+            Hero::Gohan => ("the z fighters", "goku's spirit", "the z fighters wear", "father-son kamehameha!"),
+            Hero::Goku => ("you and gohan", "gohan", "gohan wears", "father-son kamehameha!"),
+            _ => ("you and gohan", "gohan", "gohan wears", "you and gohan beam it back!"),
+        }
+    }
+
     /// A Cell Jr. goes down: Gohan's, or a tap's (that pays).
     fn jr_down(&mut self, i: usize, gohan: bool) {
         let t = self.t;
@@ -284,7 +297,7 @@ impl Game {
         let id = self.tl.boss_ids;
         let g = self.tl.cg.as_mut().unwrap();
         (g.ph, g.t0, g.boss) = (CgPh::Cell, t, id);
-        self.event_ms("perfect cell steps into the ring — tap him (gohan wears him down too)", 3200.0);
+        self.event_ms(format!("perfect cell steps into the ring — tap him ({} him down too)", self.cg_helper().2), 3200.0);
         self.cue(Cue::Sfx("boss"));
     }
 
@@ -298,7 +311,7 @@ impl Game {
             self.gain_at(prize, at.0, at.1 - 30.0, true);
             self.b.champ_until = t + CG_X_S;
             let p = fmt_short(js_round(prize));
-            self.event_ms(format!("father-son kamehameha! cell is gone for good — champion ×{CG_X} for {CG_X_S}s, +{p}"), 4000.0);
+            self.event_ms(format!("{} cell is gone for good — champion ×{CG_X} for {CG_X_S}s, +{p}", self.cg_helper().3), 4000.0);
             self.cue(Cue::Fx("star"));
             self.victory();
         } else {

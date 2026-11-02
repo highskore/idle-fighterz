@@ -7,7 +7,7 @@
 //! `Boss::mech`; anything with words goes in the usual toast.
 
 use crate::big::Big;
-use crate::data::{Hero, Upg};
+use crate::data::Upg;
 use crate::game::Game;
 use crate::geom::{ap, mul};
 use crate::hud::Cue;
@@ -180,7 +180,7 @@ impl Game {
         if self.s.lv(Upg::Piccolo) > 0 {
             v.push(Ally::Piccolo);
         }
-        if self.s.krillin_ally && self.s.hero != Hero::Krillin && self.tl.kril.is_none() && !self.tl.date.as_ref().is_some_and(|d| d.kr) {
+        if self.krillin_helps() && self.tl.kril.is_none() && !self.tl.date.as_ref().is_some_and(|d| d.kr) {
             v.push(Ally::Krillin);
         }
         v

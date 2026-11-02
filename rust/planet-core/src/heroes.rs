@@ -234,18 +234,39 @@ impl Game {
     /// The shop's names for the upgrades the hero has his own of.
     pub fn own_label(&self, u: Upg) -> Option<&'static str> {
         Some(match (self.s.hero, u) {
-            (Hero::Goku | Hero::Gohan | Hero::Krillin, Upg::Galick) => "kamehameha",
-            (Hero::Piccolo, Upg::Galick) => "special beam cannon",
+            (Hero::Vegeta, Upg::Galick) => return None,
+            (h, Upg::Galick) => crate::data::hero_beam(h).0,
+            (h, Upg::Kaio) => crate::data::hero_boost(h).name,
+            (h, Upg::Bigbang) => crate::data::hero_blast(h),
             (Hero::Piccolo, Upg::Armor) => "weighted cape",
             (Hero::Krillin, Upg::Armor) => "turtle shell",
-            (Hero::Tien, Upg::Galick) => "kikoho",
-            (Hero::Tien, Upg::Armor) => "crane robes",
-            (Hero::A17, Upg::Galick) => "power blitz",
-            (Hero::A17, Upg::Kaio) => "infinite energy",
-            (Hero::A17, Upg::Bigbang) => "barrier burst",
+            (Hero::Tien, Upg::Armor) => "crane gi",
+            (Hero::A17, Upg::Armor) => "ranger vest",
             (_, Upg::Piccolo) => self.helper().name(),
             _ => return None,
         })
+    }
+
+    /// An achievement's name as this hero would say it: the full-power beam's and the boost's are his own.
+    pub fn ach_name(&self, id: &str, name: &'static str) -> String {
+        match id {
+            "flash" => format!("{}!", crate::data::hero_beam(self.s.hero).1),
+            "kaioken" => self.boost().into(),
+            _ => name.into(),
+        }
+    }
+
+    /// What earns an achievement, in this hero's words.
+    pub fn ach_text(&self, id: &str, text: &'static str) -> String {
+        match id {
+            "kaioken" => format!("use {}", self.boost()),
+            _ => text.into(),
+        }
+    }
+
+    /// The hero's boost (the kaioken upgrade) by his own name.
+    pub fn boost(&self) -> &'static str {
+        crate::data::hero_boost(self.s.hero).name
     }
 
     /// Tien's kikoho riding on the villain, if there is one.

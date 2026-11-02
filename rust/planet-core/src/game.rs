@@ -460,7 +460,12 @@ impl Game {
             * (1.0 + 0.5 * self.lvl(N_IDLE))
             * if self.wished(WishBuff::Idle) { 3.0 } else { 1.0 }
             * if self.lvl(N_ETERNAL) > 0.0 { 3.0 } else { 1.0 }
-            * if s.krillin_ally { 1.5 } else { 1.0 }
+            * if self.krillin_helps() { 1.5 } else { 1.0 }
+    }
+
+    /// Krillin as your ally (wished back, and not the hero you're playing).
+    pub fn krillin_helps(&self) -> bool {
+        self.s.krillin_ally && self.s.hero != Hero::Krillin
     }
 
     /// Power a second, buffs included: what the HUD shows.
@@ -534,6 +539,7 @@ impl Game {
         let Some(&(id, name, _)) = ACH.iter().find(|a| a.0 == id) else { return };
         self.s.ach.insert(id);
         self.s.ach_at.insert(id, self.now_ms());
+        let name = self.ach_name(id, name);
         let unlocks: String = CHARS.iter().filter(|c| c.3 == Need::Ach(id)).map(|c| format!(" · {} unlocked", c.2)).collect();
         self.after(0.9, crate::timeline::Later::Event(format!("achievement — {name}{unlocks}"), 3200.0));
         self.cue(Cue::Sfx("coin"));
@@ -628,10 +634,11 @@ impl Game {
             if f >= 1 && self.s.hero.saiyan() {
                 self.ach("ss");
             }
-            if f >= UI_FORM && self.s.hero.saiyan() {
+            // by the power marks, not the form number (goten's forms come at half)
+            if f >= UI_FORM && self.s.hero.saiyan() && self.s.run_best.max(self.s.pl) >= ALL_FORMS[UI_FORM].1 {
                 self.ach("ui");
             }
-            if f >= MUI_FORM {
+            if f >= MUI_FORM && self.forms[f].at >= LATE_AT {
                 self.ach("mui");
             }
             if self.forms[f].lb > 0 {
@@ -821,10 +828,10 @@ impl Game {
         self.b.kaio_ready = self.t + 45.0;
         self.shake = 0.5;
         self.flash_t = 0.4;
-        let msg = format!("kaioken! ×{}", self.kaio_x());
+        let msg = format!("{}! ×{}", self.boost(), self.kaio_x());
         self.event(msg);
         let (x, y) = self.hand_pos();
-        self.burst_at(x, y, &[0xffffff, 0xff9a8a, 0xe0332b], 40, 200.0);
+        self.burst_at(x, y, &hero_boost(self.s.hero).spark, 40, 200.0);
     }
 
     fn branch_pts(&self, b: Branch) -> u32 {
@@ -1207,6 +1214,11 @@ impl Game {
         let hero_id: Option<String> = hash.find(key("hero-")).map(|i| hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect());
         let rest = hero_id.as_ref().map_or_else(|| hash.to_string(), |id| hash.replacen(&format!("hero-{id}"), "", 1));
         let hash = rest.as_str();
+        // the hero first, so a hook like `#form7` reads his ladder
+        if let Some(c) = hero_id.and_then(|id| CHARS.iter().find(|c| c.1 == id)) {
+            self.s.hero = c.0;
+            self.forms = ladder_of(c.0, self.s.limits);
+        }
         let has = |k: &str| hash.contains(key(k));
         let num = |k: &str| -> Option<usize> {
             let i = hash.find(key(k))? + k.len();
@@ -1350,9 +1362,6 @@ impl Game {
         }
         if has("vegeta") {
             trip(self, 2e6, 1);
-        }
-        if let Some(c) = hero_id.and_then(|id| CHARS.iter().find(|c| c.1 == id)) {
-            self.s.hero = c.0;
         }
         if has("snake") {
             trip(self, 3e6, 2);
