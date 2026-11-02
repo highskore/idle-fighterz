@@ -1646,7 +1646,7 @@ impl Game {
                 let hp = Big::from(400.0).max(self.wrate() * 18.0);
                 let name = if vname == "vegeta" && self.s.hero == Hero::Vegeta { "past vegeta" } else { vname };
                 self.new_boss(Boss::new(0, name.into(), spr, hp, t, t + 25.0));
-                self.event(format!("{vname} joins the tournament!"));
+                self.event(format!("{name} joins the tournament!"));
             }
             if t > tr.until {
                 let ko = self.tl.tour.as_ref().unwrap().ko;
@@ -1714,11 +1714,17 @@ impl Game {
             self.tl.next_nappa = 0.0;
             let hp = Big::from(800.0).max(self.wrate() * 50.0);
             self.new_boss(Boss::new(0, "nappa".into(), NAPPA, hp, t, t + 35.0));
-            self.event("nappa: \"vegeta, let me handle this!\" — tap him");
+            // playing vegeta, nappa's own prince is the one he faces
+            self.event(if self.s.hero == Hero::Vegeta {
+                "nappa: \"vegeta?! you'd side with them?\" — tap him"
+            } else {
+                "nappa: \"vegeta, let me handle this!\" — tap him"
+            });
         }
         // ultra instinct (or the end of the sagas) opens the multiverse
         let sagas = VILLAINS.len() as u32;
-        if !self.s.multi && (self.s.saga >= sagas || self.held_form() >= UI_FORM) {
+        // the form he holds must sit at ultra instinct's mark (goten's forms come early, at half the marks)
+        if !self.s.multi && (self.s.saga >= sagas || self.forms[self.held_form()].at >= ALL_FORMS[UI_FORM].1) {
             self.s.multi = true;
             self.s.multi_t = session;
             self.tl.next_boss = self.tl.next_boss.min(20.0);
@@ -1917,7 +1923,7 @@ impl Game {
                 let (x, y) = self.hand_pos();
                 self.tl.kis.push(Ki { x, y, t0: t, m: None, disc: false, done: false });
             }
-            if self.s.krillin_ally && !buu {
+            if self.s.krillin_ally && self.s.hero != Hero::Krillin && !buu {
                 if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go) {
                     let nd = b.next_disc.unwrap_or(2.0) - dt;
                     b.next_disc = Some(nd);
@@ -2442,7 +2448,9 @@ impl Game {
         self.shake = 0.5;
         let (x, y) = self.hand_pos();
         self.burst_at(x, y, &[0xffffff, 0xdfe6e8, 0x9adada], 40, 220.0);
-        let msg = if w == 2 && !self.s.hero.saiyan() {
+        let msg = if w == 8 && self.s.hero == Hero::A17 {
+            "a time machine drops you in trunks' future — the city is in ruins, and this world's 18 is still out there"
+        } else if w == 2 && !self.s.hero.saiyan() {
             "a space pod takes you to planet vegeta for 45 seconds — the saiyans' homeworld, and nappa's"
         } else {
             TRAVEL[w as usize]

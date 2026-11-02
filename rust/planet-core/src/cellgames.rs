@@ -180,7 +180,11 @@ impl Game {
                     .collect();
                 let g = self.tl.cg.as_mut().unwrap();
                 (g.ph, g.t0, g.jrs, g.next_jr) = (CgPh::Jrs, t, jrs, t + CG_JR_FIRST);
-                self.event_ms("cell: \"meet my children!\" — tap the cell jr.s (gohan takes them on too)", 3200.0);
+                let msg = format!(
+                    "cell: \"meet my children!\" — tap the cell jr.s ({} take them on too)",
+                    if self.s.hero == crate::data::Hero::Gohan { "the z fighters" } else { "you and gohan" }
+                );
+                self.event_ms(msg, 3200.0);
                 self.cue(Cue::Sfx("boss"));
             }
             CgPh::Jrs => {
@@ -200,7 +204,8 @@ impl Game {
                     let at = (b.x, b.y, b.k);
                     let g = self.tl.cg.as_mut().unwrap();
                     (g.ph, g.t0, g.at, g.p) = (CgPh::Boom, t, at, 0.5);
-                    self.after(1.0, Later::Event("cell swells up to self-destruct! beam it back — tap, or fire (gohan pushes too)".into(), 3500.0));
+                    let who = if self.s.hero == crate::data::Hero::Gohan { "goku's spirit" } else { "gohan" };
+                    self.after(1.0, Later::Event(format!("cell swells up to self-destruct! beam it back — tap, or fire ({who} pushes too)"), 3500.0));
                     self.cue(Cue::Sfx("boss"));
                 }
                 Some(b) if b.fled => {
@@ -284,7 +289,8 @@ impl Game {
         let id = self.tl.boss_ids;
         let g = self.tl.cg.as_mut().unwrap();
         (g.ph, g.t0, g.boss) = (CgPh::Cell, t, id);
-        self.event_ms("perfect cell steps into the ring — tap him (gohan wears him down too)", 3200.0);
+        let who = if self.s.hero == crate::data::Hero::Gohan { "the z fighters wear" } else { "gohan wears" };
+        self.event_ms(format!("perfect cell steps into the ring — tap him ({who} him down too)"), 3200.0);
         self.cue(Cue::Sfx("boss"));
     }
 
@@ -298,7 +304,13 @@ impl Game {
             self.gain_at(prize, at.0, at.1 - 30.0, true);
             self.b.champ_until = t + CG_X_S;
             let p = fmt_short(js_round(prize));
-            self.event_ms(format!("father-son kamehameha! cell is gone for good — champion ×{CG_X} for {CG_X_S}s, +{p}"), 4000.0);
+            // the father-son kamehameha is goku's and gohan's; anyone else beams it back with gohan
+            let fin = if matches!(self.s.hero, crate::data::Hero::Gohan | crate::data::Hero::Goku) {
+                "father-son kamehameha!"
+            } else {
+                "you and gohan beam it back!"
+            };
+            self.event_ms(format!("{fin} cell is gone for good — champion ×{CG_X} for {CG_X_S}s, +{p}"), 4000.0);
             self.cue(Cue::Fx("star"));
             self.victory();
         } else {

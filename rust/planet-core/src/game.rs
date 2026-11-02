@@ -460,7 +460,7 @@ impl Game {
             * (1.0 + 0.5 * self.lvl(N_IDLE))
             * if self.wished(WishBuff::Idle) { 3.0 } else { 1.0 }
             * if self.lvl(N_ETERNAL) > 0.0 { 3.0 } else { 1.0 }
-            * if s.krillin_ally { 1.5 } else { 1.0 }
+            * if s.krillin_ally && s.hero != Hero::Krillin { 1.5 } else { 1.0 }
     }
 
     /// Power a second, buffs included: what the HUD shows.
@@ -1207,6 +1207,11 @@ impl Game {
         let hero_id: Option<String> = hash.find(key("hero-")).map(|i| hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect());
         let rest = hero_id.as_ref().map_or_else(|| hash.to_string(), |id| hash.replacen(&format!("hero-{id}"), "", 1));
         let hash = rest.as_str();
+        // the hero first, so a hook like `#form7` reads his ladder
+        if let Some(c) = hero_id.and_then(|id| CHARS.iter().find(|c| c.1 == id)) {
+            self.s.hero = c.0;
+            self.forms = ladder_of(c.0, self.s.limits);
+        }
         let has = |k: &str| hash.contains(key(k));
         let num = |k: &str| -> Option<usize> {
             let i = hash.find(key(k))? + k.len();
@@ -1350,9 +1355,6 @@ impl Game {
         }
         if has("vegeta") {
             trip(self, 2e6, 1);
-        }
-        if let Some(c) = hero_id.and_then(|id| CHARS.iter().find(|c| c.1 == id)) {
-            self.s.hero = c.0;
         }
         if has("snake") {
             trip(self, 3e6, 2);

@@ -419,7 +419,7 @@ impl Game {
             if s.ascend != 0.0 { format!("ki seeds ×{}", fixed1(self.seed_boost())) } else { String::new() },
             if s.god_total > 0 { format!("god ki {} · ×{}", s.godki, fmt_short(self.god_boost_of(s.god_total as f64))) } else { String::new() },
             if s.zeno > 0 { format!("zeno's favour ×{}", fmt_short(Big::from(ZENO_X).pow(s.zeno as f64))) } else { String::new() },
-            if s.krillin_ally { "krillin: idle ×1.5".into() } else { String::new() },
+            if s.krillin_ally && s.hero != Hero::Krillin { "krillin: idle ×1.5".into() } else { String::new() },
         ];
         parts.into_iter().filter(|p| !p.is_empty()).collect::<Vec<_>>().join(" · ")
     }
@@ -845,6 +845,12 @@ impl Game {
         }
         self.forms = ladder_of(h, self.s.limits);
         self.s.form = self.s.form.min(self.forms.len() - 1);
+        // his ladder's marks aren't the last hero's: down to the form his power holds (born golden's first form
+        // stays); a higher one he holds the power for comes as anyone's does
+        let floor = if self.ang(crate::data::A_GOLDEN) { 1 } else { 0 };
+        while self.s.form > floor && self.s.pl < self.forms[self.s.form].at {
+            self.s.form -= 1;
+        }
         true
     }
 

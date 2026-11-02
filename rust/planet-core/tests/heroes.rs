@@ -301,3 +301,51 @@ fn only_saiyans_transform_on_the_full_moon() {
     assert!(g.pick_hero("a17"));
     assert!(g.b.ape_until <= g.t);
 }
+
+#[test]
+fn switching_heroes_keeps_only_the_form_your_power_holds() {
+    let mut g = Game::new(7);
+    g.preview("#hero-goten");
+    g.start();
+    g.s.beaten.insert("kid buu".into());
+    // goten's marks come at half: his third form on power that's short of vegeta's third
+    g.s.form = 3;
+    g.s.pl = (g.forms[3].at * 1.1).into();
+    assert!(g.s.pl.to_f64() < ladder_of(Hero::Vegeta, 0)[3].at);
+    assert!(g.pick_hero("vegeta"));
+    assert!(g.s.form < 3, "no free form for vegeta: {}", g.s.form);
+    assert!(g.s.pl.to_f64() >= g.forms[g.s.form].at, "the form his power holds");
+}
+
+#[test]
+fn krillins_ally_bonus_isnt_his_own() {
+    let mut g = Game::new(7);
+    g.start();
+    g.debug_set("partner", 3.0);
+    g.s.krillin_ally = true;
+    let with = g.passive().to_f64();
+    assert!(with > 0.0);
+    g.s.hero = Hero::Krillin;
+    assert!(g.passive().to_f64() < with, "no ×1.5 from himself");
+}
+
+#[test]
+fn goten_opens_the_multiverse_at_ultra_instincts_power_not_its_form_number() {
+    let mut g = Game::new(7);
+    g.preview("#hero-goten");
+    g.start();
+    let ui = planet_core::data::UI_FORM;
+    g.s.form = ui;
+    g.s.pl = (g.forms[ui].at * 1.01).into();
+    for _ in 0..30 {
+        step(&mut g);
+    }
+    assert!(!g.s.multi, "half the mark isn't ultra instinct's");
+}
+
+#[test]
+fn a_form_hook_reads_the_heros_own_ladder() {
+    let mut g = Game::new(7);
+    g.preview("#hero-goten#form3");
+    assert!(g.s.pl.to_f64() < ladder_of(Hero::Vegeta, 0)[3].at, "goten's third mark, not vegeta's");
+}
