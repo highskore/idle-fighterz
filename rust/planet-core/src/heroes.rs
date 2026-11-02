@@ -227,8 +227,8 @@ impl Game {
         Some(match (self.s.hero, u) {
             (Hero::Vegeta, Upg::Galick) => return None,
             (h, Upg::Galick) => crate::data::hero_beam(h).0,
-            (h, Upg::Kaio) => crate::data::hero_moves(h).0,
-            (h, Upg::Bigbang) => crate::data::hero_moves(h).1,
+            (h, Upg::Kaio) => crate::data::hero_boost(h).name,
+            (h, Upg::Bigbang) => crate::data::hero_blast(h),
             (Hero::Piccolo, Upg::Piccolo) => "kid gohan",
             (Hero::Piccolo, Upg::Armor) => "weighted cape",
             (Hero::Krillin, Upg::Armor) => "turtle shell",
@@ -255,9 +255,9 @@ impl Game {
         }
     }
 
-    /// The hero's boost: the kaioken upgrade's red button, by his own name.
+    /// The hero's boost (the kaioken upgrade) by his own name.
     pub fn boost(&self) -> &'static str {
-        crate::data::hero_moves(self.s.hero).0
+        crate::data::hero_boost(self.s.hero).name
     }
 
     /// Tien's kikoho riding on the villain, if there is one.

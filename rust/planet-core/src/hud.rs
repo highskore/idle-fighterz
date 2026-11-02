@@ -71,9 +71,7 @@ pub struct Hud {
     pub goal_text: &'static str,
     pub goal_p: f64,
     pub goal_n: f64,
-    /// the boost button's name: the hero's own kaioken
-    pub kaio_name: &'static str,
-    /// and its look: the button's short label and colours
+    /// the boost button: the hero's own kaioken, its name, short label and colours
     pub kaio_look: Boost,
     pub kaio_own: bool,
     pub kaio_ready: bool,
@@ -115,7 +113,7 @@ impl Hud {
             .raw("kaio", {
                 let (k, hex) = (&self.kaio_look, |c: u32| format!("#{c:06x}"));
                 Obj::new()
-                    .str("name", self.kaio_name)
+                    .str("name", k.name)
                     .str("short", k.short)
                     .str("fill", &hex(k.fill))
                     .str("pale", &hex(k.pale))
@@ -453,7 +451,6 @@ impl Game {
             goal_text: g.text,
             goal_p: s.goal_p.min(g.n),
             goal_n: g.n,
-            kaio_name: self.boost(),
             kaio_look: hero_boost(s.hero),
             kaio_own: s.lv(Upg::Kaio) > 0,
             kaio_ready: t >= self.b.kaio_ready,

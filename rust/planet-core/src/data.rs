@@ -67,7 +67,7 @@ pub const SHOP: [ShopItem; 15] = [
     ShopItem { key: "senzu", base: 4000.0, k: 2.2, label: "senzu tree", what: "beans: tap for ×1.5" },
     ShopItem { key: "house", base: 6000.0, k: 2.3, label: "capsule house", what: "+40/s (a new dome up to lv 9)" },
     ShopItem { key: "armor", base: 12000.0, k: 2.4, label: "saiyan armor", what: "+50% vs villains & saibamen" },
-    ShopItem { key: "kaio", base: 20000.0, k: 2.6, label: "kaioken", what: "red button: big boost, then tired" },
+    ShopItem { key: "kaio", base: 20000.0, k: 2.6, label: "kaioken", what: "boost button: big boost, then tired" },
     ShopItem { key: "bigbang", base: 60000.0, k: 2.5, label: "big bang attack", what: "double-tap: an exploding ki ball" },
     ShopItem { key: "piccolo", base: 30000.0, k: 2.4, label: "piccolo", what: "+60/s, zaps meteors" },
     ShopItem { key: "chamber", base: 150000.0, k: 2.8, label: "time chamber", what: "a door appears: train ×2 for 15s inside" },
@@ -854,27 +854,27 @@ pub fn hero_beam(h: Hero) -> (&'static str, &'static str) {
     }
 }
 
-/// Each hero's boost (the kaioken upgrade's red button) and blast (the big bang's double-tap), as the game names them.
-pub fn hero_moves(h: Hero) -> (&'static str, &'static str) {
+/// Each hero's blast (the big bang upgrade's double-tap), as the game names it.
+pub fn hero_blast(h: Hero) -> &'static str {
     match h {
-        Hero::Vegeta => ("majin power", "big bang attack"),
-        Hero::Goku => ("kaioken", "dragon fist"),
-        Hero::Gohan => ("potential unleashed", "masenko"),
-        Hero::Trunks => ("burning rage", "finish buster"),
-        // "max power" is his giant mode and "weights off" piccolo's first form
-        Hero::Krillin => ("full power", "scattering bullet"),
-        Hero::Piccolo => ("cape off", "hellzone grenade"),
-        Hero::A17 => ("infinite energy", "barrier burst"),
-        Hero::Tien => ("kiai", "dodon ray"),
-        Hero::Goten => ("tantrum", "jan ken"),
+        Hero::Vegeta => "big bang attack",
+        Hero::Goku => "dragon fist",
+        Hero::Gohan => "masenko",
+        Hero::Trunks => "finish buster",
+        Hero::Krillin => "scattering bullet",
+        Hero::Piccolo => "hellzone grenade",
+        Hero::A17 => "barrier burst",
+        Hero::Tien => "dodon ray",
+        Hero::Goten => "jan ken",
     }
 }
 
-/// A hero's boost as the button and his aura show it: the button's short label, fill, pale fill while recharging and
-/// ink; the colour his sprite is washed toward, the rim (pulse up, down), the flames (tip to base) and their embers;
+/// A hero's boost (the kaioken upgrade's button): its name, the button's short label, fill, pale fill while
+/// recharging and ink; the colour his sprite is washed toward, the rim (pulse up, down), the flames (tip to base) and their embers;
 /// the sparks (white, light, deep); and the beam and blast while it's on (ball, glow, mid, edge).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Boost {
+    pub name: &'static str,
     pub short: &'static str,
     pub fill: u32,
     pub pale: u32,
@@ -892,6 +892,7 @@ pub struct Boost {
 
 /// The kaioken's red.
 const RED: Boost = Boost {
+    name: "kaioken",
     short: "kaioken",
     fill: 0xe0332b,
     pale: 0xf1b9b4,
@@ -906,10 +907,11 @@ const RED: Boost = Boost {
     mid: 0xffc8bf,
     edge: 0xc8201a,
 };
-/// The plain white aura, rimmed in a cool grey so it reads on the pale worlds.
+/// The plain white aura, rimmed in a cool grey so it reads on the pale worlds; its button is silver so the meter shows.
 const WHITE: Boost = Boost {
+    name: "",
     short: "",
-    fill: 0xe6eaf0,
+    fill: 0xc8d2e0,
     pale: 0xf2f4f7,
     ink: 0x2a2f3a,
     wash: 0xffffff,
@@ -924,6 +926,7 @@ const WHITE: Boost = Boost {
 };
 /// Super saiyan gold.
 const GOLD: Boost = Boost {
+    name: "",
     short: "",
     fill: 0xf5c518,
     pale: 0xf8e3a0,
@@ -940,6 +943,7 @@ const GOLD: Boost = Boost {
 };
 /// Super saiyan rage's electric blue.
 const BLUE: Boost = Boost {
+    name: "",
     short: "",
     fill: 0x2a5cf0,
     pale: 0xbccbf8,
@@ -956,6 +960,7 @@ const BLUE: Boost = Boost {
 };
 /// Android 17's barrier green.
 const GREEN: Boost = Boost {
+    name: "",
     short: "",
     fill: 0x1fa855,
     pale: 0xb4e4c4,
@@ -974,15 +979,17 @@ const GREEN: Boost = Boost {
 /// Each hero's boost look: canon colours where the show has one, his plain aura otherwise.
 pub fn hero_boost(h: Hero) -> Boost {
     match h {
-        Hero::Vegeta => Boost { short: "majin", ..GOLD },
+        Hero::Vegeta => Boost { name: "majin power", short: "majin", ..GOLD },
         Hero::Goku => RED,
-        Hero::Gohan => Boost { short: "unleash", ..WHITE },
-        Hero::Trunks => Boost { short: "rage", ..BLUE },
-        Hero::Krillin => Boost { short: "power", ..WHITE },
-        Hero::Piccolo => Boost { short: "cape off", ..WHITE },
-        Hero::A17 => Boost { short: "infinite", ..GREEN },
-        Hero::Tien => Boost { short: "kiai", ..WHITE },
-        Hero::Goten => Boost { short: "tantrum", ..GOLD },
+        Hero::Gohan => Boost { name: "potential unleashed", short: "unleash", ..WHITE },
+        Hero::Trunks => Boost { name: "burning rage", short: "rage", ..BLUE },
+        // "max power" is his giant mode and "weights off" piccolo's first form
+        Hero::Krillin => Boost { name: "full power", short: "power", ..WHITE },
+        Hero::Piccolo => Boost { name: "cape off", short: "cape off", ..WHITE },
+        // "infinite" is one of his forms
+        Hero::A17 => Boost { name: "infinite energy", short: "energy", ..GREEN },
+        Hero::Tien => Boost { name: "kiai", short: "kiai", ..WHITE },
+        Hero::Goten => Boost { name: "tantrum", short: "tantrum", ..GOLD },
     }
 }
 

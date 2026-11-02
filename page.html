@@ -155,21 +155,20 @@ html.touch .shop.bulky .bulk { display: flex; }
 @media (prefers-reduced-motion: reduce) { .s-arcade span, .s-arcade i { animation: none; } }
 @keyframes blinkS { 60% { opacity: 0; } }
 /* kaioken: a red button once it's bought; it counts down while recharging */
-.kaio { position: absolute; right: 18px; bottom: 18px; z-index: 3; font: inherit; text-transform: uppercase; letter-spacing: .06em; color: #fff; background: #e0332b; border: 0; border-radius: 999px; padding: 7px 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(224, 51, 43, .35), inset 0 1px 0 rgba(255,255,255,.3); transition: transform .12s, background .2s; }
+.kaio { position: absolute; right: 18px; bottom: 18px; z-index: 3; font: inherit; text-transform: uppercase; letter-spacing: .06em; color: var(--ki, #fff); background: var(--kc); border: 0; border-radius: 999px; padding: 7px 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(224, 51, 43, .35), inset 0 1px 0 rgba(255,255,255,.3); transition: transform .12s, background .2s; }
 .kaio:hover:not(:disabled) { transform: translateY(-1px); }
 .kaio:active:not(:disabled) { transform: translateY(1px); }
-.kaio:disabled { background: #f1b9b4; box-shadow: none; cursor: default; }
+.kaio:disabled { background: var(--kp); box-shadow: none; cursor: default; }
 .kaio[hidden], .game:not(.playing) .kaio, .game.wishing .kaio { display: none; }
 /* instant transmission: a blue button above kaioken once it's bought; it counts down after a jump */
-.kaio.itxb { bottom: 58px; background: #2f8ae0; } .kaio.itxb:disabled { background: #b8d6f4; }
+.kaio.itxb { bottom: 58px; }
 .wish.itxp { display: grid; grid-template-columns: 1fr 1fr; width: min(420px, 92%); } .wish.itxp p, .wish.itxp .stay { grid-column: 1 / -1; } .wish.itxp button { padding: 8px 12px; } .wish .stay { align-items: center; color: var(--muted); }   /* the picker: two columns of worlds */
 /* the "ki meter" buttons (a setting, the gear's): a recharging button fills left to right in its own colour
    over today's pale, instead of counting down */
 @property --f { syntax: '<percentage>'; inherits: false; initial-value: 100%; }
 .kaio { --kc: #e0332b; --kp: #f1b9b4; } .kaio.itxb { --kc: #2f8ae0; --kp: #b8d6f4; }
-/* the boost button in the hero's own colours (the engine sets --kc, --kp, --ki; --kr rings a pale fill) */
-#kaio { color: var(--ki, #fff); background: var(--kc); box-shadow: 0 0 0 1px var(--kr, transparent), 0 4px 12px color-mix(in srgb, var(--kc) 35%, transparent), inset 0 1px 0 rgba(255,255,255,.3); }
-html:not([data-kibtn="meter"]) #kaio:disabled { background: var(--kp); } #kaio:disabled { box-shadow: 0 0 0 1px var(--kr, transparent); }
+/* the boost button in the hero's own colours: the engine sets --kc, --kp, --ki, and --kr rings a pale fill */
+#kaio { box-shadow: 0 0 0 1px var(--kr, transparent), 0 4px 12px color-mix(in srgb, var(--kc) 35%, transparent), inset 0 1px 0 rgba(255,255,255,.3); } #kaio:disabled { box-shadow: 0 0 0 1px var(--kr, transparent); }
 html[data-kibtn="meter"] .kaio:disabled { background: linear-gradient(to right, var(--kc) var(--f), var(--kp) var(--f)); transition: --f 1s linear, transform .12s; }
 html[data-kibtn="meter"] .kaio small { font-size: 1em; opacity: .8; margin-left: 6px; font-variant-numeric: tabular-nums; }
 html[data-kibtn="meter"] .kjump { transition: none !important; }
@@ -652,7 +651,8 @@ __MAIN__(engine => {   // engine: set when the game waits for the Rust engine (l
       const kb = $('kaio'), meter = kiBtns === 'meter'; kb.hidden = !s.kaio.own; kb.disabled = !s.kaio.ready; kiOwned = s.kaio.own || !!(s.itx && s.itx.own); kiName = s.kaio.name || 'kaioken';   // game.js's state has no name, short or colours
       const ks = s.kaio.short || kiName; if (kb.title !== kiName) { kb.title = kiName; kb.setAttribute('aria-label', kiName); }
       if (s.kaio.fill) for (const b of [kb/*widget*/, ...document.querySelectorAll('.w [data-w="kaio"]')/*/widget*/]) if (b.dataset.c !== s.kaio.fill) { b.dataset.c = s.kaio.fill; for (const [v, c] of [['--kc', s.kaio.fill], ['--kp', s.kaio.pale], ['--ki', s.kaio.ink], ['--kr', s.kaio.ink === '#ffffff' ? 'transparent' : s.kaio.ink + '33']]) b.style.setProperty(v, c); }
-      const kt = s.kaio.ready ? ks : narrow.matches ? s.kaio.left + 's' : meter ? `${ks}<small>${s.kaio.left}s</small>` : ks + ' ' + s.kaio.left + 's'; if (kb.dataset.t !== kt) { kb.dataset.t = kt; kb.innerHTML = kt; }
+      const kt = s.kaio.ready ? [ks] : narrow.matches ? [s.kaio.left + 's'] : meter ? [ks, s.kaio.left + 's'] : [ks + ' ' + s.kaio.left + 's'], kk = kt.join('|');
+      if (kb.dataset.t !== kk) { kb.dataset.t = kk; kb.replaceChildren(kt[0], ...kt.slice(1).map(t => Object.assign(document.createElement('small'), { textContent: t }))); }
       kiFill([kb/*widget*/, ...document.querySelectorAll('.w [data-w="kaio"]')/*/widget*/], s.kaio.ready, s.kaio.left);
       if (s.itx) { const ib = $('itxBtn'), name = narrow.matches ? 'IT' : 'transmission', clock = `${Math.floor(s.itx.left / 60)}:${String(s.itx.left % 60).padStart(2, '0')}`; ib.hidden = !s.itx.own; ib.disabled = !s.itx.ready; if (!s.itx.ready) itxShut();
         const it = s.itx.left > 0 ? (narrow.matches ? clock : meter ? `${name}<small>${clock}</small>` : `${name} ${clock}`) : name; if (ib.dataset.t !== it) { ib.dataset.t = it; ib.innerHTML = it; }

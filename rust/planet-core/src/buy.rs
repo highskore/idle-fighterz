@@ -109,11 +109,11 @@ impl Game {
             Upg::Chamber if first => "the time chamber door will appear — tap it",
             Upg::Kaio if first && self.s.hero == Hero::A17 => "infinite energy — hit the button to pin your overclock at the top",
             Upg::Kaio if first => {
-                charge = format!("{} unlocked — hit the red button", self.boost());
+                charge = format!("{} unlocked — hit the {} button", self.boost(), hero_boost(self.s.hero).short);
                 &charge
             }
             Upg::Bigbang if first => {
-                charge = format!("{} — double-tap anywhere", hero_moves(self.s.hero).1);
+                charge = format!("{} — double-tap anywhere", hero_blast(self.s.hero));
                 &charge
             }
             Upg::Itx if first => "instant transmission — tap with two fingers (or right-click), or press its button, to jump to a world you've been",
