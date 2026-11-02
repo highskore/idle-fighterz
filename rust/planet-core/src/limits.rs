@@ -30,8 +30,7 @@ fn ceil_logs() -> &'static [f64; 3] {
     L.get_or_init(|| [log10(CEIL0), log10(CEIL_STEP), log10(CEIL_T)])
 }
 
-/// The next milestone, worked out once per milestone: which one it is, log10 of its power, its named index, and how
-/// the HUD prints its power.
+/// The next milestone, worked out once per milestone: which one it is, log10 of its power and its named index.
 /// The ceiling as last worked out: the creep (its bits), the best universe and the limits, and the ceiling.
 pub type CeilMemo = ((u64, u32, u32), Big);
 
@@ -42,7 +41,6 @@ pub struct NextMile {
     /// its power (compared every frame: cheaper than a log)
     need: Big,
     named: Option<u32>,
-    text: String,
 }
 
 /// A limit break: he powers up for `BREAK_UP`s, the world freezes and cracks, then the colour floods back.
@@ -366,7 +364,7 @@ impl Game {
         if m.i != Some(self.s.mile) {
             let (at, named) = milestone(self.s.mile);
             let need = Big::exp10(at);
-            *m = NextMile { i: Some(self.s.mile), at, need, named, text: crate::num::fmt_short(need) };
+            *m = NextMile { i: Some(self.s.mile), at, need, named };
         }
         f(&m)
     }
@@ -376,10 +374,9 @@ impl Game {
         self.mo.as_ref().is_some_and(|m| matches!(m.kind, Kind::Break(_)))
     }
 
-    /// The HUD's standing line: the limit and its strain, or the limits broken; and the next milestone.
+    /// The HUD's standing line: the limit and its strain, or the limits broken.
     pub fn limit_line(&self) -> String {
-        let next = if self.s.o9k { self.milestone_next(|m| format!("next: {}", m.text)) } else { String::new() };
-        let head = if self.at_limit() {
+        if self.at_limit() {
             let n = self.s.limits + 1;
             let pct = (self.s.meter / self.break_need() * 100.0).floor().min(99.0);
             format!("ki limit {} ({}) — strain {pct}%", roman_static(n), crate::num::fmt_short(Big::exp10(Self::limit_log(n))))
@@ -393,11 +390,6 @@ impl Game {
             }
         } else {
             String::new()
-        };
-        match (head.is_empty(), next.is_empty()) {
-            (true, _) => next,
-            (false, true) => head,
-            (false, false) => format!("{head} · {next}"),
         }
     }
 }
