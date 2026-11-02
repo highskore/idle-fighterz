@@ -520,7 +520,7 @@ impl Game {
             (Upg::Armor, _) => "+50% vs villains",
             (Upg::Kaio, _) => "big boost button",
             (Upg::Bigbang, _) => "double-tap blast",
-            (Upg::Piccolo, _) => "+60/s, meditates",
+            (Upg::Piccolo, _) => "+60/s, keeps watch",
             (Upg::Chamber, _) => "train ×2 inside",
             (Upg::Tail, _) => "great ape +×0.25",
             (Upg::Itx, _) => "jump to worlds",

@@ -247,7 +247,7 @@ impl Game {
                         self.cue(Cue::Sfx("coin"));
                         let what = match x {
                             Target::Bubbles => "bubbles",
-                            Target::Piccolo => "piccolo",
+                            Target::Piccolo => self.ally_name(crate::mech::Ally::Piccolo),
                             Target::House(_) => "a house",
                             Target::Tree(_) => "a tree",
                             Target::Spot(_) => "a chunk of the floor",

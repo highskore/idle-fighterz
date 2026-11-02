@@ -168,10 +168,11 @@ fn bar(b: &planet_core::timeline::Boss, spr: &Sprite) -> (f64, f64, f64) {
 
 fn ally_sprite(g: &Game, a: Ally, t: f64) -> (&'static Sprite, f64) {
     match a {
-        // playing piccolo, the ally in his place is kid gohan (visitors.rs)
-        Ally::Piccolo if g.s.hero == planet_core::data::Hero::Piccolo => (&sprite::hero("gohan").forms[0].idle, 0.75),
         Ally::Bubbles => (sprite::get(if (t * 14.0).floor() as i64 % 2 == 0 { "MONKEY.0" } else { "MONKEY.1" }), 1.7),
-        Ally::Piccolo => (sprite::get("PICCOLO"), 0.95),
+        Ally::Piccolo => {
+            let d = g.helper().data();
+            (sprite::get(d.sprite), d.scale)
+        }
         Ally::Krillin => (sprite::get("KRILLIN"), 1.0),
     }
 }

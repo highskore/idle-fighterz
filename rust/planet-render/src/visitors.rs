@@ -2,7 +2,7 @@
 //! world's residents, the boss and the ginyu force, ki blasts, in game.js's order. Screen spots are written back.
 
 use planet_core::candy::Target;
-use planet_core::data::Upg;
+use planet_core::data::{Helper, Upg};
 use planet_core::geom::{add, ap, cross, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, sin};
 use planet_core::mech::Ally;
@@ -116,17 +116,16 @@ impl Scene {
                 0.9,
             );
         }
-        // piccolo meditates above the planet
-        if g.s.lv(Upg::Piccolo) > 0 {
+        // the piccolo upgrade's helper waits above the planet
+        if let Some(helper) = g.helper_here().filter(|_| !g.helper_away()) {
             let v = ap(&m, mul(g.frame3.cap_pt(0.6, 0.9), 1.28));
             g.tl.piccolo_at = if v[2] > -0.2 { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
             if let Some((x, y)) = g.tl.piccolo_at.filter(|_| !crate::mech::held(g, Ally::Piccolo) && !g.candied(Target::Piccolo)) {
-                // playing piccolo, his pupil kid gohan meditates in his place
-                if g.s.hero == planet_core::data::Hero::Piccolo {
-                    c.blit_z(&sprite::hero("gohan").forms[0].idle, x, y, 0.0, false, 0.0, v[2] * r + 8.0, 0.75);
-                } else {
-                    c.blit_z(sprite::get("PICCOLO"), x, y, 0.0, false, 0.0, v[2] * r + 8.0, 0.95);
+                let d = helper.data();
+                if let Some(p) = d.perch {
+                    c.blit_z(sprite::get(p.sprite), x, y, 0.0, false, -p.feet, v[2] * r + 9.0, 1.0);
                 }
+                c.blit_z(sprite::get(d.sprite), x, y, 0.0, false, 0.0, v[2] * r + 8.0, d.scale);
             }
         } else {
             g.tl.piccolo_at = None;
@@ -215,7 +214,10 @@ impl Scene {
                 if v[2] > 0.05 {
                     c.blit_z(sprite::get("KAMEHOUSE"), cx + v[0] * r, cy - v[1] * r + bob, atan2(v[0], v[1]), false, 0.0, v[2] * r + 6.0, 1.0);
                 }
-                Self::npc(c, sprite::get("ROSHI"), roshi, (t / 3.0).floor() as i64 % 2 == 0, 0.95);
+                // not twice: goku's helper is roshi
+                if g.helper_here() != Some(Helper::Roshi) {
+                    Self::npc(c, sprite::get("ROSHI"), roshi, (t / 3.0).floor() as i64 % 2 == 0, 0.95);
+                }
             }
         }
         if world == 8 {
@@ -238,7 +240,7 @@ impl Scene {
                 }
             }
             let v = ap(&m, g.frame3.cap_pt(1.3, 3.25));
-            if v[2] > 0.05 {
+            if v[2] > 0.05 && g.helper_here() != Some(Helper::FutureGohan) {
                 c.blit_z(sprite::get("FUSED.futureGohan"), cx + v[0] * r, cy - v[1] * r + bob, stand_ang(v), false, 0.0, v[2] * r + 6.0, 0.85);
             }
             for p in self.built.smokes.clone() {
@@ -265,7 +267,7 @@ impl Scene {
         }
         if world == 5 {
             let v = ap(&m, g.frame3.cap_pt(0.55, 3.2));
-            if v[2] > 0.05 {
+            if v[2] > 0.05 && g.helper_here() != Some(Helper::Bulma) {
                 c.blit_z(
                     sprite::get("BULMA"),
                     cx + v[0] * r,
@@ -286,11 +288,14 @@ impl Scene {
         if g.tl.bz.is_some() {
             Self::npc(c, sprite::get("NPCS.whis"), whis_at, (t / 3.0).floor() as i64 % 2 == 0, 1.0);
         }
-        if world == 7 {
+        if world == 7 && g.helper_here() != Some(Helper::ChiChi) {
             Self::npc(c, sprite::get("NPCS.chichi"), g.frame3.cap_pt(0.45, 3.2), true, 1.0);
         }
         if world == 6 {
-            Self::npc(c, sprite::get("NPCS.turtle"), g.frame3.cap_pt(0.5, 5.2), false, 1.0);
+            // not twice: goku's helper rides him
+            if g.helper_here() != Some(Helper::Roshi) {
+                Self::npc(c, sprite::get("NPCS.turtle"), g.frame3.cap_pt(0.5, 5.2), false, 1.0);
+            }
             Self::npc(c, sprite::get("NPCS.oolong"), g.frame3.cap_pt(0.62, 4.1), (t / 2.5).floor() as i64 % 2 == 0, 1.0);
         }
         if let Some(bz) = g.tl.bz.clone() {
@@ -850,8 +855,7 @@ impl Scene {
                 let l = hypot(&[dx, dy]);
                 let l = if l == 0.0 { 1.0 } else { l };
                 let (nx, ny) = (-dy / l, dx / l);
-                // piccolo's special beam cannon, or kid gohan's golden masenko in his place
-                let (wave, core) = if g.s.hero == planet_core::data::Hero::Piccolo { (0xffc83a, 0xfff8d0) } else { (0xc89aff, 0xfff6a0) };
+                let (wave, core) = (g.helper().data().wave, g.helper().data().core);
                 let mut d = 0.0;
                 while d < l {
                     let w = sin(d * 0.5) * 2.2;
