@@ -200,29 +200,40 @@ fn god_ki_opens_at_the_same_mark_for_every_hero() {
     // once limit III breaks, a nine-form hero's limit breakers sit at his ninth form's mark: still not god ki
     let mut g = Game::new(7);
     g.start();
-    g.s.hero = Hero::Piccolo;
+    g.s.hero = Hero::Goten;
     g.s.limits = 3;
-    g.forms = ladder_of(Hero::Piccolo, 3);
+    g.forms = ladder_of(Hero::Goten, 3);
     g.s.form = 9;
     g.s.run_best = 1e12.into();
-    assert!(!godki_open(&g), "a limit breaker at 2e11 isn't the saiyans' 2e14");
+    assert!(!godki_open(&g), "a limit breaker at his ninth mark isn't the saiyans' 2e14");
 }
 
 #[test]
 fn mastery_stars_cost_every_hero_at_least_what_goku_pays() {
-    for h in [Hero::Piccolo, Hero::Goku] {
+    let first = |h: Hero| {
         let mut g = Game::new(7);
         g.start();
         g.s.hero = h;
         g.forms = ladder_of(h, 0);
-        g.s.form = g.forms.len() - 1;
-        g.s.pl = 1e17.into();
-        step(&mut g);
-        assert_eq!(g.s.mastery, 0, "{h:?}: no star below 2e17");
-        g.s.pl = 2.1e17.into();
-        step(&mut g);
-        assert_eq!(g.s.mastery, 1, "{h:?}: the first at 2e17");
+        g.mastery_at(0).to_f64()
+    };
+    let goku = first(Hero::Goku);
+    assert_eq!(goku, 2e17, "goku's first star at 2e17");
+    for (_, h, ..) in CHARS.iter().map(|c| (c.1, c.0)) {
+        assert!(first(h) >= goku, "{h:?}: a star costs at least goku's");
     }
+    // and a star comes when the power gets there
+    let mut g = Game::new(7);
+    g.start();
+    g.s.hero = Hero::Goku;
+    g.forms = ladder_of(Hero::Goku, 0);
+    g.s.form = g.forms.len() - 1;
+    g.s.pl = 1e17.into();
+    step(&mut g);
+    assert_eq!(g.s.mastery, 0, "no star below 2e17");
+    g.s.pl = 2.1e17.into();
+    step(&mut g);
+    assert_eq!(g.s.mastery, 1, "the first at 2e17");
 }
 
 #[test]
@@ -252,7 +263,7 @@ fn the_menu_gives_each_hero_his_playstyle_and_form_ladder() {
         assert_eq!(c["form"], 2.0, "{id} shows the form he'd switch in at");
     }
     let piccolo = chars.iter().find(|c| c["id"] == "piccolo").unwrap();
-    assert_eq!(piccolo["forms"][2]["name"], "fused with nail");
+    assert_eq!(piccolo["forms"][2]["name"], "demon king");
     assert_eq!(piccolo["forms"][0]["aura"], "#8ad87a", "a namekian's green aura");
     assert_eq!(chars[0]["forms"][1]["aura"], "#ffe02e", "super saiyan gold");
 }

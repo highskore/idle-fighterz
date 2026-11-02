@@ -178,7 +178,7 @@ pub const LATE_STEP: f64 = 1000.0;
 pub const LATE_AT: f64 = 2e14;
 /// From this limit on, every limit broken is also a form-up.
 pub const LB_FROM: u32 = 3;
-const LATE_X: [f64; 2] = [24.0, 40.0];
+const LATE_X: [f64; 3] = [24.0, 40.0, 64.0];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Hero {
@@ -204,17 +204,9 @@ impl Hero {
 /// The non-Saiyans' names for the shared nine marks. Placeholders until their forms are picked.
 fn own_names(h: Hero) -> Option<[&'static str; 9]> {
     Some(match h {
-        Hero::Piccolo => [
-            "base",
-            "weights off",
-            "fused with nail",
-            "fused with kami",
-            "super namekian",
-            "potential unleashed",
-            "namekian god",
-            "orange piccolo",
-            "orange giant",
-        ],
+        Hero::Piccolo => {
+            ["base", "weights off", "demon king", "super namekian", "namekian warrior", "potential unleashed", "namekian god", "orange piccolo", "orange giant"]
+        }
         Hero::Krillin => [
             "base",
             "unlocked potential",
@@ -255,6 +247,11 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
     };
     // a non-saiyan's own late forms, each with its aura: their looks follow the shared nine in his sprites
     let own_late: &[(&str, [u32; 3])] = match h {
+        Hero::Piccolo => &[
+            ("synced with nail", [0xffffff, 0xd8ffc8, 0x6ae05a]),
+            ("synced with kami", [0xffffff, 0xe8f0ff, 0x3a6ad8]),
+            ("complete namekian", [0xffffff, 0xfff6c0, 0xe8d040]),
+        ],
         Hero::Krillin => &[("solar flare", [0xffffff, 0xfffbe0, 0xffe680]), ("taiyoken sun", [0xffffff, 0xfff8b0, 0xffd60a])],
         Hero::Tien => &[("four witches", [0xffffff, 0xd8ffe0, 0x3aa86a]), ("multi-form", [0xffffff, 0xe8f0ff, 0x8ab0e0])],
         // android 17's marks past the nine: unseen, like all his marks (a17.rs)
@@ -274,6 +271,12 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
     }
     for (j, &(name, aura)) in own_late.iter().enumerate() {
         v.push(Form { name, at: 2e14 * crate::jsmath::pow(LATE_STEP, j as f64), x: LATE_X[j], look: 9 + j, lb: 0, own_aura: Some(aura) });
+    }
+    // piccolo's forms each have their own aura: demon king's dark, the orange forms' orange
+    if h == Hero::Piccolo {
+        v[2].own_aura = Some([0xffffff, 0xc8a8e8, 0x4a2a6a]);
+        v[7].own_aura = Some([0xffffff, 0xffd8a8, 0xf2913a]);
+        v[8].own_aura = Some([0xffffff, 0xffd8a8, 0xf2913a]);
     }
     // android 17 has no forms to look like: every mark wears his base look (his overclock picks his look, a17.rs)
     if h == Hero::A17 {

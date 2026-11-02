@@ -4,7 +4,7 @@
 
 use planet_core::heroes::DISC_FLIGHT;
 use planet_core::jsmath::{cos, sin};
-use planet_core::sprite::{piccolo_seated, Sprite};
+use planet_core::sprite::{piccolo_cape, piccolo_seated, Sprite};
 use planet_core::Game;
 
 use crate::scene::Ctx;
@@ -15,8 +15,13 @@ const CAPE_FULL: f64 = 5.0;
 
 /// Piccolo seated at time `t`, his cape fluttering with his focus.
 pub fn seated(g: &Game, t: f64) -> Sprite {
-    let s = piccolo_seated();
+    // he sits in the look of the form he holds; a look without the cape has nothing to flutter
+    let look = g.forms[g.s.form].look;
+    let s = piccolo_seated(look);
     let mut spr = s.body.clone();
+    if !piccolo_cape(look) {
+        return spr;
+    }
     let amp = CAPE_CALM + (CAPE_FULL - CAPE_CALM) * g.focus();
     let (top, bottom) = s.cape.iter().fold((usize::MAX, 0), |(a, b), p| (a.min(p.0), b.max(p.0)));
     for j in top..=bottom {
