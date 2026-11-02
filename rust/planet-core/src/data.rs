@@ -773,7 +773,7 @@ pub const ACH: [(&str, &str, &str); 87] = [
     ("lap1", "first steps", "run a lap of the planet"),
     ("laps100", "marathon", "run 100 laps"),
     ("ss", "super saiyan", "reach super saiyan, as a saiyan"),
-    ("ui", "ultra instinct", "reach ultra instinct, as a saiyan"),
+    ("ui", "ultra instinct", "reach the ultra instinct mark, as a saiyan"),
     ("o9k", "it's over 9000", "pass 9,000 power"),
     ("villains10", "villain slayer", "beat 10 villains"),
     ("frieza", "emperor down", "beat frieza"),

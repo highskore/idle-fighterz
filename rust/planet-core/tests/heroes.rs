@@ -480,3 +480,35 @@ fn gotens_late_looks_wear_the_right_back_and_size() {
     assert!(h.backs[10][0].col == h.backs[0][0].col, "saiyaman x-2's black hair from behind");
     assert_eq!(sprite::look_scale("goten", 9), sprite::look_scale("goten", 10), "and x-2 no smaller than teen");
 }
+
+#[test]
+fn the_new_looks_are_pinned() {
+    // fnv-1a over each look's frames: a change to one of these sprites must be meant (re-pin it here)
+    let hash = |s: &sprite::HeroSet| {
+        let mut h: u64 = 0xcbf29ce484222325;
+        for f in [&s.idle, &s.pose].into_iter().chain(s.run.iter()) {
+            for &c in f.col.iter().chain([f.w as i32, f.h as i32].iter()) {
+                for b in c.to_le_bytes() {
+                    h = (h ^ b as u64).wrapping_mul(0x100000001b3);
+                }
+            }
+        }
+        h
+    };
+    let got: Vec<(&str, usize, u64)> = PINNED.iter().map(|&(id, l, _)| (id, l, hash(&sprite::hero(id).forms[l]))).collect();
+    let want: Vec<(&str, usize, u64)> = PINNED.to_vec();
+    assert_eq!(got, want);
+}
+
+const PINNED: [(&str, usize, u64); 10] = [
+    ("krillin", 4, 308377157137971859),
+    ("krillin", 6, 211385258944903273),
+    ("gohan", 6, 14414668871699552943),
+    ("gohan", 8, 5877161912288465477),
+    ("trunks", 6, 9381793726799690243),
+    ("trunks", 8, 15445733415866823793),
+    ("goten", 6, 10711715544689707761),
+    ("goten", 8, 6452427703010836745),
+    ("a17", 0, 14323386269816359141),
+    ("a17", 9, 16551402669959112205),
+];
