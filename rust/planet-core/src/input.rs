@@ -51,7 +51,7 @@ pub struct Beam {
     /// a full charge at beam lv 5: the final flash
     pub ff: bool,
     pub full: bool,
-    /// fired under kaioken (drawn red) or as the great ape (drawn 1.5× wider)
+    /// fired under the boost (drawn in its colour) or as the great ape (drawn 1.5× wider)
     pub kaio: bool,
     pub ape: bool,
 }
@@ -75,7 +75,7 @@ pub struct Blast {
     /// drawn 1.6× wider under the great ape (its hit radius doesn't change)
     pub r: f64,
     pub t0: f64,
-    /// under kaioken: drawn red
+    /// under the boost: drawn in its colour
     pub kaio: bool,
 }
 
