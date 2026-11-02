@@ -104,7 +104,7 @@ impl Game {
                 &charge
             }
             Upg::House => "a new capsule house lands",
-            Upg::Piccolo if first => self.helper().arrives(),
+            Upg::Piccolo if first => self.helper().data().arrives,
             Upg::Chamber if first => "the time chamber door will appear — tap it",
             Upg::Kaio if first && self.s.hero == Hero::A17 => "infinite energy — hit the button to pin your overclock at the top",
             Upg::Kaio if first => {

@@ -843,7 +843,7 @@ pub const CHARS: [(Hero, &str, &str, Need); 9] = [
     (Hero::Goten, "goten", "goten", Need::Beat("kid buu")),
 ];
 
-/// Who the piccolo upgrade brings to the planet, by hero: the same +60/s and meteor zaps, his own look and beam.
+/// Who the piccolo upgrade brings to the planet, by hero: the same +60/s and meteor zaps, their own look and beam.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Helper {
     Bulma,
@@ -856,6 +856,32 @@ pub enum Helper {
     Yamcha,
     ChiChi,
 }
+
+/// What a helper rides above the planet, and how far above its bottom row their feet go.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Perch {
+    pub sprite: &'static str,
+    pub feet: f64,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HelperData {
+    pub name: &'static str,
+    /// "him" or "her", for the lines that name them
+    pub pronoun: &'static str,
+    /// the toast when the first one is bought
+    pub arrives: &'static str,
+    /// their zap at a meteor (the default is the gohans' masenko)
+    pub wave: u32,
+    pub core: u32,
+    pub burst: u32,
+    pub sprite: &'static str,
+    pub scale: f64,
+    pub perch: Option<Perch>,
+}
+
+const HIM: HelperData =
+    HelperData { name: "", pronoun: "him", arrives: "", wave: 0xffc83a, core: 0xfff8d0, burst: 0xffc83a, sprite: "", scale: 0.95, perch: None };
 
 impl Helper {
     pub fn of(h: Hero) -> Helper {
@@ -872,48 +898,76 @@ impl Helper {
         }
     }
 
-    pub fn name(self) -> &'static str {
+    pub fn data(self) -> HelperData {
         match self {
-            Helper::Bulma => "bulma",
-            Helper::Roshi => "master roshi",
-            Helper::Piccolo => "piccolo",
-            Helper::FutureGohan => "future gohan",
-            Helper::A18 => "android 18",
-            Helper::KidGohan => "kid gohan",
-            Helper::A16 => "android 16",
-            Helper::Yamcha => "yamcha",
-            Helper::ChiChi => "chi-chi",
-        }
-    }
-
-    /// The toast when the first one is bought.
-    pub fn arrives(self) -> &'static str {
-        match self {
-            Helper::Bulma => "bulma parks her hover-bike above the planet",
-            Helper::Roshi => "master roshi rides in on turtle to keep watch",
-            Helper::Piccolo => "piccolo lands to meditate",
-            Helper::FutureGohan => "future gohan lands to meditate",
-            Helper::A18 => "android 18 drops in to keep an eye on him",
-            Helper::KidGohan => "kid gohan lands to meditate",
-            Helper::A16 => "android 16 lands to watch the birds",
-            Helper::Yamcha => "yamcha lands — the saibamen had better stay away",
-            Helper::ChiChi => "chi-chi rides in on the flying nimbus — homework first",
-        }
-    }
-
-    /// His zap at a meteor: (wave, core, the burst's colour). Bulma's capsule blaster, roshi's kamehameha, piccolo's
-    /// special beam cannon, the gohans' masenko, 18's energy blast, 16's hell flash, yamcha's spirit ball, chi-chi's
-    /// tiara blade.
-    pub fn beam(self) -> (u32, u32, u32) {
-        match self {
-            Helper::Bulma => (0x5ad8ff, 0xffffff, 0x5ad8ff),
-            Helper::Roshi => (0x5ab0ff, 0xe8f6ff, 0x5ab0ff),
-            Helper::Piccolo => (0xc89aff, 0xfff6a0, 0x9a6ad8),
-            Helper::FutureGohan | Helper::KidGohan => (0xffc83a, 0xfff8d0, 0xffc83a),
-            Helper::A18 => (0x9ae0ff, 0xffffff, 0x9ae0ff),
-            Helper::A16 => (0xff6030, 0xffe0a0, 0xff6030),
-            Helper::Yamcha => (0xfff27a, 0xffffff, 0xfff27a),
-            Helper::ChiChi => (0xff7aa8, 0xffe0ec, 0xff7aa8),
+            Helper::Bulma => HelperData {
+                name: "bulma",
+                pronoun: "her",
+                arrives: "bulma parks her hover-bike above the planet",
+                wave: 0x5ad8ff,
+                core: 0xffffff,
+                burst: 0x5ad8ff,
+                sprite: "BULMA",
+                scale: 1.0,
+                perch: Some(Perch { sprite: "ALLY.hoverbike", feet: 2.0 }),
+            },
+            Helper::Roshi => HelperData {
+                name: "master roshi",
+                arrives: "master roshi rides in on turtle to keep watch",
+                wave: 0x5ab0ff,
+                core: 0xe8f6ff,
+                burst: 0x5ab0ff,
+                sprite: "ROSHI",
+                perch: Some(Perch { sprite: "ALLY.umigame", feet: 11.0 }),
+                ..HIM
+            },
+            Helper::Piccolo => {
+                HelperData { name: "piccolo", arrives: "piccolo lands to meditate", wave: 0xc89aff, core: 0xfff6a0, burst: 0x9a6ad8, sprite: "PICCOLO", ..HIM }
+            }
+            Helper::FutureGohan => {
+                HelperData { name: "future gohan", arrives: "future gohan lands to meditate", sprite: "FUSED.futureGohan", scale: 0.85, ..HIM }
+            }
+            Helper::A18 => HelperData {
+                name: "android 18",
+                pronoun: "her",
+                arrives: "android 18 drops in to keep an eye on him",
+                wave: 0x9ae0ff,
+                core: 0xffffff,
+                burst: 0x9ae0ff,
+                sprite: "A18",
+                scale: 1.0,
+                perch: None,
+            },
+            Helper::KidGohan => HelperData { name: "kid gohan", arrives: "kid gohan lands to meditate", sprite: "ALLY.kidGohan", scale: 0.75, ..HIM },
+            Helper::A16 => HelperData {
+                name: "android 16",
+                arrives: "android 16 lands to watch the birds",
+                wave: 0xff6030,
+                core: 0xffe0a0,
+                burst: 0xff6030,
+                sprite: "A16",
+                ..HIM
+            },
+            Helper::Yamcha => HelperData {
+                name: "yamcha",
+                arrives: "yamcha lands — the saibamen had better stay away",
+                wave: 0xfff27a,
+                core: 0xffffff,
+                burst: 0xfff27a,
+                sprite: "ALLY.yamcha",
+                ..HIM
+            },
+            Helper::ChiChi => HelperData {
+                name: "chi-chi",
+                pronoun: "her",
+                arrives: "chi-chi rides in on the flying nimbus — homework first",
+                wave: 0xff7aa8,
+                core: 0xffe0ec,
+                burst: 0xff7aa8,
+                sprite: "NPCS.chichi",
+                scale: 1.0,
+                perch: Some(Perch { sprite: "puff", feet: 7.0 }),
+            },
         }
     }
 }

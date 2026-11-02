@@ -117,17 +117,15 @@ impl Scene {
             );
         }
         // the piccolo upgrade's helper waits above the planet
-        if let Some(helper) = g.helper_here() {
+        if let Some(helper) = g.helper_here().filter(|_| !g.helper_away()) {
             let v = ap(&m, mul(g.frame3.cap_pt(0.6, 0.9), 1.28));
-            // 17's helper 16 is away while he raids with 18 (no zaps meanwhile)
-            let away = helper == Helper::A16 && g.tl.ginyu.as_ref().is_some_and(|gi| gi.androids);
-            g.tl.piccolo_at = if v[2] > -0.2 && !away { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
+            g.tl.piccolo_at = if v[2] > -0.2 { Some((cx + v[0] * r, cy - v[1] * r + bob + sin(t * 1.6) * 2.0)) } else { None };
             if let Some((x, y)) = g.tl.piccolo_at.filter(|_| !crate::mech::held(g, Ally::Piccolo) && !g.candied(Target::Piccolo)) {
-                let (spr, k, perch) = crate::mech::helper_look(helper);
-                if let Some((p, pk, deck)) = perch {
-                    c.blit_z(p, x, y, 0.0, false, -deck * pk, v[2] * r + 9.0, pk);
+                let d = helper.data();
+                if let Some(p) = d.perch {
+                    c.blit_z(sprite::get(p.sprite), x, y, 0.0, false, -p.feet, v[2] * r + 9.0, 1.0);
                 }
-                c.blit_z(spr, x, y, 0.0, false, 0.0, v[2] * r + 8.0, k);
+                c.blit_z(sprite::get(d.sprite), x, y, 0.0, false, 0.0, v[2] * r + 8.0, d.scale);
             }
         } else {
             g.tl.piccolo_at = None;
@@ -857,7 +855,7 @@ impl Scene {
                 let l = hypot(&[dx, dy]);
                 let l = if l == 0.0 { 1.0 } else { l };
                 let (nx, ny) = (-dy / l, dx / l);
-                let (wave, core, _) = g.helper().beam();
+                let (wave, core) = (g.helper().data().wave, g.helper().data().core);
                 let mut d = 0.0;
                 while d < l {
                     let w = sin(d * 0.5) * 2.2;

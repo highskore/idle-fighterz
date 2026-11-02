@@ -798,13 +798,13 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
     })
 }
 
-/// Where bubbles' fused overlay goes wrong on a hero, recoloured: an orange gi swallows the orange vest (the vest
-/// takes his fur brown instead), and on piccolo the fur tone would turn the cape tan (it stays white; the turban's
-/// stripe takes the fur, for the hair streaks he doesn't have).
+/// Bubbles' fused fur, where the default overlay would vanish into an orange gi or turn piccolo's cape tan.
 fn refur(id: &str, set: &mut HeroSet) {
+    const FUR: i32 = 0x8a5a36;
+    const FUR_DARK: i32 = 0x5e3a20;
     let swap: &[(i32, i32)] = match id {
-        "goku" | "goten" | "krillin" => &[(0xf28a1c, 0x8a5a36), (0xc0601a, 0x5e3a20)],
-        "piccolo" => &[(0xf0c9a0, 0xf4f4f6), (0x7a4ab0, 0x8a5a36), (0x4e2c78, 0x5e3a20)],
+        "goku" | "goten" | "krillin" => &[(0xf28a1c, FUR), (0xc0601a, FUR_DARK)],
+        "piccolo" => &[(0xf0c9a0, 0xf4f4f6), (0x7a4ab0, FUR), (0x4e2c78, FUR_DARK)],
         _ => return,
     };
     for s in [&mut set.pose, &mut set.idle].into_iter().chain(set.run.iter_mut()) {

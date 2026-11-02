@@ -1045,6 +1045,13 @@ impl Game {
                 }
             }
         }
+        // the helper doesn't also drop by as themselves, even mid-visit (just bought, or the hero switched)
+        match self.helper_here() {
+            Some(Helper::Roshi) => self.tl.roshi = None,
+            Some(Helper::A16) => self.tl.a16 = None,
+            Some(Helper::Yamcha) => self.tl.yam = None,
+            _ => {}
+        }
         // master roshi, unless he's already here as goku's helper
         if self.tl.roshi.is_none()
             && self.s.world != 6
@@ -1293,7 +1300,7 @@ impl Game {
             }
         }
         // yamcha
-        if self.tl.yam.is_none() && session > 100.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_yam, dt) {
+        if self.tl.yam.is_none() && self.helper_here() != Some(Helper::Yamcha) && session > 100.0 && self.tl.shen.is_none() && tick(&mut self.tl.next_yam, dt) {
             let c = self.rand_cap(0.3, 0.6);
             self.tl.yam = Some(Yamcha { c, boom: t + 2.4, until: t + 16.0, helped: false, sx: None });
             self.event("a saibaman jumps on yamcha…");
@@ -1460,18 +1467,18 @@ impl Game {
         if self.tl.door.as_ref().is_some_and(|d| t > d.until) {
             self.tl.door = None;
         }
-        // piccolo zaps a meteor
+        // the helper zaps a meteor
         if self.s.lv(Upg::Piccolo) > 0 && tick(&mut self.tl.next_zap, dt) {
             self.tl.next_zap = 0.6f64.max(5.0 / (1.0 + 0.35 * (self.s.lvf(Upg::Piccolo) - 1.0)));
             let m = self.tl.meteors.iter().position(|m| !m.dead && m.delay <= 0.0);
-            if let (Some(i), Some((px, py))) = (m, self.tl.piccolo_at) {
+            if let (Some(i), Some((px, py)), false) = (m, self.tl.piccolo_at, self.helper_away()) {
                 let (mx, my) = (self.tl.meteors[i].x, self.tl.meteors[i].y);
                 self.tl.zap = Some((px, py - 8.0, mx, my, t));
                 self.tl.meteors[i].dead = true;
                 self.goal("meteor", 1.0, false);
                 let n = self.meteor_pay();
                 self.gain_at(n, mx, my - 6.0, true);
-                let burst = self.helper().beam().2;
+                let burst = self.helper().data().burst;
                 self.burst_at(mx, my, &[0xffffff, 0xfff08a, burst], 12, 90.0);
                 self.cue(Cue::Sfx("beam"));
             }
@@ -3325,7 +3332,7 @@ impl Game {
             self.cue(Cue::Sfx("buy"));
             return;
         }
-        if self.s.world == 7 && t > self.tl.chi_ready && npc_hit(self, self.cap_pt(0.45, 3.2), 12.0) {
+        if self.s.world == 7 && self.helper_here() != Some(Helper::ChiChi) && t > self.tl.chi_ready && npc_hit(self, self.cap_pt(0.45, 3.2), 12.0) {
             self.tl.chi_ready = t + 40.0;
             self.b.chi_until = t + 15.0;
             self.shake = 0.4;
@@ -3333,9 +3340,10 @@ impl Game {
             self.cue(Cue::Sfx("hit"));
             return;
         }
-        if self.s.world == 6 && t > self.tl.kame_ready && (npc_hit(self, self.cap_pt(0.5, 5.2), 14.0) || npc_hit(self, self.cap_pt(0.62, 4.1), 12.0)) {
+        // umigame isn't on the beach while goku's helper rides him
+        let turtle = self.s.world == 6 && self.helper_here() != Some(Helper::Roshi) && npc_hit(self, self.cap_pt(0.5, 5.2), 14.0);
+        if self.s.world == 6 && t > self.tl.kame_ready && (turtle || npc_hit(self, self.cap_pt(0.62, 4.1), 12.0)) {
             self.tl.kame_ready = t + 30.0;
-            let turtle = npc_hit(self, self.cap_pt(0.5, 5.2), 14.0);
             let g = Big::from(200.0).max(self.rate() * if turtle { 15.0 } else { 30.0 });
             self.gain_at(g, px, py - 10.0, true);
             let p = fmt_short(js_round(g));
