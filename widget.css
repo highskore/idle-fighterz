@@ -3,6 +3,8 @@
 html.widget, html.widget body { background: transparent !important; overflow: hidden; }
 /* window mode (html.windowed, a setting): an opaque rounded card with the site's skies, no edge feather */
 .widget.windowed #game { inset: 0; border: 1px solid rgba(0,0,0,.14); border-radius: 14px; background-color: #fcfcfb; }
+/* King Kai's planet (body.home) gets a pink sky in the widget only, the site keeps its white */
+.widget.windowed body.home:not(.night) #game { background-image: linear-gradient(#fde2eb, #f3b3c9 75%); }
 .widget .brand, .widget .foot, .widget .cue, .widget .rule, .widget .tabbar, .widget .menu-btn, .widget .mbtn, .widget .hint, .widget .intro, .widget .edge, .widget .hud, .widget .pair { display: none !important; }
 .widget .scroller { height: auto; }
 .widget .page { position: fixed; inset: 0; height: auto; min-height: 0; padding: 0; gap: 0; }
