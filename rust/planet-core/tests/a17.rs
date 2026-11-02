@@ -231,3 +231,22 @@ fn the_afk_rule_over_whole_runs() {
         assert!(act >= 2.0 && act <= cap, "playing him earns at least 2× his idle, no more than vegeta does: ×{act} (cap ×{cap})");
     }
 }
+
+#[test]
+fn he_has_his_own_head_and_his_overclock_looks_wear_it() {
+    use planet_core::sprite::{get, hero, A17_HEAD, TRUNKS_HEAD};
+    assert_ne!(A17_HEAD, TRUNKS_HEAD, "not trunks' haircut");
+    let outline = |c: &[i32]| c.iter().map(|&v| v >= 0).collect::<Vec<_>>();
+    let s = hero("a17");
+    assert_ne!(outline(&s.forms[0].idle.col), outline(&hero("trunks").forms[0].idle.col), "his outline isn't trunks'");
+    // the overclock looks are his base look with the overload drawn around it
+    let base = &s.forms[0].idle;
+    for l in [9, 10] {
+        let o = &s.forms[l].idle;
+        let hair = (0..base.h).flat_map(|j| (0..base.w).map(move |i| (i, j))).filter(|&(i, j)| base.col[j * base.w + i] == 0x1a1826);
+        assert!(hair.clone().count() > 40, "long black hair");
+        assert!(hair.filter(|&(i, j)| o.col[(j + 4) * o.w + i + 4] == 0x1a1826).count() > 40, "look {l} wears his hair");
+    }
+    assert_ne!(s.forms[9].idle.col, s.forms[10].idle.col, "core overload and redline differ");
+    assert!(get("FUSED.android35").col.contains(&0xf2d36b), "android 35's blonde half");
+}

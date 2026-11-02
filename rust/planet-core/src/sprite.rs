@@ -451,6 +451,64 @@ pub const TIEN_HEAD: [&str; 16] = [
     ".....ooSSoo.....",
 ];
 
+/// Krillin with his black hair grown out (after Cell).
+pub const KRILLIN_HAIR: [&str; 16] = [
+    "................",
+    "................",
+    "......o.o.o.....",
+    ".....ohohoho....",
+    "....ohhhhhhhoo..",
+    "...ohhhhhhhhhho.",
+    "...ohhHhhhHhhho.",
+    "...ohhhhhhhhhho.",
+    "...ohhshhhshhSo.",
+    "...ossssssssSo..",
+    "...osEEssEEsSo..",
+    "..oosrEEsEErsoo.",
+    "...ossssssssSo..",
+    "...oSsssMMsSo...",
+    "....oSsssSo.....",
+    ".....ooSSoo.....",
+];
+/// Krillin the police officer (Super): his cap (`n`, badge `v`) over his dotted head.
+pub const KRILLIN_CAP: [&str; 16] = [
+    "................",
+    "................",
+    "......oooo......",
+    "....oonnnnoo....",
+    "...onnnnnvnno...",
+    "...onnnnnnnnno..",
+    "...oooooooooooo.",
+    "...osKsKsKssSo..",
+    "...ossssssssSo..",
+    "...ossssssssSo..",
+    "...osEEssEEsSo..",
+    "..oosrEEsEErsoo.",
+    "...ossssssssSo..",
+    "...oSsssMMsSo...",
+    "....oSsssSo.....",
+    ".....ooSSoo.....",
+];
+/// Android 17: straight black hair to his shoulders, parted in the middle.
+pub const A17_HEAD: [&str; 16] = [
+    "................",
+    "................",
+    "......oooooo....",
+    ".....ohhhhhhoo..",
+    "....ohhhhhHhhho.",
+    "...ohhhhhhHhhhho",
+    "...ohhhhhosohhho",
+    "..ohhhhhossssoho",
+    "..ohhhhossssssho",
+    "..ohhhossssssSho",
+    "..ohhhsEEssEEsho",
+    "..ohhhsrEEsrEsho",
+    "..ohhhssssssSsho",
+    "..ohhhSssMMsSoho",
+    "..ohhhoSsssSohho",
+    "...ooo.ooSSooo..",
+];
+
 type Rows = Vec<Vec<u8>>;
 
 fn rows(r: &[&str]) -> Rows {
@@ -739,57 +797,13 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
                     true,
                 ),
             ),
-            (
-                "gohan",
-                make_hero(
-                    &GOHAN_HEAD,
-                    &[
-                        ('y', 0x6a3aa8),
-                        ('Y', 0x45227a),
-                        ('a', 0x6a3aa8),
-                        ('A', 0x45227a),
-                        ('b', 0x6a3aa8),
-                        ('B', 0x45227a),
-                        ('g', 0xd8323a),
-                        ('G', 0x962028),
-                        ('u', 0xd8323a),
-                        ('p', 0x6a3aa8),
-                        ('P', 0x45227a),
-                        ('w', 0x7a4a2a),
-                        ('W', 0x553018),
-                    ],
-                    true,
-                ),
-            ),
-            (
-                "trunks",
-                make_hero(
-                    &TRUNKS_HEAD,
-                    &[
-                        ('h', 0xb8a0e8),
-                        ('H', 0xe2d4ff),
-                        ('y', 0x26346e),
-                        ('Y', 0x16204a),
-                        ('a', 0x26346e),
-                        ('A', 0x16204a),
-                        ('b', 0x1a1a22),
-                        ('B', 0x0c0c12),
-                        ('g', 0xf6c8a2),
-                        ('G', 0xd99a73),
-                        ('u', 0x8a5a2a),
-                        ('p', 0x6a6e7a),
-                        ('P', 0x4a4e58),
-                        ('w', 0xf2c84a),
-                        ('W', 0xc49a24),
-                    ],
-                    true,
-                ),
-            ),
+            ("gohan", gohan()),
+            ("trunks", trunks()),
             ("piccolo", piccolo()),
-            ("krillin", with_late(make_plain(&KRILLIN_HEAD, &KRILLIN_HEAD, KRI, false), &krillin_late())),
-            ("goten", with_late_backs(make_hero(&GOKU_HEAD, GOT, true), &goten_late(), &[1, 0])),
+            ("krillin", krillin()),
+            ("goten", goten()),
             ("tien", with_late(make_plain(&TIEN_HEAD, &TIEN_HEAD, TIE, false), &tien_late())),
-            ("a17", with_late(make_plain(&TRUNKS_HEAD, &TRUNKS_HEAD, SEV, true), &a17_looks())),
+            ("a17", with_late(make_plain(&A17_HEAD, &A17_HEAD, SEV, true), &a17_looks())),
         ];
         for (id, hero) in h.iter_mut() {
             refur(id, &mut hero.fused);
@@ -898,12 +912,14 @@ pub fn hero_scale(id: &str) -> f64 {
     }
 }
 
-/// How much bigger a look of his is drawn: orange piccolo is bigger, the orange giant huge, complete namekian a little.
+/// How much bigger a look of his is drawn: orange piccolo is bigger, the orange giant huge, complete namekian and
+/// trunks' third grade a little.
 pub fn look_scale(id: &str, look: usize) -> f64 {
     match (id, look) {
         ("piccolo", 7) => 1.3,
         ("piccolo", 8) => 2.0,
         ("piccolo", 11) => 1.15,
+        ("trunks", 6) => 1.15,
         ("goten", 9 | 10) => 1.2,
         _ => 1.0,
     }
@@ -963,6 +979,40 @@ const KRI: &[(char, u32)] = &[
     ('W', 0x1c3584),
 ];
 
+/// Gohan's colours: his purple gi with the red sash and wristbands (Piccolo's style), brown shoes.
+const GOHAN: &[(char, u32)] = &[
+    ('y', 0x6a3aa8),
+    ('Y', 0x45227a),
+    ('a', 0x6a3aa8),
+    ('A', 0x45227a),
+    ('b', 0x6a3aa8),
+    ('B', 0x45227a),
+    ('g', 0xd8323a),
+    ('G', 0x962028),
+    ('u', 0xd8323a),
+    ('p', 0x6a3aa8),
+    ('P', 0x45227a),
+    ('w', 0x7a4a2a),
+    ('W', 0x553018),
+];
+/// Future trunks' colours: lavender hair, the navy jacket over a black shirt, grey trousers, yellow boots.
+const TRUNKS: &[(char, u32)] = &[
+    ('h', 0xb8a0e8),
+    ('H', 0xe2d4ff),
+    ('y', 0x26346e),
+    ('Y', 0x16204a),
+    ('a', 0x26346e),
+    ('A', 0x16204a),
+    ('b', 0x1a1a22),
+    ('B', 0x0c0c12),
+    ('g', 0xf6c8a2),
+    ('G', 0xd99a73),
+    ('u', 0x8a5a2a),
+    ('p', 0x6a6e7a),
+    ('P', 0x4a4e58),
+    ('w', 0xf2c84a),
+    ('W', 0xc49a24),
+];
 /// Goten's colours: goku's orange gi over a blue undershirt, blue wristbands and boots.
 const GOT: &[(char, u32)] = &[
     ('y', 0xe0641c),
@@ -1253,14 +1303,14 @@ fn a17_looks() -> [HeroSet; 2] {
         "........................",
         "........................",
     ];
-    let core = set_of(&TRUNKS_HEAD, &layers(&[SEV, &[('E', 0x2ec8e8)]]));
-    let red = set_of(&TRUNKS_HEAD, &layers(&[SEV, &[('E', 0xe02828), ('H', 0x9a2a3a), ('s', 0xf8c0a8), ('S', 0xe0907a), ('g', 0xf8c0a8), ('G', 0xe0907a)]]));
+    let core = set_of(&A17_HEAD, &layers(&[SEV, &[('E', 0x2ec8e8)]]));
+    let red = set_of(&A17_HEAD, &layers(&[SEV, &[('E', 0xe02828), ('H', 0x9a2a3a), ('s', 0xf8c0a8), ('S', 0xe0907a), ('g', 0xf8c0a8), ('G', 0xe0907a)]]));
     [stamp(&core, 4, 4, 4, &CRACKLE, &[('L', 0x2ec8e8), ('l', 0xc8f8ff)]), stamp(&red, 4, 4, 4, &HEAT, &[('L', 0xe02828), ('l', 0xffb0a0)])]
 }
 
 /// Android 35: 17 and 18 fused, his hair grown out half black and half her blonde, in the vest.
 fn android35() -> Sprite {
-    let head: Vec<String> = TRUNKS_HEAD
+    let head: Vec<String> = A17_HEAD
         .iter()
         .map(|r| {
             r.char_indices()
@@ -1376,6 +1426,43 @@ const PIC: &[(char, u32)] = &[
     ('Q', 0xc2c6d2),
 ];
 
+/// Ki sparking off a hero, for `stamp` with two columns each side and two rows on top.
+const SPARK: [&str; 14] = [
+    "....l..........l....",
+    ".....l........l.....",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    "....................",
+    ".l................l.",
+    "lL................Ll",
+    ".l................l.",
+    "....................",
+    "....................",
+    ".l................l.",
+    "lL................Ll",
+];
+/// Ki flaring up off a hero, for `stamp` with two columns each side and four rows on top.
+const FLAME: [&str; 16] = [
+    "....l....l....l.....",
+    "...lL...lL...lL.....",
+    "..lL...lL...lL......",
+    "..L...lL...lL...l...",
+    ".lL..lL....L...lL...",
+    ".L...L.........L....",
+    ".L...............L..",
+    ".Ll..............lL.",
+    "..L...............L.",
+    ".lL..............Ll.",
+    ".L................L.",
+    ".Ll..............lL.",
+    "..L..............L..",
+    ".lL..............Ll.",
+    ".L................L.",
+    "....................",
+];
+
 /// Piccolo: a look for every form. Base wears the turban and cape; weights off drops both (canon: they're weighted);
 /// demon king darkens his gi and reddens his eyes; super namekian keeps the cape with ki sparking off him; namekian
 /// warrior fights bare-chested; potential unleashed turns his skin yellow-green (canon, Super Hero); namekian god
@@ -1384,40 +1471,6 @@ const PIC: &[(char, u32)] = &[
 /// him; synced with kami, the turban and cape back on over kami's indigo vest and white robe; complete namekian, the
 /// turban gold-banded, gold ki flaring off him, drawn a little bigger.
 fn piccolo() -> Hero {
-    const SPARK: [&str; 14] = [
-        "....l..........l....",
-        ".....l........l.....",
-        "....................",
-        "....................",
-        "....................",
-        "....................",
-        "....................",
-        ".l................l.",
-        "lL................Ll",
-        ".l................l.",
-        "....................",
-        "....................",
-        ".l................l.",
-        "lL................Ll",
-    ];
-    const FLAME: [&str; 16] = [
-        "....l....l....l.....",
-        "...lL...lL...lL.....",
-        "..lL...lL...lL......",
-        "..L...lL...lL...l...",
-        ".lL..lL....L...lL...",
-        ".L...L.........L....",
-        ".L...............L..",
-        ".Ll..............lL.",
-        "..L...............L.",
-        ".lL..............Ll.",
-        ".L................L.",
-        ".Ll..............lL.",
-        "..L..............L..",
-        ".lL..............Ll.",
-        ".L................L.",
-        "....................",
-    ];
     let mut h = make_plain_with(&PICCOLO_HEAD, &PICCOLO_BARE, PIC, Opt { cape: true, ..Opt::default() });
     for (i, &(turban, cape, p)) in PIC_LOOKS.iter().enumerate().skip(1) {
         let head: &[&str] = if turban { &PICCOLO_HEAD } else { &PICCOLO_BARE };
@@ -1467,6 +1520,152 @@ fn piccohan() -> Sprite {
     set_of(&head, &layers(&[META, &[('s', 0x5bb043), ('S', 0x3c7f2e), ('h', 0x1a1826), ('H', 0x4a5080), ('M', 0x24401c)]])).idle
 }
 
+/// Krillin's undershirt: the orange gi over a blue short-sleeved shirt (canon from the Cell arc on).
+const UNDER: &[(char, u32)] = &[('c', 0x2b4fc8), ('C', 0x1c3584)];
+/// Each of krillin's looks (by form look index): his head, the gi (false: Saiyan battle armour), sleeves, and his
+/// colours over `KRI`.
+type KriLook = (&'static [&'static str; 16], bool, bool, &'static [(char, u32)]);
+const KRI_LOOKS: [KriLook; 9] = [
+    (&KRILLIN_HEAD, true, false, &[]),
+    (&KRILLIN_HEAD, true, true, UNDER),
+    (
+        &KRILLIN_HEAD,
+        false,
+        false,
+        &[('y', 0xe8c040), ('Y', 0xa8841a), ('a', 0xf4f4f6), ('A', 0xc2c6d2), ('g', 0xffffff), ('G', 0xc8ccda), ('w', 0xffffff), ('W', 0xc8ccda)],
+    ),
+    (&KRILLIN_HAIR, true, true, UNDER),
+    (&KRILLIN_HAIR, true, true, UNDER),
+    (&KRILLIN_HAIR, true, false, &[]),
+    (
+        &KRILLIN_CAP,
+        true,
+        true,
+        &[
+            ('n', 0x26346e),
+            ('v', 0xf2c84a),
+            ('y', 0x3a5aa0),
+            ('Y', 0x26407a),
+            ('a', 0x3a5aa0),
+            ('A', 0x26407a),
+            ('c', 0x3a5aa0),
+            ('C', 0x26407a),
+            ('g', 0xf6c8a2),
+            ('G', 0xd99a73),
+            ('u', 0x22222a),
+            ('p', 0x26346e),
+            ('P', 0x1a2460),
+            ('w', 0x22222a),
+            ('W', 0x111118),
+        ],
+    ),
+    (&KRILLIN_HEAD, true, true, UNDER),
+    (&KRILLIN_HEAD, true, true, &[('c', 0x2b4fc8), ('C', 0x1c3584), ('E', 0xe8f8ff)]),
+];
+
+/// Krillin: a look for every form. Base is bald in the orange gi; unlocked potential adds the blue undershirt (canon,
+/// Cell arc on); guru's unlock wears the Saiyan armour he fought Frieza in (canon, Namek); turtle master has his black
+/// hair grown out (canon, after Cell); destructo master holds a destructo disc up over his head; old kai's unlock,
+/// still with hair, sparks white; strongest human is the police officer of Super (canon; the uniform's colours are
+/// ours); earth's guardian is bald again in the gi he wore to the Tournament of Power (canon) with teal ki flaring off
+/// him; beyond human's eyes go white, blue ki flaring off him. Past them his solar flares (`krillin_late`).
+fn krillin() -> Hero {
+    const DISC: [&str; 3] = ["......lLLLLLLl......", "...lLLLLLLLLLLLLl...", "......lLLLLLLl......"];
+    let mut h = make_plain(&KRILLIN_HEAD, &KRILLIN_HEAD, KRI, false);
+    for (i, &(head, gi, sleeves, p)) in KRI_LOOKS.iter().enumerate().skip(1) {
+        let set = make_hero_with(head, &layers(&[KRI, p]), gi, Opt { sleeves, ..Opt::default() }).forms[0].clone();
+        h.forms[i] = match i {
+            4 => stamp(&set, 2, 4, 2, &DISC, &[('L', 0xffe640), ('l', 0xfffbc8)]),
+            5 => stamp(&set, 2, 2, 2, &SPARK, &[('L', 0xb8c0e0), ('l', 0xffffff)]),
+            7 => stamp(&set, 2, 4, 2, &FLAME, &[('L', 0x4ad8a0), ('l', 0xe0fff0)]),
+            8 => stamp(&set, 2, 4, 2, &FLAME, &[('L', 0x3ab8ff), ('l', 0xd8f0ff)]),
+            _ => set,
+        };
+    }
+    with_late(h, &krillin_late())
+}
+
+/// A hero with the looks at the given forms replaced.
+fn with_looks(mut h: Hero, looks: [(usize, HeroSet); 2]) -> Hero {
+    for (i, s) in looks {
+        h.forms[i] = s;
+    }
+    h
+}
+
+/// A head with its eyes behind dark glasses or a visor (`D`).
+fn shades(head: &[&str; 16], rows: [usize; 2]) -> Vec<String> {
+    head.iter().enumerate().map(|(j, r)| if rows.contains(&j) { r.replace('E', "D") } else { r.to_string() }).collect()
+}
+
+/// Goku's gi: orange, with the blue undershirt, wristbands, sash and boots.
+const GOKU_GI: &[(char, u32)] = &[
+    ('y', 0xf08a24),
+    ('Y', 0xc0641a),
+    ('a', 0xf08a24),
+    ('A', 0xc0641a),
+    ('b', 0x2b4fc8),
+    ('B', 0x1c3584),
+    ('g', 0x2b4fc8),
+    ('G', 0x1c3584),
+    ('u', 0x2b4fc8),
+    ('p', 0xf08a24),
+    ('P', 0xc0641a),
+    ('w', 0x2b4fc8),
+    ('W', 0x1c3584),
+];
+
+/// Gohan: where vegeta and goku reach ultra ego and ultra instinct, he's the great saiyaman (canon, Buu arc: the
+/// green suit, red cape, white gloves, orange bandana and sunglasses), then ultimate (canon, Buu arc: his own black
+/// hair, in a gi like his father's, white ki sparking off him).
+fn gohan() -> Hero {
+    let mut head = shades(&GOHAN_HEAD, [10, 11]);
+    head[8] = "...onnnnnnnnno..".into();
+    head[10] = "...ohDDDDDDsho..".into();
+    let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
+    let suit = &[
+        ('n', 0xf08a24),
+        ('D', 0x22222a),
+        ('y', 0x2e9a48),
+        ('Y', 0x1e6a30),
+        ('a', 0x2e9a48),
+        ('A', 0x1e6a30),
+        ('b', 0x22222a),
+        ('B', 0x111118),
+        ('c', 0x22222a),
+        ('C', 0x111118),
+        ('g', 0xffffff),
+        ('G', 0xc8ccda),
+        ('u', 0xd8323a),
+        ('p', 0x22222a),
+        ('P', 0x111118),
+        ('w', 0xffffff),
+        ('W', 0xc8ccda),
+        ('q', 0xd8323a),
+        ('Q', 0x962028),
+    ];
+    let saiyaman = make_hero_with(&head, &layers(&[GOHAN, suit]), true, Opt { sleeves: true, cape: true }).forms[0].clone();
+    let ultimate = stamp(&set_of(&GOHAN_HEAD, &layers(&[GOHAN, GOKU_GI])), 2, 2, 2, &SPARK, &[('L', 0xc8d0e8), ('l', 0xffffff)]);
+    let mut h = with_looks(make_hero(&GOHAN_HEAD, GOHAN, true), [(6, saiyaman), (8, ultimate)]);
+    h.backs[6] = h.backs[0].clone();
+    h.backs[8] = h.backs[0].clone();
+    h
+}
+
+/// Future trunks: where vegeta and goku reach ultra ego and ultra instinct, he's super saiyan third grade (canon, Cell
+/// arc: bulked up, in the Saiyan armour, drawn bigger by `look_scale`), then the sword of hope (canon technique, Super's
+/// Future Trunks arc; as a form, ours: his gold hair lit blue, the earth's energy flaring off him in blue).
+fn trunks() -> Hero {
+    let gold: &[(char, u32)] = &[('h', 0xffe02e), ('H', 0xfffbc8)];
+    let third = make_hero_with(&TRUNKS_HEAD, gold, false, Opt::default()).forms[0].clone();
+    let hope = set_of(&TRUNKS_HEAD, &layers(&[TRUNKS, &[('h', 0xffe02e), ('H', 0xc8f2ff)]]));
+    let hope = stamp(&hope, 2, 4, 2, &FLAME, &[('L', 0x3a8ae8), ('l', 0xc8e8ff)]);
+    let mut h = with_looks(make_hero(&TRUNKS_HEAD, TRUNKS, true), [(6, third), (8, hope)]);
+    h.backs[6] = h.backs[1].clone();
+    h.backs[8] = h.backs[1].clone();
+    h
+}
+
 /// Goten's late forms: teen super saiyan (canon; bigger, sleeves ours), then saiyaman x-2 (canon; costume ours).
 fn goten_late() -> [HeroSet; 2] {
     // the eye rows of GOKU_HEAD, under saiyaman x-2's mask
@@ -1493,6 +1692,20 @@ fn goten_late() -> [HeroSet; 2] {
     ];
     let saiyaman = make_hero_with(&masked, suit, true, Opt { cape: true, ..Opt::default() }).forms[0].clone();
     [teen, saiyaman]
+}
+
+/// Goten: where vegeta and goku reach ultra ego and ultra instinct, he's prodigy unleashed (ours: the boy who went
+/// super saiyan without trying, gold ki flaring off him), then full power super saiyan (canon form, goku's and gohan's
+/// in the Cell arc; for goten, ours: calm gold hair, white ki sparking off him). Past them, his late forms.
+fn goten() -> Hero {
+    let gold = set_of(&GOKU_HEAD, &layers(&[GOT, &[('h', 0xffe02e), ('H', 0xfffbc8)]]));
+    let prodigy = stamp(&gold, 2, 4, 2, &FLAME, &[('L', 0xffd60a), ('l', 0xfffbe0)]);
+    let calm = set_of(&GOKU_HEAD, &layers(&[GOT, &[('h', 0xf2d040), ('H', 0xffffff)]]));
+    let full = stamp(&calm, 2, 2, 2, &SPARK, &[('L', 0xe8e8f4), ('l', 0xffffff)]);
+    let mut h = with_looks(with_late_backs(make_hero(&GOKU_HEAD, GOT, true), &goten_late(), &[1, 0]), [(6, prodigy), (8, full)]);
+    h.backs[6] = h.backs[1].clone();
+    h.backs[8] = h.backs[1].clone();
+    h
 }
 
 // ── the piccolo upgrade's helpers game.js never drew

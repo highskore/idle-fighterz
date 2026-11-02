@@ -430,3 +430,15 @@ fn a_botched_dance_slows_taps_not_idle_income() {
     assert_eq!(r1, r0, "idle income doesn't feel a botched dance");
     assert!((tap1 / tap0 - 0.75).abs() < 0.02, "taps do: ×{}", tap1 / tap0);
 }
+
+#[test]
+fn every_form_has_its_own_look_and_aura() {
+    let ladder = planet_core::data::ladder_of(Hero::Krillin, 0);
+    let s = planet_core::sprite::hero("krillin");
+    for i in 0..ladder.len() {
+        for j in 0..i {
+            assert!(s.forms[ladder[i].look].idle.col != s.forms[ladder[j].look].idle.col, "{} and {} look different", ladder[j].name, ladder[i].name);
+            assert_ne!(ladder[i].aura(), ladder[j].aura(), "{} and {} glow different", ladder[j].name, ladder[i].name);
+        }
+    }
+}

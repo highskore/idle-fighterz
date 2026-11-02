@@ -279,6 +279,46 @@ fn the_menu_gives_each_hero_his_playstyle_and_form_ladder() {
     assert_eq!(piccolo["forms"][2]["name"], "demon king");
     assert_eq!(piccolo["forms"][0]["aura"], "#8ad87a", "a namekian's green aura");
     assert_eq!(chars[0]["forms"][1]["aura"], "#ffe02e", "super saiyan gold");
+    let form = |id: &str, i: usize| chars.iter().find(|c| c["id"] == id).unwrap()["forms"][i]["name"].as_str().unwrap().to_string();
+    assert_eq!([form("gohan", 6), form("gohan", 8)], ["great saiyaman", "ultimate"]);
+    assert_eq!([form("trunks", 6), form("trunks", 8)], ["super saiyan third grade", "sword of hope"]);
+    assert_eq!([form("goten", 6), form("goten", 8)], ["prodigy unleashed", "full power super saiyan"]);
+    assert_eq!(form("krillin", 4), "destructo master");
+}
+
+#[test]
+fn only_vegeta_and_goku_reach_ultra_ego_and_ultra_instinct() {
+    let theirs: Vec<&str> = [Hero::Vegeta, Hero::Goku].iter().flat_map(|&h| ladder_of(h, 0)).map(|f| f.name).collect();
+    for h in [Hero::Gohan, Hero::Trunks, Hero::Goten] {
+        let names: Vec<&str> = ladder_of(h, 0).iter().map(|f| f.name).collect();
+        for i in [6, 8] {
+            assert!(!theirs.contains(&names[i]), "{h:?}'s {} is his own", names[i]);
+            assert_eq!(names.iter().filter(|&&n| n == names[i]).count(), 1, "{h:?}'s {} names one form", names[i]);
+        }
+        let ladder = ladder_of(h, 0);
+        assert_ne!(ladder[6].aura(), ladder[8].aura(), "{h:?}: each has its own aura");
+        let s = sprite::hero(sprite_id(h));
+        for i in [6, 8] {
+            for j in 0..9 {
+                assert!(i == j || s.forms[i].idle.col != s.forms[j].idle.col, "{h:?}: looks {i} and {j} differ");
+            }
+        }
+    }
+}
+
+#[test]
+fn renamed_forms_keep_their_marks_and_multipliers() {
+    for h in [Hero::Gohan, Hero::Trunks, Hero::Goten] {
+        let base = ladder_of(Hero::Vegeta, 0);
+        for (f, v) in ladder_of(h, 0).iter().zip(&base).take(9) {
+            assert_eq!(f.x, v.x, "{h:?} {}", f.name);
+            assert_eq!(f.at / ladder_of(h, 0)[1].at, v.at / base[1].at, "{h:?} {}", f.name);
+        }
+    }
+}
+
+fn sprite_id(h: Hero) -> &'static str {
+    CHARS.iter().find(|c| c.0 == h).unwrap().1
 }
 
 #[test]
@@ -440,3 +480,35 @@ fn gotens_late_looks_wear_the_right_back_and_size() {
     assert!(h.backs[10][0].col == h.backs[0][0].col, "saiyaman x-2's black hair from behind");
     assert_eq!(sprite::look_scale("goten", 9), sprite::look_scale("goten", 10), "and x-2 no smaller than teen");
 }
+
+#[test]
+fn the_new_looks_are_pinned() {
+    // fnv-1a over each look's frames: a change to one of these sprites must be meant (re-pin it here)
+    let hash = |s: &sprite::HeroSet| {
+        let mut h: u64 = 0xcbf29ce484222325;
+        for f in [&s.idle, &s.pose].into_iter().chain(s.run.iter()) {
+            for &c in f.col.iter().chain([f.w as i32, f.h as i32].iter()) {
+                for b in c.to_le_bytes() {
+                    h = (h ^ b as u64).wrapping_mul(0x100000001b3);
+                }
+            }
+        }
+        h
+    };
+    let got: Vec<(&str, usize, u64)> = PINNED.iter().map(|&(id, l, _)| (id, l, hash(&sprite::hero(id).forms[l]))).collect();
+    let want: Vec<(&str, usize, u64)> = PINNED.to_vec();
+    assert_eq!(got, want);
+}
+
+const PINNED: [(&str, usize, u64); 10] = [
+    ("krillin", 4, 308377157137971859),
+    ("krillin", 6, 211385258944903273),
+    ("gohan", 6, 14414668871699552943),
+    ("gohan", 8, 5877161912288465477),
+    ("trunks", 6, 9381793726799690243),
+    ("trunks", 8, 15445733415866823793),
+    ("goten", 6, 10711715544689707761),
+    ("goten", 8, 6452427703010836745),
+    ("a17", 0, 14323386269816359141),
+    ("a17", 9, 16551402669959112205),
+];
