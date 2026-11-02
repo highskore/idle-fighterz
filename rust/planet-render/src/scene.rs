@@ -773,7 +773,7 @@ impl Scene {
                 g.fx.push(p);
             }
         }
-        if let Some(sp) = FORM_SPARK[fi].filter(|_| g.s.hero.saiyan()) {
+        if let Some(sp) = FORM_SPARK[fi].filter(|_| g.s.hero.saiyan() && g.forms[g.s.form].own_aura.is_none()) {
             if seen && g.rng.random() < 0.35 {
                 let mut x = kd.x + (g.rng.random() - 0.5) * 22.0;
                 let mut y = kd.y - cos(kd.ang) * (lift + 14.0) + (g.rng.random() - 0.5) * 26.0;

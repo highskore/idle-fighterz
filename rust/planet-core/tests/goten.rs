@@ -100,7 +100,7 @@ fn ratio(a: &[f64], b: &[f64]) -> f64 {
 #[test]
 fn his_forms_come_early() {
     let (g, v) = (planet_core::data::ladder_of(Hero::Goten, 0), planet_core::data::ladder_of(Hero::Vegeta, 0));
-    assert_eq!(g.len(), 9, "the shared nine, no late forms");
+    assert_eq!(g.len(), 11, "the shared nine, then his two late forms");
     for i in 1..9 {
         assert!((g[i].at - v[i].at * GOTEN_MARK).abs() < 1e-6 * v[i].at, "{}", g[i].name);
         assert_eq!(g[i].x, v[i].x);
