@@ -144,7 +144,7 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
 [data-layout="3"] .w-btns { display: contents; }
 [data-layout="3"] [data-w] { position: absolute; }
 [data-layout="3"] [data-w="close"] { right: 6px; top: 6px; } [data-layout="3"] [data-w="gear"] { right: calc(10px + var(--b)); top: 6px; }
-[data-layout="3"] [data-w="up"] { left: 6px; bottom: 6px; }
+[data-layout="3"] [data-w="up"] { left: 6px; bottom: 6px; } [data-layout="3"] [data-w="ach"] { left: calc(10px + var(--b)); bottom: 6px; }
 [data-layout="3"] [data-w="snd"] { right: 6px; bottom: 6px; } [data-layout="3"] [data-w="share"] { right: calc(10px + var(--b)); bottom: 6px; } [data-layout="3"] [data-w="kaio"] { right: calc(14px + 2 * var(--b)); bottom: 6px; } [data-layout="3"] [data-w="itx"] { right: calc(18px + 3 * var(--b)); bottom: 6px; }
 [data-layout="3"] { --tb: calc(14px + var(--b)); --pb: calc(14px + var(--b)); }
 

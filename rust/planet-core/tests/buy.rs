@@ -130,3 +130,19 @@ fn the_card_says_what_the_next_level_does() {
     g.shop = g.shop_json();
     assert_eq!(g.shop, shop);
 }
+
+#[test]
+fn ascend_row_shows_no_level() {
+    let row = |g: &Game, k: &str| serde_json::from_str::<serde_json::Value>(&g.shop_json()).unwrap()[k].clone();
+    let mut g = holding(1e6);
+    // ten ki seeds from the seeds-of-power wish, never ascended
+    g.s.ascend = Big::from(10.0);
+    let r = row(&g, "ascend");
+    assert_eq!(r["level"], 0);
+    assert_eq!(r["short"], "reset: ki seeds");
+    // seeds still keep the row up below the unlock
+    g.s.best = Big::from(10.0);
+    g.s.pl = Big::from(10.0);
+    assert!(!g.ascend_unlocked());
+    assert_eq!(row(&g, "ascend")["level"], 0);
+}
