@@ -28,7 +28,7 @@ pub struct Ramen {
 
 impl Game {
     fn hero_name(&self) -> &'static str {
-        CHARS.iter().find(|c| c.0 == self.s.hero).map_or("he", |c| c.1)
+        CHARS.iter().find(|c| c.0 == self.s.hero).map_or("he", |c| c.2)
     }
 
     /// Nothing else on the planet wants him: no fight, scene, dragon, trip or visitor that holds the stage.
