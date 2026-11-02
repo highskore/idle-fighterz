@@ -113,7 +113,7 @@
     const afk = () => {
       if (performance.now() - input < AFK) return;
       if (!$('menu').hidden) $('menuX').click();
-      $('shop').classList.remove('open'); skins.close();
+      $('shop').classList.remove('open'); $('shopToggle').setAttribute('aria-expanded', 'false'); skins.close();
     };
     // clouds under the floating planet (settings: always, while awake, or never, their shape and amount). window mode has the
     // full cloud sea instead
@@ -124,7 +124,7 @@
     addEventListener('focusin', () => wake(4000));
     root.addEventListener('mouseleave', () => wake(500));
     // while another app is active the page gets no pointer moves; the app reports where the pointer is instead
-    if (tauri) tauri.event.listen('pointer', ({ payload: p }) => wake(p.inside ? 2500 : 500));
+    if (tauri) tauri.event.listen('pointer', ({ payload: p }) => { if (p.inside) input = performance.now(); wake(p.inside ? 2500 : 500); });
     addEventListener('keydown', e => { if (e.key === 'Escape') $('shop').classList.remove('open'); });
     st.el.addEventListener('pointerdown', () => $('shop').classList.remove('open'));
 
@@ -192,7 +192,8 @@
       invoke('page_state', { hidden: document.hidden, away, ticking: !!bg });
     };
     document.addEventListener('visibilitychange', background);
-    if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; background(); });
+    // throttled while hidden, the afk tick could otherwise close a panel the moment the widget comes back
+    if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; if (payload) input = performance.now(); background(); });
 
     const apply = s => {
       const first = conf.layout !== s.layout || conf.skin !== s.skin || !w.firstChild; conf = s;
