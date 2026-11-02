@@ -1,11 +1,12 @@
 // Pixel baselines: each state is played the same way on the fake clock and the seeded Math.random, then compared with
 // test/browser/__screenshots__/<size>/. The game canvas must match exactly; the whole page may differ by a shade where
 // Chromium rasterises text and rounded corners (seen as ±2 levels on the card's corners between identical runs).
-// Every run also writes what it rendered to shots/<size>/, named as the baselines are (CI uploads it; copied over
-// __screenshots__ it is a new baseline set). PLANET_SHOTS_ONLY=1 (npm run shots) skips the comparison, for a machine
-// that isn't CI's Linux. The page runs the Rust engine (game.js without a wasm build in dist). game.js's fallback gets a
-// smoke test (tagged @js): home with ?js and without WebAssembly must match the same canvas baseline, as game.js is
-// frozen; the page gets its own (js-home, no-wasm-home), since game.js still counts snake way's parked achievements.
+// Every run also writes what it rendered to shots/<size>/, a page and a canvas shot per test (CI uploads it).
+// PLANET_SHOTS_ONLY=1 (npm run shots) skips the comparison, for a machine that isn't CI's Linux. The page runs the Rust
+// engine (game.js without a wasm build in dist). game.js's fallback gets a smoke test (tagged @js): home with ?js and
+// without WebAssembly must match the same canvas baseline, as game.js is frozen; the page shares one of its own
+// (js-home), since game.js still counts snake way's parked achievements.
+// States that only open an overlay share the menu's canvas baseline: the same 2 s of play under it.
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { test, expect } from '@playwright/test'
 import { open, start, play } from './page.mjs'
@@ -31,10 +32,10 @@ const STATES = [
   ['wish', '#shenron', page => playUntil(page, '#wish:not([hidden])')],
   ['ascend', '#mui', async page => { await play(page, 2000); await openShop(page); await page.locator('[data-buy="ascend"]').click(); await play(page, 500) }],
   ['menu', '', async page => { await play(page, 2000); await page.locator('.hud [data-menu]').click(); await play(page, 500) }],
-  ['menu-chars', '', async page => { await play(page, 2000); await page.locator('.hud [data-menu]').click(); await page.locator('[data-mt="chars"]').click(); await play(page, 500) }],
-  ['settings', '', async page => { await play(page, 2000); await page.locator('#gear:visible, #gearM:visible').first().click(); await play(page, 500) }],
-  ['settings-locked', '', async page => { await play(page, 2000); await page.locator('#gear:visible, #gearM:visible').first().click(); await page.locator('.car .arr[data-step="1"]').click(); await play(page, 500) }],
-  ['tree', '#seeds', async page => { await play(page, 2000); await openShop(page); await page.locator('[data-buy="ascend"]').click(); await page.locator('#ascTree').click(); await play(page, 500) }],
+  ['menu-chars', '', async page => { await play(page, 2000); await page.locator('.hud [data-menu]').click(); await page.locator('[data-mt="chars"]').click(); await play(page, 500) }, 'menu'],
+  ['settings', '', async page => { await play(page, 2000); await page.locator('#gear:visible, #gearM:visible').first().click(); await play(page, 500) }, 'menu'],
+  ['settings-locked', '', async page => { await play(page, 2000); await page.locator('#gear:visible, #gearM:visible').first().click(); await page.locator('.car .arr[data-step="1"]').click(); await play(page, 500) }, 'menu'],
+  ['tree', '#seeds', async page => { await play(page, 2000); await openShop(page); await page.locator('[data-buy="ascend"]').click(); await page.locator('#ascTree').click(); await play(page, 500) }, 'menu'],
   ['angels', '#godki', async page => { await play(page, 2000); await page.locator('.hud [data-menu]').click(); await page.locator('[data-mt="angels"]').click(); await play(page, 500) }],
 ]
 
@@ -43,7 +44,7 @@ const RUNS = [
   ['js ', STATES[0], { js: true }],
   ['no-wasm ', STATES[0], { wasm: false }],
 ]
-for (const [pre, [name, hash, act], how] of RUNS) {
+for (const [pre, [name, hash, act, frame = name], how] of RUNS) {
   test(pre + name, { tag: pre ? '@js' : [] }, async ({ page }, info) => {
     const errors = await open(page, hash, { title: false, ...how })
     await start(page)
@@ -59,7 +60,7 @@ for (const [pre, [name, hash, act], how] of RUNS) {
     writeFileSync(`${dir}/${as}-canvas.png`, canvas)
     expect(errors).toEqual([])
     if (SHOTS_ONLY) return
-    expect(canvas).toMatchSnapshot(`${name}-canvas.png`, { threshold: 0, maxDiffPixels: 0 })
-    await expect(page).toHaveScreenshot(`${pre ? as : name}.png`, { animations: 'disabled', caret: 'hide', threshold: 0.02, maxDiffPixels: 0 })
+    expect(canvas).toMatchSnapshot(`${frame}-canvas.png`, { threshold: 0, maxDiffPixels: 0 })
+    await expect(page).toHaveScreenshot(`${pre ? 'js-' + name : name}.png`, { animations: 'disabled', caret: 'hide', threshold: 0.02, maxDiffPixels: 0 })
   })
 }

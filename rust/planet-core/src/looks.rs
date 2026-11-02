@@ -167,7 +167,7 @@ impl Game {
 impl Game {
     /// Preview hook `#looks0` (`#looks1`, `#looks3`): that milestone's looks unlocked and worn, one of every kind.
     pub(crate) fn looks_preview(&mut self, hash: &str) {
-        let Some(i) = hash.find("looks") else { return };
+        let Some(i) = hash.find(crate::hooks::key("looks")) else { return };
         let k: u32 = hash[i + 5..].chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().unwrap_or(0);
         let mut n = 0;
         while milestone(n).1 != Some(k) {

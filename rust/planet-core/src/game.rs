@@ -440,7 +440,7 @@ impl Game {
         };
         let tired = if b.kaio_until <= t && b.tired_until > t { 0.75 } else { 1.0 };
         let awake = if self.tl.bz.as_ref().is_some_and(|b| b.awake != 0.0) { 0.25 } else { 1.0 };
-        self.capped(self.core()) * self.forms[self.s.form].x * self.late_boost() * bonus * tired * awake
+        self.capped(self.core()) * self.forms[self.s.form].x * self.oc_x() * self.late_boost() * bonus * tired * awake
     }
 
     /// A botched fusion dance while it lasts (×0.75), on what your taps make; 1 otherwise.
@@ -460,7 +460,12 @@ impl Game {
             * (1.0 + 0.5 * self.lvl(N_IDLE))
             * if self.wished(WishBuff::Idle) { 3.0 } else { 1.0 }
             * if self.lvl(N_ETERNAL) > 0.0 { 3.0 } else { 1.0 }
-            * if s.krillin_ally { 1.5 } else { 1.0 }
+            * if self.krillin_helps() { 1.5 } else { 1.0 }
+    }
+
+    /// Krillin as your ally (wished back, and not the hero you're playing).
+    pub fn krillin_helps(&self) -> bool {
+        self.s.krillin_ally && self.s.hero != Hero::Krillin
     }
 
     /// Power a second, buffs included: what the HUD shows.
@@ -482,7 +487,7 @@ impl Game {
             Upg::Senzu => best >= 1000.0,
             Upg::House => best >= 2000.0,
             Upg::Armor => best >= 5000.0,
-            Upg::Tail => self.s.ach.contains("ape"),
+            Upg::Tail => self.s.ach.contains("ape") && self.s.hero.saiyan(),
             Upg::Kaio => best >= 8000.0,
             Upg::Bigbang => best >= 20000.0,
             Upg::Piccolo => best >= 10000.0,
@@ -534,6 +539,7 @@ impl Game {
         let Some(&(id, name, _)) = ACH.iter().find(|a| a.0 == id) else { return };
         self.s.ach.insert(id);
         self.s.ach_at.insert(id, self.now_ms());
+        let name = self.ach_name(id, name);
         let unlocks: String = CHARS.iter().filter(|c| c.3 == Need::Ach(id)).map(|c| format!(" · {} unlocked", c.2)).collect();
         self.after(0.9, crate::timeline::Later::Event(format!("achievement — {name}{unlocks}"), 3200.0));
         self.cue(Cue::Sfx("coin"));
@@ -628,10 +634,11 @@ impl Game {
             if f >= 1 && self.s.hero.saiyan() {
                 self.ach("ss");
             }
-            if f >= UI_FORM && self.s.hero.saiyan() {
+            // by the power marks, not the form number (goten's forms come at half)
+            if f >= UI_FORM && self.s.hero.saiyan() && self.s.run_best.max(self.s.pl) >= ALL_FORMS[UI_FORM].1 {
                 self.ach("ui");
             }
-            if f >= MUI_FORM {
+            if f >= MUI_FORM && self.forms[f].at >= LATE_AT {
                 self.ach("mui");
             }
             if self.forms[f].lb > 0 {
@@ -812,7 +819,7 @@ impl Game {
     }
 
     pub fn kaioken(&mut self) {
-        if !self.playing || self.s.lv(Upg::Kaio) == 0 || self.t < self.b.kaio_ready {
+        if !self.playing || self.s.lv(Upg::Kaio) == 0 || self.t < self.b.kaio_ready || self.infinite_energy() {
             return;
         }
         self.ach("kaioken");
@@ -821,10 +828,10 @@ impl Game {
         self.b.kaio_ready = self.t + 45.0;
         self.shake = 0.5;
         self.flash_t = 0.4;
-        let msg = format!("kaioken! ×{}", self.kaio_x());
+        let msg = format!("{}! ×{}", self.boost(), self.kaio_x());
         self.event(msg);
         let (x, y) = self.hand_pos();
-        self.burst_at(x, y, &[0xffffff, 0xff9a8a, 0xe0332b], 40, 200.0);
+        self.burst_at(x, y, &hero_boost(self.s.hero).spark, 40, 200.0);
     }
 
     fn branch_pts(&self, b: Branch) -> u32 {
@@ -1197,18 +1204,24 @@ impl Game {
 }
 
 impl Game {
-    /// game.js's preview hooks (`#raid`, `#namek`, `#form12`, `#hero-goku`, ...), applied as `mount()` applies them,
-    /// after the world is set up and before `start()`. Of those that wait on a `setTimeout`, `#shenron` is ported;
-    /// `#flight`, `#chamber` and `#cvlink` aren't.
+    /// The preview hooks in `hooks.txt` (`#raid`, `#namek`, `#form12`, `#hero-goku`, ...), applied as game.js's
+    /// `mount()` applies them, after the world is set up and before `start()`. Of game.js's that wait on a
+    /// `setTimeout`, `#shenron` is ported; `#flight`, `#chamber` and `#cvlink` aren't.
     pub fn preview(&mut self, hash: &str) {
         use crate::data::{Upg, LADDER, MUI_FORM, VILLAINS};
+        use crate::hooks::key;
         // `#hero-<id>` picks the hero; the other hooks never see it, so `#hero-krillin` doesn't also call krillin in
-        let hero_id: Option<String> = hash.find("hero-").map(|i| hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect());
+        let hero_id: Option<String> = hash.find(key("hero-")).map(|i| hash[i + 5..].chars().take_while(|c| c.is_ascii_alphanumeric() || *c == '_').collect());
         let rest = hero_id.as_ref().map_or_else(|| hash.to_string(), |id| hash.replacen(&format!("hero-{id}"), "", 1));
         let hash = rest.as_str();
-        let has = |k: &str| hash.contains(k);
+        // the hero first, so a hook like `#form7` reads his ladder
+        if let Some(c) = hero_id.and_then(|id| CHARS.iter().find(|c| c.1 == id)) {
+            self.s.hero = c.0;
+            self.forms = ladder_of(c.0, self.s.limits);
+        }
+        let has = |k: &str| hash.contains(key(k));
         let num = |k: &str| -> Option<usize> {
-            let i = hash.find(k)? + k.len();
+            let i = hash.find(key(k))? + k.len();
             let d: String = hash[i..].chars().take_while(|c| c.is_ascii_digit()).collect();
             d.parse().ok()
         };
@@ -1350,9 +1363,6 @@ impl Game {
         if has("vegeta") {
             trip(self, 2e6, 1);
         }
-        if let Some(c) = hero_id.and_then(|id| CHARS.iter().find(|c| c.1 == id)) {
-            self.s.hero = c.0;
-        }
         if has("snake") {
             trip(self, 3e6, 2);
             self.snake_way = true;
@@ -1435,7 +1445,7 @@ impl Game {
             // `setTimeout(() => { …a long buff line… }, 800)`
             self.tl.later.push((0.8, crate::timeline::Later::Buffs));
         }
-        if let Some(i) = hash.find("shenron") {
+        if let Some(i) = hash.find(key("shenron")) {
             // `setTimeout(() => summon(look), 800)`
             if let Some(d) = hash[i + 7..].chars().next().and_then(|c| c.to_digit(10)) {
                 self.tl.shen_look = d as usize;

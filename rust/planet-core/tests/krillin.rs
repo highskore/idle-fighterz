@@ -196,15 +196,13 @@ fn the_afk_rule_over_whole_runs() {
 }
 
 #[test]
-fn his_own_late_forms_moon_and_fusion() {
+fn his_own_late_forms_and_fusion() {
     let ladder = planet_core::data::ladder_of(Hero::Krillin, 0);
     let names: Vec<&str> = ladder.iter().map(|f| f.name).collect();
     assert_eq!(&names[9..], ["solar flare", "taiyoken sun"], "past the shared nine, his own two");
-    assert!(!names.contains(&"max power"), "max power is his moon form now, not a form name");
     let s = planet_core::sprite::hero("krillin");
     assert!(s.forms[9].idle.w > s.forms[0].idle.w, "the solar flare blazes behind him");
     let mut r = Run::new(1, Hero::Krillin);
-    assert_eq!(r.g.ape_name(false), "max power");
     assert_eq!(planet_core::sprite::get("FUSED.roshillin").h, planet_core::sprite::hero("krillin").forms[0].idle.h);
     // the fusion dance: master roshi asks, three beats on time make roshillin
     r.g.preview("#dance");
@@ -382,7 +380,7 @@ fn playing_krillin_theres_no_other_krillin() {
 }
 
 #[test]
-fn the_androids_dont_drop_in_on_seventeen() {
+fn eighteen_and_sixteen_drop_in_on_seventeen() {
     let mut g = Game::new(7);
     g.preview("#hero-a17#androids");
     g.start();
@@ -390,7 +388,8 @@ fn the_androids_dont_drop_in_on_seventeen() {
         let t = g.t + DT;
         g.frame(t, DT);
     }
-    assert!(g.tl.ginyu.is_none(), "17 doesn't drop in on himself");
+    let raid = g.tl.ginyu.as_ref().expect("the androids drop in");
+    assert_eq!(raid.members.iter().map(|m| m.name).collect::<Vec<_>>(), ["android 18", "android 16"], "17 doesn't drop in on himself");
 }
 
 #[test]

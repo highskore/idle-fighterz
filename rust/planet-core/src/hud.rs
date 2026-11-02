@@ -71,6 +71,8 @@ pub struct Hud {
     pub goal_text: &'static str,
     pub goal_p: f64,
     pub goal_n: f64,
+    /// the boost button: the hero's own kaioken, its name, short label and colours
+    pub kaio_look: Boost,
     pub kaio_own: bool,
     pub kaio_ready: bool,
     pub kaio_left: f64,
@@ -86,7 +88,7 @@ pub struct Hud {
     pub effects: String,
     pub extra: String,
     pub combo: f64,
-    pub form_name: &'static str,
+    pub form_name: String,
     pub form_x: f64,
     pub form_next: String,
     pub form_p: f64,
@@ -108,7 +110,19 @@ impl Hud {
     pub fn to_json(&self) -> String {
         Obj::new()
             .raw("goal", Obj::new().str("text", self.goal_text).num("p", self.goal_p).num("n", self.goal_n).end())
-            .raw("kaio", Obj::new().bool("own", self.kaio_own).bool("ready", self.kaio_ready).num("left", self.kaio_left).end())
+            .raw("kaio", {
+                let (k, hex) = (&self.kaio_look, |c: u32| format!("#{c:06x}"));
+                Obj::new()
+                    .str("name", k.name)
+                    .str("short", k.short)
+                    .str("fill", &hex(k.fill))
+                    .str("pale", &hex(k.pale))
+                    .str("ink", &hex(k.ink))
+                    .bool("own", self.kaio_own)
+                    .bool("ready", self.kaio_ready)
+                    .num("left", self.kaio_left)
+                    .end()
+            })
             .raw("itx", Obj::new().bool("own", self.itx_own).bool("ready", self.itx_ready).num("left", self.itx_left).end())
             .big("pl", self.pl)
             .big("best", self.best)
@@ -118,7 +132,7 @@ impl Hud {
             .str("effects", &self.effects)
             .str("extra", &self.extra)
             .num("combo", self.combo)
-            .raw("form", Obj::new().str("name", self.form_name).num("x", self.form_x).str("next", &self.form_next).num("p", self.form_p).end())
+            .raw("form", Obj::new().str("name", &self.form_name).num("x", self.form_x).str("next", &self.form_next).num("p", self.form_p).end())
             .num("balls", self.balls as f64)
             .num("wishes", self.wishes as f64)
             .str("ascend", &self.ascend)
@@ -245,11 +259,6 @@ impl Game {
         self.cues.push(c);
     }
 
-    /// `kame()`: goku, gohan, krillin and goten fire a kamehameha, the others a galick gun (piccolo his own cannon).
-    pub fn kame(&self) -> bool {
-        matches!(self.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten)
-    }
-
     /// The buffs line under the power (`fxs.join(' · ')`).
     pub fn effects(&self) -> String {
         let t = self.t;
@@ -335,7 +344,7 @@ impl Game {
             fx.push(format!("tournament {}s · {} KO", secs(tr.until), tr.ko));
         }
         if b.kaio_until > t {
-            fx.push(format!("kaioken ×{} {}s", num(self.kaio_x()), secs(b.kaio_until)));
+            fx.push(format!("{} ×{} {}s", self.boost(), num(self.kaio_x()), secs(b.kaio_until)));
         } else if b.tired_until > t {
             fx.push(format!("tired ×0.75 {}s", secs(b.tired_until)));
         }
@@ -375,6 +384,9 @@ impl Game {
         }
         if self.powered_down().is_some() {
             fx.push("powered down · tap him".into());
+        }
+        if let Some(st) = self.stake() {
+            fx.push(format!("kikoho {} at stake {}s", fmt_short(st.n), num((crate::heroes::KIKOHO_SECS - (self.t - st.t0)).max(0.0).ceil())));
         }
         if self.cuts() > 0 {
             fx.push(format!("discs {}/{BARRAGE}", self.cuts().min(crate::heroes::BARRAGE_CUTS), BARRAGE = crate::heroes::BARRAGE_CUTS));
@@ -416,7 +428,7 @@ impl Game {
             if s.ascend != 0.0 { format!("ki seeds ×{}", fixed1(self.seed_boost())) } else { String::new() },
             if s.god_total > 0 { format!("god ki {} · ×{}", s.godki, fmt_short(self.god_boost_of(s.god_total as f64))) } else { String::new() },
             if s.zeno > 0 { format!("zeno's favour ×{}", fmt_short(Big::from(ZENO_X).pow(s.zeno as f64))) } else { String::new() },
-            if s.krillin_ally { "krillin: idle ×1.5".into() } else { String::new() },
+            if self.krillin_helps() { "krillin: idle ×1.5".into() } else { String::new() },
         ];
         parts.into_iter().filter(|p| !p.is_empty()).collect::<Vec<_>>().join(" · ")
     }
@@ -430,11 +442,16 @@ impl Game {
             Some(nf) => (nf.name.to_string(), Big::from(nf.at)),
             None => (format!("mastery {}", s.mastery + 1), self.mastery_at(s.mastery)),
         };
+        // android 17 shows his overclock in place of a form
+        let (form_name, form_x, form_next, form_p) = self
+            .a17_form_line()
+            .unwrap_or_else(|| (if s.form > 0 { cf.name } else { "base" }.to_string(), cf.x, next_name, 1f64.min((s.pl / next_at).to_f64())));
         let tl = &self.tl;
         Hud {
             goal_text: g.text,
             goal_p: s.goal_p.min(g.n),
             goal_n: g.n,
+            kaio_look: hero_boost(s.hero),
             kaio_own: s.lv(Upg::Kaio) > 0,
             kaio_ready: t >= self.b.kaio_ready,
             kaio_left: ceil(self.b.kaio_ready - t),
@@ -449,10 +466,10 @@ impl Game {
             effects: self.effects(),
             extra: self.extra(),
             combo: self.combo,
-            form_name: if s.form > 0 { cf.name } else { "base" },
-            form_x: cf.x,
-            form_next: next_name,
-            form_p: 1f64.min((s.pl / next_at).to_f64()),
+            form_name,
+            form_x,
+            form_next,
+            form_p,
             balls: s.orbs7,
             wishes: s.granted,
             ascend: if s.ascend != 0.0 { fixed1(self.seed_boost()) } else { String::new() },
@@ -492,8 +509,6 @@ impl Game {
             _ => {}
         }
         match (Upg::from_key(key).unwrap(), self.s.hero) {
-            (Upg::Tail, Hero::Piccolo) => "giant +×0.25",
-            (Upg::Tail, Hero::Krillin) => "max power +×0.25",
             (Upg::Boots, _) => "+1 per step",
             (Upg::Partner, _) => "+4/s, trains",
             (Upg::Gravity, _) => "×1.15 everything",
@@ -524,11 +539,6 @@ impl Game {
         let u = Upg::from_key(key).unwrap();
         let l = s.lv(u);
         let base = SHOP[u as usize].what;
-        match (u, self.s.hero) {
-            (Upg::Tail, Hero::Piccolo) => return "giant namekian: +×0.25, +8% size, +2s (size and time slow past lv 10)".into(),
-            (Upg::Tail, Hero::Krillin) => return "max power: +×0.25, +8% size, +2s (size and time slow past lv 10)".into(),
-            _ => {}
-        }
         if u == Upg::Itx && l > 0 {
             let min: f64 = to_fixed(self.itx_cd() / 60.0, 1).parse().unwrap();
             return format!("jump every {} min · trips {}% sooner", num(min), num(js_round(100.0 - 100.0 * self.soon())));
@@ -538,6 +548,12 @@ impl Game {
         }
         match u {
             Upg::Chamber if l > 0 => format!("train ×{} inside · next ×{}", num(self.chamber_x()), num(1.5 + 0.5 * (s.lvf(u) + 1.0))),
+            Upg::Kaio if s.hero == Hero::A17 => format!(
+                "overclock pinned at {}% for {}s, no tiredness · next {}s",
+                num((crate::a17::OC_MAX * 100.0).round()),
+                num(crate::a17::pin_secs_at(s.lvf(u).max(1.0))),
+                num(crate::a17::pin_secs_at(s.lvf(u) + 1.0))
+            ),
             Upg::Kaio if l > 0 => format!("×{} for 15s, then ×0.75", num(self.kaio_x())),
             Upg::Bigbang if l > 0 => format!("pays {} beams · next {}, bigger blast", num(Self::bang_x_at(s.lvf(u))), num(Self::bang_x_at(s.lvf(u) + 1.0))),
             Upg::Galick if l > 0 => format!(
@@ -545,17 +561,11 @@ impl Game {
                 num(Self::beam_x_at(s.lvf(u))),
                 num(Self::beam_x_at(s.lvf(u) + 1.0)),
                 if l == 4 {
-                    if self.kame() {
-                        " and super kamehameha"
-                    } else if s.hero == Hero::Piccolo {
-                        " and a full-power special beam cannon"
-                    } else {
-                        " and final flash"
-                    }
+                    format!(" and {}", hero_beam(s.hero).1)
                 } else if l >= 5 {
-                    " · full charge ×1.25"
+                    " · full charge ×1.25".into()
                 } else {
-                    ""
+                    String::new()
                 }
             ),
             Upg::Scouter if self.crit_over() > 0.0 => {
@@ -638,7 +648,7 @@ impl Game {
                 (format!("a taste of {}", nf.name), format!("×{} for 60 seconds", num(nf.x)))
             }
             "seeds" => (label.into(), format!("+{} ki seeds, kept forever", crate::data::WISH_SEEDS)),
-            "kaio" => (label.into(), format!("kaioken ×{} now, no tiredness after", num(self.kaio_x()))),
+            "kaio" => (label.into(), format!("{} ×{} now, no tiredness after", self.boost(), num(self.kaio_x()))),
             "senzu" => (label.into(), format!("senzu ×{} for 2 minutes", num(self.senzu_x()))),
             "krillin" => (label.into(), format!("he trains with you: idle ×1.5 and destructo discs. next death: rage ×{}", 3 + self.s.krillin_revives)),
             _ => (label.into(), what.into()),
@@ -666,7 +676,7 @@ impl Game {
 
     /// The achievements the menu and the share card list: all but snake way's while it's parked.
     fn listed_ach(&self) -> impl Iterator<Item = (usize, &'static (&'static str, &'static str, &'static str))> + '_ {
-        ACH.iter().enumerate().filter(|(_, a)| self.snake_way || !SNAKE_ACH.contains(&a.0))
+        ACH.iter().enumerate().filter(|(_, a)| (self.snake_way || !SNAKE_ACH.contains(&a.0)) && (self.s.hero.saiyan() || !APE_ACH.contains(&a.0)))
     }
 
     fn hero_open(&self, h: Hero) -> bool {
@@ -699,18 +709,37 @@ impl Game {
                 .bool("can", open && s.tree[i] < n.max && s.seeds >= cost)
                 .end()
         });
-        let ach =
-            self.listed_ach().map(|(_, &(id, name, text))| Obj::new().str("id", id).str("name", name).str("text", text).bool("done", s.ach.contains(id)).end());
+        let ach = self.listed_ach().map(|(_, &(id, name, text))| {
+            Obj::new().str("id", id).str("name", &self.ach_name(id, name)).str("text", &self.ach_text(id, text)).bool("done", s.ach.contains(id)).end()
+        });
         let chars = CHARS.iter().map(|&(h, id, name, need)| {
             // his form ladder for the hero row's strip: each form's name and its aura's outer colour
+            // (android 17 has no ladder: his strip is his overclock's looks)
             let ladder = ladder_of(h, s.limits);
-            let forms = ladder.iter().map(|f| Obj::new().str("name", f.name).str("aura", &format!("#{:06x}", f.aura()[2])).end());
+            let forms: Vec<String> = if h == Hero::A17 {
+                crate::a17::LOOK_NAMES
+                    .iter()
+                    .zip(crate::a17::LOOK_AURA)
+                    .map(|(n, a)| Obj::new().str("name", n).str("aura", &format!("#{:06x}", a[2])).end())
+                    .collect()
+            } else {
+                ladder.iter().map(|f| Obj::new().str("name", f.name).str("aura", &format!("#{:06x}", f.aura()[2])).end()).collect()
+            };
+            let form = if h == Hero::A17 {
+                if s.hero == h {
+                    self.oc_look().unwrap_or(0)
+                } else {
+                    0
+                }
+            } else {
+                s.form.min(ladder.len() - 1)
+            };
             let mut o = Obj::new()
                 .str("id", id)
                 .str("name", name)
                 .bool("open", self.hero_open(h))
                 .str("style", hero_style(h))
-                .num("form", s.form.min(ladder.len() - 1) as f64)
+                .num("form", form as f64)
                 .raw("forms", arr(forms));
             match need {
                 Need::Open => {}
@@ -811,8 +840,24 @@ impl Game {
         }
         self.s.hero = h;
         self.hero_sync();
+        if !h.saiyan() {
+            self.b.ape_until = self.b.ape_until.min(self.t);
+            if let Some(m) = self.tl.moon.as_mut() {
+                m.leaving = true;
+            }
+        }
         self.forms = ladder_of(h, self.s.limits);
+        let was = self.s.form;
         self.s.form = self.s.form.min(self.forms.len() - 1);
+        // only the forms this run's power reached on his own ladder (a wished form stays till it wears off)
+        let floor = if self.ang(crate::data::A_GOLDEN) { 1 } else { 0 };
+        let reached = self.s.run_best.max(self.s.pl);
+        while self.tl.preview.is_none() && self.s.form > floor && reached < self.forms[self.s.form].at {
+            self.s.form -= 1;
+        }
+        if self.s.form != was {
+            self.cue(Cue::Form(self.s.form));
+        }
         true
     }
 
@@ -858,19 +903,22 @@ impl Game {
     /// renderer (`spr`, `scene` in game.js), so they're not here.
     pub fn card_json(&self) -> String {
         let s = &self.s;
-        let mut done: Vec<(usize, &str, f64)> =
-            self.listed_ach().filter(|(_, a)| s.ach.contains(a.0)).map(|(i, a)| (i, a.1, s.ach_at.get(a.0).copied().unwrap_or(0.0))).collect();
+        let mut done: Vec<(usize, String, f64)> = self
+            .listed_ach()
+            .filter(|(_, a)| s.ach.contains(a.0))
+            .map(|(i, a)| (i, self.ach_name(a.0, a.1), s.ach_at.get(a.0).copied().unwrap_or(0.0)))
+            .collect();
         done.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap().then(a.0.cmp(&b.0)));
         let hero = CHARS.iter().find(|c| c.0 == s.hero).unwrap_or(&CHARS[0]).2;
         let uni = if s.multi || s.uni_best > 0 { uni_badge(s.uni.max(s.uni_best) as usize) } else { String::new() };
         Obj::new()
-            .raw("ach", arr(done.iter().map(|d| json::str(d.1))))
+            .raw("ach", arr(done.iter().map(|d| json::str(&d.1))))
             .num("achN", self.listed_ach().count() as f64)
             .num("laps", self.laps as f64)
             .num("time", self.session)
             .big("best", s.best.floor())
             .big("pl", s.pl.floor())
-            .str("form", self.forms[s.form].name)
+            .str("form", self.oc_look().map_or(self.forms[s.form].name, |l| crate::a17::LOOK_NAMES[l]))
             .str("hero", hero)
             .num("world", s.world as f64)
             .str("worldName", WORLD_FULL[s.world as usize])

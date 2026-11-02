@@ -7,7 +7,7 @@ through one API, `planet_core::bridge::Bridge`, with plain calls in and JSON str
 - **Web** (the site page's engine, [below](#the-web-page)): `planet-web` exports `Bridge` to wasm-bindgen as `Planet`.
   `rust/planet-web/shim.js` hands page.html a `game` object with game.js's API and turns the bridge's messages into
   page.html's `ui.*` calls. page.html's markup and code are unchanged.
-- **Native widget** (stage 5): the same `Bridge` behind Tauri commands, with a transparent web view that loads only
+- **Native widget**: the same `Bridge` behind Tauri commands, with a transparent web view that loads only
   the HUD. That view uses the same shim, with the `Planet` calls swapped for `invoke`. Every argument and result is a
   number, a bool or a JSON string, so the messages are identical.
 
@@ -36,7 +36,7 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
 | `frame_drawn(t, dt, now_ms)` | `frame(t, dt)` as page.html calls it, every animation frame with its own `t` and `dt`, drawn. The timeouts due by `t` run first, as a page's `setTimeout`s fire between frames |
 | `timeouts_now(now_ms)` | the timeouts due by `Date.now()`, counted from the last `frame_drawn`. The shim calls it before every input, since a page's `setTimeout`s fire in time order with its events |
 | `pixels_ptr() → ptr` | where the frame's RGBA bytes are in the module's memory (`w`×`h`×4), for an `ImageData` over them |
-| `step(elapsed_s, now_ms) → steps`, `step_drawn(elapsed_s, now_ms) → steps` | fixed 1/30 s steps, at most 8 a call, undrawn or drawn. For the native widget (stage 5) |
+| `step(elapsed_s, now_ms) → steps`, `step_drawn(elapsed_s, now_ms) → steps` | fixed 1/30 s steps, at most 8 a call, undrawn or drawn (`step_drawn` is `Bridge`'s, for the native widget) |
 | `frame() → message` | see below; call it after stepping and after every command |
 | `resize(w, h, scale)` | `resize()` (`layout()`) |
 | `pointer_down(x, y, bx, by, id, button, touch)`, `pointer_move(x, y, bx, by, id)`, `pointer_up(bx, by, id)`, `pointer_cancel()` | the canvas's pointer listeners, with `pointerId`, `button` and `pointerType === 'touch'`: tap, double tap (big bang), drag (spin, with inertia), hold (beam charge); on snake way the press acts. Once instant transmission is owned, a right-click opens it, and so does a two-finger tap at home with nothing on (two touches landing within 0.12 s and lifting within 0.25 s, unmoved) |
@@ -96,8 +96,8 @@ pixels (`st.toBuf(e)`); taps and beams are hit-tested in these.
   pod, a trip, a raid and the dragon; the site has no `ui.notify`, so the shim skips it). Two hand the page a list to
   pick from, and the page calls back: `wish(list)`, the dragon's offer `[{key, label, what, tier}]`, once for each
   offer (its words fixed when it's made, as in game.js), calls back `pick_wish(key)`; `itxPick(list)`, instant
-  transmission's worlds `[{key, label}]`, calls back `itx_jump(w)`. `resend()` sends the dragon's offer again while it
-  waits. One cue is the Rust engine's own: `xform(on)`, a transformation's power-up darkening the sky (`true`) and its
+  transmission's worlds `[{key, label}]`, calls back `itx_jump(w)`. `Bridge::resend()` (the widget's) sends the dragon's offer again
+  while it waits. One cue is the Rust engine's own: `xform(on)`, a transformation's power-up darkening the sky (`true`) and its
   form landing (`false`); the shim toggles `body.xdark`, which lightens the desktop HUD's text over the dark sky.
 
 Every cue game.js emits is ported, at the same point of the same call (90 sites). None is draw-only: the one site in
@@ -134,16 +134,3 @@ script isn't wrapped in a function, so game.js sees world.js's names). `<html da
   and the `@js` smoke tests play game.js's fallback against the same baselines.
 - planet-render places what taps and beams aim at (planet-core's `spots`) as it draws, and draws with the game's random
   numbers, as game.js does.
-
-## What stage 5 needs
-
-- **Tauri commands**: one for each row of the calls table, on a `Mutex<Bridge>`. Return the same strings. Push
-  `frame()`'s message to the HUD web view as a Tauri event after each tick, rather than having the view poll.
-- **The HUD-only web view**: page.html's HUD markup with the shim. Swap the `Planet` calls for `invoke`, and drop
-  the frame loop and `putImageData` (the native side steps and draws). Pointer events on the native window go to
-  `pointer_*` with both coordinate pairs. The widget's own `ui.notify` handles the `notify` cues.
-- **Pictures the HUD shows**: `thumb(id)` (the characters tab) and the card's `spr` come from planet-core's hero sprites
-  (`hero_sprite`, `card_sprite`; the widget's `planet_sprite`), the card's `scene` from the framebuffer.
-- **Time**: pass the wall clock (`Date.now()`, or the system clock in ms) with `start` and `step`, and today's date as
-  `toDateString()` would print it (`Wed Oct 28 2026`).
-- **The save**: the `save()` text in a file, read back with `load()`.

@@ -3,6 +3,7 @@
 //! game's random stream stays where game.js leaves it. Screen spots game.js writes back while drawing (where the
 //! hero, piccolo, bubbles and the visitors stand) are written back to the game the same way.
 
+use planet_core::data::{hero_boost, Boost};
 use planet_core::fx::Particle;
 use planet_core::geom::{ap, dot, mul, norm, V3};
 use planet_core::jsmath::{atan2, cos, hypot, pow, sin};
@@ -249,9 +250,10 @@ impl Ctx<'_> {
         }
     }
 
-    /// `kaioAura`: the sprite washed red, a pulsing red rim and flames licking up, depth-tested like the sprite.
+    /// `kaioAura`: the sprite washed in the boost's colour (the kaioken's red), a pulsing rim and flames licking up,
+    /// depth-tested like the sprite.
     #[allow(clippy::too_many_arguments)]
-    fn kaio_aura(&mut self, spr: &Sprite, bx: f64, by: f64, ang: f64, flip: bool, lift: f64, depth: f64, k: f64, t: f64) {
+    fn kaio_aura(&mut self, spr: &Sprite, bx: f64, by: f64, ang: f64, flip: bool, lift: f64, depth: f64, k: f64, t: f64, bp: &Boost) {
         let (ux, uy, rx, ry) = (sin(ang), -cos(ang), cos(ang), sin(ang));
         let (ox, oy) = (bx + ux * lift, by + uy * lift);
         let rr = (hypot(&[spr.w as f64, spr.h as f64]) + 6.0) * k;
@@ -265,6 +267,8 @@ impl Ctx<'_> {
         let pulse = 0.5 + 0.5 * sin(t * 9.0);
         let f = (t * 12.0).floor();
         let wash = 0.12 + 0.08 * pulse;
+        // toward a channel at 0 it scales down, as game.js washes red: the kaioken's pixels stay the same
+        let mix = |c: f64, to: u32| (if to == 0 { c * (1.0 - wash) } else { c + (to as f64 - c) * wash }) as i64 as u32 & 255;
         let mut y = (oy - rr).floor();
         while y <= oy + rr {
             if y >= 0.0 && y < self.h {
@@ -280,12 +284,12 @@ impl Ctx<'_> {
                             if on(i, j) {
                                 let p = *b;
                                 let (r, g, bl) = ((p & 255) as f64, ((p >> 8) & 255) as f64, ((p >> 16) & 255) as f64);
-                                let rr2 = ((r + (255.0 - r) * wash) as i64 as u32) & 255;
-                                let gg = (g * (1.0 - wash)) as u32;
-                                let bb = (bl * (1.0 - wash)) as u32;
+                                let rr2 = mix(r, bp.wash >> 16 & 255);
+                                let gg = mix(g, bp.wash >> 8 & 255);
+                                let bb = mix(bl, bp.wash & 255);
                                 *b = pk(((rr2 << 16) | (gg << 8) | bb) & 0xffffff, 255);
                             } else if on(i - 1.0, j) || on(i + 1.0, j) || on(i, j - 1.0) || on(i, j + 1.0) {
-                                *b = pk(if pulse > 0.5 { 0xff4a3a } else { 0xe0332b }, 255);
+                                *b = pk(if pulse > 0.5 { bp.rim[0] } else { bp.rim[1] }, 255);
                             } else {
                                 let fl = 2.0 + ((h2(i * 13.0 + f * 7.0, f) * 4.0) as i64) as f64;
                                 let mut q = 0.0;
@@ -300,16 +304,16 @@ impl Ctx<'_> {
                                 if q != 0.0 {
                                     *b = pk(
                                         if q >= fl {
-                                            0xffd0c0
+                                            bp.flame[0]
                                         } else if q > 2.0 {
-                                            0xff8a6a
+                                            bp.flame[1]
                                         } else {
-                                            0xff4a3a
+                                            bp.flame[2]
                                         },
                                         255,
                                     );
                                 } else if (on(i - 2.0, j) || on(i + 2.0, j) || on(i, j + 2.0)) && bayer(x as i32, y as i32) < 0.25 + 0.35 * pulse {
-                                    *b = pk(0xb0201a, 255);
+                                    *b = pk(bp.ember, 255);
                                 }
                             }
                         }
@@ -596,6 +600,7 @@ impl Scene {
         crate::snack::draw_ramen(&mut c, g, &hero);
         self.draw_visitors(&mut c, g, &hero, dt);
         crate::heroes::draw_discs(&mut c, g);
+        crate::heroes::draw_crater(&mut c, g);
         crate::beam::draw_charge(&mut c, g);
         crate::effects::draw(&mut c, g);
         crate::beam::draw_beam(&mut c, g);
@@ -668,6 +673,14 @@ impl Scene {
         // his drawn size: goten is a kid, tien is tall
         let hk = 1.05 * sprite::hero_scale(hero_id(g));
         let shown = g.forms[crate::xform::shown_form(g, t)].look;
+        // android 17 wears his overclock's look and aura instead of a form's
+        let (fi, aura, shown) = match g.oc_look() {
+            Some(l) => (0, planet_core::a17::LOOK_AURA[l], planet_core::a17::LOOK_SPRITE[l]),
+            None => (fi, aura, shown),
+        };
+        let formed = g.oc_look().map_or(g.s.form > 0, |l| l > 0);
+        // some looks are drawn bigger (orange piccolo, the orange giant)
+        let hk = hk * sprite::look_scale(hero_id(g), shown);
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[shown] };
         let bl = match &self.itx_fx {
             Some(b) if t - b.t0 < 0.75 => t - b.t0,
@@ -718,16 +731,16 @@ impl Scene {
         }
         let kaio = g.b.kaio_until > t;
         let worn = g.look(planet_core::looks::LookKind::Aura);
-        if seen && (g.tl.aura || g.b.boost_until > t || g.riding > 0.0 || g.s.form > 0 || kaio || g.s.aura > 0 || worn.is_some()) {
-            let n = if g.s.form > 0 { 4 } else { 3 };
+        if seen && (g.tl.aura || g.b.boost_until > t || g.riding > 0.0 || formed || kaio || g.s.aura > 0 || worn.is_some()) {
+            let n = if formed { 4 } else { 3 };
             for _ in 0..n {
                 let a = kd.ang + (g.rng.random() - 0.5) * 0.9;
                 let r = 4.0 + g.rng.random() * 8.0;
                 let col: Vec<u32> = if kaio {
-                    vec![0xffffff, 0xff9a8a, 0xe0332b]
+                    hero_boost(g.s.hero).spark.to_vec()
                 } else if let Some(l) = worn {
                     l.cols[..3].to_vec()
-                } else if g.s.form == 0 && g.s.aura > 0 {
+                } else if !formed && g.s.aura > 0 {
                     AURAS[((g.s.aura - 1) % 4) as usize].to_vec()
                 } else {
                     aura.to_vec()
@@ -774,14 +787,10 @@ impl Scene {
         let draw_hero = |c: &mut Ctx, s: &Sprite, l: f64, d: f64, k: f64, x: f64, y: f64, a: f64| {
             c.blit_z(s, x, y, a, flip, l, d, k);
             if kaio {
-                c.kaio_aura(s, x, y, a, flip, l, d, k, t);
+                c.kaio_aura(s, x, y, a, flip, l, d, k, t, &hero_boost(g.s.hero));
             }
         };
-        if g.b.ape_until > t && g.s.hero == planet_core::data::Hero::Krillin {
-            // krillin's stand-in for the great ape: max power, bigger and bare-chested
-            let mp = sprite::krillin_max_power();
-            draw_hero(c, &mp.run[((t * 9.0).floor() as i64 % 4) as usize], lift, depth, hk * 1.3, kd.x, kd.y, kd.ang);
-        } else if g.b.ape_until > t {
+        if g.b.ape_until > t {
             // the great ape stomps: a little hop each step, a screen shake on landing
             // (the step and its shake are planet-core's: Game::draw_step)
             let step = (t * 3.2).floor();
@@ -799,14 +808,12 @@ impl Scene {
                 .min((kd.y + uy * lift) / (1.001 - uy))
                 .min((c.h - kd.y - uy * lift) / (1.001 + uy))
                 - 3.0;
-            // piccolo grows into a giant namekian: himself, huge, in place of the ape
-            let namek = g.s.hero == planet_core::data::Hero::Piccolo;
-            let a0 = if namek { &set.run[0] } else { sprite::get("APE.0") };
+            let a0 = sprite::get("APE.0");
             let ape = &g.tl.ape;
             let want = 2.3 * (1.0 + 0.08 * g.tail_lv()) * if ape.giant { 1.0 + 0.5 * 1f64.min((t - ape.at) / 1.2) } else { 1.0 };
             let k = ape.k + (1.5f64.max(want.min(2.0 * half / (a0.w.max(a0.h) as f64))) - ape.k) * 1f64.min(dt * 2.0);
             g.tl.ape.k = k;
-            let spr = if namek { &set.run[step as i64 as usize % 4] } else { sprite::get(if step as i64 % 2 == 0 { "APE.0" } else { "APE.1" }) };
+            let spr = sprite::get(if step as i64 % 2 == 0 { "APE.0" } else { "APE.1" });
             draw_hero(c, spr, lift + sin(t * 3.2 * std::f64::consts::PI).abs() * 3.0, depth + 30.0, k, kd.x, kd.y, kd.ang);
         } else if g.b.fused.is_some_and(|f| f.1 > t) {
             let look = g.tl.fused_look;
@@ -902,7 +909,7 @@ impl Scene {
             let (bx, by) = (mx - sin(a2) * sh / 2.0, my + cos(a2) * sh / 2.0);
             c.blit_z(spr, bx, by, a2, back, 0.0, depth, hk);
             if kaio {
-                c.kaio_aura(spr, bx, by, a2, back, 0.0, depth, hk, t);
+                c.kaio_aura(spr, bx, by, a2, back, 0.0, depth, hk, t, &hero_boost(g.s.hero));
             }
         } else if (0.0..0.18).contains(&bl) {
             // he steps in out of the light

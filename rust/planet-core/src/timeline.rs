@@ -1098,7 +1098,7 @@ impl Game {
         {
             let c = self.cap_pt(0.38, 1.3);
             self.tl.kril = Some(Krillin { c, t0: t, boom: t + 3.2, dead: 0.0, sx: None });
-            self.event(if self.s.krillin_ally { "krillin: \"don't worry guys, i've got this one!\"" } else { "krillin: \"hey guys! what did i miss?\"" });
+            self.event(if self.krillin_helps() { "krillin: \"don't worry guys, i've got this one!\"" } else { "krillin: \"hey guys! what did i miss?\"" });
             self.tl.next_kril = 360.0 + self.r() * 180.0;
         }
         if let Some(k) = self.tl.kril.clone() {
@@ -1146,18 +1146,20 @@ impl Game {
             && self.s.world != 8
             && session > 200.0
             && self.s.best >= 2e5
-            && self.s.hero != Hero::A17
             && tick(&mut self.tl.next_andro, dt)
         {
             self.krillin_hit("the androids");
             let hp = Big::from(500.0).max(self.wrate() * 14.0);
-            let members = [("android 17", A17), ("android 18", A18)]
+            // playing 17, it's his sister and 16 who come looking
+            let a17 = self.s.hero == Hero::A17;
+            let members = if a17 { [("android 18", A18), ("android 16", A16)] } else { [("android 17", A17), ("android 18", A18)] };
+            let members = members
                 .iter()
                 .enumerate()
                 .map(|(i, &(name, spr))| Member { name, spr, hp, max: hp, i, x: 0.0, y: 0.0, k: 1.0, dead: false, flash: 0.0 })
                 .collect();
             self.tl.ginyu = Some(Ginyu { androids: true, members, max: hp * 2.0, t0: t, until: t + 45.0, next_ki: 1.0, done: 0.0, mech: None });
-            self.event("androids 17 and 18 drop in — \"we're just bored\"");
+            self.event(if a17 { "androids 18 and 16 drop in — \"you're coming home, 17\"" } else { "androids 17 and 18 drop in — \"we're just bored\"" });
             self.cue(Cue::Sfx("boss"));
             self.tl.next_andro = 340.0 + self.r() * 60.0;
         }
@@ -1336,7 +1338,9 @@ impl Game {
                     Hero::Krillin => ("master roshi", "roshillin"),
                     // the other new heroes' fusions come with their own work
                     Hero::Goten => ("kid trunks", "gotenks"),
-                    Hero::Piccolo | Hero::Tien | Hero::A17 => ("goku", "gogeta"),
+                    Hero::A17 => ("android 18", "android35"),
+                    Hero::Tien => ("chiaotzu", "tienzu"),
+                    Hero::Piccolo => ("kid gohan", "piccohan"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
@@ -1353,6 +1357,9 @@ impl Game {
                 // the new heroes' fusions have no fat or skinny one: a botched dance is still them, weaker
                 let own = match res {
                     "roshillin" => Some("FUSED.roshillin"),
+                    "tienzu" => Some("FUSED.tienzu"),
+                    "android35" => Some("FUSED.android35"),
+                    "piccohan" => Some("FUSED.piccohan"),
                     // goten's gotenks: a botched dance is still gotenks (trunks' keeps the old fat and skinny ones)
                     "gotenks" if self.s.hero == Hero::Goten => Some("FUSED.gotenks"),
                     _ => None,
@@ -1639,7 +1646,7 @@ impl Game {
                 let hp = Big::from(400.0).max(self.wrate() * 18.0);
                 let name = if vname == "vegeta" && self.s.hero == Hero::Vegeta { "past vegeta" } else { vname };
                 self.new_boss(Boss::new(0, name.into(), spr, hp, t, t + 25.0));
-                self.event(format!("{vname} joins the tournament!"));
+                self.event(format!("{name} joins the tournament!"));
             }
             if t > tr.until {
                 let ko = self.tl.tour.as_ref().unwrap().ko;
@@ -1707,11 +1714,16 @@ impl Game {
             self.tl.next_nappa = 0.0;
             let hp = Big::from(800.0).max(self.wrate() * 50.0);
             self.new_boss(Boss::new(0, "nappa".into(), NAPPA, hp, t, t + 35.0));
-            self.event("nappa: \"vegeta, let me handle this!\" — tap him");
+            self.event(if self.s.hero == Hero::Vegeta {
+                "nappa: \"vegeta?! you'd side with them?\" — tap him"
+            } else {
+                "nappa: \"vegeta, let me handle this!\" — tap him"
+            });
         }
         // ultra instinct (or the end of the sagas) opens the multiverse
         let sagas = VILLAINS.len() as u32;
-        if !self.s.multi && (self.s.saga >= sagas || self.held_form() >= UI_FORM) {
+        // and ultra instinct's power: goten's forms come early, at half the marks
+        if !self.s.multi && (self.s.saga >= sagas || self.held_form() >= UI_FORM && self.s.run_best.max(self.s.pl) >= ALL_FORMS[UI_FORM].1) {
             self.s.multi = true;
             self.s.multi_t = session;
             self.tl.next_boss = self.tl.next_boss.min(20.0);
@@ -1910,7 +1922,7 @@ impl Game {
                 let (x, y) = self.hand_pos();
                 self.tl.kis.push(Ki { x, y, t0: t, m: None, disc: false, done: false });
             }
-            if self.s.krillin_ally && !buu {
+            if self.krillin_helps() && !buu {
                 if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go) {
                     let nd = b.next_disc.unwrap_or(2.0) - dt;
                     b.next_disc = Some(nd);
@@ -2046,7 +2058,13 @@ impl Game {
     pub(crate) fn timeline_moon(&mut self, t: f64, dt: f64) {
         let session = self.session;
         let (w, h) = (self.cam.w, self.cam.h);
-        if (session > 40.0 || self.s.world == 2) && self.s.world != 3 && self.tl.moon.is_none() && self.b.ape_until < t && tick(&mut self.tl.next_moon, dt) {
+        if (session > 40.0 || self.s.world == 2)
+            && self.s.world != 3
+            && self.s.hero.saiyan()
+            && self.tl.moon.is_none()
+            && self.b.ape_until < t
+            && tick(&mut self.tl.next_moon, dt)
+        {
             let r = 9f64.max(js_round(w.min(h) * 0.07));
             self.tl.moon = Some(Moon { x: w * 0.2, y: h * 0.22, r, a: 0.0, born: t, leaving: false });
             self.once("moon", "a full moon is rising… click it to transform");
@@ -2094,7 +2112,7 @@ impl Game {
 
     /// `krillinHit`: an ally krillin is the first thing every villain goes for.
     fn krillin_hit(&mut self, by: &str) {
-        if !self.s.krillin_ally || self.s.hero == Hero::Krillin || self.tl.kril.is_some() || self.r() > 0.75 {
+        if !self.krillin_helps() || self.tl.kril.is_some() || self.r() > 0.75 {
             return;
         }
         let c = self.frame3.road_pt(self.phi - 0.5);
@@ -2147,7 +2165,11 @@ impl Game {
                 let prize = (max * 2.0).max(self.wrate() * 200.0) * (1.0 + 0.5 * self.lvl(N_BOUNTY));
                 let (cx, cy) = (self.cam.cx, self.cam.cy - self.cam.r * 1.3);
                 self.gain_at(prize, cx, cy, true);
-                let who = if androids { "androids 17 and 18 are" } else { "the ginyu force is" };
+                let who = match (androids, self.s.hero == Hero::A17) {
+                    (true, true) => "androids 18 and 16 are",
+                    (true, false) => "androids 17 and 18 are",
+                    _ => "the ginyu force is",
+                };
                 self.event(format!("{who} defeated! +{}", fmt_short(js_round(prize))));
                 self.cue(Cue::Fx("star"));
                 self.cue(Cue::Sfx("boom"));
@@ -2425,7 +2447,14 @@ impl Game {
         self.shake = 0.5;
         let (x, y) = self.hand_pos();
         self.burst_at(x, y, &[0xffffff, 0xdfe6e8, 0x9adada], 40, 220.0);
-        self.event_ms(TRAVEL[w as usize], if w >= 3 { 6000.0 } else { 2600.0 });
+        let msg = if w == 8 && self.s.hero == Hero::A17 {
+            "a time machine drops you in trunks' future — the city is in ruins, and this world's 18 is still out there"
+        } else if w == 2 && !self.s.hero.saiyan() {
+            "a space pod takes you to planet vegeta for 45 seconds — the saiyans' homeworld, and nappa's"
+        } else {
+            TRAVEL[w as usize]
+        };
+        self.event_ms(msg, if w >= 3 { 6000.0 } else { 2600.0 });
         if w != 0 {
             self.cue(crate::hud::Cue::Notify("trip", crate::hud::WORLD_FULL[w as usize].into()));
         }
@@ -2691,14 +2720,14 @@ impl Game {
 
     fn wish_ok(&self, key: &str) -> bool {
         match key {
-            "form" => self.s.form < self.forms.len() - 1,
-            "bigape" => self.s.ach.contains("ape") && !self.s.big_ape,
+            "form" => self.s.form < self.forms.len() - 1 && self.s.hero != Hero::A17,
+            "bigape" => self.s.ach.contains("ape") && !self.s.big_ape && self.s.hero.saiyan(),
             "skills" => TREE.iter().enumerate().any(|(i, n)| self.s.tree[i] > 0 && self.s.tree[i] < n.max),
             "gear" => self.s.levels.iter().any(|&l| l > 0),
             "fly" => !self.wished(WishBuff::Fly),
             "idle" => self.passive() > 0.0,
             "fuse" | "bubbles" => self.s.lv(Upg::Partner) > 0,
-            "kaio" => self.s.lv(Upg::Kaio) > 0,
+            "kaio" => self.s.lv(Upg::Kaio) > 0 && self.s.hero != Hero::A17,
             "trip" => self.s.world == self.home(),
             _ => true,
         }
@@ -2848,7 +2877,7 @@ impl Game {
             "kaio" => {
                 self.b.kaio_until = t + 15.0;
                 self.b.kaio_ready = t + 15.0;
-                let msg = format!("your wish is granted — kaioken ×{}, and you won't get tired", self.kaio_x());
+                let msg = format!("your wish is granted — {} ×{}, and you won't get tired", self.boost(), self.kaio_x());
                 self.event(msg);
             }
             "bubbles" => {

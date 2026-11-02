@@ -199,3 +199,40 @@ fn the_afk_rule_over_whole_runs() {
         assert!((2.0..=3.2).contains(&act), "tapping him like anyone else still earns about 2-3× his idle: ×{act}");
     }
 }
+
+#[test]
+fn every_form_has_its_own_look_and_three_late_ones_follow() {
+    let ladder = planet_core::data::ladder_of(Hero::Piccolo, 0);
+    let names: Vec<&str> = ladder.iter().map(|f| f.name).collect();
+    assert_eq!(&names[9..], ["synced with nail", "synced with kami", "complete namekian"]);
+    assert!(!names[..9].iter().any(|n| n.contains("nail") || n.contains("kami")), "no clashing names: {names:?}");
+    let s = planet_core::sprite::hero("piccolo");
+    for i in 0..12 {
+        for j in 0..i {
+            assert!(s.forms[i].idle.col != s.forms[j].idle.col || i == 8 && j == 7, "looks {j} and {i} differ");
+        }
+    }
+    assert!(planet_core::sprite::look_scale("piccolo", 8) > planet_core::sprite::look_scale("piccolo", 7));
+    assert!(planet_core::sprite::look_scale("piccolo", 7) > 1.0, "orange piccolo is bigger");
+}
+
+#[test]
+fn kid_gohan_dances_with_him_into_piccohan() {
+    let mut g = Game::new(1);
+    g.preview("#hero-piccolo#dance");
+    g.start();
+    let mut said = Vec::new();
+    for _ in 0..30 * 12 {
+        if let Some(d) = g.tl.dance.clone() {
+            if d.i < 3 && (d.beats[d.i] - g.t).abs() < 0.05 {
+                let k = g.kid_screen(14.0);
+                g.tap(k.x, k.y);
+            }
+        }
+        let t = g.t + DT;
+        g.frame(t, DT);
+        said.extend(g.events.drain(..).map(|e| e.0));
+    }
+    assert!(said.iter().any(|s| s.starts_with("kid gohan wants to do the fusion dance")), "{said:?}");
+    assert_eq!(g.tl.fused_look, "FUSED.piccohan");
+}

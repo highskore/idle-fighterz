@@ -235,6 +235,7 @@ impl Game {
         let reward = match n {
             1 => "the grand priest takes notice…".to_string(),
             2 => "zenkai without limit: ki seeds count for more".to_string(),
+            3 if self.s.hero == crate::data::Hero::A17 => format!("beyond the limiter: from now on every limit you break doubles his power mark (×{})", 2),
             3 => format!("beyond the forms: from now on every limit you break is a new form (×{})", 2),
             4 => "the god limit: god ki now compounds".to_string(),
             5 => format!("the universe limit: universe stars ×{}", crate::data::STAR_X_V),
@@ -399,7 +400,7 @@ impl Game {
     /// `#mile0` (… `#mileK`) with the K-th named milestone (0: 1e10, 1: 1e100, 2: infinity, 3: 1e1000 …) about to land.
     pub(crate) fn limits_preview(&mut self, hash: &str) {
         let num = |k: &str| -> Option<u32> {
-            let i = hash.find(k)? + k.len();
+            let i = hash.find(crate::hooks::key(k))? + k.len();
             hash[i..].chars().take_while(|c| c.is_ascii_digit()).collect::<String>().parse().ok()
         };
         let late = |g: &mut Game, pl: Big| {
@@ -422,7 +423,7 @@ impl Game {
             // and no trip for a while: the scene plays at home
             g.tl.home_since = g.session + 600.0;
         };
-        if let Some(n) = num("limit").filter(|&n| n >= 1) {
+        if let Some(n) = num("limit").filter(|&n| n >= 1).map(|n| n.min(100)) {
             self.s.limits = n - 1;
             self.s.levels[crate::data::Upg::Gravity as usize] = 60;
             self.s.ascend = Big::from(4e7);
@@ -435,11 +436,9 @@ impl Game {
             }
             self.s.mile = i;
         }
-        if let Some(k) = num("mile") {
-            let mut i = 0;
-            while milestone(i).1 != Some(k) {
-                i += 1;
-            }
+        // (a milestone that doesn't exist does nothing)
+        if let Some(i) = num("mile").and_then(|k| (0..).take_while(|&i| milestone(i).0.is_finite()).find(|&i| milestone(i).1 == Some(k))) {
+            let k = milestone(i).1.unwrap();
             self.s.mile = i;
             let at = milestone(i).0;
             let pl = Big::exp10(at + 0.0002);

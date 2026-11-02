@@ -4,7 +4,7 @@
 
 use planet_core::heroes::DISC_FLIGHT;
 use planet_core::jsmath::{cos, sin};
-use planet_core::sprite::{piccolo_seated, Sprite};
+use planet_core::sprite::{piccolo_cape, piccolo_seated, Sprite};
 use planet_core::Game;
 
 use crate::scene::Ctx;
@@ -15,8 +15,13 @@ const CAPE_FULL: f64 = 5.0;
 
 /// Piccolo seated at time `t`, his cape fluttering with his focus.
 pub fn seated(g: &Game, t: f64) -> Sprite {
-    let s = piccolo_seated();
+    // he sits in the look of the form he holds; a look without the cape has nothing to flutter
+    let look = g.forms[g.s.form].look;
+    let s = piccolo_seated(look);
     let mut spr = s.body.clone();
+    if !piccolo_cape(look) {
+        return spr;
+    }
     let amp = CAPE_CALM + (CAPE_FULL - CAPE_CALM) * g.focus();
     let (top, bottom) = s.cape.iter().fold((usize::MAX, 0), |(a, b), p| (a.min(p.0), b.max(p.0)));
     for j in top..=bottom {
@@ -67,5 +72,23 @@ pub fn draw_discs(c: &mut Ctx, g: &Game) {
         }
         // a glint goes round the rim as it spins
         c.fb.px((x + cos(spin) * rx).round(), (y + sin(spin) * ry).round(), 0xffffff, 1.0);
+    }
+}
+
+/// Where tien's kikoho hit: its triangle burnt round the villain, gold fading to embers over `CRATER_SECS`.
+pub fn draw_crater(c: &mut Ctx, g: &Game) {
+    let Some((x, y, t0)) = g.crater() else { return };
+    let k = 1.0 - (c.t - t0) / planet_core::heroes::CRATER_SECS;
+    let r = 22.0;
+    let tri = [(x, y - r * 0.9), (x - r, y + r * 0.6), (x + r, y + r * 0.6)];
+    for e in 0..3 {
+        let ((x0, y0), (x1, y1)) = (tri[e], tri[(e + 1) % 3]);
+        let n = 40;
+        for i in 0..=n {
+            let f = i as f64 / n as f64;
+            let (px, py) = (x0 + (x1 - x0) * f, y0 + (y1 - y0) * f);
+            c.fb.px(px.round(), py.round(), 0xffd060, 0.9 * k);
+            c.fb.px(px.round(), py.round() + 1.0, 0xd88a18, 0.7 * k);
+        }
     }
 }

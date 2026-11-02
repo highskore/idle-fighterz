@@ -40,14 +40,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "planet-native"
-version = "0.1.0"
-dependencies = [
- "planet-core",
- "planet-render",
-]
-
-[[package]]
 name = "planet-render"
 version = "0.1.0"
 dependencies = [
