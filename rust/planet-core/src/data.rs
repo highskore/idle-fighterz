@@ -259,7 +259,7 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         _ => &[],
     };
     let own = own_names(h);
-    // goten was born super saiyan: his marks come at a tenth (he can't hold a form for long, heroes.rs)
+    // goten was born super saiyan: his marks come at half (he can't hold a form for long, heroes.rs)
     let mark = if h == Hero::Goten { crate::heroes::GOTEN_MARK } else { 1.0 };
     let mut v: Vec<Form> = ALL_FORMS[..9]
         .iter()
@@ -317,7 +317,7 @@ pub const TREE: [Node; 21] = [
     Node { id: "stride", branch: Branch::Body, tier: 1, name: "long stride", what: "he runs 10% faster a rank: more laps", max: 5 },
     Node { id: "brawl", branch: Branch::Body, tier: 1, name: "brawler", what: "villain taps +50% a rank", max: INF },
     Node { id: "critx", branch: Branch::Body, tier: 2, name: "pressure point", what: "crits hit ×1 harder a rank", max: INF },
-    Node { id: "pride", branch: Branch::Body, tier: 3, name: "saiyan pride", what: "combo goes to ×4", max: 1 },
+    Node { id: "pride", branch: Branch::Body, tier: 3, name: "warrior's pride", what: "combo goes to ×4", max: 1 },
     Node { id: "idle", branch: Branch::Spirit, tier: 0, name: "meditation", what: "idle income +50% a rank", max: INF },
     Node { id: "beam", branch: Branch::Spirit, tier: 0, name: "ki control", what: "beams +25% a rank", max: INF },
     Node { id: "chamber", branch: Branch::Spirit, tier: 1, name: "patience", what: "the chamber door comes 25% more often a rank", max: INF },
@@ -734,8 +734,8 @@ pub const LATE_ACH: [(&str, &str); 5] = [
 pub const ACH: [(&str, &str, &str); 87] = [
     ("lap1", "first steps", "run a lap of the planet"),
     ("laps100", "marathon", "run 100 laps"),
-    ("ss", "super saiyan", "reach super saiyan"),
-    ("ui", "ultra instinct", "reach ultra instinct"),
+    ("ss", "super saiyan", "reach super saiyan, as a saiyan"),
+    ("ui", "ultra instinct", "reach ultra instinct, as a saiyan"),
     ("o9k", "it's over 9000", "pass 9,000 power"),
     ("villains10", "villain slayer", "beat 10 villains"),
     ("frieza", "emperor down", "beat frieza"),
@@ -776,7 +776,7 @@ pub const ACH: [(&str, &str, &str); 87] = [
     ("coolerdown", "cooler down", "beat cooler and his armoured squadron"),
     ("unwarped", "janemba unwarped", "beat janemba, double and all"),
     ("sealed", "bojack sealed", "beat bojack and his gang"),
-    ("mui", "beyond instinct", "reach your hero's first form past ultra instinct"),
+    ("mui", "beyond instinct", "reach your first form past ultra instinct's mark"),
     ("universe", "universe star", "clear a universe"),
     ("multiverse", "last one standing", "clear universe 11 in the tournament of power"),
     ("mastery", "beyond the forms", "earn a mastery star"),
@@ -858,7 +858,7 @@ pub fn hero_style(h: Hero) -> &'static str {
 /// The angels' rules as the menu shows them, in `ANGELS` order: (name, what).
 pub const ANGEL_TEXT: [(&str, &str); 8] = [
     ("divine seeds", "ki seeds grow with power^0.55, not its square root"),
-    ("born golden", "every ascension starts at super saiyan"),
+    ("born golden", "every ascension starts in your first form"),
     ("whis' staff", "whis' training is always on at beerus' planet"),
     ("self-ascension", "ascends on its own at the power you pick"),
     ("vados' notes", "ascending keeps a tenth of every upgrade"),
