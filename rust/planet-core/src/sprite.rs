@@ -785,38 +785,7 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
                     true,
                 ),
             ),
-            (
-                "piccolo",
-                make_plain_with(
-                    &PICCOLO_HEAD,
-                    &PICCOLO_BARE,
-                    &[
-                        ('s', 0x5bb043),
-                        ('S', 0x3c7f2e),
-                        ('h', 0xf4f4f6),
-                        ('H', 0xc2c6d2),
-                        ('k', 0x7a4ab0),
-                        ('K', 0x4e2c78),
-                        ('M', 0x24401c),
-                        ('a', 0x5a3a9a),
-                        ('A', 0x3e2670),
-                        ('y', 0xf4f4f6),
-                        ('Y', 0xc2c6d2),
-                        ('u', 0x3a6ad8),
-                        ('g', 0xd8323a),
-                        ('G', 0x962028),
-                        ('p', 0x5a3a9a),
-                        ('P', 0x3e2670),
-                        ('w', 0x8a4a2a),
-                        ('W', 0x5a2e18),
-                        ('b', 0x5a3a9a),
-                        ('B', 0x3e2670),
-                        ('q', 0xf4f4f6),
-                        ('Q', 0xc2c6d2),
-                    ],
-                    Opt { cape: true, ..Opt::default() },
-                ),
-            ),
+            ("piccolo", piccolo()),
             ("krillin", with_late(make_plain(&KRILLIN_HEAD, &KRILLIN_HEAD, KRI, false), &krillin_late())),
             (
                 "goten",
@@ -851,9 +820,10 @@ pub struct Seated {
     pub cape: Vec<(usize, usize, u32)>,
 }
 
-pub fn piccolo_seated() -> &'static Seated {
-    static S: OnceLock<Seated> = OnceLock::new();
-    S.get_or_init(|| {
+pub fn piccolo_seated(look: usize) -> &'static Seated {
+    static S: [OnceLock<Seated>; 12] = [const { OnceLock::new() }; 12];
+    let look = look.min(PIC_LOOKS.len() - 1);
+    S[look].get_or_init(|| {
         const BODY: [&str; 9] = [
             "...oyyobbbbyyo..",
             "..oyyyoaaaaoyyo.",
@@ -865,6 +835,9 @@ pub fn piccolo_seated() -> &'static Seated {
             "oppPPpwwwwpPPppo",
             ".oooooooooooooo.",
         ];
+        let (turban, caped, over) = PIC_LOOKS[look];
+        // without the cape, his shoulders are the gi's
+        let shoulders: &[(char, u32)] = if caped { &[] } else { &[('y', 0x5a3a9a), ('Y', 0x3e2670)] };
         let pal = Pal::new(&[
             ('o', 0x120c18),
             ('s', 0x5bb043),
@@ -886,13 +859,15 @@ pub fn piccolo_seated() -> &'static Seated {
             ('P', 0x3e2670),
             ('w', 0x8a4a2a),
             ('g', 0xd8323a),
-        ]);
+        ])
+        .with(&layers(&[shoulders, over]));
         // seven columns of room behind him (he faces right) for the cape to stream back into
-        let rows: Vec<String> = PICCOLO_HEAD.iter().chain(BODY.iter()).map(|r| format!(".......{r}")).collect();
+        let head: &[&str] = if turban { &PICCOLO_HEAD } else { &PICCOLO_BARE };
+        let rows: Vec<String> = head.iter().chain(BODY.iter()).map(|r| format!(".......{r}")).collect();
         let body = make_sprite(&rows, &pal, "", Some(15.0), None);
         // the cape hangs off his back from the shoulders and pools on the ground behind him
         let mut cape = Vec::new();
-        for (j, row) in rows.iter().enumerate().skip(PICCOLO_HEAD.len()) {
+        for (j, row) in rows.iter().enumerate().skip(PICCOLO_HEAD.len()).filter(|_| caped) {
             let b = j - PICCOLO_HEAD.len();
             let first = row.bytes().position(|c| c != b'.').unwrap();
             let w = (2 + b / 2).min(first);
@@ -920,6 +895,16 @@ pub fn hero_scale(id: &str) -> f64 {
     }
 }
 
+/// How much bigger a look of his is drawn: orange piccolo is bigger, the orange giant huge, complete namekian a little.
+pub fn look_scale(id: &str, look: usize) -> f64 {
+    match (id, look) {
+        ("piccolo", 7) => 1.3,
+        ("piccolo", 8) => 2.0,
+        ("piccolo", 11) => 1.15,
+        _ => 1.0,
+    }
+}
+
 /// A hero by id, vegeta when unknown (`HERO()`).
 pub fn hero(id: &str) -> &'static Hero {
     let h = heroes();
@@ -941,7 +926,10 @@ pub fn get(name: &str) -> &'static Sprite {
 /// dance looks them up under.
 fn built(name: &str) -> Option<&'static Sprite> {
     static B: OnceLock<HashMap<&'static str, Sprite>> = OnceLock::new();
-    B.get_or_init(|| HashMap::from([("FUSED.roshillin", roshillin()), ("FUSED.tienzu", tienzu()), ("FUSED.android35", android35())])).get(name)
+    B.get_or_init(|| {
+        HashMap::from([("FUSED.roshillin", roshillin()), ("FUSED.tienzu", tienzu()), ("FUSED.android35", android35()), ("FUSED.piccohan", piccohan())])
+    })
+    .get(name)
 }
 
 // ── the new heroes' late forms and fusion results (from the heroes pickers)
@@ -1322,4 +1310,122 @@ fn tienzu() -> Sprite {
     }
     let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
     set_of(&head, &layers(&[META, &[('s', 0xfbe6dc), ('S', 0xe8c4b4), ('R', 0xe8505a)]])).idle
+}
+
+/// Piccolo's colours: green skin, the purple gi with its blue sash, red wristbands, brown shoes, the white turban
+/// and cape.
+const PIC: &[(char, u32)] = &[
+    ('s', 0x5bb043),
+    ('S', 0x3c7f2e),
+    ('h', 0xf4f4f6),
+    ('H', 0xc2c6d2),
+    ('k', 0x7a4ab0),
+    ('K', 0x4e2c78),
+    ('M', 0x24401c),
+    ('a', 0x5a3a9a),
+    ('A', 0x3e2670),
+    ('y', 0xf4f4f6),
+    ('Y', 0xc2c6d2),
+    ('u', 0x3a6ad8),
+    ('g', 0xd8323a),
+    ('G', 0x962028),
+    ('p', 0x5a3a9a),
+    ('P', 0x3e2670),
+    ('w', 0x8a4a2a),
+    ('W', 0x5a2e18),
+    ('b', 0x5a3a9a),
+    ('B', 0x3e2670),
+    ('q', 0xf4f4f6),
+    ('Q', 0xc2c6d2),
+];
+
+/// Piccolo: a look for every form. Base wears the turban and cape; weights off drops both (canon: they're weighted);
+/// demon king darkens his gi and reddens his eyes; super namekian keeps the cape with ki sparking off him; namekian
+/// warrior fights bare-chested; potential unleashed turns his skin yellow-green (canon, Super Hero); namekian god
+/// wears white with a gold sash; orange piccolo (canon, Super Hero) is orange, darker on the arms, with red eyes, and
+/// is drawn bigger, the orange giant bigger still (`look_scale`). Past them: synced with nail, green ki flaring off
+/// him; synced with kami, the turban and cape back on over kami's indigo vest and white robe; complete namekian, the
+/// turban gold-banded, gold ki flaring off him, drawn a little bigger.
+fn piccolo() -> Hero {
+    const SPARK: [&str; 14] = [
+        "....l..........l....",
+        ".....l........l.....",
+        "....................",
+        "....................",
+        "....................",
+        "....................",
+        "....................",
+        ".l................l.",
+        "lL................Ll",
+        ".l................l.",
+        "....................",
+        "....................",
+        ".l................l.",
+        "lL................Ll",
+    ];
+    const FLAME: [&str; 16] = [
+        "....l....l....l.....",
+        "...lL...lL...lL.....",
+        "..lL...lL...lL......",
+        "..L...lL...lL...l...",
+        ".lL..lL....L...lL...",
+        ".L...L.........L....",
+        ".L...............L..",
+        ".Ll..............lL.",
+        "..L...............L.",
+        ".lL..............Ll.",
+        ".L................L.",
+        ".Ll..............lL.",
+        "..L..............L..",
+        ".lL..............Ll.",
+        ".L................L.",
+        "....................",
+    ];
+    let mut h = make_plain_with(&PICCOLO_HEAD, &PICCOLO_BARE, PIC, Opt { cape: true, ..Opt::default() });
+    for (i, &(turban, cape, p)) in PIC_LOOKS.iter().enumerate().skip(1) {
+        let head: &[&str] = if turban { &PICCOLO_HEAD } else { &PICCOLO_BARE };
+        let set = make_hero_with(head, &layers(&[PIC, p]), true, Opt { cape, ..Opt::default() }).forms[0].clone();
+        h.forms[i] = match i {
+            3 => stamp(&set, 2, 2, 2, &SPARK, &[('L', 0x6ae05a), ('l', 0xd8ffc8)]),
+            9 => stamp(&set, 2, 4, 2, &FLAME, &[('L', 0x6ae05a), ('l', 0xd8ffc8)]),
+            11 => stamp(&set, 2, 4, 2, &FLAME, &[('L', 0xe8d040), ('l', 0xfff6c0)]),
+            _ => set,
+        };
+    }
+    h
+}
+
+const ORANGE: &[(char, u32)] = &[('s', 0xf2913a), ('S', 0xc2601c), ('r', 0xe02828), ('M', 0x6a2410)];
+/// Each of piccolo's looks (by form look index): the turban on, the cape on, and his colours over `PIC`.
+type PicLook = (bool, bool, &'static [(char, u32)]);
+const PIC_LOOKS: [PicLook; 12] = [
+    (true, true, &[]),
+    (false, false, &[]),
+    (false, false, &[('a', 0x2a1a3a), ('A', 0x160c22), ('p', 0x2a1a3a), ('P', 0x160c22), ('b', 0x2a1a3a), ('B', 0x160c22), ('r', 0xe02828)]),
+    (false, true, &[]),
+    (false, false, &[('a', 0x5bb043), ('A', 0x3c7f2e)]),
+    (false, true, &[('s', 0x9cc83a), ('S', 0x6c9420)]),
+    (false, true, &[('a', 0xf4f4f6), ('A', 0xc2c6d2), ('p', 0xf4f4f6), ('P', 0xc2c6d2), ('b', 0xf4f4f6), ('B', 0xc2c6d2), ('u', 0xe8b830)]),
+    (false, false, ORANGE),
+    (false, false, ORANGE),
+    (false, false, &[]),
+    (true, true, &[('a', 0x2a3a8a), ('A', 0x1a2460), ('p', 0xf4f4f6), ('P', 0xc2c6d2), ('u', 0xd8323a), ('k', 0x2a3a8a), ('K', 0x1a2460)]),
+    (true, true, &[('k', 0xe8b830), ('K', 0xb08818)]),
+];
+
+/// Whether piccolo's look `look` wears his cape (the seated cape flutters only then).
+pub fn piccolo_cape(look: usize) -> bool {
+    PIC_LOOKS.get(look).is_none_or(|l| l.1)
+}
+
+/// Piccohan: piccolo and kid gohan fused, gohan's black spiky hair over piccolo's face and antennae, in the vest.
+fn piccohan() -> Sprite {
+    let mut head: Vec<String> = PICCOLO_BARE.iter().map(|s| s.to_string()).collect();
+    head[2] = "....oooo.ooo....".into();
+    head[3] = "...ohhhhohhho...".into();
+    head[4] = "..ohhhhhhhhhho..".into();
+    head[5] = "..ohhhhhhhhhhSo.".into();
+    head[6] = "...ohhsssshhSo..".into();
+    let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
+    set_of(&head, &layers(&[META, &[('s', 0x5bb043), ('S', 0x3c7f2e), ('h', 0x1a1826), ('H', 0x4a5080), ('M', 0x24401c)]])).idle
 }

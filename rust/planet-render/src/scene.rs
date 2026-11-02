@@ -679,6 +679,8 @@ impl Scene {
             None => (fi, aura, shown),
         };
         let formed = g.oc_look().map_or(g.s.form > 0, |l| l > 0);
+        // some looks are drawn bigger (orange piccolo, the orange giant)
+        let hk = hk * sprite::look_scale(hero_id(g), shown);
         let set = if g.b.fuse_until > t { &hero.fused } else { &hero.forms[shown] };
         let bl = match &self.itx_fx {
             Some(b) if t - b.t0 < 0.75 => t - b.t0,

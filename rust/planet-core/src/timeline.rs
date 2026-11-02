@@ -1340,7 +1340,7 @@ impl Game {
                     Hero::Goten => ("kid trunks", "gotenks"),
                     Hero::A17 => ("android 18", "android35"),
                     Hero::Tien => ("chiaotzu", "tienzu"),
-                    Hero::Piccolo => ("goku", "gogeta"),
+                    Hero::Piccolo => ("kid gohan", "piccohan"),
                 }
             };
             self.tl.dance = Some(Dance { who, res, t0: t, beats: [t + 2.0, t + 2.8, t + 3.6], i: 0, hits: 0, ok: -9.0, done: 0.0, spoil: None });
@@ -1359,6 +1359,7 @@ impl Game {
                     "roshillin" => Some("FUSED.roshillin"),
                     "tienzu" => Some("FUSED.tienzu"),
                     "android35" => Some("FUSED.android35"),
+                    "piccohan" => Some("FUSED.piccohan"),
                     // goten's gotenks: a botched dance is still gotenks (trunks' keeps the old fat and skinny ones)
                     "gotenks" if self.s.hero == Hero::Goten => Some("FUSED.gotenks"),
                     _ => None,
