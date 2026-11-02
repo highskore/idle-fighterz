@@ -29,7 +29,7 @@
 [data-skin="scouter"] .sc-btns button { --b: 24px; color: #9dffad; background: rgba(120,255,150,.08); border: 0; box-shadow: none; }
 [data-skin="scouter"] .sc-btns button:hover { transform: none; background: rgba(120,255,150,.2); }
 [data-skin="scouter"] .sc-btns button svg { width: 60%; height: 60%; }
-[data-skin="scouter"] .sc-btns [data-w="kaio"] { color: #ff7a6a; background: rgba(255,106,90,.14); }
+[data-skin="scouter"] .sc-btns [data-w="kaio"] { color: var(--kc, #ff7a6a); background: color-mix(in srgb, var(--kc, #ff6a5a) 14%, transparent); }   /* the hero's own boost colour (page.html sets --kc) */
 [data-skin="scouter"] .sc-btns [data-w="itx"] { color: #7cc4ff; background: rgba(124,196,255,.14); }
 [data-skin="scouter"] .sc-btns button:disabled { opacity: .4; }
 [data-skin="scouter"] .sc-btns [data-w="snd"][aria-pressed="false"], [data-skin="scouter"] .sc-btns [data-w="close"] { color: #5d8f68; }
@@ -68,7 +68,7 @@
 [data-skin="capsule"] .cc-b button { width: auto; min-width: 30px; height: 22px; padding: 0 7px; color: #fff; background: rgba(255,255,255,.14); border: 0; border-radius: 11px; box-shadow: none; }
 [data-skin="capsule"] .cc-b button:hover { transform: none; background: rgba(255,255,255,.26); }
 [data-skin="capsule"] .cc-b button svg { width: 14px; height: 14px; }
-[data-skin="capsule"] .cc-b [data-w="kaio"] { background: #e0332b; }
+[data-skin="capsule"] .cc-b [data-w="kaio"] { color: var(--ki, #fff); background: var(--kc, #e0332b); }
 [data-skin="capsule"] .cc-b [data-w="itx"] { color: #1f5fd1; background: #fff; }
 [data-skin="capsule"] .cc-b button:disabled { opacity: .5; }
 [data-skin="capsule"] .cc-b [data-w="snd"][aria-pressed="false"], [data-skin="capsule"] .cc-b [data-w="close"] { color: rgba(255,255,255,.7); }
@@ -135,7 +135,9 @@ html.widget[data-theme="dark"]:not([data-skin]) .w button:hover { background: #3
 html.widget[data-theme="dark"]:is([data-layout="7"], [data-layout="2"], [data-layout="6"]) .w-btns button:not([data-w="kaio"], [data-w="itx"]) { color: #ece9e2; background: rgba(255,255,255,.08); }
 html.widget[data-theme="dark"]:is([data-layout="7"], [data-layout="2"], [data-layout="6"]) .w-btns button:not([data-w="kaio"], [data-w="itx"]):hover { background: rgba(255,255,255,.16); }
 html.widget[data-theme="dark"][data-layout="2"] .w-btns button:not([data-w="kaio"], [data-w="itx"]), html.widget[data-theme="dark"][data-layout="6"] .w-btns button:not([data-w="kaio"], [data-w="itx"]) { background: transparent; }
-html.widget[data-theme="dark"]:not([data-skin="scouter"]) .w [data-w="kaio"]:disabled { color: #e3a6a0; background: #5a2420; border-color: #5a2420; }
+/* recharging: the hero's colour, dimmed; on the ki meter its ink, as the meter fills in its colours */
+html.widget[data-theme="dark"]:not([data-skin="scouter"]) .w [data-w="kaio"]:disabled { color: color-mix(in srgb, var(--kc, #e0332b) 70%, #fff); background: color-mix(in srgb, var(--kc, #e0332b) 30%, #16161b); border-color: color-mix(in srgb, var(--kc, #e0332b) 30%, #16161b); }
+html.widget[data-theme="dark"][data-kibtn="meter"]:not([data-skin="scouter"]) .w [data-w="kaio"]:disabled { color: var(--ki, #fff); }
 html.widget[data-theme="dark"]:not([data-skin="scouter"]) .w [data-w="itx"]:disabled { color: #a9c7e6; background: #1f3a57; border-color: #1f3a57; }
 html.widget[data-theme="dark"]:not([data-skin="scouter"]) .w [data-w="snd"][aria-pressed="false"] { color: #8a8780; }
 html.widget[data-theme="dark"]:not([data-skin="scouter"]) .w [data-w="close"] { color: #b9b6b0; }
