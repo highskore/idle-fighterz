@@ -66,6 +66,13 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
 /* window mode (the app's fullscreen too): the HUD and its panels zoomed by the UI size setting (--ui, widget.js); a
    zoom lays them out at that size, so they stay sharp and take clicks where they show */
 .widget.windowed :is(.w, .dw, #shop, #toast, #wish, #tip, .menu) { zoom: var(--ui, 1); }
+/* window mode's cursor, the saiyan glove (--cur-*, widget.js), over page.html's pointers; text fields and disabled
+   buttons keep the system's, and so does floating */
+.widget.windowed body, .widget.windowed body * { cursor: var(--cur-normal), default; }
+.widget.windowed :is(button, a[href], label, summary, [role=button]):not(:disabled):hover { cursor: var(--cur-hover), pointer; }
+.widget.windowed body :active, .widget.windowed :is(button, a[href], label, summary, [role=button]):not(:disabled):hover:active { cursor: var(--cur-pressed), pointer; }
+.widget.windowed body :is(input, textarea, select, [contenteditable], [contenteditable] *) { cursor: auto; }
+.widget.windowed body :disabled { cursor: default; }
 /* stretched past the phone width (window mode, the app's fullscreen): the panels keep their phone proportions,
    centred, and toasts grow with the window. build.mjs keeps this breakpoint; the page's own it turns off */
 @media (min-width: 761px) {

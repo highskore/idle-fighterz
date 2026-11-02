@@ -199,7 +199,36 @@
     // window mode: the HUD zoomed (the UI size setting) and the planet sized (the planet size setting) by the window's
     // short side (world.js uiScale, fillScale), clear of each other; floating keeps its own sizes
     let sized = '';
-    const sizes = () => { const ui = BARE ? 1 : uiScale(innerWidth, innerHeight, conf.ui_size); root.style.setProperty('--ui', ui); st.room = Math.round(40 * ui); };
+    const sizes = () => { const ui = BARE ? 1 : uiScale(innerWidth, innerHeight, conf.ui_size); root.style.setProperty('--ui', ui); st.room = Math.round(40 * ui); cursors(BARE ? 0 : ui); };
+
+    // window mode's cursor, the saiyan glove: a 16×16 sprite at a tier of the UI size (24 to 48 px, whole pixels at 2x),
+    // as --cur-normal, --cur-hover and --cur-pressed (widget.css); floating keeps the system cursor
+    const GLOVE_HAND = ['...owgooo.......', '...owgowwooo....', '.ooowgowgowwoo..', 'owwowgowgowgwwo.', 'owwgwwwwgwwgwgo.', '.owwwwwwwwwwwgo.', '.owwwwwwwwwwggo.', '..owwwwwwwwwgo..', '...owwwwwwwgo...', '...obbbbbbbbo...', '...oBBBBBBBBo...', '....oooooooo....'];
+    const GLOVE = {
+      normal: ['....oo..........', '...owwo.........', '...owgo.........', '...owgo.........'],
+      hover: ['....sos.........', '..soywo.........', '...owgo.........', '...owgo.........'],
+      pressed: ['................', '....f.f.........', '..f.oo..........', '...owwof........'],
+    };
+    const GLOVE_PAL = { o: '#120c18', w: '#ffffff', g: '#c8ccda', y: '#ffe45a', b: '#2b4fc8', B: '#1c3584', s: 'rgba(255,228,90,.9)', f: 'rgba(255,255,255,.95)' };
+    const glove = (state, px) => {
+      const s = document.createElement('canvas'); s.width = s.height = 16;
+      const g = s.getContext('2d');
+      GLOVE[state].concat(GLOVE_HAND).forEach((row, y) => [...row].forEach((c, x) => { if (c !== '.') { g.fillStyle = GLOVE_PAL[c]; g.fillRect(x, y, 1, 1); } }));
+      const c = document.createElement('canvas'); c.width = c.height = px;
+      const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(s, 0, 0, px, px);
+      return c.toDataURL();
+    };
+    let tier = 0;
+    const cursors = ui => {
+      const t = ui ? Math.min(48, Math.max(24, Math.round(20 * ui / 8) * 8)) : 0;
+      if (t === tier) return;
+      tier = t;
+      // the hotspot is the fingertip, cell (4, 1), in 1x px
+      for (const state of Object.keys(GLOVE)) {
+        if (t) root.style.setProperty('--cur-' + state, `image-set(url(${glove(state, t)}) 1x, url(${glove(state, t * 2)}) 2x) ${Math.round(4.5 * t / 16)} ${Math.round(1.5 * t / 16)}`);
+        else root.style.removeProperty('--cur-' + state);
+      }
+    };
     addEventListener('resize', sizes);
     const apply = s => {
       const first = conf.layout !== s.layout || conf.skin !== s.skin || !w.firstChild; conf = s;
