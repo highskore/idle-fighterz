@@ -431,7 +431,7 @@ impl Game {
             // and no trip for a while: the scene plays at home
             g.tl.home_since = g.session + 600.0;
         };
-        if let Some(n) = num("limit").filter(|&n| n >= 1) {
+        if let Some(n) = num("limit").filter(|&n| n >= 1).map(|n| n.min(100)) {
             self.s.limits = n - 1;
             self.s.levels[crate::data::Upg::Gravity as usize] = 60;
             self.s.ascend = Big::from(4e7);
@@ -444,11 +444,9 @@ impl Game {
             }
             self.s.mile = i;
         }
-        if let Some(k) = num("mile") {
-            let mut i = 0;
-            while milestone(i).1 != Some(k) {
-                i += 1;
-            }
+        // (a milestone that doesn't exist does nothing)
+        if let Some(i) = num("mile").and_then(|k| (0..).take_while(|&i| milestone(i).0.is_finite()).find(|&i| milestone(i).1 == Some(k))) {
+            let k = milestone(i).1.unwrap();
             self.s.mile = i;
             let at = milestone(i).0;
             let pl = Big::exp10(at + 0.0002);
