@@ -195,6 +195,8 @@
     // throttled while hidden, the afk tick could otherwise close a panel the moment the widget comes back
     if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; if (payload) input = performance.now(); background(); });
 
+    // the planet size setting (window mode): the share of the window's short side the planet comes nearest to
+    const PLANET_FILL = { small: .4, medium: .6, large: .7, huge: .8 };
     const apply = s => {
       const first = conf.layout !== s.layout || conf.skin !== s.skin || !w.firstChild; conf = s;
       idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; background();
@@ -203,6 +205,9 @@
       if (first) arrange(s.layout, s.skin);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live
+      // and a planet the size the setting picks, by the window's short side (world.js fillScale); floating keeps its own
+      const fill = BARE ? 0 : PLANET_FILL[s.planet_size] || PLANET_FILL.medium;
+      if (fill !== st.fill) { st.fill = fill; st.resize(); if (game) { game.resize(); game.frame(st.t, 0); } }
       clouds();
       document.body.style.opacity = s.opacity;
       // the menu-bar icon may be hidden behind the notch: say how to get the widget back

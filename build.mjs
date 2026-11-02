@@ -119,6 +119,11 @@ async function widgetPage(page) {
   page = page.replace('__WIDGET_CSS__', () => read('widget.css') + read('skins.css')).replace('__WIDGET_JS__', () => read('skins.js') + read('widget.js'))
   page = page.replace(/<link [^>]*fonts\.(googleapis|gstatic)\.com[^>]*>\n/g, '').replace('<script id="three">__THREE__</script>\n', '')
   if (/<(script|link)[^>]+(src|href)="https?:/.test(page)) throw new Error('the widget page still loads something remote')
+  // the widget is the phone layout at any size: a window stretched past 760px (window mode, fullscreen) would otherwise
+  // get the site's desktop layout over its own, a second upgrades list, bare toasts and site-wide overlays among it
+  page = page.replaceAll('@media (max-width: 760px)', '@media all').replaceAll("matchMedia('(max-width: 760px)')", "matchMedia('all')")
+    .replace(/@media \(min-width: 761px\)( and \([a-z-]+: [a-z]+\))?/g, '@media not all')
+  if (/\((max|min)-width: 76[01]px\)/.test(page)) throw new Error('a site breakpoint is left in the widget page')
   return page.replace('<style>', '<style>\n' + await faces(process.cwd(), 'block'))
 }
 

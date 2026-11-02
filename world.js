@@ -24,13 +24,24 @@ function makeSprite(rows, pal, opts = {}) {
   return { w, h, col, emit, ax: opts.ax ?? Math.floor(w / 2), ay: opts.ay ?? h - 1, glow: opts.glow || 0, glowColor: opts.glowColor };
 }
 
+/*widget*/
+// window mode and fullscreen (st.fill: the planet size setting, a share of the window's short side): the whole-pixel scale
+// whose planet comes nearest that share, clear of the HUD (64px above and below it) and with the scene at least 200 game
+// pixels across, which the dragon, the ape and the raids need. Its radius is the game's: a fifth of the short side, 56–70
+function fillScale(w, h, fill) {
+  const side = Math.min(w, h), want = side * fill, d = k => 2 * k * Math.max(56, Math.min(70, Math.round(Math.min(Math.ceil(w / k), Math.ceil(h / k)) * .2)));
+  let best = 1;
+  for (let k = 2; side / k >= 200; k++) if (d(k) <= h - 128 && Math.abs(d(k) - want) < Math.abs(d(best) - want)) best = k;
+  return best;
+}
+/*/widget*/
 function makeStage(section) {
   const el = section.querySelector('.stage'), cv = el.querySelector('canvas'), ctx = cv.getContext('2d');
   const st = { el, cv, ctx, W: 0, H: 0, scale: 3, night: false, t: 0, bob: 0 };
   let img, buf;
   st.resize = () => {
     const r = el.getBoundingClientRect();
-    st.scale = r.width < 560 ? 2 : 3;/*widget*/ if (WIDGET) st.scale = r.width >= 520 ? 2 : 1;   // the widget: 1× up to medium, 2× at large, so a site-sized planet fits with room round it/*/widget*/
+    st.scale = r.width < 560 ? 2 : 3;/*widget*/ if (WIDGET) st.scale = st.fill ? fillScale(r.width, r.height, st.fill) : r.width >= 520 ? 2 : 1;   // floating: 1× up to medium, 2× at large, so a site-sized planet fits with room round it/*/widget*/
     st.W = Math.ceil(r.width / st.scale); st.H = Math.ceil(r.height / st.scale);
     cv.width = st.W; cv.height = st.H;
     if (PX) {   // the pixels, depth, ids and mask in the module's memory: drawn into from both sides, put on the canvas uncopied
