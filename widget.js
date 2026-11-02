@@ -195,6 +195,11 @@
     // throttled while hidden, the afk tick could otherwise close a panel the moment the widget comes back
     if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; if (payload) input = performance.now(); background(); });
 
+    // window mode: the HUD zoomed (the UI size setting) and the planet sized (the planet size setting) by the window's
+    // short side (world.js uiScale, fillScale), clear of each other; floating keeps its own sizes
+    let sized = '';
+    const sizes = () => { const ui = BARE ? 1 : uiScale(innerWidth, innerHeight, conf.ui_size); root.style.setProperty('--ui', ui); st.room = Math.round(40 * ui); };
+    addEventListener('resize', sizes);
     const apply = s => {
       const first = conf.layout !== s.layout || conf.skin !== s.skin || !w.firstChild; conf = s;
       idleFps = [60, 30, 15].includes(s.fps) ? s.fps : 30; background();
@@ -203,6 +208,8 @@
       if (first) arrange(s.layout, s.skin);
       root.classList.toggle('pin', s.hud === 'always');
       BARE = s.mode !== 'window'; root.classList.toggle('windowed', !BARE);   // window mode: the site's skies and backdrops, live
+      sizes(); st.floor = BARE ? 0 : PLANET_FLOOR[s.planet_size] || PLANET_FLOOR.medium;
+      if (sized !== st.floor + ':' + st.room) { sized = st.floor + ':' + st.room; st.scale = 0; st.resize(); if (game) { game.resize(); game.frame(st.t, 0); } }
       clouds();
       document.body.style.opacity = s.opacity;
       // the menu-bar icon may be hidden behind the notch: say how to get the widget back
