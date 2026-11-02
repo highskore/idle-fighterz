@@ -166,6 +166,7 @@
         },
         theme(t) { setting = t; paint(); },
         open: () => isOpen(),
+        close,
         hud(s, n, rate) { if (p) p.hud(s, n, rate); },
         shop(v) { items = v; badges(); },
       };

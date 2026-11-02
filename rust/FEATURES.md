@@ -18,7 +18,7 @@ What the Rust engine has that game.js, the frozen fallback, does not, and where 
     - from limit III each break adds a **limit-breaker** form (×2 each, the last canon form's look, its own aura), landed by the transformation scene once the break's scene is over.
   - **Nothing erases a limit**: ascending, god ki and zeno keep the limits, the creep and the floor.
   - **Milestones.** These go by lifetime best: 1e10 (the scouter wave, every scouter in the sky pops), 1e100 (the sky splits on the gods' realm), 1.8e308 (it splits red: beerus), 1e1000 and 1e10,000 (claps of thunder), 1e100,000 (four claps), 1e1,000,000 (the scouter wave in gold), then every ×10 of the exponent, in turn. Small beats come between them on each step of the leading power of ten (1e20 … 1e90, 1e200, 1e300 …): a burst and the toast.
-    - Each gives ×2 for 30s. The text is the usual toast; the standing line reads "ki limit III (1.0Sp) — strain 63% · next: 1.0e40".
+    - Each gives ×2 for 30s. The text is the usual toast; the standing line reads "ki limit III (1.0Sp) — strain 63%".
   - Hooks: `#limitN` (limit N about to break), `#mileK` (the K-th named milestone landing).
   - `planet-core/tests/limits.rs` checks the ladder and that a limit breaks idle. It also checks that the floor holds through god ki and zeno, and that the forms come from limit III. Its ignored `pace` test plays idle and active bots from a new game (see the PR for the table).
 
