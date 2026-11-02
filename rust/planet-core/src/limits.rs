@@ -237,6 +237,7 @@ impl Game {
         let reward = match n {
             1 => "the grand priest takes notice…".to_string(),
             2 => "zenkai without limit: ki seeds count for more".to_string(),
+            3 if self.s.hero == crate::data::Hero::A17 => format!("beyond the limiter: from now on every limit you break doubles his power mark (×{})", 2),
             3 => format!("beyond the forms: from now on every limit you break is a new form (×{})", 2),
             4 => "the god limit: god ki now compounds".to_string(),
             5 => format!("the universe limit: universe stars ×{}", crate::data::STAR_X_V),

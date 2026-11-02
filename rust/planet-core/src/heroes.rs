@@ -125,6 +125,12 @@ pub enum Kind {
         auto: f64,
         crater: Option<(f64, f64, f64)>,
     },
+    A17 {
+        /// his overclock, the next auto-beam, and until when infinite energy pins it
+        oc: f64,
+        auto: f64,
+        pin: f64,
+    },
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -145,6 +151,7 @@ impl Kind {
             Hero::Krillin => Kind::Krillin { cuts: 0, last: -9.0, auto: DISC_AUTO, discs: Vec::new() },
             Hero::Goten => Kind::Goten { up: 0.0, down: None, best: 0, seen: 0 },
             Hero::Tien => Kind::Tien { stake: None, auto: 0.0, crater: None },
+            Hero::A17 => Kind::A17 { oc: 1.0, auto: crate::a17::AUTO_BEAM, pin: 0.0 },
             _ => Kind::None,
         }
     }
@@ -200,6 +207,7 @@ impl Game {
         match self.hero_rt.kind {
             Kind::Piccolo { focus } => PICCOLO_BASE * (1.0 + focus),
             Kind::Tien { .. } => TIEN_BASE,
+            Kind::A17 { .. } => crate::a17::A17_BASE,
             _ => 1.0,
         }
     }
@@ -339,6 +347,7 @@ impl Game {
     pub fn hero_tap_x(&self) -> f64 {
         match self.hero_rt.kind {
             Kind::Goten { .. } => GOTEN_TAP,
+            Kind::A17 { .. } => crate::a17::A17_TAP,
             _ => 1.0,
         }
     }
@@ -455,6 +464,7 @@ impl Game {
         }
         self.goten_step();
         self.tien_step(dt);
+        self.a17_step(dt);
         if self.meditating() {
             let f = self.focus();
             if f < 1.0 {
@@ -512,6 +522,7 @@ impl Game {
 
     /// A training tap at (x, y): Piccolo spends a slice of focus and it pays out.
     pub(crate) fn hero_tap(&mut self, x: f64, y: f64) {
+        self.a17_tap();
         let spend = self.focus().min(FOCUS_TAP);
         if spend <= 0.0 {
             return;
@@ -554,6 +565,7 @@ impl Game {
 
     /// A beam of charge `c` from (x, y): Piccolo's special beam cannon spends focus with its charge.
     pub(crate) fn hero_beam(&mut self, c: f64, x: f64, y: f64) {
+        self.a17_beam(c);
         let spend = self.focus() * (c / 2.5).min(1.0);
         if spend <= 0.0 {
             return;

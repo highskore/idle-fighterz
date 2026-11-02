@@ -68,16 +68,22 @@ fn every_hero_names_his_own_boost_blast_and_armor() {
             assert!(name != g.ape_name(false) && name != g.ape_name(true), "{id}: {name} is his giant");
         }
 
-        for (key, name, toast) in
-            [("kaio", boost, format!("{boost} unlocked — hit the red button")), ("bigbang", blast, format!("{blast} — double-tap anywhere"))]
-        {
+        // 17's boost pins his overclock instead, and says so
+        let kaio_toast = if hero == Hero::A17 {
+            "infinite energy — hit the button to pin your overclock at the top".to_string()
+        } else {
+            format!("{boost} unlocked — hit the red button")
+        };
+        for (key, name, toast) in [("kaio", boost, kaio_toast), ("bigbang", blast, format!("{blast} — double-tap anywhere"))] {
             assert!(row_of(&g, key).contains(&format!("\"label\":\"{name}\"")), "{id}: {}", row_of(&g, key));
             assert!(g.buy(key), "{id} buys {key}");
             assert!(g.events.iter().any(|e| e.0 == toast), "{id}: {:?}", g.events);
         }
         g.kaioken();
-        assert!(g.events.iter().any(|e| e.0.starts_with(&format!("{boost}! ×"))), "{id}: {:?}", g.events);
-        assert!(g.effects().contains(&format!("{boost} ×")), "{id}: {}", g.effects());
+        assert!(g.events.iter().any(|e| e.0.starts_with(&format!("{boost}! "))), "{id}: {:?}", g.events);
+        if hero != Hero::A17 {
+            assert!(g.effects().contains(&format!("{boost} ×")), "{id}: {}", g.effects());
+        }
         assert!(g.hud_now().to_json().contains(&format!("\"kaio\":{{\"name\":\"{boost}\"")), "{id}");
         let look = hero_boost(hero);
         assert!(!look.short.is_empty() && look.short.len() <= 8, "{id}: the button's label {:?}", look.short);
