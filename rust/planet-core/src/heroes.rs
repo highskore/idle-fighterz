@@ -19,7 +19,7 @@
 //! line, each paying as if taken by hand, and each cut after the first in one throw also pays a chain bonus that
 //! doubles with every cut. Left alone he throws one by himself every `DISC_AUTO` at the nearest saibaman or meteor
 //! (never at an orb: running picks those up anyway). After `BARRAGE_CUTS` cuts, his next disc at a villain is a giant
-//! one that takes a fifth of its hp.
+//! one that takes `BARRAGE_HP` of its hp.
 
 use crate::big::Big;
 use crate::data::{Hero, LAP, N_LEGS, N_STRIDE};
@@ -73,17 +73,20 @@ pub struct Stake {
     pub safe: bool,
 }
 
+/// Krillin's steady income: under vegeta's, since his discs pay on top (his idle ran ×1.5 vegeta's without it).
+pub const KRILLIN_BASE: f64 = 0.82;
+
 /// Seconds between krillin's discs, and between the ones he throws by himself.
-pub const DISC_GAP: f64 = 0.4;
+pub const DISC_GAP: f64 = 1.0;
 pub const DISC_AUTO: f64 = 15.0;
 /// How far off its line a disc cuts (past a target's own size), and how far it flies, in the game's pixels.
 pub const DISC_BAND: f64 = 6.0;
 pub const DISC_RANGE: f64 = 240.0;
 /// A chain's bonus: seconds of his recent income for the second cut in one throw, doubling for each one after.
-pub const CHAIN_SECS: f64 = 1.0;
+pub const CHAIN_SECS: f64 = 0.25;
 /// Cuts that charge the barrage, and the share of a villain's hp it takes.
-pub const BARRAGE_CUTS: u32 = 10;
-pub const BARRAGE_HP: f64 = 0.2;
+pub const BARRAGE_CUTS: u32 = 20;
+pub const BARRAGE_HP: f64 = 0.15;
 /// How long a thrown disc is in the air (the renderer draws it; the cuts land when it's thrown).
 pub const DISC_FLIGHT: f64 = 0.45;
 
@@ -207,6 +210,7 @@ impl Game {
         match self.hero_rt.kind {
             Kind::Piccolo { focus } => PICCOLO_BASE * (1.0 + focus),
             Kind::Tien { .. } => TIEN_BASE,
+            Kind::Krillin { .. } => KRILLIN_BASE,
             Kind::A17 { .. } => crate::a17::A17_BASE,
             _ => 1.0,
         }
@@ -607,9 +611,9 @@ impl Game {
         let boss = self.tl.boss.as_ref().filter(|b| !b.dead && t >= b.go).map(|b| (b.x, b.y - b.spr().h / 2.0 * b.k));
         if let (Some((bx, by)), true) = (boss, self.cuts() >= BARRAGE_CUTS) {
             let max = self.tl.boss.as_ref().unwrap().max;
-            // a fifth of his hp after armor, as mech.rs's set shares are
+            // a share of his hp after armor, as mech.rs's set shares are
             self.hit_boss(max * BARRAGE_HP / (1.0 + 0.5 * self.s.lvf(crate::data::Upg::Armor)), bx, by, true);
-            self.event("disc barrage! a giant destructo disc takes a fifth of his hp");
+            self.event(format!("disc barrage! a giant destructo disc takes {}% of his hp", (BARRAGE_HP * 100.0).round()));
             if let Kind::Krillin { cuts, last, discs, .. } = &mut self.hero_rt.kind {
                 *cuts -= BARRAGE_CUTS;
                 *last = t;
