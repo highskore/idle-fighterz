@@ -34,7 +34,7 @@
     function mount(c) {
       const el = html => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
       const icon = k => c.B[k].querySelector('svg').outerHTML;
-      const ORDER = ['up', 'kaio', 'itx', 'share', 'snd', 'gear', 'close'];
+      const ORDER = ['up', 'ach', 'kaio', 'itx', 'share', 'snd', 'gear', 'close'];
       const sys = matchMedia('(prefers-color-scheme: dark)');
       let skin = 'classic', setting = 'light', p = null, items = {}, tab = 'up', menuKey = '', menuAt = 0;
 

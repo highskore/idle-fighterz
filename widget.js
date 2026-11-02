@@ -17,6 +17,7 @@
 
     const ICON = {
       up: '<path d="M6 13.5l6-6 6 6M6 19l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+      ach: '<path d="M7 4h10v5a5 5 0 0 1-10 0z" fill="currentColor"/><path d="M7 6H4.5a3 3 0 0 0 2.8 4.5M17 6h2.5a3 3 0 0 1-2.8 4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10.5 14h3v3h-3zM8 18h8v2.5H8z" fill="currentColor"/>',
       kaio: '<path d="M12 2.5c1 4.2 5.5 5.6 5.5 10.6a5.5 5.5 0 0 1-11 0c0-2.8 1.6-4 2.7-5.6.5 1.7 1.3 2.6 2.2 2.8C11 7.6 11.5 5.1 12 2.5z" fill="currentColor"/>',
       itx: '<path d="M10 12.5V5a1.5 1.5 0 0 1 3 0v7.5M13 12V4a1.5 1.5 0 0 1 3 0v8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M7.5 12.5c0 4 2 7 5.5 7s5-2.6 5-6.5V11" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M4 6.5h3M3.5 10h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
       share: '<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 11H6v9h12v-9h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -24,7 +25,7 @@
       gear: '<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" stroke-width="1.8"/>',
       close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
     };
-    const LABEL = { up: 'upgrades', kaio: 'kaioken', itx: 'instant transmission', share: 'share', snd: 'sound', gear: 'settings', close: 'hide' };
+    const LABEL = { up: 'upgrades', ach: 'achievements and heroes', kaio: 'kaioken', itx: 'instant transmission', share: 'share', snd: 'sound', gear: 'settings', close: 'hide' };
     const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
     const w = el('div', 'w'), pl = el('div', 'w-pl', '<b class="w-n">0</b><span class="w-rate"></span>'), bar = el('span', 'w-bar', '<b></b>'), btns = el('div', 'w-btns'), num = pl.firstChild, rate = pl.lastChild;
     // the dock's middle: the form and a bar to the next one, dragon balls and wishes once there are any
@@ -34,7 +35,7 @@
     const B = {};
     for (const k of Object.keys(ICON)) { const b = el('button', '', `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k]}</svg>${k === 'up' ? '<i></i>' : ''}`); b.type = 'button'; b.dataset.w = k; b.title = b.ariaLabel = LABEL[k]; btns.append(b); B[k] = b; }
     B.kaio.hidden = B.itx.hidden = true;
-    const ACT = { up: () => $('shopToggle').click(), kaio: () => $('kaio').click(), itx: () => $('itxBtn').click(), share: () => $('share').click(), snd: () => { $('snd').click(); B.snd.setAttribute('aria-pressed', $('snd').getAttribute('aria-pressed')); }, gear: () => invoke('open_settings'), close: () => invoke('hide_widget') };
+    const ACT = { up: () => $('shopToggle').click(), ach: () => { menuTab = 'ach'; $('menu').classList.remove('tree-only'); openMenu(); }, kaio: () => $('kaio').click(), itx: () => $('itxBtn').click(), share: () => $('share').click(), snd: () => { $('snd').click(); B.snd.setAttribute('aria-pressed', $('snd').getAttribute('aria-pressed')); }, gear: () => invoke('open_settings'), close: () => invoke('hide_widget') };
     w.addEventListener('click', e => { const b = e.target.closest('[data-w]'); if (b) ACT[b.dataset.w](); });
     B.snd.setAttribute('aria-pressed', $('snd').getAttribute('aria-pressed'));
     $('game').append(w);
@@ -59,7 +60,7 @@
       if (n !== 3 && bar.parentNode === pl) pl.after(bar);
     }
     // ring: the power level at the top, settings and close up either side, the rest along the bottom
-    const RING = { gear: 208, close: 332, up: 40, kaio: 65, itx: 90, share: 115, snd: 140 };
+    const RING = { gear: 208, close: 332, up: 35, ach: 57, kaio: 79, itx: 101, share: 123, snd: 145 };
     function placeRing() { for (const [k, deg] of Object.entries(RING)) { const a = deg * Math.PI / 180; B[k].style.left = `calc(50% + ${(Math.cos(a) * 38).toFixed(2)}vmin)`; B[k].style.top = `calc(55% + ${(Math.sin(a) * 38).toFixed(2)}vmin)`; } }
 
     // the game's own hud stays hidden; these mirror it. the hud needn't follow every frame: at most 30 times a second
