@@ -787,26 +787,7 @@ pub fn heroes() -> &'static [(&'static str, Hero); 9] {
             ),
             ("piccolo", piccolo()),
             ("krillin", with_late(make_plain(&KRILLIN_HEAD, &KRILLIN_HEAD, KRI, false), &krillin_late())),
-            (
-                "goten",
-                make_hero(
-                    &GOKU_HEAD,
-                    &[
-                        ('y', 0xe0641c),
-                        ('Y', 0xa84614),
-                        ('a', 0xe0641c),
-                        ('A', 0xa84614),
-                        ('g', 0x2b4fc8),
-                        ('G', 0x1c3584),
-                        ('u', 0x2b4fc8),
-                        ('p', 0xe0641c),
-                        ('P', 0xa84614),
-                        ('w', 0x2b4fc8),
-                        ('W', 0x1c3584),
-                    ],
-                    true,
-                ),
-            ),
+            ("goten", with_late_backs(make_hero(&GOKU_HEAD, GOT, true), &goten_late(), &[1, 0])),
             ("tien", with_late(make_plain(&TIEN_HEAD, &TIEN_HEAD, TIE, false), &tien_late())),
             ("a17", with_late(make_plain(&TRUNKS_HEAD, &TRUNKS_HEAD, SEV, true), &a17_looks())),
         ];
@@ -923,6 +904,7 @@ pub fn look_scale(id: &str, look: usize) -> f64 {
         ("piccolo", 7) => 1.3,
         ("piccolo", 8) => 2.0,
         ("piccolo", 11) => 1.15,
+        ("goten", 9 | 10) => 1.2,
         _ => 1.0,
     }
 }
@@ -977,6 +959,21 @@ const KRI: &[(char, u32)] = &[
     ('u', 0x2b4fc8),
     ('p', 0xf08a24),
     ('P', 0xc0641a),
+    ('w', 0x2b4fc8),
+    ('W', 0x1c3584),
+];
+
+/// Goten's colours: goku's orange gi over a blue undershirt, blue wristbands and boots.
+const GOT: &[(char, u32)] = &[
+    ('y', 0xe0641c),
+    ('Y', 0xa84614),
+    ('a', 0xe0641c),
+    ('A', 0xa84614),
+    ('g', 0x2b4fc8),
+    ('G', 0x1c3584),
+    ('u', 0x2b4fc8),
+    ('p', 0xe0641c),
+    ('P', 0xa84614),
     ('w', 0x2b4fc8),
     ('W', 0x1c3584),
 ];
@@ -1053,6 +1050,15 @@ fn stamp(s: &HeroSet, l: usize, t: usize, r: usize, art: &[&str], p: &[(char, u3
 fn with_late(mut h: Hero, late: &[HeroSet]) -> Hero {
     for (j, s) in late.iter().enumerate() {
         h.forms[9 + j] = s.clone();
+    }
+    h
+}
+
+/// `with_late`, and from behind (snake way) each late look wears the back of the form it's drawn from.
+fn with_late_backs(h: Hero, late: &[HeroSet], backs: &[usize]) -> Hero {
+    let mut h = with_late(h, late);
+    for (j, &b) in backs.iter().enumerate() {
+        h.backs[9 + j] = h.backs[b].clone();
     }
     h
 }
@@ -1459,6 +1465,34 @@ fn piccohan() -> Sprite {
     head[6] = "...ohhsssshhSo..".into();
     let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
     set_of(&head, &layers(&[META, &[('s', 0x5bb043), ('S', 0x3c7f2e), ('h', 0x1a1826), ('H', 0x4a5080), ('M', 0x24401c)]])).idle
+}
+
+/// Goten's late forms: teen super saiyan (canon; bigger, sleeves ours), then saiyaman x-2 (canon; costume ours).
+fn goten_late() -> [HeroSet; 2] {
+    // the eye rows of GOKU_HEAD, under saiyaman x-2's mask
+    const MASK_ROWS: [usize; 2] = [10, 11];
+    let teen = make_hero_with(&GOKU_HEAD, &layers(&[GOT, &[('c', 0x2b4fc8), ('C', 0x1c3584)]]), true, Opt { sleeves: true, ..Opt::default() }).forms[1].clone();
+    let masked: Vec<String> =
+        GOKU_HEAD.iter().enumerate().map(|(j, r)| if MASK_ROWS.contains(&j) { r.replace(['s', 'E', 'r'], "R") } else { r.to_string() }).collect();
+    let masked: Vec<&str> = masked.iter().map(|s| s.as_str()).collect();
+    let suit: &[(char, u32)] = &[
+        ('y', 0x2f8a3a),
+        ('Y', 0x1f6028),
+        ('a', 0x2f8a3a),
+        ('A', 0x1f6028),
+        ('g', 0xf4f4f6),
+        ('G', 0xc2c6d2),
+        ('u', 0xd8323a),
+        ('p', 0x22222a),
+        ('P', 0x111118),
+        ('w', 0xf4f4f6),
+        ('W', 0xc2c6d2),
+        ('q', 0xd8323a),
+        ('Q', 0x962028),
+        ('R', 0xd8323a),
+    ];
+    let saiyaman = make_hero_with(&masked, suit, true, Opt { cape: true, ..Opt::default() }).forms[0].clone();
+    [teen, saiyaman]
 }
 
 // ── the piccolo upgrade's helpers game.js never drew

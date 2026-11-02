@@ -19,7 +19,7 @@
 //! line, each paying as if taken by hand, and each cut after the first in one throw also pays a chain bonus that
 //! doubles with every cut. Left alone he throws one by himself every `DISC_AUTO` at the nearest saibaman or meteor
 //! (never at an orb: running picks those up anyway). After `BARRAGE_CUTS` cuts, his next disc at a villain is a giant
-//! one that takes a fifth of its hp.
+//! one that takes `BARRAGE_HP` of its hp.
 
 use crate::big::Big;
 use crate::data::{Helper, Hero, Upg, LAP, N_LEGS, N_STRIDE};
@@ -73,17 +73,24 @@ pub struct Stake {
     pub safe: bool,
 }
 
+/// The AFK sims' ceiling on a hero's active/idle: at most vegeta's own (×this), since the boss picked "a hero may
+/// earn as much from play as vegeta does" over the old fixed 2-3× (Tien, 17).
+pub const ACTIVE_VS_VEGETA: f64 = 1.05;
+
+/// Krillin's steady income: under vegeta's, since his discs pay on top.
+pub const KRILLIN_BASE: f64 = 0.82;
+
 /// Seconds between krillin's discs, and between the ones he throws by himself.
-pub const DISC_GAP: f64 = 0.4;
+pub const DISC_GAP: f64 = 1.0;
 pub const DISC_AUTO: f64 = 15.0;
 /// How far off its line a disc cuts (past a target's own size), and how far it flies, in the game's pixels.
 pub const DISC_BAND: f64 = 6.0;
 pub const DISC_RANGE: f64 = 240.0;
 /// A chain's bonus: seconds of his recent income for the second cut in one throw, doubling for each one after.
-pub const CHAIN_SECS: f64 = 1.0;
+pub const CHAIN_SECS: f64 = 0.25;
 /// Cuts that charge the barrage, and the share of a villain's hp it takes.
-pub const BARRAGE_CUTS: u32 = 10;
-pub const BARRAGE_HP: f64 = 0.2;
+pub const BARRAGE_CUTS: u32 = 20;
+pub const BARRAGE_HP: f64 = 0.15;
 /// How long a thrown disc is in the air (the renderer draws it; the cuts land when it's thrown).
 pub const DISC_FLIGHT: f64 = 0.45;
 
@@ -111,6 +118,8 @@ pub enum Kind {
         last: f64,
         auto: f64,
         discs: Vec<Disc>,
+        /// a tap made before his next disc was ready: where it goes once it is
+        queued: Option<(f64, f64)>,
     },
     Goten {
         /// when he last formed up, when he dropped to base (while he's down), his best form, and the form last seen
@@ -148,7 +157,7 @@ impl Kind {
     fn of(h: Hero) -> Self {
         match h {
             Hero::Piccolo => Kind::Piccolo { focus: 1.0 },
-            Hero::Krillin => Kind::Krillin { cuts: 0, last: -9.0, auto: DISC_AUTO, discs: Vec::new() },
+            Hero::Krillin => Kind::Krillin { cuts: 0, last: -9.0, auto: DISC_AUTO, discs: Vec::new(), queued: None },
             Hero::Goten => Kind::Goten { up: 0.0, down: None, best: 0, seen: 0 },
             Hero::Tien => Kind::Tien { stake: None, auto: 0.0, crater: None },
             Hero::A17 => Kind::A17 { oc: 1.0, auto: crate::a17::AUTO_BEAM, pin: 0.0 },
@@ -207,6 +216,7 @@ impl Game {
         match self.hero_rt.kind {
             Kind::Piccolo { focus } => PICCOLO_BASE * (1.0 + focus),
             Kind::Tien { .. } => TIEN_BASE,
+            Kind::Krillin { .. } => KRILLIN_BASE,
             Kind::A17 { .. } => crate::a17::A17_BASE,
             _ => 1.0,
         }
@@ -486,15 +496,18 @@ impl Game {
         let t = self.t;
         let free = !self.stunned() && !self.swapped();
         let mut due = false;
-        if let Kind::Krillin { auto, discs, .. } = &mut self.hero_rt.kind {
+        let mut queued_now = None;
+        if let Kind::Krillin { auto, discs, queued, last, .. } = &mut self.hero_rt.kind {
             discs.retain(|d| t - d.t0 < DISC_FLIGHT);
             *auto -= dt;
-            if *auto <= 0.0 && free {
+            if queued.is_some() && t - *last >= DISC_GAP && free {
+                queued_now = queued.take();
+            } else if *auto <= 0.0 && free {
                 *auto = DISC_AUTO;
                 due = true;
             }
         }
-        if let Some((x, y)) = due.then(|| self.nearest_target_of(false)).flatten() {
+        if let Some((x, y)) = queued_now.or_else(|| due.then(|| self.nearest_target_of(false)).flatten()) {
             self.throw_disc(x, y);
         }
     }
@@ -542,7 +555,7 @@ impl Game {
     }
 
     /// A tap of yours at (x, y) that hit nothing else and would train: krillin throws a disc that way instead (on
-    /// himself, straight ahead along the road) if one's ready, and either way the tap is spent. Everything a tap
+    /// himself, straight ahead along the road), now or the moment the next one's ready. Everything a tap
     /// does before that (a villain, a pod, the moon, the fusion dance's beats…) is his as anyone's, and a training
     /// tap the game makes (instinct's, from off the screen) still trains.
     pub(crate) fn hero_disc_tap(&mut self, x: f64, y: f64) -> bool {
@@ -551,14 +564,19 @@ impl Game {
         if !(0.0..=self.cam.w).contains(&x) || !(0.0..=self.cam.h).contains(&y) {
             return false;
         }
-        if t - last >= DISC_GAP && !self.stunned() && !self.swapped() {
-            let k = self.kid_screen(14.0);
-            let (x, y) = if hypot(&[x - k.x, y - k.y]) < 14.0 {
-                let a = self.cam.screen(self.frame3.road_pt(self.phi + 0.6), 14.0);
-                (a.x, a.y)
-            } else {
-                (x, y)
-            };
+        let k = self.kid_screen(14.0);
+        let (x, y) = if hypot(&[x - k.x, y - k.y]) < 14.0 {
+            let a = self.cam.screen(self.frame3.road_pt(self.phi + 0.6), 14.0);
+            (a.x, a.y)
+        } else {
+            (x, y)
+        };
+        if t - last < DISC_GAP {
+            // too soon: it's thrown the moment the next disc is ready, so no tap of his goes nowhere
+            if let Kind::Krillin { queued, .. } = &mut self.hero_rt.kind {
+                *queued = Some((x, y));
+            }
+        } else if !self.stunned() && !self.swapped() {
             self.throw_disc(x, y);
         }
         true
@@ -637,9 +655,9 @@ impl Game {
         let boss = self.tl.boss.as_ref().filter(|b| !b.dead && t >= b.go).map(|b| (b.x, b.y - b.spr().h / 2.0 * b.k));
         if let (Some((bx, by)), true) = (boss, self.cuts() >= BARRAGE_CUTS) {
             let max = self.tl.boss.as_ref().unwrap().max;
-            // a fifth of his hp after armor, as mech.rs's set shares are
+            // a share of his hp after armor, as mech.rs's set shares are
             self.hit_boss(max * BARRAGE_HP / (1.0 + 0.5 * self.s.lvf(crate::data::Upg::Armor)), bx, by, true);
-            self.event("disc barrage! a giant destructo disc takes a fifth of his hp");
+            self.event(format!("disc barrage! a giant destructo disc takes {}% of his hp", (BARRAGE_HP * 100.0).round()));
             if let Kind::Krillin { cuts, last, discs, .. } = &mut self.hero_rt.kind {
                 *cuts -= BARRAGE_CUTS;
                 *last = t;

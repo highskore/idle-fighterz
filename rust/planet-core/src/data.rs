@@ -242,16 +242,17 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         Hero::Goku => &[9],
         Hero::Gohan => &[11],
         Hero::Trunks => &[13],
-        // their own late forms come below; the rest aren't built yet: their ladders stop at the shared nine
+        // the other heroes' late forms are their own, below
         Hero::Piccolo | Hero::Krillin | Hero::Goten | Hero::Tien | Hero::A17 => &[],
     };
-    // a non-saiyan's own late forms, each with its aura: their looks follow the shared nine in his sprites
+    // a hero's own late forms, each with its aura: their looks follow the shared nine in his sprites
     let own_late: &[(&str, [u32; 3])] = match h {
         Hero::Piccolo => &[
             ("synced with nail", [0xffffff, 0xd8ffc8, 0x6ae05a]),
             ("synced with kami", [0xffffff, 0xe8f0ff, 0x3a6ad8]),
             ("complete namekian", [0xffffff, 0xfff6c0, 0xe8d040]),
         ],
+        Hero::Goten => &[("teen super saiyan", [0xffffff, 0xfff0a0, 0xffd02e]), ("saiyaman x-2", [0xffffff, 0xffd0c8, 0xd8323a])],
         Hero::Krillin => &[("solar flare", [0xffffff, 0xfffbe0, 0xffe680]), ("taiyoken sun", [0xffffff, 0xfff8b0, 0xffd60a])],
         Hero::Tien => &[("four witches", [0xffffff, 0xd8ffe0, 0x3aa86a]), ("multi-form", [0xffffff, 0xe8f0ff, 0x8ab0e0])],
         // android 17's marks past the nine: unseen, like all his marks (a17.rs)
