@@ -2870,7 +2870,7 @@ impl Game {
             "kaio" => {
                 self.b.kaio_until = t + 15.0;
                 self.b.kaio_ready = t + 15.0;
-                let msg = format!("your wish is granted — kaioken ×{}, and you won't get tired", self.kaio_x());
+                let msg = format!("your wish is granted — {} ×{}, and you won't get tired", self.boost(), self.kaio_x());
                 self.event(msg);
             }
             "bubbles" => {

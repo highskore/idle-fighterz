@@ -534,6 +534,7 @@ impl Game {
         let Some(&(id, name, _)) = ACH.iter().find(|a| a.0 == id) else { return };
         self.s.ach.insert(id);
         self.s.ach_at.insert(id, self.now_ms());
+        let name = self.ach_name(id, name);
         let unlocks: String = CHARS.iter().filter(|c| c.3 == Need::Ach(id)).map(|c| format!(" · {} unlocked", c.2)).collect();
         self.after(0.9, crate::timeline::Later::Event(format!("achievement — {name}{unlocks}"), 3200.0));
         self.cue(Cue::Sfx("coin"));
@@ -821,10 +822,10 @@ impl Game {
         self.b.kaio_ready = self.t + 45.0;
         self.shake = 0.5;
         self.flash_t = 0.4;
-        let msg = format!("kaioken! ×{}", self.kaio_x());
+        let msg = format!("{}! ×{}", self.boost(), self.kaio_x());
         self.event(msg);
         let (x, y) = self.hand_pos();
-        self.burst_at(x, y, &[0xffffff, 0xff9a8a, 0xe0332b], 40, 200.0);
+        self.burst_at(x, y, &hero_boost(self.s.hero).spark, 40, 200.0);
     }
 
     fn branch_pts(&self, b: Branch) -> u32 {

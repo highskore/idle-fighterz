@@ -27,8 +27,8 @@ html.widget, html.widget body { background: transparent !important; overflow: hi
 .w button[hidden] { display: none; }
 .w button i { position: absolute; right: -4px; top: -4px; min-width: 15px; height: 15px; padding: 0 4px; font-style: normal; font-size: 9px; line-height: 15px; text-align: center; color: #fff; background: var(--gold); border-radius: 999px; }
 .w button i:empty { display: none; }
-.w [data-w="kaio"] { color: #fff; background: #e0332b; border-color: #e0332b; }
-.w [data-w="kaio"]:disabled { background: #f1b9b4; border-color: #f1b9b4; cursor: default; }
+.w [data-w="kaio"] { color: var(--ki, #fff); background: var(--kc); border-color: var(--kc); }
+.w [data-w="kaio"]:disabled { background: var(--kp); border-color: var(--kp); cursor: default; }
 .w [data-w="itx"] { color: #fff; background: #2f8ae0; border-color: #2f8ae0; }
 .w [data-w="itx"]:disabled { background: #b8d6f4; border-color: #b8d6f4; cursor: default; }
 .w [data-w="snd"][aria-pressed="true"] .off, .w [data-w="snd"][aria-pressed="false"] .on { display: none; }
@@ -82,7 +82,7 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
 [data-layout="7"] .w-btns { gap: 2px; }
 [data-layout="7"] .w-btns button { --b: clamp(18px, 7vmin, 26px); box-shadow: none; border-color: transparent; background: #f2f2ef; }
 [data-layout="7"] .w-btns button:hover { transform: none; background: #e6e6e2; }
-[data-layout="7"] .w-btns [data-w="kaio"] { background: #e0332b; } [data-layout="7"] .w-btns [data-w="kaio"]:disabled { background: #f1b9b4; }
+[data-layout="7"] .w-btns [data-w="kaio"] { background: var(--kc); } [data-layout="7"] .w-btns [data-w="kaio"]:disabled { background: var(--kp); }
 [data-layout="7"] .w-btns [data-w="itx"] { background: #2f8ae0; } [data-layout="7"] .w-btns [data-w="itx"]:disabled { background: #b8d6f4; }
 [data-layout="7"] .w-bar { display: none; }
 .w-info { display: none; }
@@ -120,7 +120,7 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
 [data-layout="2"] .w-n { font-size: 1.55em; } [data-layout="2"] .w-rate { font-size: .8em; }
 [data-layout="2"] .w-btns { gap: 2px; } [data-layout="2"] .w-btns button { box-shadow: none; border-color: transparent; background: transparent; --b: clamp(20px, 7.6vmin, 28px); }
 [data-layout="2"] .w-btns button:hover { background: #f2f2f0; }
-[data-layout="2"] .w-btns [data-w="kaio"] { background: #e0332b; } [data-layout="2"] .w-btns [data-w="itx"] { background: #2f8ae0; } [data-layout="2"] .w-btns [data-w="itx"]:disabled { background: #b8d6f4; }
+[data-layout="2"] .w-btns [data-w="kaio"] { background: var(--kc); } [data-layout="2"] .w-btns [data-w="itx"] { background: #2f8ae0; } [data-layout="2"] .w-btns [data-w="itx"]:disabled { background: #b8d6f4; }
 [data-layout="2"] .w-bar { position: absolute; left: 18px; right: 18px; bottom: 0; height: 2px; }
 [data-layout="2"] { --tb: calc(34px + var(--b)); --pb: calc(14px + var(--b)); }   /* popups float well clear of the pill */
 
@@ -141,7 +141,7 @@ html.widget:not(.awake):not(.pin) .w > *, html.widget:not(.awake):not(.pin) .w-r
 [data-layout="6"] .w-rate { font-size: .8em; }
 [data-layout="6"] .w-btns { gap: 1px; } [data-layout="6"] .w-btns button { --b: clamp(19px, 7vmin, 26px); box-shadow: none; border-color: transparent; background: transparent; border-radius: 7px; }
 [data-layout="6"] .w-btns button:hover { background: #f2f2f0; }
-[data-layout="6"] .w-btns [data-w="kaio"] { background: #e0332b; } [data-layout="6"] .w-btns [data-w="itx"] { background: #2f8ae0; } [data-layout="6"] .w-btns [data-w="itx"]:disabled { background: #b8d6f4; }
+[data-layout="6"] .w-btns [data-w="kaio"] { background: var(--kc); } [data-layout="6"] .w-btns [data-w="itx"] { background: #2f8ae0; } [data-layout="6"] .w-btns [data-w="itx"]:disabled { background: #b8d6f4; }
 [data-layout="6"] .w-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 0; }
 [data-layout="6"] .shop.open { top: calc(14px + var(--b)); bottom: auto; }
 [data-layout="6"] { --tb: 10px; }
