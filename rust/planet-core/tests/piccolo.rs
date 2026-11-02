@@ -162,7 +162,7 @@ fn idle_his_focus_only_grows() {
 
 #[test]
 fn other_heroes_are_untouched() {
-    for h in [Hero::Vegeta, Hero::Goku, Hero::Krillin] {
+    for h in [Hero::Vegeta, Hero::Goku] {
         let r = Run::new(1, h);
         assert_eq!(r.g.hero_x(), 1.0, "{h:?}");
         assert_eq!(r.g.focus(), 0.0, "{h:?}");

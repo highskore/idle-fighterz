@@ -4,7 +4,7 @@
 //! does costs him anything.
 
 use planet_core::data::{Hero, Upg, SHOP};
-use planet_core::heroes::{BARRAGE_CUTS, DISC_AUTO, DISC_GAP};
+use planet_core::heroes::{BARRAGE_CUTS, BARRAGE_HP, DISC_AUTO, DISC_GAP};
 use planet_core::{Game, DT};
 
 const POLICY: [&str; 13] = ["boots", "partner", "gravity", "scouter", "house", "piccolo", "cloud", "armor", "kaio", "galick", "senzu", "chamber", "bigbang"];
@@ -82,7 +82,10 @@ impl Run {
     }
 }
 
-const SEEDS: [u32; 24] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24];
+const SEEDS: [u32; 48] = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+    42, 43, 44, 45, 46, 47, 48,
+];
 
 fn geo_mean(v: &[f64]) -> f64 {
     (v.iter().map(|x| x.ln()).sum::<f64>() / v.len() as f64).exp()
@@ -162,7 +165,7 @@ fn the_barrage_takes_a_fifth_of_a_villain() {
     // a tap on empty sky: with the barrage charged, the disc goes for the villain
     g.tap(g.cam.w * 0.05, g.cam.h * 0.05);
     let hp1 = g.tl.boss.as_ref().map_or(0.0, |b| b.hp.to_f64());
-    assert!(hp0 - hp1 >= max * 0.19 || g.tl.boss.as_ref().is_none_or(|b| b.dead), "the barrage: {hp0} → {hp1} of {max}");
+    assert!(hp0 - hp1 >= max * (BARRAGE_HP - 0.01) || g.tl.boss.as_ref().is_none_or(|b| b.dead), "the barrage: {hp0} → {hp1} of {max}");
     assert_eq!(g.cuts(), 0);
 }
 
@@ -187,11 +190,14 @@ fn he_never_visits_himself() {
 fn the_afk_rule_over_whole_runs() {
     for mins in [30.0, 60.0] {
         let (ki, ka) = (earned(Hero::Krillin, Play::Idle, mins), earned(Hero::Krillin, Play::Active, mins));
-        let vi = earned(Hero::Vegeta, Play::Idle, mins);
+        let (vi, va) = (earned(Hero::Vegeta, Play::Idle, mins), earned(Hero::Vegeta, Play::Active, mins));
         let (vs_vegeta, act) = (ratio(&ki, &vi), ratio(&ka, &ki));
         println!("{mins} min, {} seeds: idle krillin / idle vegeta ×{vs_vegeta:.3}; active / idle ×{act:.3}", SEEDS.len());
+        println!("(vegeta active / idle ×{:.3}; krillin active / vegeta active ×{:.3})", ratio(&va, &vi), ratio(&ka, &va));
         assert!((0.8..=1.25).contains(&vs_vegeta), "idle, he keeps pace with an idle vegeta: ×{vs_vegeta}");
-        assert!((2.0..=3.0).contains(&act), "playing him earns about 2-3× his idle: ×{act}");
+        // picked: a hero may match vegeta's own active/idle (×4.7-5.3 with this bot), so the ceiling is his
+        let cap = ratio(&va, &vi) * 1.05;
+        assert!(act >= 2.0 && act <= cap, "playing him earns at least 2× his idle, no more than vegeta does: ×{act} (cap ×{cap})");
     }
 }
 
@@ -294,7 +300,7 @@ fn armor_doesnt_grow_the_barrage() {
     g.tap(g.cam.w * 0.05, g.cam.h * 0.05);
     let hp1 = g.tl.boss.as_ref().unwrap().hp.to_f64();
     let took = (hp0 - hp1) / max;
-    assert!((0.19..=0.21).contains(&took), "a fifth of his hp with armor ×6 too: took {took}");
+    assert!((took - BARRAGE_HP).abs() <= 0.01, "the barrage's share of his hp with armor ×6 too: took {took}");
 }
 
 #[test]

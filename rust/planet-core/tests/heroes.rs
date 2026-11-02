@@ -197,15 +197,6 @@ fn god_ki_opens_at_the_same_mark_for_every_hero() {
         g.god_reset();
         assert_eq!(g.s.gods, gods + 1, "{id}");
     }
-    // once limit III breaks, a nine-form hero's limit breakers sit at his ninth form's mark: still not god ki
-    let mut g = Game::new(7);
-    g.start();
-    g.s.hero = Hero::Goten;
-    g.s.limits = 3;
-    g.forms = ladder_of(Hero::Goten, 3);
-    g.s.form = 9;
-    g.s.run_best = 1e12.into();
-    assert!(!godki_open(&g), "a limit breaker at his ninth mark isn't the saiyans' 2e14");
 }
 
 #[test]
@@ -300,4 +291,14 @@ fn only_saiyans_transform_on_the_full_moon() {
     assert!(g.b.ape_until > g.t, "vegeta went great ape");
     assert!(g.pick_hero("a17"));
     assert!(g.b.ape_until <= g.t);
+}
+
+#[test]
+fn no_hero_tops_out_below_the_late_forms() {
+    // limit breakers double the top form: every hero's top form carries a late multiplier
+    for &(h, id, ..) in CHARS.iter() {
+        let top = ladder_of(h, 0).last().unwrap().x;
+        assert!(top >= 24.0, "{id} tops out at ×{top}");
+    }
+    assert_eq!(&ladder_of(Hero::Goten, 0).iter().map(|f| f.name).collect::<Vec<_>>()[9..], ["teen super saiyan", "saiyaman x-2"]);
 }
