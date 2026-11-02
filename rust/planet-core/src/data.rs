@@ -858,6 +858,122 @@ pub fn hero_moves(h: Hero) -> (&'static str, &'static str) {
     }
 }
 
+/// A hero's boost as the button and his aura show it: the button's short label, fill, pale fill while recharging and
+/// ink; the colour his sprite is washed toward, the rim (pulse up, down), the flames (tip to base) and their embers;
+/// the sparks (white, light, deep); and the beam and blast while it's on (ball, glow, mid, edge).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Boost {
+    pub short: &'static str,
+    pub fill: u32,
+    pub pale: u32,
+    pub ink: u32,
+    pub wash: u32,
+    pub rim: [u32; 2],
+    pub flame: [u32; 3],
+    pub ember: u32,
+    pub spark: [u32; 3],
+    pub ball: u32,
+    pub glow: u32,
+    pub mid: u32,
+    pub edge: u32,
+}
+
+/// The kaioken's red.
+const RED: Boost = Boost {
+    short: "kaioken",
+    fill: 0xe0332b,
+    pale: 0xf1b9b4,
+    ink: 0xffffff,
+    wash: 0xff0000,
+    rim: [0xff4a3a, 0xe0332b],
+    flame: [0xffd0c0, 0xff8a6a, 0xff4a3a],
+    ember: 0xb0201a,
+    spark: [0xffffff, 0xff9a8a, 0xe0332b],
+    ball: 0xffb0a4,
+    glow: 0xff6a5a,
+    mid: 0xffc8bf,
+    edge: 0xc8201a,
+};
+/// The plain white aura, rimmed in a cool grey so it reads on the pale worlds.
+const WHITE: Boost = Boost {
+    short: "",
+    fill: 0xe6eaf0,
+    pale: 0xf2f4f7,
+    ink: 0x2a2f3a,
+    wash: 0xffffff,
+    rim: [0xffffff, 0xc8d4e2],
+    flame: [0xffffff, 0xeef4ff, 0xc8d8ea],
+    ember: 0x8a9ab0,
+    spark: [0xffffff, 0xeef4ff, 0xb0c0d4],
+    ball: 0xf4f8ff,
+    glow: 0xdce8f6,
+    mid: 0xffffff,
+    edge: 0xa0b4cc,
+};
+/// Super saiyan gold.
+const GOLD: Boost = Boost {
+    short: "",
+    fill: 0xf5c518,
+    pale: 0xf8e3a0,
+    ink: 0x3a2a00,
+    wash: 0xffd000,
+    rim: [0xffe04a, 0xf0b820],
+    flame: [0xfff4c0, 0xffe070, 0xf0c030],
+    ember: 0xc08a10,
+    spark: [0xffffff, 0xfff0a0, 0xe8b020],
+    ball: 0xfff0a8,
+    glow: 0xffd850,
+    mid: 0xfff6c8,
+    edge: 0xd09a10,
+};
+/// Super saiyan rage's electric blue.
+const BLUE: Boost = Boost {
+    short: "",
+    fill: 0x2a5cf0,
+    pale: 0xbccbf8,
+    ink: 0xffffff,
+    wash: 0x2a8aff,
+    rim: [0x4ac8ff, 0x1a7ae8],
+    flame: [0xd0f4ff, 0x7ad8ff, 0x3aa8ff],
+    ember: 0x1a5ac0,
+    spark: [0xffffff, 0x9ae0ff, 0x2a8ae8],
+    ball: 0xb0e8ff,
+    glow: 0x5ac0ff,
+    mid: 0xd0f0ff,
+    edge: 0x1a6ad8,
+};
+/// Android 17's barrier green.
+const GREEN: Boost = Boost {
+    short: "",
+    fill: 0x1fa855,
+    pale: 0xb4e4c4,
+    ink: 0xffffff,
+    wash: 0x20d060,
+    rim: [0x4ae87a, 0x22b850],
+    flame: [0xd0ffe0, 0x7af0a0, 0x3ad86a],
+    ember: 0x1a8a40,
+    spark: [0xffffff, 0xa0f4c0, 0x22b850],
+    ball: 0xb8ffd0,
+    glow: 0x5ae890,
+    mid: 0xd4ffe2,
+    edge: 0x1a9a48,
+};
+
+/// Each hero's boost look: canon colours where the show has one, his plain aura otherwise.
+pub fn hero_boost(h: Hero) -> Boost {
+    match h {
+        Hero::Vegeta => Boost { short: "majin", ..GOLD },
+        Hero::Goku => RED,
+        Hero::Gohan => Boost { short: "unleash", ..WHITE },
+        Hero::Trunks => Boost { short: "rage", ..BLUE },
+        Hero::Krillin => Boost { short: "power", ..WHITE },
+        Hero::Piccolo => Boost { short: "cape off", ..WHITE },
+        Hero::A17 => Boost { short: "infinite", ..GREEN },
+        Hero::Tien => Boost { short: "kiai", ..WHITE },
+        Hero::Goten => Boost { short: "tantrum", ..GOLD },
+    }
+}
+
 /// Each hero's playstyle in one line, as the settings panel's hero row shows it.
 pub fn hero_style(h: Hero) -> &'static str {
     match h {

@@ -1,7 +1,7 @@
 //! Every hero's beam, boost and blast go by his own names wherever the player reads them: the shop rows, their
 //! first-buy toasts, the hints, the toasts and achievements. Only vegeta fires a galick gun.
 
-use planet_core::data::{hero_beam, hero_moves, ladder_of, Hero, Upg, CHARS, SHOP};
+use planet_core::data::{hero_beam, hero_boost, hero_moves, ladder_of, Hero, Upg, CHARS, SHOP};
 use planet_core::Game;
 
 fn game(hero: Hero) -> Game {
@@ -79,6 +79,12 @@ fn every_hero_names_his_own_boost_blast_and_armor() {
         assert!(g.events.iter().any(|e| e.0.starts_with(&format!("{boost}! ×"))), "{id}: {:?}", g.events);
         assert!(g.effects().contains(&format!("{boost} ×")), "{id}: {}", g.effects());
         assert!(g.hud_now().to_json().contains(&format!("\"kaio\":{{\"name\":\"{boost}\"")), "{id}");
+        let look = hero_boost(hero);
+        assert!(!look.short.is_empty() && look.short.len() <= 8, "{id}: the button's label {:?}", look.short);
+        let hud = g.hud_now().to_json();
+        assert!(hud.contains(&format!("\"short\":\"{}\",\"fill\":\"#{:06x}\"", look.short, look.fill)), "{id}: {hud}");
+        // goku keeps the kaioken's red; the others' boosts aren't red
+        assert_eq!(look.fill == 0xe0332b, hero == Hero::Goku, "{id}");
         assert_eq!(g.ach_name("kaioken", "kaioken"), boost, "{id}");
         assert_eq!(g.ach_text("kaioken", "use the kaioken"), format!("use {boost}"), "{id}");
 

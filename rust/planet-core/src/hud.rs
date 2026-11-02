@@ -73,6 +73,8 @@ pub struct Hud {
     pub goal_n: f64,
     /// the boost button's name: the hero's own kaioken
     pub kaio_name: &'static str,
+    /// and its look: the button's short label and colours
+    pub kaio_look: Boost,
     pub kaio_own: bool,
     pub kaio_ready: bool,
     pub kaio_left: f64,
@@ -110,7 +112,19 @@ impl Hud {
     pub fn to_json(&self) -> String {
         Obj::new()
             .raw("goal", Obj::new().str("text", self.goal_text).num("p", self.goal_p).num("n", self.goal_n).end())
-            .raw("kaio", Obj::new().str("name", self.kaio_name).bool("own", self.kaio_own).bool("ready", self.kaio_ready).num("left", self.kaio_left).end())
+            .raw("kaio", {
+                let (k, hex) = (&self.kaio_look, |c: u32| format!("#{c:06x}"));
+                Obj::new()
+                    .str("name", self.kaio_name)
+                    .str("short", k.short)
+                    .str("fill", &hex(k.fill))
+                    .str("pale", &hex(k.pale))
+                    .str("ink", &hex(k.ink))
+                    .bool("own", self.kaio_own)
+                    .bool("ready", self.kaio_ready)
+                    .num("left", self.kaio_left)
+                    .end()
+            })
             .raw("itx", Obj::new().bool("own", self.itx_own).bool("ready", self.itx_ready).num("left", self.itx_left).end())
             .big("pl", self.pl)
             .big("best", self.best)
@@ -436,6 +450,7 @@ impl Game {
             goal_p: s.goal_p.min(g.n),
             goal_n: g.n,
             kaio_name: self.boost(),
+            kaio_look: hero_boost(s.hero),
             kaio_own: s.lv(Upg::Kaio) > 0,
             kaio_ready: t >= self.b.kaio_ready,
             kaio_left: ceil(self.b.kaio_ready - t),

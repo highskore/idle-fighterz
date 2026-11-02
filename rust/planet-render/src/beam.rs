@@ -1,10 +1,10 @@
 //! The hero's beam: the ball charging in his hands with its aim line and, at full charge, its crackle; then the
-//! fired beam (each hero's own, vegeta's final flash; red under kaioken, wider as the great ape) with its crackle.
+//! fired beam (each hero's own, vegeta's final flash; in the boost's colour under it, wider as the great ape) with its crackle.
 
 // game.js turns by 6.28, not TAU: the angles must round the same
 #![allow(clippy::approx_constant)]
 
-use planet_core::data::{Hero, Upg};
+use planet_core::data::{hero_boost, Hero, Upg};
 use planet_core::fx::Particle;
 use planet_core::jsmath::{cos, hypot, pow, sin};
 use planet_core::num::js_round;
@@ -13,7 +13,7 @@ use planet_core::Game;
 use crate::bayer;
 use crate::scene::Ctx;
 
-/// game.js `BEAMS`/`KAIO_BEAM`; the kaioken palette has no aim line or ball edge.
+/// game.js `BEAMS`/`KAIO_BEAM`; the boost's palette has no aim line or ball edge.
 pub(crate) struct Pal {
     aim: u32,
     ball: u32,
@@ -34,7 +34,6 @@ const BURNING: Pal = Pal { aim: 0xf0a03a, ball: 0xffe0a0, ball_edge: 0xe87a1a, s
 const BLITZ: Pal = Pal { aim: 0x5ad86a, ball: 0xc0ffc8, ball_edge: 0x2ab84a, spark: 0xa2f0b0, glow: 0x7ae88a, mid: 0xd4ffda, edge: 0x1f9a3a };
 /// Tien's kikoho: gold, with a hot white core.
 const KIKOHO: Pal = Pal { aim: 0xffc83a, ball: 0xfff4c0, ball_edge: 0xe8a020, spark: 0xffe080, glow: 0xffd060, mid: 0xfff8d8, edge: 0xd88a18 };
-const KAIO: Pal = Pal { aim: 0, ball: 0xffb0a4, ball_edge: 0, spark: 0xff9a8a, glow: 0xff6a5a, mid: 0xffc8bf, edge: 0xc8201a };
 
 /// `BEAM()`
 pub(crate) fn pal(g: &Game) -> &'static Pal {
@@ -166,7 +165,9 @@ pub fn draw_beam(c: &mut Ctx, g: &mut Game) {
         g.inp.beam = None;
         return;
     }
-    let bp = if b.kaio { &KAIO } else { pal(g) };
+    let k = hero_boost(g.s.hero);
+    let kaio = Pal { aim: 0, ball: k.ball, ball_edge: 0, spark: k.spark[1], glow: k.glow, mid: k.mid, edge: k.edge };
+    let bp = if b.kaio { &kaio } else { pal(g) };
     // the final flash's yellow is vegeta's; the others' full-power beams keep their own colour
     let ff = b.ff && g.s.hero == Hero::Vegeta && !b.kaio;
     let w = (3.0 + b.c * 3.0)

@@ -825,7 +825,7 @@ impl Game {
         let msg = format!("{}! ×{}", self.boost(), self.kaio_x());
         self.event(msg);
         let (x, y) = self.hand_pos();
-        self.burst_at(x, y, &[0xffffff, 0xff9a8a, 0xe0332b], 40, 200.0);
+        self.burst_at(x, y, &hero_boost(self.s.hero).spark, 40, 200.0);
     }
 
     fn branch_pts(&self, b: Branch) -> u32 {

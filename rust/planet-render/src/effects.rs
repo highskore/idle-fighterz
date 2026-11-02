@@ -1,6 +1,7 @@
 //! The ki effects drawn between the visitors and the boss: the spirit bomb gathering over the hero and its throw, the
 //! beam struggle, and the capsule a beaten boss drops (its fall and its opening run here, as in game.js).
 
+use planet_core::data::hero_boost;
 use planet_core::fx::Particle;
 use planet_core::jsmath::{cos, hypot, sin};
 use planet_core::num::js_round;
@@ -138,14 +139,14 @@ pub fn draw(c: &mut Ctx, g: &mut Game) {
                             if k < 0.5 {
                                 0xffffff
                             } else if b.kaio {
-                                0xff6a5a
+                                hero_boost(g.s.hero).glow
                             } else {
                                 0x8fd8ff
                             }
                         } else if d < rr * 0.4 {
                             0xffffff
                         } else if b.kaio {
-                            0xffb0a4
+                            hero_boost(g.s.hero).ball
                         } else {
                             0xbfe9ff
                         };
