@@ -11,6 +11,7 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gameFile, rustEngine, rustLoader, rustPreload } from './rust/planet-web/assemble.mjs'
+import { phoneLayout } from './widget-layout.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 // a Windows checkout may have CRLF sources: everything below matches on \n, and the output must not depend on it
@@ -116,6 +117,7 @@ async function sitePage(page) {
 // the widget runs offline and has no title, so no three.js, and the fonts are inlined from @fontsource (installed with
 // the widget's own dependencies, in node_modules where it runs)
 async function widgetPage(page) {
+  page = phoneLayout(page)
   page = page.replace('__WIDGET_CSS__', () => read('widget.css') + read('skins.css')).replace('__WIDGET_JS__', () => read('skins.js') + read('widget.js'))
   page = page.replace(/<link [^>]*fonts\.(googleapis|gstatic)\.com[^>]*>\n/g, '').replace('<script id="three">__THREE__</script>\n', '')
   if (/<(script|link)[^>]+(src|href)="https?:/.test(page)) throw new Error('the widget page still loads something remote')

@@ -24,13 +24,35 @@ function makeSprite(rows, pal, opts = {}) {
   return { w, h, col, emit, ax: opts.ax ?? Math.floor(w / 2), ay: opts.ay ?? h - 1, glow: opts.glow || 0, glowColor: opts.glowColor };
 }
 
+/*widget*/
+// The widget's sizes in window mode (and the app's fullscreen), by the window. The planet: the biggest whole-pixel scale
+// that leaves the scene at least `floor` game pixels across (the planet size setting: the smaller the floor, the bigger the
+// planet, whose radius is the game's 56–70 game pixels) and the planet clear of the HUD's `room` (its dock) at the bottom, at the
+// biggest any world draws it (game.js W2L: planet vegeta's zoom; the lookout's lift and .82 stay inside that). `prev`, the
+// scale it has, holds within 4% of the floor while a window is resized
+const PLANET_FLOOR = { small: 260, medium: 200, large: 170, huge: 140 }, WORLD_ZOOM = 1.22;
+function fillScale(w, h, floor, room = 40, prev = 0) {
+  const side = Math.min(w, h), r = k => Math.max(56, Math.min(70, Math.round(Math.min(Math.ceil(w / k), Math.ceil(h / k)) * .2)));
+  const fits = (k, f) => k === 1 || (side / k >= f && r(k) * k * WORLD_ZOOM <= h / 2 - room);
+  let k = 1;
+  while (fits(k + 1, floor)) k++;
+  if (prev > k && fits(prev, floor * .96)) return prev;
+  if (prev && prev < k && !fits(k, floor * 1.04)) return prev;
+  return k;
+}
+// The HUD's zoom (the UI size setting): with the window's short side from 640px up to twice that, times the pick
+const UI_SIZE = { small: .8, medium: 1, large: 1.25, huge: 1.5 };
+function uiScale(w, h, size) {
+  return Math.round(Math.min(2, Math.max(1, Math.min(w, h) / 640)) * (UI_SIZE[size] || 1) * 100) / 100;
+}
+/*/widget*/
 function makeStage(section) {
   const el = section.querySelector('.stage'), cv = el.querySelector('canvas'), ctx = cv.getContext('2d');
   const st = { el, cv, ctx, W: 0, H: 0, scale: 3, night: false, t: 0, bob: 0 };
   let img, buf;
   st.resize = () => {
     const r = el.getBoundingClientRect();
-    st.scale = r.width < 560 ? 2 : 3;/*widget*/ if (WIDGET) st.scale = r.width >= 520 ? 2 : 1;   // the widget: 1× up to medium, 2× at large, so a site-sized planet fits with room round it/*/widget*/
+    st.scale = r.width < 560 ? 2 : 3;/*widget*/ if (WIDGET) st.scale = st.floor ? fillScale(r.width, r.height, st.floor, st.room, st.scale) : r.width >= 520 ? 2 : 1;   // floating: 1× up to medium, 2× at large, so a site-sized planet fits with room round it/*/widget*/
     st.W = Math.ceil(r.width / st.scale); st.H = Math.ceil(r.height / st.scale);
     cv.width = st.W; cv.height = st.H;
     if (PX) {   // the pixels, depth, ids and mask in the module's memory: drawn into from both sides, put on the canvas uncopied
