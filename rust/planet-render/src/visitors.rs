@@ -222,7 +222,7 @@ impl Scene {
             let fa = self.built.fut_andro.clone();
             // playing 17, there's no second him: only this world's 18
             let a17 = g.s.hero == planet_core::data::Hero::A17;
-            for (i, p) in fa.iter().enumerate().filter(|&(i, _)| i > 0 || !a17) {
+            for (i, p) in fa.iter().enumerate().skip(a17 as usize) {
                 let v = ap(&m, *p);
                 if v[2] > 0.05 {
                     c.blit_z(

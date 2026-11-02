@@ -303,18 +303,34 @@ fn only_saiyans_transform_on_the_full_moon() {
 }
 
 #[test]
-fn switching_heroes_keeps_only_the_form_your_power_holds() {
+fn switching_heroes_keeps_only_the_form_this_runs_power_reached() {
+    // goten's marks come at half: his third form on power short of vegeta's third gives vegeta no free form
     let mut g = Game::new(7);
     g.preview("#hero-goten");
     g.start();
-    g.s.beaten.insert("kid buu".into());
-    // goten's marks come at half: his third form on power that's short of vegeta's third
     g.s.form = 3;
     g.s.pl = (g.forms[3].at * 1.1).into();
-    assert!(g.s.pl.to_f64() < ladder_of(Hero::Vegeta, 0)[3].at);
+    g.s.run_best = g.s.pl;
+    assert!(g.s.run_best.to_f64() < ladder_of(Hero::Vegeta, 0)[3].at);
     assert!(g.pick_hero("vegeta"));
     assert!(g.s.form < 3, "no free form for vegeta: {}", g.s.form);
-    assert!(g.s.pl.to_f64() >= g.forms[g.s.form].at, "the form his power holds");
+    assert!(g.s.run_best.to_f64() >= g.forms[g.s.form].at, "the form this run's power reached");
+    // power reached and then spent keeps its form, for the same marks and for the same hero
+    let mut g = Game::new(7);
+    g.start();
+    g.s.form = 3;
+    g.s.run_best = (g.forms[3].at * 1.1).into();
+    g.s.pl = 1e3.into();
+    g.s.ach.insert("ss");
+    assert!(g.pick_hero("goku"));
+    assert_eq!(g.s.form, 3, "goku keeps super saiyan 3 after spending");
+    assert!(g.pick_hero("goku"));
+    assert_eq!(g.s.form, 3, "and re-picking him changes nothing");
+    // a wished form holds through a switch until it wears off
+    g.s.form = 6;
+    g.tl.preview = Some((3, g.t + 60.0));
+    assert!(g.pick_hero("vegeta"));
+    assert_eq!(g.s.form, 6, "the wish isn't wasted");
 }
 
 #[test]
@@ -325,27 +341,59 @@ fn krillins_ally_bonus_isnt_his_own() {
     g.s.krillin_ally = true;
     let with = g.passive().to_f64();
     assert!(with > 0.0);
+    assert!(g.krillin_helps() && g.extra().contains("krillin: idle"));
     g.s.hero = Hero::Krillin;
     assert!(g.passive().to_f64() < with, "no ×1.5 from himself");
+    assert!(!g.krillin_helps() && !g.extra().contains("krillin: idle"), "nor its HUD line");
+    // nor his ki discs at a villain
+    let mut g = Game::new(7);
+    g.preview("#hero-krillin#saga1");
+    g.start();
+    g.s.krillin_ally = true;
+    while g.tl.boss.as_ref().is_none_or(|b| g.t < b.go) && g.t < 120.0 {
+        step(&mut g);
+    }
+    for _ in 0..30 {
+        step(&mut g);
+    }
+    assert!(g.tl.boss.as_ref().is_some_and(|b| b.next_disc.is_none()), "no ally discs while you're krillin");
 }
 
 #[test]
 fn goten_opens_the_multiverse_at_ultra_instincts_power_not_its_form_number() {
-    let mut g = Game::new(7);
-    g.preview("#hero-goten");
-    g.start();
     let ui = planet_core::data::UI_FORM;
-    g.s.form = ui;
-    g.s.pl = (g.forms[ui].at * 1.01).into();
-    for _ in 0..30 {
-        step(&mut g);
-    }
-    assert!(!g.s.multi, "half the mark isn't ultra instinct's");
+    let run = |pl: f64| {
+        let mut g = Game::new(7);
+        g.preview("#hero-goten");
+        g.start();
+        g.s.form = ui;
+        g.s.pl = pl.into();
+        g.s.run_best = g.s.pl;
+        for _ in 0..30 {
+            step(&mut g);
+        }
+        g.s.multi
+    };
+    let g = {
+        let mut g = Game::new(7);
+        g.preview("#hero-goten");
+        g
+    };
+    assert!(!run(g.forms[ui].at * 1.01), "half the mark isn't ultra instinct's");
+    assert!(run(planet_core::data::ALL_FORMS[ui].1 * 1.05), "ultra instinct's power opens it");
 }
 
 #[test]
 fn a_form_hook_reads_the_heros_own_ladder() {
     let mut g = Game::new(7);
     g.preview("#hero-goten#form3");
-    assert!(g.s.pl.to_f64() < ladder_of(Hero::Vegeta, 0)[3].at, "goten's third mark, not vegeta's");
+    assert_eq!(g.s.pl.to_f64(), (ladder_of(Hero::Goten, 0)[3].at * 1.05).round(), "goten's third mark, not vegeta's");
+}
+
+#[test]
+fn hooks_for_a_milestone_or_limit_that_doesnt_exist_dont_hang() {
+    let mut g = Game::new(7);
+    g.preview("#mile999");
+    g.preview("#limit99999");
+    assert!(g.s.limits <= 100);
 }

@@ -180,7 +180,7 @@ impl Game {
         if self.s.lv(Upg::Piccolo) > 0 {
             v.push(Ally::Piccolo);
         }
-        if self.s.krillin_ally && self.s.hero != Hero::Krillin && self.tl.kril.is_none() && !self.tl.date.as_ref().is_some_and(|d| d.kr) {
+        if self.krillin_helps() && self.tl.kril.is_none() && !self.tl.date.as_ref().is_some_and(|d| d.kr) {
             v.push(Ally::Krillin);
         }
         v

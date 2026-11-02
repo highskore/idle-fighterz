@@ -73,12 +73,13 @@ impl Game {
         }
     }
 
-    /// His power marks come without a scene: every mark he holds the power for, at once and quietly.
+    /// His power marks come without a scene: every mark this run's power reached, at once and quietly.
     pub(crate) fn a17_marks(&mut self) -> bool {
         if self.s.hero != Hero::A17 {
             return false;
         }
-        while self.form_owed() {
+        let reached = self.s.run_best.max(self.s.pl);
+        while self.s.form < self.forms.len() - 1 && reached >= self.forms[self.s.form + 1].at {
             self.s.form += 1;
         }
         true

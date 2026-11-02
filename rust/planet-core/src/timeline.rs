@@ -1098,7 +1098,7 @@ impl Game {
         {
             let c = self.cap_pt(0.38, 1.3);
             self.tl.kril = Some(Krillin { c, t0: t, boom: t + 3.2, dead: 0.0, sx: None });
-            self.event(if self.s.krillin_ally { "krillin: \"don't worry guys, i've got this one!\"" } else { "krillin: \"hey guys! what did i miss?\"" });
+            self.event(if self.krillin_helps() { "krillin: \"don't worry guys, i've got this one!\"" } else { "krillin: \"hey guys! what did i miss?\"" });
             self.tl.next_kril = 360.0 + self.r() * 180.0;
         }
         if let Some(k) = self.tl.kril.clone() {
@@ -1714,7 +1714,6 @@ impl Game {
             self.tl.next_nappa = 0.0;
             let hp = Big::from(800.0).max(self.wrate() * 50.0);
             self.new_boss(Boss::new(0, "nappa".into(), NAPPA, hp, t, t + 35.0));
-            // playing vegeta, nappa's own prince is the one he faces
             self.event(if self.s.hero == Hero::Vegeta {
                 "nappa: \"vegeta?! you'd side with them?\" — tap him"
             } else {
@@ -1723,8 +1722,8 @@ impl Game {
         }
         // ultra instinct (or the end of the sagas) opens the multiverse
         let sagas = VILLAINS.len() as u32;
-        // the form he holds must sit at ultra instinct's mark (goten's forms come early, at half the marks)
-        if !self.s.multi && (self.s.saga >= sagas || self.forms[self.held_form()].at >= ALL_FORMS[UI_FORM].1) {
+        // and ultra instinct's power: goten's forms come early, at half the marks
+        if !self.s.multi && (self.s.saga >= sagas || self.held_form() >= UI_FORM && self.s.run_best.max(self.s.pl) >= ALL_FORMS[UI_FORM].1) {
             self.s.multi = true;
             self.s.multi_t = session;
             self.tl.next_boss = self.tl.next_boss.min(20.0);
@@ -1923,7 +1922,7 @@ impl Game {
                 let (x, y) = self.hand_pos();
                 self.tl.kis.push(Ki { x, y, t0: t, m: None, disc: false, done: false });
             }
-            if self.s.krillin_ally && self.s.hero != Hero::Krillin && !buu {
+            if self.krillin_helps() && !buu {
                 if let Some(b) = self.tl.boss.as_mut().filter(|b| !b.dead && t >= b.go) {
                     let nd = b.next_disc.unwrap_or(2.0) - dt;
                     b.next_disc = Some(nd);
@@ -2113,7 +2112,7 @@ impl Game {
 
     /// `krillinHit`: an ally krillin is the first thing every villain goes for.
     fn krillin_hit(&mut self, by: &str) {
-        if !self.s.krillin_ally || self.s.hero == Hero::Krillin || self.tl.kril.is_some() || self.r() > 0.75 {
+        if !self.krillin_helps() || self.tl.kril.is_some() || self.r() > 0.75 {
             return;
         }
         let c = self.frame3.road_pt(self.phi - 0.5);

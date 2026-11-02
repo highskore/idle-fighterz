@@ -460,7 +460,12 @@ impl Game {
             * (1.0 + 0.5 * self.lvl(N_IDLE))
             * if self.wished(WishBuff::Idle) { 3.0 } else { 1.0 }
             * if self.lvl(N_ETERNAL) > 0.0 { 3.0 } else { 1.0 }
-            * if s.krillin_ally && s.hero != Hero::Krillin { 1.5 } else { 1.0 }
+            * if self.krillin_helps() { 1.5 } else { 1.0 }
+    }
+
+    /// Krillin as your ally (wished back, and not the hero you're playing).
+    pub fn krillin_helps(&self) -> bool {
+        self.s.krillin_ally && self.s.hero != Hero::Krillin
     }
 
     /// Power a second, buffs included: what the HUD shows.
@@ -628,10 +633,11 @@ impl Game {
             if f >= 1 && self.s.hero.saiyan() {
                 self.ach("ss");
             }
-            if f >= UI_FORM && self.s.hero.saiyan() {
+            // by the power marks, not the form number (goten's forms come at half)
+            if f >= UI_FORM && self.s.hero.saiyan() && self.s.run_best.max(self.s.pl) >= ALL_FORMS[UI_FORM].1 {
                 self.ach("ui");
             }
-            if f >= MUI_FORM {
+            if f >= MUI_FORM && self.forms[f].at >= LATE_AT {
                 self.ach("mui");
             }
             if self.forms[f].lb > 0 {
