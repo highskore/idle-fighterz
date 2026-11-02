@@ -1,10 +1,10 @@
 //! The hero's beam: the ball charging in his hands with its aim line and, at full charge, its crackle; then the
-//! fired beam (galick gun, kamehameha, final flash; red under kaioken, wider as the great ape) with its crackle.
+//! fired beam (each hero's own, vegeta's final flash; in the boost's colour under it, wider as the great ape) with its crackle.
 
 // game.js turns by 6.28, not TAU: the angles must round the same
 #![allow(clippy::approx_constant)]
 
-use planet_core::data::{Hero, Upg};
+use planet_core::data::{hero_boost, Hero, Upg};
 use planet_core::fx::Particle;
 use planet_core::jsmath::{cos, hypot, pow, sin};
 use planet_core::num::js_round;
@@ -13,43 +13,37 @@ use planet_core::Game;
 use crate::bayer;
 use crate::scene::Ctx;
 
-/// game.js `BEAMS`/`KAIO_BEAM`; the kaioken palette has no aim line or ball edge.
-struct Pal {
+/// game.js `BEAMS`/`KAIO_BEAM`; the boost's palette has no aim line or ball edge.
+pub(crate) struct Pal {
     aim: u32,
     ball: u32,
     ball_edge: u32,
     spark: u32,
     glow: u32,
-    mid: u32,
-    edge: u32,
+    pub(crate) mid: u32,
+    pub(crate) edge: u32,
 }
 
 const GALICK: Pal = Pal { aim: 0x9a5af0, ball: 0xd9b8ff, ball_edge: 0x8a4ae8, spark: 0xc9a2ff, glow: 0xb98af8, mid: 0xe2cbff, edge: 0x7a3ae0 };
 const KAME: Pal = Pal { aim: 0x4aa8f0, ball: 0xb8e4ff, ball_edge: 0x2a8ae8, spark: 0xa2d8ff, glow: 0x7ac8ff, mid: 0xcdeeff, edge: 0x1f6ad8 };
 /// Piccolo's special beam cannon: a bright yellow core in a violet sheath.
 const SBC: Pal = Pal { aim: 0xffd84a, ball: 0xfff2a0, ball_edge: 0x8a4ae8, spark: 0xffe86a, glow: 0xd8b0ff, mid: 0xfff6c0, edge: 0x7a3ae0 };
+/// Future trunks' burning attack: yellow-orange.
+const BURNING: Pal = Pal { aim: 0xf0a03a, ball: 0xffe0a0, ball_edge: 0xe87a1a, spark: 0xffc86a, glow: 0xffb050, mid: 0xfff0c8, edge: 0xd8601a };
 /// Tien's kikoho: gold, with a hot white core.
 const KIKOHO: Pal = Pal { aim: 0xffc83a, ball: 0xfff4c0, ball_edge: 0xe8a020, spark: 0xffe080, glow: 0xffd060, mid: 0xfff8d8, edge: 0xd88a18 };
 /// Android 17's power blitz: green, with a pale core.
 const BLITZ: Pal = Pal { aim: 0x4ae88a, ball: 0xc8ffd8, ball_edge: 0x22b860, spark: 0x9affb8, glow: 0x6af0a0, mid: 0xd8ffe4, edge: 0x14a050 };
-const KAIO: Pal = Pal { aim: 0, ball: 0xffb0a4, ball_edge: 0, spark: 0xff9a8a, glow: 0xff6a5a, mid: 0xffc8bf, edge: 0xc8201a };
-
-fn kame(g: &Game) -> bool {
-    matches!(g.s.hero, Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten)
-}
 
 /// `BEAM()`
-fn pal(g: &Game) -> &'static Pal {
-    if kame(g) {
-        &KAME
-    } else if g.s.hero == Hero::Tien {
-        &KIKOHO
-    } else if g.s.hero == Hero::Piccolo {
-        &SBC
-    } else if g.s.hero == Hero::A17 {
-        &BLITZ
-    } else {
-        &GALICK
+pub(crate) fn pal(g: &Game) -> &'static Pal {
+    match g.s.hero {
+        Hero::Vegeta => &GALICK,
+        Hero::Goku | Hero::Gohan | Hero::Krillin | Hero::Goten => &KAME,
+        Hero::Piccolo => &SBC,
+        Hero::Trunks => &BURNING,
+        Hero::A17 => &BLITZ,
+        Hero::Tien => &KIKOHO,
     }
 }
 
@@ -171,8 +165,11 @@ pub fn draw_beam(c: &mut Ctx, g: &mut Game) {
         g.inp.beam = None;
         return;
     }
-    let bp = if b.kaio { &KAIO } else { pal(g) };
-    let ff = b.ff && !kame(g) && !b.kaio;
+    let k = hero_boost(g.s.hero);
+    let kaio = Pal { aim: 0, ball: k.ball, ball_edge: 0, spark: k.spark[1], glow: k.glow, mid: k.mid, edge: k.edge };
+    let bp = if b.kaio { &kaio } else { pal(g) };
+    // the final flash's yellow is vegeta's; the others' full-power beams keep their own colour
+    let ff = b.ff && g.s.hero == Hero::Vegeta && !b.kaio;
     let w = (3.0 + b.c * 3.0)
         * if b.ff { 1.8 } else { 1.0 }
         * if b.ape { 1.5 } else { 1.0 }
