@@ -105,16 +105,26 @@
     // awake while the pointer is about; the upgrades list or a popup keep it up
     let idle = 0;
     const keep = () => $('shop').classList.contains('open') || skins.open() || !$('menu').hidden || !$('ascBox').hidden || !$('shareBox').hidden;
+    // afk: the ki tree, the upgrades or the drawer left open close after a minute with no input, as an idle player picks
+    // nothing there, and the hud can sleep. ascending and sharing ask something, so those stay
+    const AFK = 60000;
+    let input = performance.now();
+    for (const t of ['pointermove', 'pointerdown', 'keydown', 'wheel']) addEventListener(t, () => { input = performance.now(); }, true);
+    const afk = () => {
+      if (performance.now() - input < AFK) return;
+      if (!$('menu').hidden) $('menuX').click();
+      $('shop').classList.remove('open'); $('shopToggle').setAttribute('aria-expanded', 'false'); skins.close();
+    };
     // clouds under the floating planet (settings: always, while awake, or never, their shape and amount). window mode has the
     // full cloud sea instead
     const clouds = () => { const on = BARE && (conf.clouds === 'always' || (conf.clouds !== 'never' && root.classList.contains('awake'))); st.clouds = on && (conf.cloud_shape || 'c'); st.cloudAmt = conf.cloud_amount || 2; };
-    const sleep = () => { if (keep()) idle = setTimeout(sleep, 1000); else { root.classList.remove('awake'); clouds(); pace(); } };
+    const sleep = () => { afk(); if (keep()) idle = setTimeout(sleep, 1000); else { root.classList.remove('awake'); clouds(); pace(); } };
     const wake = ms => { root.classList.add('awake'); clouds(); pace(); clearTimeout(idle); idle = setTimeout(sleep, ms); };
     addEventListener('pointermove', () => wake(2500)); addEventListener('pointerdown', () => wake(2500), true);
     addEventListener('focusin', () => wake(4000));
     root.addEventListener('mouseleave', () => wake(500));
     // while another app is active the page gets no pointer moves; the app reports where the pointer is instead
-    if (tauri) tauri.event.listen('pointer', ({ payload: p }) => wake(p.inside ? 2500 : 500));
+    if (tauri) tauri.event.listen('pointer', ({ payload: p }) => { if (p.inside) input = performance.now(); wake(p.inside ? 2500 : 500); });
     addEventListener('keydown', e => { if (e.key === 'Escape') $('shop').classList.remove('open'); });
     st.el.addEventListener('pointerdown', () => $('shop').classList.remove('open'));
 
@@ -182,7 +192,8 @@
       invoke('page_state', { hidden: document.hidden, away, ticking: !!bg });
     };
     document.addEventListener('visibilitychange', background);
-    if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; background(); });
+    // throttled while hidden, the afk tick could otherwise close a panel the moment the widget comes back
+    if (tauri) tauri.event.listen('shown', ({ payload }) => { away = !payload; if (payload) input = performance.now(); background(); });
 
     const apply = s => {
       const first = conf.layout !== s.layout || conf.skin !== s.skin || !w.firstChild; conf = s;
