@@ -181,7 +181,15 @@ fn godki_open(g: &Game) -> bool {
 
 #[test]
 fn god_ki_opens_at_the_same_mark_for_every_hero() {
-    for (id, h) in [("piccolo", Hero::Piccolo), ("tien", Hero::Tien), ("a17", Hero::A17), ("vegeta", Hero::Vegeta), ("goku", Hero::Goku)] {
+    for (id, h) in [
+        ("piccolo", Hero::Piccolo),
+        ("tien", Hero::Tien),
+        ("a17", Hero::A17),
+        ("krillin", Hero::Krillin),
+        ("goten", Hero::Goten),
+        ("vegeta", Hero::Vegeta),
+        ("goku", Hero::Goku),
+    ] {
         let mut g = Game::new(7);
         g.start();
         g.s.hero = h;
@@ -197,15 +205,20 @@ fn god_ki_opens_at_the_same_mark_for_every_hero() {
         g.god_reset();
         assert_eq!(g.s.gods, gods + 1, "{id}");
     }
-    // once limit III breaks, a nine-form hero's limit breakers sit at his ninth form's mark: still not god ki
+    // goten dropped from teen super saiyan to base still holds it for god ki
     let mut g = Game::new(7);
+    g.preview("#hero-goten");
     g.start();
-    g.s.hero = Hero::Goten;
-    g.s.limits = 3;
-    g.forms = ladder_of(Hero::Goten, 3);
     g.s.form = 9;
-    g.s.run_best = 1e12.into();
-    assert!(!godki_open(&g), "a limit breaker at his ninth mark isn't the saiyans' 2e14");
+    g.s.run_best = 2.5e14.into();
+    g.s.pl = g.s.run_best;
+    let t = g.t + DT;
+    g.frame(t, DT);
+    g.t += planet_core::heroes::GOTEN_UP + 1.0;
+    let t = g.t + DT;
+    g.frame(t, DT);
+    assert!(g.powered_down().is_some() && g.s.form == 0, "he's dropped to base");
+    assert!(godki_open(&g), "and god ki stays open");
 }
 
 #[test]
@@ -269,7 +282,7 @@ fn the_menu_gives_each_hero_his_playstyle_and_form_ladder() {
     let form = |id: &str, i: usize| chars.iter().find(|c| c["id"] == id).unwrap()["forms"][i]["name"].as_str().unwrap().to_string();
     assert_eq!([form("gohan", 6), form("gohan", 8)], ["great saiyaman", "ultimate"]);
     assert_eq!([form("trunks", 6), form("trunks", 8)], ["super saiyan third grade", "sword of hope"]);
-    assert_eq!([form("goten", 6), form("goten", 8)], ["saiyaman x-2", "prodigy unleashed"]);
+    assert_eq!([form("goten", 6), form("goten", 8)], ["prodigy unleashed", "full power super saiyan"]);
     assert_eq!(form("krillin", 4), "destructo master");
 }
 
@@ -340,4 +353,130 @@ fn only_saiyans_transform_on_the_full_moon() {
     assert!(g.b.ape_until > g.t, "vegeta went great ape");
     assert!(g.pick_hero("a17"));
     assert!(g.b.ape_until <= g.t);
+}
+
+#[test]
+fn switching_heroes_keeps_only_the_form_this_runs_power_reached() {
+    // goten's marks come at half: his third form on power short of vegeta's third gives vegeta no free form
+    let mut g = Game::new(7);
+    g.preview("#hero-goten");
+    g.start();
+    g.s.form = 3;
+    g.s.pl = (g.forms[3].at * 1.1).into();
+    g.s.run_best = g.s.pl;
+    assert!(g.s.run_best.to_f64() < ladder_of(Hero::Vegeta, 0)[3].at);
+    assert!(g.pick_hero("vegeta"));
+    assert!(g.s.form < 3, "no free form for vegeta: {}", g.s.form);
+    assert!(g.s.run_best.to_f64() >= g.forms[g.s.form].at, "the form this run's power reached");
+    // power reached and then spent keeps its form, for the same marks and for the same hero
+    let mut g = Game::new(7);
+    g.start();
+    g.s.form = 3;
+    g.s.run_best = (g.forms[3].at * 1.1).into();
+    g.s.pl = 1e3.into();
+    g.s.ach.insert("ss");
+    assert!(g.pick_hero("goku"));
+    assert_eq!(g.s.form, 3, "goku keeps super saiyan 3 after spending");
+    assert!(g.pick_hero("goku"));
+    assert_eq!(g.s.form, 3, "and re-picking him changes nothing");
+    // a wished form holds through a switch until it wears off
+    g.s.form = 6;
+    g.tl.preview = Some((3, g.t + 60.0));
+    assert!(g.pick_hero("vegeta"));
+    assert_eq!(g.s.form, 6, "the wish isn't wasted");
+}
+
+#[test]
+fn krillins_ally_bonus_isnt_his_own() {
+    let mut g = Game::new(7);
+    g.start();
+    g.debug_set("partner", 3.0);
+    g.s.krillin_ally = true;
+    let with = g.passive().to_f64();
+    assert!(with > 0.0);
+    assert!(g.krillin_helps() && g.extra().contains("krillin: idle"));
+    g.s.hero = Hero::Krillin;
+    assert!(g.passive().to_f64() < with, "no ×1.5 from himself");
+    assert!(!g.krillin_helps() && !g.extra().contains("krillin: idle"), "nor its HUD line");
+    // nor his ki discs at a villain
+    let mut g = Game::new(7);
+    g.preview("#hero-krillin#saga1");
+    g.start();
+    g.s.krillin_ally = true;
+    while g.tl.boss.as_ref().is_none_or(|b| g.t < b.go) && g.t < 120.0 {
+        step(&mut g);
+    }
+    for _ in 0..30 {
+        step(&mut g);
+    }
+    assert!(g.tl.boss.as_ref().is_some_and(|b| b.next_disc.is_none()), "no ally discs while you're krillin");
+}
+
+#[test]
+fn goten_opens_the_multiverse_at_ultra_instincts_power_not_its_form_number() {
+    let ui = planet_core::data::UI_FORM;
+    let run = |pl: f64| {
+        let mut g = Game::new(7);
+        g.preview("#hero-goten");
+        g.start();
+        g.s.form = ui;
+        g.s.pl = pl.into();
+        g.s.run_best = g.s.pl;
+        for _ in 0..30 {
+            step(&mut g);
+        }
+        g.s.multi
+    };
+    let g = {
+        let mut g = Game::new(7);
+        g.preview("#hero-goten");
+        g
+    };
+    assert!(!run(g.forms[ui].at * 1.01), "half the mark isn't ultra instinct's");
+    assert!(run(planet_core::data::ALL_FORMS[ui].1 * 1.05), "ultra instinct's power opens it");
+}
+
+#[test]
+fn a_form_hook_reads_the_heros_own_ladder() {
+    let mut g = Game::new(7);
+    g.preview("#hero-goten#form3");
+    assert_eq!(g.s.pl.to_f64(), (ladder_of(Hero::Goten, 0)[3].at * 1.05).round(), "goten's third mark, not vegeta's");
+}
+
+#[test]
+fn hooks_for_a_milestone_or_limit_that_doesnt_exist_dont_hang() {
+    let mut g = Game::new(7);
+    g.preview("#mile999");
+    g.preview("#limit99999");
+    assert!(g.s.limits <= 100);
+}
+
+#[test]
+fn every_ladder_climbs_to_the_late_marks_and_its_limit_breakers_sit_at_the_top() {
+    use planet_core::data::LATE_AT;
+    let vegeta = ladder_of(Hero::Vegeta, 0);
+    for &(h, id, ..) in CHARS.iter() {
+        for limits in [0, 3, 5] {
+            let l = ladder_of(h, limits);
+            for w in l.windows(2) {
+                assert!(w[1].at >= w[0].at, "{id} (limits {limits}): {} below {}", w[1].name, w[0].name);
+                assert!(w[1].x > w[0].x, "{id} (limits {limits}): {} no stronger than {}", w[1].name, w[0].name);
+            }
+            let top = l.iter().rfind(|f| f.lb == 0).unwrap();
+            assert!(top.at >= LATE_AT, "{id}: his top form reaches the late marks");
+            assert!(l.iter().filter(|f| f.lb > 0).all(|f| f.at == top.at), "{id}: limit breakers at his top form's mark");
+        }
+    }
+    let goten = ladder_of(Hero::Goten, 0);
+    for i in 9..11 {
+        assert_eq!((goten[i].at, goten[i].x), (vegeta[i].at, vegeta[i].x), "goten's late marks are vegeta's");
+    }
+}
+
+#[test]
+fn gotens_late_looks_wear_the_right_back_and_size() {
+    let h = sprite::hero("goten");
+    assert!(h.backs[9][0].col == h.backs[1][0].col, "teen super saiyan's golden hair from behind");
+    assert!(h.backs[10][0].col == h.backs[0][0].col, "saiyaman x-2's black hair from behind");
+    assert_eq!(sprite::look_scale("goten", 9), sprite::look_scale("goten", 10), "and x-2 no smaller than teen");
 }

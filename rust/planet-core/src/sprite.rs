@@ -898,6 +898,7 @@ pub fn look_scale(id: &str, look: usize) -> f64 {
         ("piccolo", 8) => 2.0,
         ("piccolo", 11) => 1.15,
         ("trunks", 6) => 1.15,
+        ("goten", 9 | 10) => 1.2,
         _ => 1.0,
     }
 }
@@ -981,8 +982,8 @@ const TRUNKS: &[(char, u32)] = &[
     ('w', 0xf2c84a),
     ('W', 0xc49a24),
 ];
-/// Goten's colours: his father's gi in a deeper orange.
-const GOTEN: &[(char, u32)] = &[
+/// Goten's colours: goku's orange gi over a blue undershirt, blue wristbands and boots.
+const GOT: &[(char, u32)] = &[
     ('y', 0xe0641c),
     ('Y', 0xa84614),
     ('a', 0xe0641c),
@@ -1068,6 +1069,15 @@ fn stamp(s: &HeroSet, l: usize, t: usize, r: usize, art: &[&str], p: &[(char, u3
 fn with_late(mut h: Hero, late: &[HeroSet]) -> Hero {
     for (j, s) in late.iter().enumerate() {
         h.forms[9 + j] = s.clone();
+    }
+    h
+}
+
+/// `with_late`, and from behind (snake way) each late look wears the back of the form it's drawn from.
+fn with_late_backs(h: Hero, late: &[HeroSet], backs: &[usize]) -> Hero {
+    let mut h = with_late(h, late);
+    for (j, &b) in backs.iter().enumerate() {
+        h.backs[9 + j] = h.backs[b].clone();
     }
     h
 }
@@ -1625,35 +1635,44 @@ fn trunks() -> Hero {
     h
 }
 
-/// Goten: where vegeta and goku reach ultra ego and ultra instinct, he's saiyaman x-2 (canon, Super manga ch. 88; the
-/// suit's colours are ours: navy, white gloves and boots, an orange cape, a cyan visor), then prodigy unleashed (ours:
-/// the boy who went super saiyan without trying, gold ki flaring off him).
-fn goten() -> Hero {
-    let head = shades(&GOKU_HEAD, [10, 11]);
-    let head: Vec<&str> = head.iter().map(|s| s.as_str()).collect();
-    let suit = &[
-        ('D', 0x3ac8e8),
-        ('y', 0x1e2a5a),
-        ('Y', 0x121a3c),
-        ('a', 0x1e2a5a),
-        ('A', 0x121a3c),
-        ('c', 0x1e2a5a),
-        ('C', 0x121a3c),
-        ('g', 0xffffff),
-        ('G', 0xc8ccda),
-        ('u', 0xf08a24),
-        ('p', 0x1e2a5a),
-        ('P', 0x121a3c),
-        ('w', 0xffffff),
-        ('W', 0xc8ccda),
-        ('q', 0xf08a24),
-        ('Q', 0xc0641a),
+/// Goten's late forms: teen super saiyan (canon; bigger, sleeves ours), then saiyaman x-2 (canon; costume ours).
+fn goten_late() -> [HeroSet; 2] {
+    // the eye rows of GOKU_HEAD, under saiyaman x-2's mask
+    const MASK_ROWS: [usize; 2] = [10, 11];
+    let teen = make_hero_with(&GOKU_HEAD, &layers(&[GOT, &[('c', 0x2b4fc8), ('C', 0x1c3584)]]), true, Opt { sleeves: true, ..Opt::default() }).forms[1].clone();
+    let masked: Vec<String> =
+        GOKU_HEAD.iter().enumerate().map(|(j, r)| if MASK_ROWS.contains(&j) { r.replace(['s', 'E', 'r'], "R") } else { r.to_string() }).collect();
+    let masked: Vec<&str> = masked.iter().map(|s| s.as_str()).collect();
+    let suit: &[(char, u32)] = &[
+        ('y', 0x2f8a3a),
+        ('Y', 0x1f6028),
+        ('a', 0x2f8a3a),
+        ('A', 0x1f6028),
+        ('g', 0xf4f4f6),
+        ('G', 0xc2c6d2),
+        ('u', 0xd8323a),
+        ('p', 0x22222a),
+        ('P', 0x111118),
+        ('w', 0xf4f4f6),
+        ('W', 0xc2c6d2),
+        ('q', 0xd8323a),
+        ('Q', 0x962028),
+        ('R', 0xd8323a),
     ];
-    let x2 = make_hero_with(&head, &layers(&[GOTEN, suit]), true, Opt { sleeves: true, cape: true }).forms[0].clone();
-    let prodigy = set_of(&GOKU_HEAD, &layers(&[GOTEN, &[('h', 0xffe02e), ('H', 0xfffbc8)]]));
-    let prodigy = stamp(&prodigy, 2, 4, 2, &FLAME, &[('L', 0xffd60a), ('l', 0xfffbe0)]);
-    let mut h = with_looks(make_hero(&GOKU_HEAD, GOTEN, true), [(6, x2), (8, prodigy)]);
-    h.backs[6] = h.backs[0].clone();
+    let saiyaman = make_hero_with(&masked, suit, true, Opt { cape: true, ..Opt::default() }).forms[0].clone();
+    [teen, saiyaman]
+}
+
+/// Goten: where vegeta and goku reach ultra ego and ultra instinct, he's prodigy unleashed (ours: the boy who went
+/// super saiyan without trying, gold ki flaring off him), then full power super saiyan (canon form, goku's and gohan's
+/// in the Cell arc; for goten, ours: calm gold hair, white ki sparking off him). Past them, his late forms.
+fn goten() -> Hero {
+    let gold = set_of(&GOKU_HEAD, &layers(&[GOT, &[('h', 0xffe02e), ('H', 0xfffbc8)]]));
+    let prodigy = stamp(&gold, 2, 4, 2, &FLAME, &[('L', 0xffd60a), ('l', 0xfffbe0)]);
+    let calm = set_of(&GOKU_HEAD, &layers(&[GOT, &[('h', 0xf2d040), ('H', 0xffffff)]]));
+    let full = stamp(&calm, 2, 2, 2, &SPARK, &[('L', 0xe8e8f4), ('l', 0xffffff)]);
+    let mut h = with_looks(with_late_backs(make_hero(&GOKU_HEAD, GOT, true), &goten_late(), &[1, 0]), [(6, prodigy), (8, full)]);
+    h.backs[6] = h.backs[1].clone();
     h.backs[8] = h.backs[1].clone();
     h
 }

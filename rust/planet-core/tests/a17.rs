@@ -83,19 +83,15 @@ impl Run {
     }
 }
 
-const SEEDS: [u32; 48] = [
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-    42, 43, 44, 45, 46, 47, 48,
-];
+const SEEDS: u32 = 48;
 
 fn geo_mean(v: &[f64]) -> f64 {
     (v.iter().map(|x| x.ln()).sum::<f64>() / v.len() as f64).exp()
 }
 
 fn earned(hero: Hero, play: Play, mins: f64) -> Vec<f64> {
-    SEEDS
-        .iter()
-        .map(|&s| {
+    (1..=SEEDS)
+        .map(|s| {
             let mut r = Run::new(s, hero);
             r.play(play, mins * 60.0);
             r.earned()
@@ -228,11 +224,10 @@ fn the_afk_rule_over_whole_runs() {
         let (si, sa) = (earned(Hero::A17, Play::Idle, mins), earned(Hero::A17, Play::Active, mins));
         let (vi, va) = (earned(Hero::Vegeta, Play::Idle, mins), earned(Hero::Vegeta, Play::Active, mins));
         let (vs_vegeta, act) = (ratio(&si, &vi), ratio(&sa, &si));
-        println!("{mins} min, {} seeds: idle 17 / idle vegeta ×{vs_vegeta:.3}; active / idle ×{act:.3}", SEEDS.len());
+        println!("{mins} min, {} seeds: idle 17 / idle vegeta ×{vs_vegeta:.3}; active / idle ×{act:.3}", SEEDS);
         println!("(vegeta active / idle ×{:.3}; 17 active / vegeta active ×{:.3})", ratio(&va, &vi), ratio(&sa, &va));
         assert!((0.8..=1.25).contains(&vs_vegeta), "idle, he keeps pace with an idle vegeta: ×{vs_vegeta}");
-        // picked: a hero may match vegeta's own active/idle (×4.7-5.3 with this bot), so the ceiling is his
-        let cap = ratio(&va, &vi) * 1.05;
+        let cap = ratio(&va, &vi) * planet_core::heroes::ACTIVE_VS_VEGETA;
         assert!(act >= 2.0 && act <= cap, "playing him earns at least 2× his idle, no more than vegeta does: ×{act} (cap ×{cap})");
     }
 }
