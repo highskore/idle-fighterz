@@ -242,10 +242,10 @@ pub fn ladder_of(h: Hero, limits: u32) -> Vec<Form> {
         Hero::Goku => &[9],
         Hero::Gohan => &[11],
         Hero::Trunks => &[13],
-        // their own late forms come below; the rest aren't built yet: their ladders stop at the shared nine
+        // the other heroes' late forms are their own, below
         Hero::Piccolo | Hero::Krillin | Hero::Goten | Hero::Tien | Hero::A17 => &[],
     };
-    // a non-saiyan's own late forms, each with its aura: their looks follow the shared nine in his sprites
+    // a hero's own late forms, each with its aura: their looks follow the shared nine in his sprites
     let own_late: &[(&str, [u32; 3])] = match h {
         Hero::Piccolo => &[
             ("synced with nail", [0xffffff, 0xd8ffc8, 0x6ae05a]),

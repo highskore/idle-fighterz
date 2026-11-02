@@ -280,12 +280,10 @@ impl Game {
         (if self.ang(A_DIVINE) { p.pow(0.55) } else { p.sqrt() }).floor().max(1.0)
     }
 
-    /// God ki opens at `LATE_AT`: a form held at that mark (a saiyan's tenth on), or the top of a ladder that stops
-    /// short of it with the power for it this run.
+    /// God ki opens at `LATE_AT`: a form held at that mark (every ladder's late forms sit there; goten's dropped
+    /// form still counts).
     pub fn god_open(&self) -> bool {
-        // goten's dropped form still counts
-        let f = self.held_form();
-        self.forms[f].at >= LATE_AT || f == self.forms.len() - 1 && self.s.run_best >= LATE_AT
+        self.forms[self.held_form()].at >= LATE_AT
     }
 
     /// Where mastery star `m + 1` lands: ×1000 a star past the last form's mark, and never under `LATE_AT`'s.

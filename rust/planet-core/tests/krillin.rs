@@ -1,10 +1,10 @@
-//! Krillin, destructo disc: taps throw discs that cut everything along their line, a chain paying more with every cut;
-//! left alone he throws one himself every few seconds. The AFK rule over whole runs: idle he keeps pace with an idle
-//! Vegeta, playing him (aiming discs between training taps) earns about 2-3× his own idle, and nothing an idle player
-//! does costs him anything.
+//! Krillin, destructo disc: taps throw discs that cut everything along their line, a chain paying more with every cut
+//! (a tap before the next disc is ready throws it when it is); left alone he throws one himself every few seconds. The AFK rule
+//! over whole runs: idle he keeps pace with an idle Vegeta, playing him earns at least 2× his own idle and no more
+//! than playing Vegeta does over his, and nothing an idle player does costs him anything.
 
 use planet_core::data::{Hero, Upg, SHOP};
-use planet_core::heroes::{BARRAGE_CUTS, BARRAGE_HP, DISC_AUTO, DISC_GAP};
+use planet_core::heroes::{ACTIVE_VS_VEGETA, BARRAGE_CUTS, BARRAGE_HP, DISC_AUTO, DISC_GAP};
 use planet_core::{Game, DT};
 
 const POLICY: [&str; 13] = ["boots", "partner", "gravity", "scouter", "house", "piccolo", "cloud", "armor", "kaio", "galick", "senzu", "chamber", "bigbang"];
@@ -31,9 +31,11 @@ fn buy_all(g: &mut Game) -> f64 {
 enum Play {
     /// never taps; checks in once a second to buy
     Idle,
-    /// buys, kaiokens when ready, and for 5s of every 10 taps every 0.4s (as fast as his discs come): at the nearest
+    /// buys, kaiokens when ready, and for 5s of every 10 taps once a disc is ready (every `DISC_GAP`): at the nearest
     /// target, or on himself
     Active,
+    /// as `Active`, but tapping 5 a second as vegeta's bot does (the taps before a disc is ready queue it)
+    Fast,
 }
 
 struct Run {
@@ -57,7 +59,11 @@ impl Run {
 
     fn step(&mut self, play: Play) {
         let f = self.f;
-        if play == Play::Active && f % 300 < 150 && f.is_multiple_of(12) {
+        let every = match play {
+            Play::Active => (DISC_GAP / DT).round() as u32,
+            _ => 6,
+        };
+        if play != Play::Idle && f % 300 < 150 && f.is_multiple_of(every) {
             // his taps are discs: at the nearest target, or on himself (straight ahead) when there's none
             let (x, y) = self.g.nearest_target().unwrap_or_else(|| {
                 let k = self.g.kid_screen(14.0);
@@ -82,19 +88,15 @@ impl Run {
     }
 }
 
-const SEEDS: [u32; 48] = [
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-    42, 43, 44, 45, 46, 47, 48,
-];
+const SEEDS: u32 = 48;
 
 fn geo_mean(v: &[f64]) -> f64 {
     (v.iter().map(|x| x.ln()).sum::<f64>() / v.len() as f64).exp()
 }
 
 fn earned(hero: Hero, play: Play, mins: f64) -> Vec<f64> {
-    SEEDS
-        .iter()
-        .map(|&s| {
+    (1..=SEEDS)
+        .map(|s| {
             let mut r = Run::new(s, hero);
             r.play(play, mins * 60.0);
             r.earned()
@@ -130,6 +132,12 @@ fn a_disc_cuts_everything_along_its_line_and_a_chain_pays_more() {
     assert_eq!(r.g.discs().len(), 1, "the disc flies");
     r.g.tap(p.x, p.y);
     assert_eq!(r.g.discs().len(), 1, "one disc every {DISC_GAP}s, however fast you tap");
+    // the early tap isn't lost: its disc goes the moment the next one is ready
+    for _ in 0..(DISC_GAP / DT).ceil() as u32 + 1 {
+        let t = r.g.t + DT;
+        r.g.frame(t, DT);
+    }
+    assert_eq!(r.g.discs().len(), 1, "{DISC_GAP}s on, the tap made too early is thrown");
 }
 
 #[test]
@@ -140,7 +148,7 @@ fn left_alone_he_throws_by_himself() {
 }
 
 #[test]
-fn the_barrage_takes_a_fifth_of_a_villain() {
+fn the_barrage_takes_its_share_of_a_villain() {
     let mut g = Game::new(7);
     g.preview("#hero-krillin#saga3");
     g.start();
@@ -189,15 +197,16 @@ fn he_never_visits_himself() {
 #[ignore = "slow: whole runs, several seeds (cargo test --release -- --ignored krillin)"]
 fn the_afk_rule_over_whole_runs() {
     for mins in [30.0, 60.0] {
-        let (ki, ka) = (earned(Hero::Krillin, Play::Idle, mins), earned(Hero::Krillin, Play::Active, mins));
-        let (vi, va) = (earned(Hero::Vegeta, Play::Idle, mins), earned(Hero::Vegeta, Play::Active, mins));
-        let (vs_vegeta, act) = (ratio(&ki, &vi), ratio(&ka, &ki));
-        println!("{mins} min, {} seeds: idle krillin / idle vegeta ×{vs_vegeta:.3}; active / idle ×{act:.3}", SEEDS.len());
-        println!("(vegeta active / idle ×{:.3}; krillin active / vegeta active ×{:.3})", ratio(&va, &vi), ratio(&ka, &va));
+        let (ki, ka, kf) = (earned(Hero::Krillin, Play::Idle, mins), earned(Hero::Krillin, Play::Active, mins), earned(Hero::Krillin, Play::Fast, mins));
+        let (vi, va) = (earned(Hero::Vegeta, Play::Idle, mins), earned(Hero::Vegeta, Play::Fast, mins));
+        let (vs_vegeta, act, fast, veg) = (ratio(&ki, &vi), ratio(&ka, &ki), ratio(&kf, &ki), ratio(&va, &vi));
+        println!("{mins} min, {} seeds: idle krillin / idle vegeta ×{vs_vegeta:.3}; disc-paced / idle ×{act:.3}; fast / idle ×{fast:.3}", SEEDS);
+        println!("(vegeta fast / idle ×{veg:.3}; krillin fast / vegeta fast ×{:.3})", ratio(&kf, &va));
         assert!((0.8..=1.25).contains(&vs_vegeta), "idle, he keeps pace with an idle vegeta: ×{vs_vegeta}");
-        // picked: a hero may match vegeta's own active/idle (×4.7-5.3 with this bot), so the ceiling is his
-        let cap = ratio(&va, &vi) * 1.05;
-        assert!(act >= 2.0 && act <= cap, "playing him earns at least 2× his idle, no more than vegeta does: ×{act} (cap ×{cap})");
+        let cap = veg * ACTIVE_VS_VEGETA;
+        for (how, x) in [("disc-paced", act), ("fast", fast)] {
+            assert!(x >= 2.0 && x <= cap, "{how}, playing him earns at least 2× his idle, no more than vegeta does: ×{x} (cap ×{cap})");
+        }
     }
 }
 
