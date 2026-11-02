@@ -107,13 +107,13 @@ fn a_named_milestone_plays_and_boosts() {
 }
 
 #[test]
-fn the_hud_line_names_the_limit_its_strain_and_the_next_milestone() {
+fn the_hud_line_names_the_limit_and_its_strain() {
     let mut g = Game::new(1);
     g.preview("#limit3");
     g.start();
     g.s.meter = g.break_need() * 0.634;
     let l = g.limit_line();
-    assert!(l.starts_with("ki limit III (1.0Sp) — strain 63% · next: "), "{l}");
+    assert_eq!(l, "ki limit III (1.0Sp) — strain 63%");
 }
 
 // ── the pacing bot
