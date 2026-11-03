@@ -931,6 +931,7 @@ impl Game {
         s.ustars = 0;
         s.foes.clear();
         self.tl.preview = None;
+        self.tl.uni_held = None;
         if let Some(b) = self.tl.boss.as_mut().filter(|b| b.uni && !b.dead) {
             b.dead = true;
             b.fled = true;
@@ -982,6 +983,7 @@ impl Game {
         self.tl.zen = None;
         self.tl.preview = None;
         self.tl.next_boss = 60.0;
+        (self.tl.uni_dps, self.tl.uni_held) = (Big::ZERO, None);
         self.ach("zeno");
         self.top_sync();
         if self.s.world != 0 {

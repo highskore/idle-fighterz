@@ -651,7 +651,10 @@ pub const LADDER: [(u32, &str, u32, [&str; 3]); 7] = [
     (6, "universe 6", 0x48d0a8, ["kefla", "caulifla", "kale"]),
     (11, "universe 11", 0xe0473e, ["dyspo", "toppo", "jiren"]),
 ];
-pub const UNI_HP: f64 = 6e14;
+/// A universe's strongest, in seconds of the active damage the multiverse opened on (`Game::uni_hp`).
+pub const UNI_SECS: f64 = 1000.0;
+/// The ki blasts' exchange with a universe fighter: each takes this share of a second of active damage.
+pub const UNI_KI: f64 = 0.25;
 pub const UNI_STEP: f64 = 20.0;
 pub const UNI_STAGES: [f64; 3] = [0.2, 0.45, 1.0];
 

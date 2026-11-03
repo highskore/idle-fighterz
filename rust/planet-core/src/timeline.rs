@@ -583,6 +583,10 @@ pub struct Tl {
     pub boss: Option<Boss>,
     pub boss_ids: u32,
     pub next_boss: f64,
+    /// what the universe fighters' hp is counted in: `fight_dps` as the multiverse opened
+    pub uni_dps: Big,
+    /// a universe fighter who held keeps his wounds: (universe, stage, hp left)
+    pub uni_held: Option<(u32, u32, Big)>,
     pub next_saga: f64,
     pub storm: Option<Storm>,
     pub next_storm: f64,
@@ -718,6 +722,8 @@ impl Default for Tl {
             boss: None,
             boss_ids: 0,
             next_boss: 120.0,
+            uni_dps: Big::ZERO,
+            uni_held: None,
             next_saga: 60.0,
             storm: None,
             next_storm: 240.0,
@@ -947,6 +953,20 @@ impl Game {
         } else {
             30.0
         }
+    }
+
+    /// Active play's damage a second, after armor and without timed buffs: 4 taps at combo 1.5, a big bang every 2.5s.
+    fn fight_dps(&self) -> Big {
+        let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
+        let bb = self.s.lvf(Upg::Bigbang);
+        (self.tap_power() * self.mult(true) * 6.0 * 4.0 * 1.5 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL))
+            + if bb > 0.0 { self.wrate().max(self.lap_value() * self.mult(true)) * 12.0 * bb / 2.5 } else { Big::ZERO })
+            * arm
+    }
+
+    /// Universe `u`'s fighter `k` at full hp: seconds of the `fight_dps` the multiverse opened on, climbing by universe.
+    pub fn uni_hp(&self, u: usize, k: usize) -> Big {
+        self.tl.uni_dps * UNI_SECS * crate::jsmath::pow(UNI_STEP, u as f64) * UNI_STAGES[k]
     }
 
     fn finisher(&self) -> Big {
@@ -1735,6 +1755,7 @@ impl Game {
         if !self.s.multi && (self.s.saga >= sagas || self.held_form() >= UI_FORM && self.s.run_best.max(self.s.pl) >= ALL_FORMS[UI_FORM].1) {
             self.s.multi = true;
             self.s.multi_t = session;
+            self.tl.uni_dps = self.fight_dps();
             self.tl.next_boss = self.tl.next_boss.min(20.0);
             self.top_sync();
             if self.s.world == 0 {
@@ -1781,10 +1802,16 @@ impl Game {
         {
             let (u, k) = (self.s.uni as usize, self.s.uni_stage as usize);
             let who = uni_fighter(u, k);
-            let hp = UNI_HP * crate::jsmath::pow(UNI_STEP, u as f64) * UNI_STAGES[k];
+            // (a preview hook opens it without the unlock)
+            if self.tl.uni_dps == 0.0 {
+                self.tl.uni_dps = self.fight_dps();
+            }
             let last = k == UNI_STAGES.len() - 1;
             let ut = self.uni_time();
-            let mut b = Boss::new(0, who.into(), Dim::default(), hp.into(), t, t + ut);
+            let mut b = Boss::new(0, who.into(), Dim::default(), self.uni_hp(u, k), t, t + ut);
+            if let Some((_, _, hp)) = self.tl.uni_held.take().filter(|h| (h.0, h.1) == (u as u32, k as u32)) {
+                b.hp = hp;
+            }
             b.sprs = fighter_takes(who);
             b.uni = true;
             b.tag = format!("{}{}", uni_name(u), if last { " boss".to_string() } else { format!(" {}/{}", k + 1, UNI_STAGES.len()) });
@@ -1911,6 +1938,7 @@ impl Game {
                         _ => place,
                     };
                     let msg = format!("{} holds {place} — {}% left. grow, he's back in {next}s", b.name, js_round((b.hp / b.max * 100.0).to_f64()));
+                    self.tl.uni_held = Some((self.s.uni, self.s.uni_stage, b.hp));
                     self.tl.next_boss = next;
                     self.event_ms(msg, 3500.0);
                 } else if b.name != "perfect cell" && b.name != "majin buu" {
@@ -1976,7 +2004,11 @@ impl Game {
                     let dmg = Big::from(1.0).max(self.rate() * 0.2);
                     self.ginyu_hit(mi, dmg);
                 } else {
-                    let dmg = Big::from(1.0).max(self.rate() * if kb.disc { 2.0 } else { 0.2 });
+                    let mut dmg = Big::from(1.0).max(self.rate() * if kb.disc { 2.0 } else { 0.2 });
+                    // a universe fighter's hp is counted in fight_dps: idle has to be able to wear him down
+                    if self.tl.boss.as_ref().is_some_and(|b| b.uni) {
+                        dmg = dmg.max(self.fight_dps() * UNI_KI / (1.0 + 0.5 * self.s.lvf(Upg::Armor)));
+                    }
                     self.hit_boss(dmg, tx, ty, false);
                 }
                 continue;
@@ -2948,11 +2980,7 @@ impl Game {
 
     fn start_movie(&mut self, who: &'static str, t: f64, metal: bool) {
         let o = MOVIES.iter().find(|m| m.who == who).unwrap();
-        let arm = 1.0 + 0.5 * self.s.lvf(Upg::Armor);
-        let bb = self.s.lvf(Upg::Bigbang);
-        let dps = (self.tap_power() * self.mult(true) * 6.0 * 4.0 * 1.5 * (1.0 + 0.5 * self.lvl(N_FIST)) * (1.0 + 0.5 * self.lvl(N_BRAWL))
-            + if bb > 0.0 { self.wrate().max(self.lap_value() * self.mult(true)) * 12.0 * bb / 2.5 } else { Big::ZERO })
-            * arm;
+        let dps = self.fight_dps();
         let wr = self.wrate();
         let hp = Big::from(600.0).max(wr * 26.0).max(dps * o.hp[0]);
         let mh = Big::from(150.0).max(wr * 5.0).max(dps * o.hp[1]);
