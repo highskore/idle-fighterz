@@ -109,10 +109,11 @@
     // afk: the ki tree, the upgrades or the drawer left open close after a minute with no input, as an idle player picks
     // nothing there, and the hud can sleep. ascending and sharing ask something, so those stay
     const AFK = 60000;
-    let input = performance.now();
+    // a panel the game opens itself (a wish's ki seeds open the tree) gets its own minute, counted from when it opened
+    let input = performance.now(), opened = 0;
     for (const t of ['pointermove', 'pointerdown', 'keydown', 'wheel']) addEventListener(t, () => { input = performance.now(); }, true);
     const afk = () => {
-      if (performance.now() - input < AFK) return;
+      if (performance.now() - Math.max(input, opened) < AFK) return;
       if (!$('menu').hidden) $('menuX').click();
       $('shop').classList.remove('open'); $('shopToggle').setAttribute('aria-expanded', 'false'); skins.close();
     };
@@ -122,6 +123,12 @@
     const sleep = () => { afk(); if (keep()) idle = setTimeout(sleep, 1000); else { root.classList.remove('awake'); clouds(); pace(); } };
     const wake = ms => { root.classList.add('awake'); clouds(); pace(); clearTimeout(idle); idle = setTimeout(sleep, ms); };
     addEventListener('pointermove', () => wake(2500)); addEventListener('pointerdown', () => wake(2500), true);
+    // the afk tick runs from wake(): a panel opened with no input (and no focus to move, the app in the background) starts it
+    const panel = () => $('shop').classList.contains('open') || skins.open() || !$('menu').hidden;
+    let up = false;
+    const seen = () => { const now = panel(); if (now && !up) { opened = performance.now(); wake(2500); } up = now; };
+    const watch = new MutationObserver(seen);
+    watch.observe($('menu'), { attributes: true, attributeFilter: ['hidden'] }); watch.observe($('shop'), { attributes: true, attributeFilter: ['class'] }); watch.observe(root, { attributes: true, attributeFilter: ['class'] });
     addEventListener('focusin', () => wake(4000));
     root.addEventListener('mouseleave', () => wake(500));
     // while another app is active the page gets no pointer moves; the app reports where the pointer is instead
@@ -249,4 +256,7 @@
     arrange(7);
     invoke('get_settings').then(s => s && apply(s));
     if (tauri) tauri.event.listen('settings', e => apply(e.payload));
+    // preview hook: #treegift<s> (the ki tree a seeds wish opens, after s seconds, 1 by default)
+    const gift = location.hash.match(/treegift(\d*)/);
+    if (gift) setTimeout(() => ui.treeGift('+5 ki seeds from shenron'), 1000 * (+gift[1] || 1));
   }

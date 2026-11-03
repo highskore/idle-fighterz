@@ -176,6 +176,9 @@ jobs:
       - uses: ./.github/actions/browser
       - name: Every preview hook on the Rust engine, no page or console errors
         run: npx playwright test hooks --project ${{ matrix.size }}
+      - name: The widget's afk close, for a panel the game opens
+        if: ${{ matrix.size == 'desktop' }}
+        run: npx playwright test widget-afk --project desktop
 
   visual:
     if: ${{ !inputs.update_baselines }}
